@@ -1,0 +1,347 @@
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
+
+body{
+    font-family:sans-serif;
+    background:#020617;
+    overflow:hidden;
+}
+
+/* PAGE */
+
+.otp-page{
+    width:100%;
+    height:100vh;
+    display:flex;
+}
+
+/* LEFT */
+
+.otp-left{
+    width:50%;
+    height:100vh;
+    overflow:hidden;
+    position:relative;
+}
+
+.otp-video{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+}
+
+.otp-overlay{
+    position:absolute;
+    inset:0;
+
+    background:
+    linear-gradient(
+        rgba(2,6,23,0.08),
+        rgba(2,6,23,0.12)
+    );
+}
+
+/* RIGHT */
+
+.otp-right{
+    width:50%;
+    height:100vh;
+
+    display:flex;
+    align-items:center;
+    justify-content:center;
+
+    padding:20px;
+}
+
+/* CARD */
+
+.otp-card{
+    width:100%;
+    max-width:340px;
+
+    background:rgba(5,15,40,0.88);
+
+    border:1px solid rgba(255,255,255,0.08);
+
+    border-radius:22px;
+
+    padding:22px 18px;
+
+    position:relative;
+
+    text-align:center;
+
+    backdrop-filter:blur(8px);
+}
+
+/* DOT */
+
+.top-dot{
+    position:absolute;
+
+    top:16px;
+    right:16px;
+
+    width:8px;
+    height:8px;
+
+    border-radius:50%;
+
+    background:#00F5D4;
+}
+
+/* ICON */
+
+.shield-icon{
+    width:56px;
+    height:56px;
+
+    margin:auto;
+    margin-bottom:16px;
+
+    border-radius:50%;
+
+    border:1px solid #00F5D4;
+
+    display:flex;
+    align-items:center;
+    justify-content:center;
+
+    color:#00F5D4;
+
+    font-size:22px;
+}
+
+/* TITLE */
+
+.otp-card h2{
+    color:white;
+
+    font-size:18px;
+
+    margin-bottom:8px;
+}
+
+/* TEXT */
+
+.otp-text{
+    color:#94A3B8;
+
+    font-size:13px;
+}
+
+/* EMAIL */
+
+.email-text{
+    display:block;
+
+    margin-top:5px;
+    margin-bottom:18px;
+
+    color:white;
+
+    font-size:13px;
+    font-weight:700;
+}
+
+/* OTP INPUTS */
+
+.otp-inputs{
+    display:flex;
+    justify-content:center;
+
+    gap:6px;
+
+    margin-bottom:20px;
+}
+
+.otp-box{
+    width:42px;
+    height:48px;
+
+    border-radius:12px;
+
+    border:1px solid rgba(255,255,255,0.08);
+
+    background:#071226;
+
+    color:white;
+
+    text-align:center;
+
+    font-size:18px;
+    font-weight:700;
+
+    outline:none;
+}
+
+.otp-box:focus{
+    border-color:#00F5D4;
+}
+
+/* BUTTON */
+
+.verify-btn{
+    width:100%;
+    height:46px;
+
+    border:none;
+
+    border-radius:12px;
+
+    background:linear-gradient(
+        to right,
+        #00F5D4,
+        #4EA8FF
+    );
+
+    color:white;
+
+    font-size:15px;
+    font-weight:700;
+
+    cursor:pointer;
+}
+
+/* RESEND */
+
+.resend-section{
+    margin-top:18px;
+}
+
+/* TIMER */
+
+.timer-wrapper{
+    display:flex;
+    justify-content:center;
+    align-items:center;
+
+    gap:6px;
+
+    flex-wrap:wrap;
+}
+
+.didnt-text{
+    color:#94A3B8;
+    font-size:13px;
+}
+
+.timer-text{
+    color:#00D9FF;
+    font-size:13px;
+    font-weight:600;
+}
+
+/* LIVE NUMBER */
+
+.seconds{
+    color:#00F5D4;
+
+    font-size:15px;
+    font-weight:700;
+
+    min-width:20px;
+
+    text-align:center;
+}
+
+/* RESEND */
+
+.resend-link{
+    display:none;
+
+    margin-top:10px;
+
+    color:#00F5D4;
+
+    text-decoration:none;
+
+    font-size:14px;
+    font-weight:700;
+}
+
+/* BACK */
+
+.back-link{
+    margin-top:14px;
+}
+
+.back-link a{
+    color:#94A3B8;
+
+    text-decoration:none;
+
+    font-size:12px;
+}
+
+/* ERROR */
+
+.error-box{
+    background:rgba(255,0,0,0.08);
+
+    border:1px solid rgba(255,0,0,0.14);
+
+    color:#ffb4b4;
+
+    padding:10px;
+
+    border-radius:10px;
+
+    margin-bottom:16px;
+}
+
+/* MOBILE */
+
+.mobile-logo{
+    display:none;
+}
+
+@media(max-width:991px){
+
+    body{
+        overflow:auto;
+    }
+
+    .otp-page{
+        width:100%;
+        min-height:100vh;
+
+        justify-content:center;
+        align-items:center;
+
+        padding:110px 18px 30px;
+    }
+
+    .otp-left{
+        display:none;
+    }
+
+    .mobile-logo{
+        display:flex;
+
+        position:absolute;
+
+        top:24px;
+        left:0;
+
+        width:100%;
+
+        justify-content:center;
+    }
+
+    .mobile-logo img{
+        width:210px;
+    }
+
+    .otp-right{
+        width:100%;
+        height:auto;
+
+        padding:0;
+    }
+
+}

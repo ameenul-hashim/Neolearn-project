@@ -1,0 +1,276 @@
+={% extends 'base.html' %}
+{% load static %}
+
+{% block title %}
+
+Signup
+
+{% endblock %}
+
+{% block content %}
+
+<link rel="stylesheet" href="{% static 'accounts/css/signup.css' %}">
+
+<div class="main-container">
+
+    <!-- VIDEO BACKGROUND -->
+
+    <div class="video-container">
+
+        <video
+            autoplay
+            muted
+            loop
+            playsinline
+            class="video-bg"
+        >
+
+            <source
+                src="{% static 'accounts/videos/signup-animation.mp4' %}"
+                type="video/mp4"
+            >
+
+        </video>
+
+        <div class="video-overlay"></div>
+
+    </div>
+
+    <!-- MOBILE LOGO -->
+
+    <div class="mobile-logo">
+
+        <img
+            src="{% static 'accounts/images/neolearn-logo.png' %}"
+            alt="NeoLearn Logo"
+        >
+
+    </div>
+
+    <!-- FORM -->
+
+    <div class="form-wrapper">
+
+        <div class="signup-card">
+
+            <div class="top-dot"></div>
+
+            <!-- HEADER -->
+
+            <div class="signup-header">
+
+                <h2>
+
+                    Create Account
+
+                </h2>
+
+                <p>
+
+                    Join the AI learning revolution.
+
+                </p>
+
+            </div>
+
+            <!-- DJANGO MESSAGES -->
+
+            {% if messages %}
+
+                {% for message in messages %}
+
+                    <div class="message-box auto-hide">
+
+                        {{ message }}
+
+                    </div>
+
+                {% endfor %}
+
+            {% endif %}
+
+            <!-- FORM -->
+
+            <form
+                method="POST"
+                class="signup-form"
+                novalidate
+            >
+
+                {% csrf_token %}
+
+                <!-- USERNAME -->
+
+                <div class="input-group">
+
+                    <label>
+
+                        Username
+
+                    </label>
+
+                    <input
+                        type="text"
+                        name="username"
+                        placeholder="johndoe"
+                    >
+
+                </div>
+
+                <!-- EMAIL -->
+
+                <div class="input-group">
+
+                    <label>
+
+                        Email Address
+
+                    </label>
+
+                    <input
+                        type="email"
+                        name="email"
+                        placeholder="john@example.com"
+                    >
+
+                </div>
+
+                <!-- PASSWORD -->
+
+                <div class="input-group">
+
+                    <label>
+
+                        Password
+
+                    </label>
+
+                    <div class="password-field">
+
+                        <input
+                            type="password"
+                            name="password"
+                            id="password"
+                            placeholder="••••••••"
+                        >
+
+                        <button
+                            type="button"
+                            class="eye-btn"
+                            onclick="togglePassword('password','password-eye')"
+                        >
+
+                            <span id="password-eye">
+
+                                👁
+
+                            </span>
+
+                        </button>
+
+                    </div>
+
+                </div>
+
+                <!-- CONFIRM PASSWORD -->
+
+                <div class="input-group">
+
+                    <label>
+
+                        Confirm Password
+
+                    </label>
+
+                    <div class="password-field">
+
+                        <input
+                            type="password"
+                            name="confirm_password"
+                            id="confirm_password"
+                            placeholder="••••••••"
+                        >
+
+                        <button
+                            type="button"
+                            class="eye-btn"
+                            onclick="togglePassword('confirm_password','confirm-eye')"
+                        >
+
+                            <span id="confirm-eye">
+
+                                👁
+
+                            </span>
+
+                        </button>
+
+                    </div>
+
+                </div>
+
+                <!-- BUTTON -->
+
+                <button
+                    type="submit"
+                    class="signup-btn"
+                >
+
+                    Create Account
+
+                </button>
+
+            </form>
+
+            <!-- DIVIDER -->
+
+            <div class="divider">
+
+                <div></div>
+
+                <span>
+
+                    or
+
+                </span>
+
+                <div></div>
+
+            </div>
+
+            <!-- GOOGLE BUTTON -->
+
+            <button class="google-btn">
+
+                <img
+                    src="https://www.svgrepo.com/show/475656/google-color.svg"
+                    alt="Google"
+                >
+
+                Sign up with Google
+
+            </button>
+
+            <!-- LOGIN -->
+
+            <p class="login-text">
+
+                Already have an account?
+
+                <a href="#">
+
+                    Sign in
+
+                </a>
+
+            </p>
+
+        </div>
+
+    </div>
+
+</div>
+
+<script src="{% static 'accounts/js/signup.js' %}"></script>
+
+{% endblock %}

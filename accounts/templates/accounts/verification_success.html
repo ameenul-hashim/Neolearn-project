@@ -1,0 +1,143 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}
+
+Verification Success
+
+{% endblock %}
+
+{% block content %}
+
+<link rel="stylesheet" href="{% static 'accounts/css/verification_success.css' %}">
+
+<!-- AUTO REDIRECT -->
+
+<meta http-equiv="refresh" content="4;url=/signin/">
+
+<div class="success-page">
+
+    <!-- LEFT SIDE -->
+
+    <div class="success-left">
+
+        <video
+            autoplay
+            muted
+            loop
+            playsinline
+            class="success-video"
+        >
+
+            <source
+                src="{% static 'accounts/videos/signup-verifyemail.mp4' %}"
+                type="video/mp4"
+            >
+
+        </video>
+
+        <div class="success-overlay"></div>
+
+    </div>
+
+    <!-- MOBILE LOGO -->
+
+    <div class="mobile-logo">
+
+        <img
+            src="{% static 'accounts/images/neolearn-logo.png' %}"
+            alt="NeoLearn"
+        >
+
+    </div>
+
+    <!-- RIGHT SIDE -->
+
+    <div class="success-right">
+
+        <div class="success-card">
+
+            <div class="top-dot"></div>
+
+            <!-- SUCCESS ICON -->
+
+            <div class="success-circle">
+
+                <div class="success-check">
+
+                    ✓
+
+                </div>
+
+            </div>
+
+            <!-- TITLE -->
+
+            <h1>
+
+                Verification Successful
+
+            </h1>
+
+            <!-- TEXT -->
+
+            <p>
+
+                Your account has been verified successfully.
+                Redirecting you to Sign In page.
+
+            </p>
+
+            <!-- REDIRECT STATUS -->
+
+            <div class="redirect-status">
+
+                Redirecting in
+
+                <span id="redirect-timer">
+
+                    4
+
+                </span>
+
+                s
+
+            </div>
+
+            <!-- LOADER -->
+
+            <div class="loader">
+
+                <div class="loader-bar"></div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<script>
+
+    let seconds = 4
+
+    const timer = document.getElementById("redirect-timer")
+
+    const countdown = setInterval(()=>{
+
+        seconds--
+
+        timer.innerText = seconds
+
+        if(seconds <= 0){
+
+            clearInterval(countdown)
+
+        }
+
+    },1000)
+
+</script>
+
+{% endblock %}

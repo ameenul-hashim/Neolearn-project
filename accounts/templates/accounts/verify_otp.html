@@ -1,0 +1,223 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}
+
+Verify OTP
+
+{% endblock %}
+
+{% block content %}
+
+<link rel="stylesheet" href="{% static 'accounts/css/verify_otp.css' %}">
+
+<div class="otp-page">
+
+    <!-- LEFT SIDE -->
+
+    <div class="otp-left">
+
+        <video
+            autoplay
+            muted
+            loop
+            playsinline
+            class="otp-video"
+        >
+
+            <source
+                src="{% static 'accounts/videos/signup-verifyemail.mp4' %}"
+                type="video/mp4"
+            >
+
+        </video>
+
+        <div class="otp-overlay"></div>
+
+    </div>
+
+    <!-- MOBILE LOGO -->
+
+    <div class="mobile-logo">
+
+        <img
+            src="{% static 'accounts/images/neolearn-logo.png' %}"
+            alt="NeoLearn"
+        >
+
+    </div>
+
+    <!-- RIGHT SIDE -->
+
+    <div class="otp-right">
+
+        <div class="otp-card">
+
+            <div class="top-dot"></div>
+
+            <!-- ICON -->
+
+            <div class="shield-icon">
+
+                ✓
+
+            </div>
+
+            <!-- TITLE -->
+
+            <h2>
+
+                Verify Email
+
+            </h2>
+
+            <p class="otp-text">
+
+                Enter the verification code sent to
+
+            </p>
+
+            <!-- EMAIL -->
+
+            <span class="email-text">
+
+                {{ request.session.email }}
+
+            </span>
+
+            <!-- MESSAGES -->
+
+            {% if messages %}
+
+                {% for message in messages %}
+
+                    <div class="error-box auto-hide">
+
+                        {{ message }}
+
+                    </div>
+
+                {% endfor %}
+
+            {% endif %}
+
+            <!-- FORM -->
+
+            <form method="POST">
+
+                {% csrf_token %}
+
+                <!-- OTP BOXES -->
+
+                <div class="otp-inputs">
+
+                    <input type="text" maxlength="1" class="otp-box">
+
+                    <input type="text" maxlength="1" class="otp-box">
+
+                    <input type="text" maxlength="1" class="otp-box">
+
+                    <input type="text" maxlength="1" class="otp-box">
+
+                    <input type="text" maxlength="1" class="otp-box">
+
+                    <input type="text" maxlength="1" class="otp-box">
+
+                </div>
+
+                <!-- FINAL OTP -->
+
+                <input
+                    type="hidden"
+                    name="otp"
+                    id="final-otp"
+                >
+
+                <!-- BUTTON -->
+
+                <button
+                    type="submit"
+                    class="verify-btn"
+                >
+
+                    Verify Account
+
+                </button>
+
+            </form>
+
+            <!-- RESEND SECTION -->
+
+            <div class="resend-section">
+
+                <!-- TIMER -->
+
+                <div
+                    class="timer-wrapper"
+                    id="timer-wrapper"
+                >
+
+                    <span class="didnt-text">
+
+                        Didn’t get a code?
+
+                    </span>
+
+                    <span class="timer-text">
+
+                        Resend OTP in
+
+                    </span>
+
+                    <span
+                        class="seconds"
+                        id="timer"
+                    >
+
+                        59
+
+                    </span>
+
+                    <span class="timer-text">
+
+                        s
+
+                    </span>
+
+                </div>
+
+                <!-- RESEND BUTTON -->
+
+                <a
+                    href="{% url 'resend_otp' %}"
+                    id="resend-link"
+                    class="resend-link"
+                >
+
+                    ↻ Resend OTP
+
+                </a>
+
+            </div>
+
+            <!-- BACK -->
+
+            <div class="back-link">
+
+                <a href="{% url 'signup' %}">
+
+                    ← Back to Signup
+
+                </a>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<script src="{% static 'accounts/js/verify_otp.js' %}"></script>
+
+{% endblock %}
