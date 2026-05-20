@@ -1,19 +1,19 @@
-={% extends 'base.html' %}
+{% extends 'base.html' %}
 {% load static %}
 
 {% block title %}
-
 Signup
-
 {% endblock %}
 
 {% block content %}
 
 <link rel="stylesheet" href="{% static 'accounts/css/signup.css' %}">
 
+<link rel="stylesheet" href="{% static 'accounts/css/global-messages.css' %}">
+
 <div class="main-container">
 
-    <!-- VIDEO BACKGROUND -->
+    <!-- LEFT VIDEO SIDE -->
 
     <div class="video-container">
 
@@ -36,18 +36,7 @@ Signup
 
     </div>
 
-    <!-- MOBILE LOGO -->
-
-    <div class="mobile-logo">
-
-        <img
-            src="{% static 'accounts/images/neolearn-logo.png' %}"
-            alt="NeoLearn Logo"
-        >
-
-    </div>
-
-    <!-- FORM -->
+    <!-- RIGHT FORM SIDE -->
 
     <div class="form-wrapper">
 
@@ -73,19 +62,27 @@ Signup
 
             </div>
 
-            <!-- DJANGO MESSAGES -->
+            <!-- ERROR -->
 
-            {% if messages %}
+            {% if error %}
 
-                {% for message in messages %}
+                <div class="message-box">
 
-                    <div class="message-box auto-hide">
+                    {{ error }}
 
-                        {{ message }}
+                </div>
 
-                    </div>
+            {% endif %}
 
-                {% endfor %}
+            <!-- SUCCESS -->
+
+            {% if success %}
+
+                <div class="success-box">
+
+                    {{ success }}
+
+                </div>
 
             {% endif %}
 
@@ -137,7 +134,7 @@ Signup
 
                 <!-- PASSWORD -->
 
-                <div class="input-group">
+                <div class="input-group password-field">
 
                     <label>
 
@@ -145,36 +142,28 @@ Signup
 
                     </label>
 
-                    <div class="password-field">
+                    <input
+                        type="password"
+                        name="password"
+                        id="password"
+                        placeholder="••••••••"
+                    >
 
-                        <input
-                            type="password"
-                            name="password"
-                            id="password"
-                            placeholder="••••••••"
-                        >
+                    <button
+                        type="button"
+                        class="eye-btn"
+                        id="togglePassword"
+                    >
 
-                        <button
-                            type="button"
-                            class="eye-btn"
-                            onclick="togglePassword('password','password-eye')"
-                        >
+                        👁
 
-                            <span id="password-eye">
-
-                                👁
-
-                            </span>
-
-                        </button>
-
-                    </div>
+                    </button>
 
                 </div>
 
                 <!-- CONFIRM PASSWORD -->
 
-                <div class="input-group">
+                <div class="input-group password-field">
 
                     <label>
 
@@ -182,39 +171,28 @@ Signup
 
                     </label>
 
-                    <div class="password-field">
+                    <input
+                        type="password"
+                        name="confirm_password"
+                        id="confirmPassword"
+                        placeholder="••••••••"
+                    >
 
-                        <input
-                            type="password"
-                            name="confirm_password"
-                            id="confirm_password"
-                            placeholder="••••••••"
-                        >
+                    <button
+                        type="button"
+                        class="eye-btn"
+                        id="toggleConfirmPassword"
+                    >
 
-                        <button
-                            type="button"
-                            class="eye-btn"
-                            onclick="togglePassword('confirm_password','confirm-eye')"
-                        >
+                        👁
 
-                            <span id="confirm-eye">
-
-                                👁
-
-                            </span>
-
-                        </button>
-
-                    </div>
+                    </button>
 
                 </div>
 
                 <!-- BUTTON -->
 
-                <button
-                    type="submit"
-                    class="signup-btn"
-                >
+                <button type="submit" class="signup-btn">
 
                     Create Account
 
@@ -238,13 +216,12 @@ Signup
 
             </div>
 
-            <!-- GOOGLE BUTTON -->
+            <!-- GOOGLE -->
 
-            <button class="google-btn">
+            <button type="button" class="google-btn">
 
                 <img
                     src="https://www.svgrepo.com/show/475656/google-color.svg"
-                    alt="Google"
                 >
 
                 Sign up with Google
@@ -257,7 +234,7 @@ Signup
 
                 Already have an account?
 
-                <a href="#">
+                <a href="{% url 'signin' %}">
 
                     Sign in
 
@@ -269,8 +246,19 @@ Signup
 
     </div>
 
+    <!-- MOBILE LOGO -->
+
+    <div class="mobile-logo">
+
+        <img
+            src="{% static 'accounts/images/neolearn-logo.png' %}"
+            alt="NeoLearn Logo"
+        >
+
+    </div>
+
 </div>
 
-<script src="{% static 'accounts/js/signup.js' %}"></script>
+<script src="{% static 'accounts/js/auth-global.js' %}"></script>
 
 {% endblock %}

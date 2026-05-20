@@ -1,60 +1,16 @@
 window.addEventListener("DOMContentLoaded", () => {
 
-    /* ========================= */
-    /* OTP BOXES */
-    /* ========================= */
+    /* OTP INPUTS */
 
     const otpInputs = document.querySelectorAll(".otp-box")
 
     const finalOtp = document.getElementById("final-otp")
 
-    otpInputs.forEach((input, index) => {
 
-        /* ONLY NUMBER */
 
-        input.addEventListener("input", function () {
+    /* UPDATE OTP */
 
-            this.value = this.value.replace(/[^0-9]/g, '')
-
-            /* AUTO NEXT */
-
-            if (this.value.length === 1) {
-
-                if (index < otpInputs.length - 1) {
-
-                    otpInputs[index + 1].focus()
-
-                }
-
-            }
-
-            combineOtp()
-
-        })
-
-        /* BACKSPACE */
-
-        input.addEventListener("keydown", function (e) {
-
-            if (e.key === "Backspace" && this.value === "") {
-
-                if (index > 0) {
-
-                    otpInputs[index - 1].focus()
-
-                }
-
-            }
-
-        })
-
-    })
-
-    /* ========================= */
-    /* COMBINE OTP */
-    /* ========================= */
-
-    function combineOtp() {
+    function updateOtp() {
 
         let otp = ""
 
@@ -68,9 +24,67 @@ window.addEventListener("DOMContentLoaded", () => {
 
     }
 
-    /* ========================= */
-    /* REAL LIVE TIMER */
-    /* ========================= */
+
+
+    /* OTP EVENTS */
+
+    otpInputs.forEach((input, index) => {
+
+        /* INPUT EVENT */
+
+        input.addEventListener("input", () => {
+
+            /* ONLY NUMBERS */
+
+            input.value = input.value.replace(/\D/g, "")
+
+            /* AUTO NEXT FIELD */
+
+            if (
+
+                input.value &&
+
+                index < otpInputs.length - 1
+
+            ) {
+
+                otpInputs[index + 1].focus()
+
+            }
+
+            /* UPDATE OTP */
+
+            updateOtp()
+
+        })
+
+
+
+        /* BACKSPACE EVENT */
+
+        input.addEventListener("keydown", (e) => {
+
+            if (
+
+                e.key === "Backspace" &&
+
+                !input.value &&
+
+                index > 0
+
+            ) {
+
+                otpInputs[index - 1].focus()
+
+            }
+
+        })
+
+    })
+
+
+
+    /* TIMER */
 
     const timer = document.getElementById("timer")
 
@@ -78,68 +92,70 @@ window.addEventListener("DOMContentLoaded", () => {
 
     const timerWrapper = document.getElementById("timer-wrapper")
 
-    /* HIDE RESEND INITIALLY */
 
-    resendLink.style.display = "none"
 
-    /* START FROM 59 */
+    if (
 
-    let seconds = 59
+        timer &&
 
-    /* INITIAL DISPLAY */
+        resendLink &&
 
-    timer.textContent = seconds
+        timerWrapper
 
-    /* REAL RUNNING TIMER */
+    ) {
 
-    const timerInterval = setInterval(() => {
+        resendLink.style.display = "none"
 
-        seconds--
-
-        /* UPDATE LIVE */
+        let seconds = 59
 
         timer.textContent = seconds
 
-        /* AFTER 0 */
+        const interval = setInterval(() => {
 
-        if (seconds <= 0) {
+            seconds--
 
-            clearInterval(timerInterval)
+            timer.textContent = seconds
 
-            /* HIDE TIMER */
+            if (seconds <= 0) {
 
-            timerWrapper.style.display = "none"
+                clearInterval(interval)
 
-            /* SHOW RESEND */
+                timerWrapper.style.display = "none"
 
-            resendLink.style.display = "inline-block"
+                resendLink.style.display = "inline-block"
 
-        }
+            }
 
-    }, 1000)
+        }, 1000)
 
-    /* ========================= */
-    /* AUTO HIDE MESSAGE */
-    /* ========================= */
+    }
+
+
+
+    /* AUTO HIDE ALERTS */
 
     setTimeout(() => {
 
-        const messages = document.querySelectorAll(".auto-hide")
+        document.querySelectorAll(
 
-        messages.forEach((message) => {
+            ".message-box, .success-box, .error-box"
 
-            message.style.transition = "0.5s"
+        ).forEach((msg) => {
 
-            message.style.opacity = "0"
+            msg.style.transition = "0.4s"
+
+            msg.style.opacity = "0"
+
+            msg.style.transform = "translateY(-10px)"
 
             setTimeout(() => {
 
-                message.remove()
+                msg.remove()
 
-            }, 500)
+            }, 400)
 
         })
 
-    }, 5000)
+    }, 3000)
 
 })

@@ -1,0 +1,237 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}
+Signin
+{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'accounts/css/signin.css' %}">
+
+<link rel="stylesheet" href="{% static 'accounts/css/global-messages.css' %}">
+
+
+
+<div class="main-container">
+
+    <!-- MOBILE LOGO -->
+
+    <div class="mobile-logo">
+
+        <img
+            src="{% static 'accounts/images/neolearn-logo.png' %}"
+            alt="NeoLearn Logo"
+        >
+
+    </div>
+
+    <!-- LEFT VIDEO -->
+
+    <div class="video-container">
+
+        <video
+            autoplay
+            muted
+            loop
+            playsinline
+            class="video-bg"
+        >
+
+            <source
+                src="{% static 'accounts/videos/login-animation.mp4' %}"
+                type="video/mp4"
+            >
+
+        </video>
+
+        <div class="video-overlay"></div>
+
+    </div>
+
+    <!-- RIGHT FORM -->
+
+    <div class="form-wrapper">
+
+        <div class="signin-card">
+
+            <div class="top-dot"></div>
+
+            <!-- HEADER -->
+
+            <div class="signin-header">
+
+                <h2>
+
+                    Sign In
+
+                </h2>
+
+                <p>
+
+                    Access your AI learning workspace.
+
+                </p>
+
+            </div>
+
+            <!-- CUSTOM ERROR -->
+
+            {% if error %}
+
+                <div class="message-box">
+
+                    {{ error }}
+
+                </div>
+
+            {% endif %}
+
+            <!-- FORM -->
+
+            <form
+                method="POST"
+                class="signin-form"
+                novalidate
+            >
+
+                {% csrf_token %}
+
+                <!-- EMAIL -->
+
+                <div class="input-group">
+
+                    <label>
+
+                        Email Address
+
+                    </label>
+
+                    <div class="input-wrapper">
+
+                        <span class="input-icon">
+
+                            ✉
+
+                        </span>
+
+                        <input
+                            type="email"
+                            name="email"
+                            placeholder="john@example.com"
+                        >
+
+                    </div>
+
+                </div>
+
+                <!-- PASSWORD -->
+
+                <div class="input-group">
+
+                    <label>
+
+                        Password
+
+                    </label>
+
+                    <div class="input-wrapper">
+
+                        <span class="input-icon">
+
+                            🔒
+
+                        </span>
+
+                        <input
+                            type="password"
+                            name="password"
+                            id="password"
+                            placeholder="••••••••"
+                        >
+
+                        <span
+                            class="toggle-password"
+                            id="togglePassword"
+                        >
+
+                            👁
+
+                        </span>
+
+                    </div>
+
+                </div>
+
+                <!-- FORGOT -->
+
+                <div class="forgot-wrapper">
+
+                    <a href="#">
+
+                        Forgot password?
+
+                    </a>
+
+                </div>
+
+                <!-- BUTTON -->
+
+                <button type="submit" class="signin-btn">
+
+                    Sign In
+
+                </button>
+
+            </form>
+
+            <!-- DIVIDER -->
+
+            <div class="divider">
+
+                <div></div>
+
+                <span>
+
+                    or continue with
+
+                </span>
+
+                <div></div>
+
+            </div>
+
+            <!-- GOOGLE -->
+
+            <button type="button" class="google-btn">
+
+                <img
+                    src="https://www.svgrepo.com/show/475656/google-color.svg"
+                >
+
+                Continue with Google
+
+            </button>
+
+            <!-- SIGNUP -->
+
+            <p class="signup-text">
+
+                New to NeoLearn?
+
+                <a href="{% url 'signup' %}">
+
+                    Create account
+
+                </a>
+
+            </p>
+
+        </div>
+
+    </div>
+
+</div>
+
+<script src="{% static 'accounts/js/auth-global.js' %}"></script>
+
+{% endblock %}

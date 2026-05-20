@@ -2,22 +2,17 @@
 {% load static %}
 
 {% block title %}
-
 Verification Success
-
 {% endblock %}
 
 {% block content %}
 
 <link rel="stylesheet" href="{% static 'accounts/css/verification_success.css' %}">
-
-<!-- AUTO REDIRECT -->
+<link rel="stylesheet" href="{% static 'accounts/css/global-messages.css' %}">
 
 <meta http-equiv="refresh" content="4;url=/signin/">
 
 <div class="success-page">
-
-    <!-- LEFT SIDE -->
 
     <div class="success-left">
 
@@ -40,8 +35,6 @@ Verification Success
 
     </div>
 
-    <!-- MOBILE LOGO -->
-
     <div class="mobile-logo">
 
         <img
@@ -51,15 +44,11 @@ Verification Success
 
     </div>
 
-    <!-- RIGHT SIDE -->
-
     <div class="success-right">
 
         <div class="success-card">
 
             <div class="top-dot"></div>
-
-            <!-- SUCCESS ICON -->
 
             <div class="success-circle">
 
@@ -71,15 +60,11 @@ Verification Success
 
             </div>
 
-            <!-- TITLE -->
-
             <h1>
 
                 Verification Successful
 
             </h1>
-
-            <!-- TEXT -->
 
             <p>
 
@@ -87,8 +72,6 @@ Verification Success
                 Redirecting you to Sign In page.
 
             </p>
-
-            <!-- REDIRECT STATUS -->
 
             <div class="redirect-status">
 
@@ -103,8 +86,6 @@ Verification Success
                 s
 
             </div>
-
-            <!-- LOADER -->
 
             <div class="loader">
 

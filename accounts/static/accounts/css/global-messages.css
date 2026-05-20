@@ -1,0 +1,40 @@
+/* ERROR MESSAGE */
+
+.error-box,
+.message-box{
+    background:rgba(255,0,0,0.08);
+
+    border:1px solid rgba(255,0,0,0.14);
+
+    color:#ffb4b4;
+
+    padding:10px 12px;
+
+    border-radius:10px;
+
+    margin-bottom:16px;
+
+    font-size:13px;
+
+    transition:0.3s ease;
+}
+
+/* SUCCESS MESSAGE */
+
+.success-box{
+    background:rgba(34,197,94,0.12);
+
+    border:1px solid rgba(34,197,94,0.18);
+
+    color:#86EFAC;
+
+    padding:10px 12px;
+
+    border-radius:10px;
+
+    margin-bottom:16px;
+
+    font-size:13px;
+
+    transition:0.3s ease;
+}

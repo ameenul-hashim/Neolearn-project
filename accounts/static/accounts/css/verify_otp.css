@@ -278,21 +278,6 @@ body{
     font-size:12px;
 }
 
-/* ERROR */
-
-.error-box{
-    background:rgba(255,0,0,0.08);
-
-    border:1px solid rgba(255,0,0,0.14);
-
-    color:#ffb4b4;
-
-    padding:10px;
-
-    border-radius:10px;
-
-    margin-bottom:16px;
-}
 
 /* MOBILE */
 
@@ -342,6 +327,58 @@ body{
         height:auto;
 
         padding:0;
+    }
+
+}
+
+/* TABLET / NEST HUB DEVICES */
+
+@media(max-width:1200px){
+
+    .otp-left,
+    .success-left,
+    .video-container{
+        display:none;
+    }
+
+    .otp-right,
+    .success-right,
+    .form-wrapper{
+        width:100%;
+        height:100vh;
+
+        display:flex;
+        justify-content:center;
+        align-items:center;
+
+        padding:40px 20px;
+    }
+
+    .otp-card,
+    .success-card,
+    .signin-card,
+    .signup-card{
+        width:100%;
+        max-width:420px;
+    }
+
+    .mobile-logo{
+        display:flex;
+
+        position:absolute;
+
+        top:24px;
+        left:50%;
+
+        transform:translateX(-50%);
+
+        z-index:1000;
+    }
+
+    .mobile-logo img{
+        width:180px;
+        max-width:80%;
+        object-fit:contain;
     }
 
 }

@@ -2,18 +2,17 @@
 {% load static %}
 
 {% block title %}
-
 Verify OTP
-
 {% endblock %}
 
 {% block content %}
 
 <link rel="stylesheet" href="{% static 'accounts/css/verify_otp.css' %}">
+<link rel="stylesheet" href="{% static 'accounts/css/global-messages.css' %}">
 
 <div class="otp-page">
 
-    <!-- LEFT SIDE -->
+    <!-- LEFT VIDEO -->
 
     <div class="otp-left">
 
@@ -85,43 +84,78 @@ Verify OTP
 
             </span>
 
-            <!-- MESSAGES -->
+            <!-- ERROR -->
 
-            {% if messages %}
+            {% if error %}
 
-                {% for message in messages %}
+                <div class="error-box">
 
-                    <div class="error-box auto-hide">
+                    {{ error }}
 
-                        {{ message }}
+                </div>
 
-                    </div>
+            {% endif %}
 
-                {% endfor %}
+            <!-- SUCCESS -->
+
+            {% if success %}
+
+                <div class="success-box">
+
+                    {{ success }}
+
+                </div>
 
             {% endif %}
 
             <!-- FORM -->
 
-            <form method="POST">
+            <form
+                method="POST"
+                id="otp-form"
+            >
 
                 {% csrf_token %}
 
-                <!-- OTP BOXES -->
+                <!-- OTP INPUTS -->
 
                 <div class="otp-inputs">
 
-                    <input type="text" maxlength="1" class="otp-box">
+                    <input
+                        type="text"
+                        maxlength="1"
+                        class="otp-box"
+                    >
 
-                    <input type="text" maxlength="1" class="otp-box">
+                    <input
+                        type="text"
+                        maxlength="1"
+                        class="otp-box"
+                    >
 
-                    <input type="text" maxlength="1" class="otp-box">
+                    <input
+                        type="text"
+                        maxlength="1"
+                        class="otp-box"
+                    >
 
-                    <input type="text" maxlength="1" class="otp-box">
+                    <input
+                        type="text"
+                        maxlength="1"
+                        class="otp-box"
+                    >
 
-                    <input type="text" maxlength="1" class="otp-box">
+                    <input
+                        type="text"
+                        maxlength="1"
+                        class="otp-box"
+                    >
 
-                    <input type="text" maxlength="1" class="otp-box">
+                    <input
+                        type="text"
+                        maxlength="1"
+                        class="otp-box"
+                    >
 
                 </div>
 
@@ -133,7 +167,7 @@ Verify OTP
                     id="final-otp"
                 >
 
-                <!-- BUTTON -->
+                <!-- VERIFY BUTTON -->
 
                 <button
                     type="submit"
@@ -186,7 +220,7 @@ Verify OTP
 
                 </div>
 
-                <!-- RESEND BUTTON -->
+                <!-- RESEND LINK -->
 
                 <a
                     href="{% url 'resend_otp' %}"
@@ -219,5 +253,7 @@ Verify OTP
 </div>
 
 <script src="{% static 'accounts/js/verify_otp.js' %}"></script>
+
+<script src="{% static 'accounts/js/auth-global.js' %}"></script>
 
 {% endblock %}
