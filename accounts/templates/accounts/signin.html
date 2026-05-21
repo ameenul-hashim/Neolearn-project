@@ -6,11 +6,10 @@ Signin
 {% endblock %}
 
 {% block content %}
+
 <link rel="stylesheet" href="{% static 'accounts/css/signin.css' %}">
 
 <link rel="stylesheet" href="{% static 'accounts/css/global-messages.css' %}">
-
-
 
 <div class="main-container">
 
@@ -74,13 +73,25 @@ Signin
 
             </div>
 
-            <!-- CUSTOM ERROR -->
+            <!-- ERROR -->
 
             {% if error %}
 
                 <div class="message-box">
 
                     {{ error }}
+
+                </div>
+
+            {% endif %}
+
+            <!-- SUCCESS -->
+
+            {% if success %}
+
+                <div class="success-box">
+
+                    {{ success }}
 
                 </div>
 
@@ -96,13 +107,13 @@ Signin
 
                 {% csrf_token %}
 
-                <!-- EMAIL -->
+                <!-- USERNAME -->
 
                 <div class="input-group">
 
                     <label>
 
-                        Email Address
+                        Username
 
                     </label>
 
@@ -110,14 +121,15 @@ Signin
 
                         <span class="input-icon">
 
-                            ✉
+                            👤
 
                         </span>
 
                         <input
-                            type="email"
-                            name="email"
-                            placeholder="john@example.com"
+                            type="text"
+                            name="username"
+                            placeholder="Enter username"
+                            autocomplete="username"
                         >
 
                     </div>
@@ -147,6 +159,7 @@ Signin
                             name="password"
                             id="password"
                             placeholder="••••••••"
+                            autocomplete="current-password"
                         >
 
                         <span
@@ -162,11 +175,11 @@ Signin
 
                 </div>
 
-                <!-- FORGOT -->
+                <!-- FORGOT PASSWORD -->
 
                 <div class="forgot-wrapper">
 
-                    <a href="#">
+                    <a href="{% url 'forgot_password' %}">
 
                         Forgot password?
 
@@ -176,7 +189,10 @@ Signin
 
                 <!-- BUTTON -->
 
-                <button type="submit" class="signin-btn">
+                <button
+                    type="submit"
+                    class="signin-btn"
+                >
 
                     Sign In
 
@@ -202,10 +218,14 @@ Signin
 
             <!-- GOOGLE -->
 
-            <button type="button" class="google-btn">
+            <button
+                type="button"
+                class="google-btn"
+            >
 
                 <img
                     src="https://www.svgrepo.com/show/475656/google-color.svg"
+                    alt="Google"
                 >
 
                 Continue with Google

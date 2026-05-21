@@ -1,7 +1,5 @@
 // AUTO HIDE ALERTS
 
-// AUTO HIDE ALERTS
-
 const alerts=document.querySelectorAll(
     ".message-box, .success-box, .error-box"
 );
