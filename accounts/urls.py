@@ -1,4 +1,5 @@
 from django.urls import path
+from .oauth_views import *
 from . import views
 
 urlpatterns=[
@@ -14,4 +15,6 @@ urlpatterns=[
     path('resend-reset-otp/',views.resend_reset_otp_view,name='resend_reset_otp'),
     path('dashboard/',views.dashboard_view,name='dashboard'),
     path('logout/',views.logout_view,name='logout'),
+    path('google/signup/',google_signup,name='google_signup'),
+    path('google/signin/',google_signin,name='google_signin'),
 ]
