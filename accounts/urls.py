@@ -12,4 +12,6 @@ urlpatterns=[
     path('forgot-password-verify/',views.forgot_password_verify_view,name='forgot_password_verify'),
     path('reset-password/',views.reset_password_view,name='reset_password'),
     path('resend-reset-otp/',views.resend_reset_otp_view,name='resend_reset_otp'),
+    path('dashboard/',views.dashboard_view,name='dashboard'),
+    path('logout/',views.logout_view,name='logout'),
 ]
