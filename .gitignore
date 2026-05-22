@@ -1,0 +1,33 @@
+# PYTHON
+
+__pycache__/
+*.py[cod]
+
+# VIRTUAL ENVIRONMENT
+
+venv/
+
+# DATABASE
+
+db.sqlite3
+
+# ENV FILES
+
+.env
+
+# DJANGO STATIC BUILD
+
+staticfiles/
+
+# MEDIA FILES
+
+media/
+
+# OS FILES
+
+.DS_Store
+Thumbs.db
+
+# VSCODE
+
+.vscode/
