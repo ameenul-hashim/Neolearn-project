@@ -7,244 +7,291 @@ Signin
 
 {% block content %}
 
-<link rel="stylesheet" href="{% static 'accounts/css/signin.css' %}">
-
 <link rel="stylesheet" href="{% static 'accounts/css/global-messages.css' %}">
 
-<div class="main-container">
+<div class="w-full min-h-screen bg-[#020617] overflow-hidden">
 
-    <!-- MOBILE LOGO -->
+    <div class="flex w-full min-h-screen">
 
-    <div class="mobile-logo">
+        <!-- LEFT VIDEO SIDE -->
+        <!-- ONLY LARGE DESKTOPS -->
 
-        <img
-            src="{% static 'accounts/images/neolearn-logo.png' %}"
-            alt="NeoLearn Logo"
-        >
+        <div class="hidden 2xl:block w-1/2 h-screen relative overflow-hidden bg-black">
 
-    </div>
-
-    <!-- LEFT VIDEO -->
-
-    <div class="video-container">
-
-        <video
-            autoplay
-            muted
-            loop
-            playsinline
-            class="video-bg"
-        >
-
-            <source
-                src="{% static 'accounts/videos/login-animation.mp4' %}"
-                type="video/mp4"
+            <video
+                autoplay
+                muted
+                loop
+                playsinline
+                class="w-full h-full object-cover object-center"
             >
 
-        </video>
+                <source
+                    src="{% static 'accounts/videos/login-animation.mp4' %}"
+                    type="video/mp4"
+                >
 
-        <div class="video-overlay"></div>
+            </video>
 
-    </div>
+            <!-- OVERLAY -->
 
-    <!-- RIGHT FORM -->
+            <div class="absolute inset-0 bg-gradient-to-b from-[#020617]/5 to-[#020617]/15 z-10"></div>
 
-    <div class="form-wrapper">
+        </div>
 
-        <div class="signin-card">
+        <!-- RIGHT FORM SIDE -->
 
-            <div class="top-dot"></div>
+        <div class="w-full 2xl:w-1/2 min-h-screen flex items-center justify-center px-4 sm:px-6 lg:px-8 py-10 bg-[#020617] relative z-20 overflow-y-auto">
 
-            <!-- HEADER -->
+            <div class="w-full flex flex-col items-center">
 
-            <div class="signin-header">
+                <!-- MOBILE/TABLET LOGO -->
 
-                <h2>
+                <div class="2xl:hidden w-full flex justify-center mb-7">
 
-                    Sign In
-
-                </h2>
-
-                <p>
-
-                    Access your AI learning workspace.
-
-                </p>
-
-            </div>
-
-            <!-- ERROR -->
-
-            {% if error %}
-
-                <div class="message-box">
-
-                    {{ error }}
+                    <img
+                        src="{% static 'accounts/images/neolearn-logo.png' %}"
+                        alt="NeoLearn Logo"
+                        class="w-[140px] sm:w-[160px] object-contain"
+                    >
 
                 </div>
 
-            {% endif %}
+                <!-- SIGNIN CARD -->
 
-            <!-- SUCCESS -->
+                <div class="relative w-full max-w-sm rounded-[26px] border border-white/10 bg-[rgba(8,15,30,0.30)] backdrop-blur-[24px] px-[22px] py-[22px] shadow-[0_10px_35px_rgba(0,0,0,0.22)] overflow-hidden">
 
-            {% if success %}
+                    <!-- INNER LIGHT -->
 
-                <div class="success-box">
+                    <div class="absolute inset-0 bg-gradient-to-br from-white/[0.03] to-white/[0.01] pointer-events-none"></div>
 
-                    {{ success }}
+                    <!-- CYAN GLOW -->
 
-                </div>
+                    <div class="absolute -top-[80px] -right-[80px] w-[180px] h-[180px] bg-cyan-400/10 rounded-full blur-3xl"></div>
 
-            {% endif %}
+                    <!-- TOP DOT -->
 
-            <!-- FORM -->
+                    <div class="absolute top-[18px] right-[18px] w-2 h-2 rounded-full bg-cyan-400 shadow-[0_0_12px_#22D3EE]"></div>
 
-            <form
-                method="POST"
-                class="signin-form"
-                novalidate
-            >
+                    <!-- HEADER -->
 
-                {% csrf_token %}
+                    <div class="relative z-10 mb-5">
 
-                <!-- USERNAME -->
+                        <h2 class="text-white text-[30px] font-bold mb-1">
 
-                <div class="input-group">
+                            Sign In
 
-                    <label>
+                        </h2>
 
-                        Username
+                        <p class="text-[#94A3B8] text-[13px]">
 
-                    </label>
+                            Access your AI learning workspace.
 
-                    <div class="input-wrapper">
-
-                        <span class="input-icon">
-
-                            👤
-
-                        </span>
-
-                        <input
-                            type="text"
-                            name="username"
-                            placeholder="Enter username"
-                            autocomplete="username"
-                        >
+                        </p>
 
                     </div>
 
-                </div>
+                    <!-- ERROR -->
 
-                <!-- PASSWORD -->
+                    {% if error %}
 
-                <div class="input-group">
+                        <div class="message-box mb-4">
 
-                    <label>
+                            {{ error }}
 
-                        Password
+                        </div>
 
-                    </label>
+                    {% endif %}
 
-                    <div class="input-wrapper">
+                    <!-- SUCCESS -->
 
-                        <span class="input-icon">
+                    {% if success %}
 
-                            🔒
+                        <div class="success-box mb-4">
+
+                            {{ success }}
+
+                        </div>
+
+                    {% endif %}
+
+                    <!-- FORM -->
+
+                    <form
+                        method="POST"
+                        class="relative z-10 flex flex-col gap-[14px]"
+                        novalidate
+                    >
+
+                        {% csrf_token %}
+
+                        <!-- USERNAME -->
+
+                        <div>
+
+                            <label class="block mb-[7px] text-[#E2E8F0] text-[13px] font-medium">
+
+                                Username
+
+                            </label>
+
+                            <div class="relative flex items-center">
+
+                                <!-- ICON -->
+
+                                <span class="absolute left-4 text-[#94A3B8] text-[16px] z-10">
+
+                                    👤
+
+                                </span>
+
+                                <!-- INPUT -->
+
+                                <input
+                                    type="text"
+                                    name="username"
+                                    placeholder="Enter username"
+                                    autocomplete="username"
+                                    class="w-full h-[50px] rounded-[14px] border border-white/10 bg-[rgba(15,23,42,0.35)] backdrop-blur-[12px] pl-[46px] pr-[16px] text-white text-[13px] outline-none transition duration-300 placeholder:text-[#94A3B8] focus:border-cyan-400 focus:shadow-[0_0_12px_rgba(34,211,238,0.14)]"
+                                >
+
+                            </div>
+
+                        </div>
+
+                        <!-- PASSWORD -->
+
+                        <div>
+
+                            <label class="block mb-[7px] text-[#E2E8F0] text-[13px] font-medium">
+
+                                Password
+
+                            </label>
+
+                            <div class="relative flex items-center">
+
+                                <!-- LOCK ICON -->
+
+                                <span class="absolute left-4 text-[#94A3B8] text-[16px] z-10">
+
+                                    🔒
+
+                                </span>
+
+                                <!-- INPUT -->
+
+                                <input
+                                    type="password"
+                                    name="password"
+                                    id="password"
+                                    placeholder="••••••••"
+                                    autocomplete="current-password"
+                                    class="w-full h-[50px] rounded-[14px] border border-white/10 bg-[rgba(15,23,42,0.35)] backdrop-blur-[12px] pl-[46px] pr-[52px] text-white text-[13px] outline-none transition duration-300 placeholder:text-[#94A3B8] focus:border-cyan-400 focus:shadow-[0_0_12px_rgba(34,211,238,0.14)]"
+                                >
+
+                                <!-- PASSWORD TOGGLE -->
+
+                                <button
+                                    type="button"
+                                    id="togglePassword"
+                                    class="absolute right-4 flex items-center justify-center transition-all duration-300 hover:scale-110"
+                                >
+
+                                    <img
+                                        id="passwordEyeIcon"
+                                        src="{% static 'accounts/images/eye.png' %}"
+                                        alt="Toggle Password"
+                                        class="w-[18px] h-[18px] opacity-70 hover:opacity-100 transition-all duration-300"
+                                    >
+
+                                </button>
+
+                            </div>
+
+                        </div>
+
+                        <!-- FORGOT PASSWORD -->
+
+                        <div class="flex justify-end">
+
+                            <a
+                                href="{% url 'forgot_password' %}"
+                                class="text-cyan-400 text-[12px] no-underline hover:text-cyan-300 transition duration-300"
+                            >
+
+                                Forgot password?
+
+                            </a>
+
+                        </div>
+
+                        <!-- BUTTON -->
+
+                        <button
+                            type="submit"
+                            class="w-full h-[50px] rounded-[14px] border-none bg-gradient-to-r from-[#1DE9D6] via-[#22D3EE] to-[#4F8CFF] text-white text-[14px] font-bold transition duration-300 hover:-translate-y-[2px] hover:shadow-[0_8px_18px_rgba(34,211,238,0.18)]"
+                        >
+
+                            Sign In
+
+                        </button>
+
+                    </form>
+
+                    <!-- DIVIDER -->
+
+                    <div class="relative z-10 flex items-center gap-[12px] my-[20px]">
+
+                        <div class="flex-1 h-px bg-white/10"></div>
+
+                        <span class="text-[#94A3B8] text-[12px]">
+
+                            or continue with
 
                         </span>
 
-                        <input
-                            type="password"
-                            name="password"
-                            id="password"
-                            placeholder="••••••••"
-                            autocomplete="current-password"
-                        >
-
-                        <span
-                            class="toggle-password"
-                            id="togglePassword"
-                        >
-
-                            👁
-
-                        </span>
+                        <div class="flex-1 h-px bg-white/10"></div>
 
                     </div>
 
+                    <!-- GOOGLE BUTTON -->
+
+                    <button
+                        type="button"
+                        class="relative z-10 w-full h-[50px] rounded-[14px] border border-white/10 bg-[rgba(15,23,42,0.35)] backdrop-blur-[12px] text-white text-[14px] font-semibold flex items-center justify-center gap-3 transition duration-300 hover:bg-[rgba(15,23,42,0.50)]"
+                    >
+
+                        <img
+                            src="https://www.svgrepo.com/show/475656/google-color.svg"
+                            alt="Google"
+                            class="w-5 h-5"
+                        >
+
+                        Continue with Google
+
+                    </button>
+
+                    <!-- SIGNUP -->
+
+                    <p class="relative z-10 mt-5 text-center text-[#94A3B8] text-[13px]">
+
+                        New to NeoLearn?
+
+                        <a
+                            href="{% url 'signup' %}"
+                            class="text-cyan-400 no-underline font-semibold hover:text-cyan-300 transition duration-300"
+                        >
+
+                            Create account
+
+                        </a>
+
+                    </p>
+
                 </div>
-
-                <!-- FORGOT PASSWORD -->
-
-                <div class="forgot-wrapper">
-
-                    <a href="{% url 'forgot_password' %}">
-
-                        Forgot password?
-
-                    </a>
-
-                </div>
-
-                <!-- BUTTON -->
-
-                <button
-                    type="submit"
-                    class="signin-btn"
-                >
-
-                    Sign In
-
-                </button>
-
-            </form>
-
-            <!-- DIVIDER -->
-
-            <div class="divider">
-
-                <div></div>
-
-                <span>
-
-                    or continue with
-
-                </span>
-
-                <div></div>
 
             </div>
-
-            <!-- GOOGLE -->
-
-            <button
-                type="button"
-                class="google-btn"
-            >
-
-                <img
-                    src="https://www.svgrepo.com/show/475656/google-color.svg"
-                    alt="Google"
-                >
-
-                Continue with Google
-
-            </button>
-
-            <!-- SIGNUP -->
-
-            <p class="signup-text">
-
-                New to NeoLearn?
-
-                <a href="{% url 'signup' %}">
-
-                    Create account
-
-                </a>
-
-            </p>
 
         </div>
 

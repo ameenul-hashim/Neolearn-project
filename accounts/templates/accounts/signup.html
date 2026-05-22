@@ -7,253 +7,333 @@ Signup
 
 {% block content %}
 
-<link rel="stylesheet" href="{% static 'accounts/css/signup.css' %}">
-
 <link rel="stylesheet" href="{% static 'accounts/css/global-messages.css' %}">
 
-<div class="main-container">
+<div class="w-full min-h-screen bg-[#020617] overflow-hidden">
 
-    <!-- LEFT VIDEO SIDE -->
+    <div class="flex w-full min-h-screen">
 
-    <div class="video-container">
+        <!-- LEFT VIDEO SIDE -->
+        <!-- LARGE DEVICES ONLY -->
 
-        <video
-            autoplay
-            muted
-            loop
-            playsinline
-            class="video-bg"
-        >
+        <div class="hidden xl:block w-1/2 h-screen relative overflow-hidden bg-black">
 
-            <source
-                src="{% static 'accounts/videos/signup-animation.mp4' %}"
-                type="video/mp4"
+            <!-- VIDEO -->
+
+            <video
+                autoplay
+                muted
+                loop
+                playsinline
+                class="w-full h-full object-cover object-center"
             >
 
-        </video>
-
-        <div class="video-overlay"></div>
-
-    </div>
-
-    <!-- RIGHT FORM SIDE -->
-
-    <div class="form-wrapper">
-
-        <div class="signup-card">
-
-            <div class="top-dot"></div>
-
-            <!-- HEADER -->
-
-            <div class="signup-header">
-
-                <h2>
-
-                    Create Account
-
-                </h2>
-
-                <p>
-
-                    Join the AI learning revolution.
-
-                </p>
-
-            </div>
-
-            <!-- ERROR -->
-
-            {% if error %}
-
-                <div class="message-box">
-
-                    {{ error }}
-
-                </div>
-
-            {% endif %}
-
-            <!-- SUCCESS -->
-
-            {% if success %}
-
-                <div class="success-box">
-
-                    {{ success }}
-
-                </div>
-
-            {% endif %}
-
-            <!-- FORM -->
-
-            <form
-                method="POST"
-                class="signup-form"
-                novalidate
-            >
-
-                {% csrf_token %}
-
-                <!-- USERNAME -->
-
-                <div class="input-group">
-
-                    <label>
-
-                        Username
-
-                    </label>
-
-                    <input
-                        type="text"
-                        name="username"
-                        placeholder="johndoe"
-                    >
-
-                </div>
-
-                <!-- EMAIL -->
-
-                <div class="input-group">
-
-                    <label>
-
-                        Email Address
-
-                    </label>
-
-                    <input
-                        type="email"
-                        name="email"
-                        placeholder="john@example.com"
-                    >
-
-                </div>
-
-                <!-- PASSWORD -->
-
-                <div class="input-group password-field">
-
-                    <label>
-
-                        Password
-
-                    </label>
-
-                    <input
-                        type="password"
-                        name="password"
-                        id="password"
-                        placeholder="••••••••"
-                    >
-
-                    <button
-                        type="button"
-                        class="eye-btn"
-                        id="togglePassword"
-                    >
-
-                        👁
-
-                    </button>
-
-                </div>
-
-                <!-- CONFIRM PASSWORD -->
-
-                <div class="input-group password-field">
-
-                    <label>
-
-                        Confirm Password
-
-                    </label>
-
-                    <input
-                        type="password"
-                        name="confirm_password"
-                        id="confirmPassword"
-                        placeholder="••••••••"
-                    >
-
-                    <button
-                        type="button"
-                        class="eye-btn"
-                        id="toggleConfirmPassword"
-                    >
-
-                        👁
-
-                    </button>
-
-                </div>
-
-                <!-- BUTTON -->
-
-                <button type="submit" class="signup-btn">
-
-                    Create Account
-
-                </button>
-
-            </form>
-
-            <!-- DIVIDER -->
-
-            <div class="divider">
-
-                <div></div>
-
-                <span>
-
-                    or
-
-                </span>
-
-                <div></div>
-
-            </div>
-
-            <!-- GOOGLE -->
-
-            <button type="button" class="google-btn">
-
-                <img
-                    src="https://www.svgrepo.com/show/475656/google-color.svg"
+                <source
+                    src="{% static 'accounts/videos/signup-animation.mp4' %}"
+                    type="video/mp4"
                 >
 
-                Sign up with Google
+            </video>
 
-            </button>
+            <!-- OVERLAY -->
 
-            <!-- LOGIN -->
-
-            <p class="login-text">
-
-                Already have an account?
-
-                <a href="{% url 'signin' %}">
-
-                    Sign in
-
-                </a>
-
-            </p>
+            <div class="absolute inset-0 bg-gradient-to-b from-[#020617]/5 to-[#020617]/15 z-10"></div>
 
         </div>
 
-    </div>
+        <!-- RIGHT FORM SIDE -->
 
-    <!-- MOBILE LOGO -->
+        <div class="w-full xl:w-1/2 min-h-screen flex items-center justify-center px-4 sm:px-6 lg:px-8 py-10 bg-[#020617] relative z-20 overflow-y-auto">
 
-    <div class="mobile-logo">
+            <div class="w-full flex flex-col items-center">
 
-        <img
-            src="{% static 'accounts/images/neolearn-logo.png' %}"
-            alt="NeoLearn Logo"
-        >
+                <!-- MOBILE / TABLET LOGO -->
+
+                <div class="xl:hidden w-full flex justify-center mb-7">
+
+                    <img
+                        src="{% static 'accounts/images/neolearn-logo.png' %}"
+                        alt="NeoLearn Logo"
+                        class="w-[140px] sm:w-[160px] object-contain"
+                    >
+
+                </div>
+
+                <!-- CARD -->
+
+                <div class="relative w-full max-w-[360px] rounded-[26px] border border-white/10 bg-[rgba(8,15,30,0.30)] backdrop-blur-[24px] px-[22px] py-[22px] shadow-[0_10px_35px_rgba(0,0,0,0.22)] overflow-hidden">
+
+                    <!-- INNER LIGHT -->
+
+                    <div class="absolute inset-0 bg-gradient-to-br from-white/[0.03] to-white/[0.01] pointer-events-none"></div>
+
+                    <!-- CYAN GLOW -->
+
+                    <div class="absolute -top-[80px] -right-[80px] w-[180px] h-[180px] bg-cyan-400/10 rounded-full blur-3xl"></div>
+
+                    <!-- TOP DOT -->
+
+                    <div class="absolute top-[18px] right-[18px] w-2 h-2 rounded-full bg-cyan-400 shadow-[0_0_12px_#22D3EE]"></div>
+
+                    <!-- HEADER -->
+
+                    <div class="relative z-10 mb-4">
+
+                        <h2 class="text-[#F8FAFC] text-[27px] font-bold mb-1">
+
+                            Create Account
+
+                        </h2>
+
+                        <p class="text-[#CBD5E1] text-[12px] leading-[1.5]">
+
+                            Join the AI learning revolution.
+
+                        </p>
+
+                    </div>
+
+                    <!-- ERROR -->
+
+                    {% if error %}
+
+                        <div class="message-box mb-4">
+
+                            {{ error }}
+
+                        </div>
+
+                    {% endif %}
+
+                    <!-- SUCCESS -->
+
+                    {% if success %}
+
+                        <div class="success-box mb-4">
+
+                            {{ success }}
+
+                        </div>
+
+                    {% endif %}
+
+                    <!-- FORM -->
+
+                    <form
+                        method="POST"
+                        class="relative z-10 flex flex-col gap-[11px]"
+                        novalidate
+                    >
+
+                        {% csrf_token %}
+
+                        <!-- USERNAME -->
+
+                        <div class="w-full">
+
+                            <label class="block mb-[6px] text-[#F1F5F9] text-[12px] font-medium">
+
+                                Username
+
+                            </label>
+
+                            <input
+                                type="text"
+                                name="username"
+                                placeholder="johndoe"
+                                class="w-full h-[46px] rounded-[12px] border border-white/10 bg-[rgba(15,23,42,0.35)] backdrop-blur-[12px] px-[15px] text-white text-[12px] outline-none transition duration-300 placeholder:text-[#94A3B8] focus:border-cyan-400 focus:bg-[rgba(15,23,42,0.45)] focus:shadow-[0_0_12px_rgba(34,211,238,0.14)]"
+                            >
+
+                        </div>
+
+                        <!-- EMAIL -->
+
+                        <div class="w-full">
+
+                            <label class="block mb-[6px] text-[#F1F5F9] text-[12px] font-medium">
+
+                                Email Address
+
+                            </label>
+
+                            <input
+                                type="email"
+                                name="email"
+                                placeholder="john@example.com"
+                                class="w-full h-[46px] rounded-[12px] border border-white/10 bg-[rgba(15,23,42,0.35)] backdrop-blur-[12px] px-[15px] text-white text-[12px] outline-none transition duration-300 placeholder:text-[#94A3B8] focus:border-cyan-400 focus:bg-[rgba(15,23,42,0.45)] focus:shadow-[0_0_12px_rgba(34,211,238,0.14)]"
+                            >
+
+                        </div>
+
+                        <!-- PASSWORD -->
+
+                        <div class="relative flex flex-col">
+
+                            <label class="block mb-[6px] text-[#F1F5F9] text-[12px] font-medium">
+
+                                Password
+
+                            </label>
+
+                            <input
+                                type="password"
+                                name="password"
+                                id="password"
+                                placeholder="••••••••"
+                                class="w-full h-[46px] rounded-[12px] border border-white/10 bg-[rgba(15,23,42,0.35)] backdrop-blur-[12px] px-[15px] pr-[50px] text-white text-[12px] outline-none transition duration-300 placeholder:text-[#94A3B8] focus:border-cyan-400 focus:bg-[rgba(15,23,42,0.45)] focus:shadow-[0_0_12px_rgba(34,211,238,0.14)]"
+                            >
+
+                            <button
+                                type="button"
+                                id="togglePassword"
+                                class="absolute right-4 bottom-[12px] text-[#94A3B8] hover:text-cyan-400 transition duration-300"
+                            >
+
+                                <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke-width="1.8"
+                                    stroke="currentColor"
+                                    class="w-[18px] h-[18px]"
+                                >
+
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.964-7.178z"
+                                    />
+
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                                    />
+
+                                </svg>
+
+                            </button>
+
+                        </div>
+
+                        <!-- CONFIRM PASSWORD -->
+
+                        <div class="relative flex flex-col">
+
+                            <label class="block mb-[6px] text-[#F1F5F9] text-[12px] font-medium">
+
+                                Confirm Password
+
+                            </label>
+
+                            <input
+                                type="password"
+                                name="confirm_password"
+                                id="confirmPassword"
+                                placeholder="••••••••"
+                                class="w-full h-[46px] rounded-[12px] border border-white/10 bg-[rgba(15,23,42,0.35)] backdrop-blur-[12px] px-[15px] pr-[50px] text-white text-[12px] outline-none transition duration-300 placeholder:text-[#94A3B8] focus:border-cyan-400 focus:bg-[rgba(15,23,42,0.45)] focus:shadow-[0_0_12px_rgba(34,211,238,0.14)]"
+                            >
+
+                            <button
+                                type="button"
+                                id="toggleConfirmPassword"
+                                class="absolute right-4 bottom-[12px] text-[#94A3B8] hover:text-cyan-400 transition duration-300"
+                            >
+
+                                <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke-width="1.8"
+                                    stroke="currentColor"
+                                    class="w-[18px] h-[18px]"
+                                >
+
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.964-7.178z"
+                                    />
+
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                                    />
+
+                                </svg>
+
+                            </button>
+
+                        </div>
+
+                        <!-- BUTTON -->
+
+                        <button
+                            type="submit"
+                            class="w-full h-[46px] rounded-[12px] mt-[2px] bg-gradient-to-r from-[#1DE9D6] via-[#22D3EE] to-[#4F8CFF] text-white text-[13px] font-bold transition duration-300 hover:-translate-y-[2px] hover:shadow-[0_8px_18px_rgba(34,211,238,0.18)]"
+                        >
+
+                            Create Account
+
+                        </button>
+
+                    </form>
+
+                    <!-- DIVIDER -->
+
+                    <div class="relative z-10 flex items-center gap-[10px] my-[14px]">
+
+                        <div class="flex-1 h-px bg-white/10"></div>
+
+                        <span class="text-[#CBD5E1] text-[12px]">
+
+                            or
+
+                        </span>
+
+                        <div class="flex-1 h-px bg-white/10"></div>
+
+                    </div>
+
+                    <!-- GOOGLE -->
+
+                    <button
+                        type="button"
+                        class="relative z-10 w-full h-[46px] rounded-[12px] border border-white/10 bg-[rgba(15,23,42,0.35)] backdrop-blur-[12px] text-white text-[13px] font-semibold flex items-center justify-center gap-2 transition duration-300 hover:bg-[rgba(15,23,42,0.50)]"
+                    >
+
+                        <img
+                            src="https://www.svgrepo.com/show/475656/google-color.svg"
+                            class="w-4 h-4"
+                        >
+
+                        Sign up with Google
+
+                    </button>
+
+                    <!-- LOGIN -->
+
+                    <p class="relative z-10 mt-[14px] text-center text-[#CBD5E1] text-[12px]">
+
+                        Already have an account?
+
+                        <a
+                            href="{% url 'signin' %}"
+                            class="text-cyan-400 font-semibold no-underline"
+                        >
+
+                            Sign in
+
+                        </a>
+
+                    </p>
+
+                </div>
+
+            </div>
+
+        </div>
 
     </div>
 

@@ -17,10 +17,27 @@ def signup_view(request):
 
     if request.method == 'POST':
 
-        username=request.POST.get('username')
-        email=request.POST.get('email')
-        password=request.POST.get('password')
-        confirm_password=request.POST.get('confirm_password')
+        username=request.POST.get(
+            'username',
+            ''
+        ).strip()
+
+        email=request.POST.get(
+            'email',
+            ''
+        ).strip().lower()
+
+        password=request.POST.get(
+            'password',
+            ''
+        )
+
+        confirm_password=request.POST.get(
+            'confirm_password',
+            ''
+        )
+
+        # EMPTY VALIDATION
 
         if not username or not email or not password or not confirm_password:
 
@@ -32,7 +49,11 @@ def signup_view(request):
                 }
             )
 
-        if User.objects.filter(username=username).exists():
+        # USERNAME EXISTS
+
+        if User.objects.filter(
+            username=username
+        ).exists():
 
             return render(
                 request,
@@ -41,6 +62,8 @@ def signup_view(request):
                     'error':'Username already exists'
                 }
             )
+
+        # EMAIL FORMAT VALIDATION
 
         try:
 
@@ -52,11 +75,38 @@ def signup_view(request):
                 request,
                 'accounts/signup.html',
                 {
-                    'error':'Invalid email format'
+                    'error':'Enter a valid email address'
                 }
             )
 
-        if User.objects.filter(email=email).exists():
+        # STRICT EMAIL DOMAIN VALIDATION
+
+        valid_domains=[
+
+            'gmail.com',
+            'yahoo.com',
+            'outlook.com',
+            'hotmail.com',
+            'icloud.com'
+        ]
+
+        email_domain=email.split('@')[-1].lower()
+
+        if email_domain not in valid_domains:
+
+            return render(
+                request,
+                'accounts/signup.html',
+                {
+                    'error':'Enter a valid email provider'
+                }
+            )
+
+        # EMAIL EXISTS
+
+        if User.objects.filter(
+            email=email
+        ).exists():
 
             return render(
                 request,
@@ -65,6 +115,8 @@ def signup_view(request):
                     'error':'Email already exists'
                 }
             )
+
+        # PASSWORD MATCH
 
         if password != confirm_password:
 
@@ -76,6 +128,8 @@ def signup_view(request):
                 }
             )
 
+        # PASSWORD LENGTH
+
         if len(password) < 8:
 
             return render(
@@ -85,6 +139,8 @@ def signup_view(request):
                     'error':'Password must contain at least 8 characters'
                 }
             )
+
+        # UPPERCASE CHECK
 
         if not re.search(r'[A-Z]',password):
 
@@ -96,6 +152,8 @@ def signup_view(request):
                 }
             )
 
+        # LOWERCASE CHECK
+
         if not re.search(r'[a-z]',password):
 
             return render(
@@ -105,6 +163,8 @@ def signup_view(request):
                     'error':'Password must contain at least one lowercase letter'
                 }
             )
+
+        # NUMBER CHECK
 
         if not re.search(r'[0-9]',password):
 
@@ -116,6 +176,8 @@ def signup_view(request):
                 }
             )
 
+        # SPECIAL CHARACTER CHECK
+
         if not re.search(r'[@$!%*?&]',password):
 
             return render(
@@ -126,6 +188,8 @@ def signup_view(request):
                 }
             )
 
+        # SAVE TEMP USER
+
         request.session['temp_user']={
 
             'username':username,
@@ -133,12 +197,16 @@ def signup_view(request):
             'password':password
         }
 
+        # GENERATE OTP
+
         otp=str(random.randint(100000,999999))
 
         request.session['otp']=otp
         request.session['email']=email
 
         request.session['otp_success']='OTP sent successfully to your email'
+
+        # SEND EMAIL
 
         send_mail(
 
@@ -236,27 +304,6 @@ def verify_otp_view(request):
 
 def verification_success_view(request):
 
-    google_signup=request.session.get(
-        'google_signup'
-    )
-
-    # GOOGLE SIGNUP USERS
-
-    if google_signup:
-
-        logout(request)
-
-        response=render(
-            request,
-            'accounts/verification_success.html'
-        )
-
-        response.delete_cookie('sessionid')
-
-        response.delete_cookie('csrftoken')
-
-        return response
-
     return render(
         request,
         'accounts/verification_success.html'
@@ -307,8 +354,15 @@ def signin_view(request):
 
     if request.method == 'POST':
 
-        username=request.POST.get('username')
-        password=request.POST.get('password')
+        username=request.POST.get(
+            'username',
+            ''
+        ).strip()
+
+        password=request.POST.get(
+            'password',
+            ''
+        )
 
         if not username or not password:
 
@@ -384,8 +438,15 @@ def forgot_password_view(request):
 
     if request.method == 'POST':
 
-        username=request.POST.get('username')
-        email=request.POST.get('email')
+        username=request.POST.get(
+            'username',
+            ''
+        ).strip()
+
+        email=request.POST.get(
+            'email',
+            ''
+        ).strip().lower()
 
         if not username or not email:
 
@@ -408,7 +469,29 @@ def forgot_password_view(request):
                 request,
                 'accounts/forgot_password.html',
                 {
-                    'error':'Invalid email format',
+                    'error':'Enter a valid email address',
+                    'success':success
+                }
+            )
+
+        valid_domains=[
+
+            'gmail.com',
+            'yahoo.com',
+            'outlook.com',
+            'hotmail.com',
+            'icloud.com'
+        ]
+
+        email_domain=email.split('@')[-1].lower()
+
+        if email_domain not in valid_domains:
+
+            return render(
+                request,
+                'accounts/forgot_password.html',
+                {
+                    'error':'Enter a valid email provider',
                     'success':success
                 }
             )
@@ -430,7 +513,7 @@ def forgot_password_view(request):
                 }
             )
 
-        if user.email != email:
+        if user.email.lower() != email:
 
             return render(
                 request,
@@ -581,10 +664,14 @@ def reset_password_view(request):
 
     if request.method == 'POST':
 
-        password=request.POST.get('password')
+        password=request.POST.get(
+            'password',
+            ''
+        )
 
         confirm_password=request.POST.get(
-            'confirm_password'
+            'confirm_password',
+            ''
         )
 
         if not password or not confirm_password:
@@ -691,20 +778,6 @@ def reset_password_view(request):
 @login_required(login_url='/signin/')
 @never_cache
 def dashboard_view(request):
-
-    google_signup=request.session.get(
-        'google_signup'
-    )
-
-    # BLOCK NEW GOOGLE SIGNUP USERS
-
-    if google_signup:
-
-        logout(request)
-
-        request.session.flush()
-
-        return redirect('/signin/')
 
     return render(
         request,

@@ -7,89 +7,132 @@ Verification Success
 
 {% block content %}
 
-<link rel="stylesheet" href="{% static 'accounts/css/verification_success.css' %}">
 <link rel="stylesheet" href="{% static 'accounts/css/global-messages.css' %}">
 
 <meta http-equiv="refresh" content="4;url=/signin/">
 
-<div class="success-page">
+<div class="w-full min-h-screen bg-[#020617] overflow-hidden">
 
-    <div class="success-left">
+    <div class="flex w-full min-h-screen">
 
-        <video
-            autoplay
-            muted
-            loop
-            playsinline
-            class="success-video"
-        >
+        <!-- LEFT VIDEO SIDE -->
+        <!-- ONLY LARGE DESKTOPS -->
 
-            <source
-                src="{% static 'accounts/videos/signup-verifyemail.mp4' %}"
-                type="video/mp4"
+        <div class="hidden 2xl:block w-1/2 h-screen relative overflow-hidden bg-black">
+
+            <video
+                autoplay
+                muted
+                loop
+                playsinline
+                class="w-full h-full object-cover object-center"
             >
 
-        </video>
+                <source
+                    src="{% static 'accounts/videos/signup-verifyemail.mp4' %}"
+                    type="video/mp4"
+                >
 
-        <div class="success-overlay"></div>
+            </video>
 
-    </div>
+            <!-- OVERLAY -->
 
-    <div class="mobile-logo">
+            <div class="absolute inset-0 bg-gradient-to-b from-[#020617]/5 to-[#020617]/15 z-10"></div>
 
-        <img
-            src="{% static 'accounts/images/neolearn-logo.png' %}"
-            alt="NeoLearn"
-        >
+        </div>
 
-    </div>
+        <!-- RIGHT SIDE -->
 
-    <div class="success-right">
+        <div class="w-full 2xl:w-1/2 min-h-screen flex items-center justify-center px-4 sm:px-6 lg:px-8 py-10 bg-[#020617] relative z-20 overflow-y-auto">
 
-        <div class="success-card">
+            <div class="w-full flex flex-col items-center">
 
-            <div class="top-dot"></div>
+                <!-- MOBILE/TABLET LOGO -->
 
-            <div class="success-circle">
+                <div class="2xl:hidden w-full flex justify-center mb-7">
 
-                <div class="success-check">
-
-                    ✓
+                    <img
+                        src="{% static 'accounts/images/neolearn-logo.png' %}"
+                        alt="NeoLearn"
+                        class="w-[150px] sm:w-[170px] object-contain"
+                    >
 
                 </div>
 
-            </div>
+                <!-- SUCCESS CARD -->
 
-            <h1>
+                <div class="relative w-full max-w-sm rounded-[24px] border border-white/10 bg-[rgba(5,15,40,0.88)] backdrop-blur-[10px] px-6 py-9 text-center shadow-[0_10px_35px_rgba(0,0,0,0.22)] overflow-hidden">
 
-                Verification Successful
+                    <!-- GLOW -->
 
-            </h1>
+                    <div class="absolute -top-[90px] -right-[90px] w-[200px] h-[200px] bg-cyan-400/10 rounded-full blur-3xl"></div>
 
-            <p>
+                    <!-- TOP DOT -->
 
-                Your account has been verified successfully.
-                Redirecting you to Sign In page.
+                    <div class="absolute top-[18px] right-[18px] w-2 h-2 rounded-full bg-[#00F5D4] shadow-[0_0_12px_#00F5D4]"></div>
 
-            </p>
+                    <!-- SUCCESS CIRCLE -->
 
-            <div class="redirect-status">
+                    <div class="relative z-10 w-[90px] h-[90px] mx-auto mb-6 rounded-full border-2 border-[#00F5D4] flex items-center justify-center animate-pulse shadow-[0_0_25px_rgba(0,245,212,0.18)]">
 
-                Redirecting in
+                        <div class="text-[#00F5D4] text-[40px] font-bold">
 
-                <span id="redirect-timer">
+                            ✓
 
-                    4
+                        </div>
 
-                </span>
+                    </div>
 
-                s
+                    <!-- TITLE -->
 
-            </div>
+                    <h1 class="relative z-10 text-white text-[28px] font-bold leading-tight mb-4">
 
-            <div class="loader">
+                        Verification Successful
 
-                <div class="loader-bar"></div>
+                    </h1>
+
+                    <!-- DESCRIPTION -->
+
+                    <p class="relative z-10 text-[#94A3B8] text-[15px] leading-[1.7] mb-6">
+
+                        Your account has been verified successfully.
+                        Redirecting you to Sign In page.
+
+                    </p>
+
+                    <!-- REDIRECT STATUS -->
+
+                    <div class="relative z-10 text-[#00F5D4] text-[15px] font-semibold mb-4">
+
+                        Redirecting in
+
+                        <span
+                            id="redirect-timer"
+                            class="text-white font-bold"
+                        >
+
+                            4
+
+                        </span>
+
+                        s
+
+                    </div>
+
+                    <!-- LOADER -->
+
+                    <div class="relative z-10 w-full h-[6px] bg-white/10 rounded-full overflow-hidden">
+
+                        <div
+                            id="loader-bar"
+                            class="h-full w-0 bg-gradient-to-r from-[#00F5D4] to-[#4EA8FF] rounded-full"
+                        >
+
+                        </div>
+
+                    </div>
+
+                </div>
 
             </div>
 
@@ -99,26 +142,6 @@ Verification Success
 
 </div>
 
-<script>
-
-    let seconds = 4
-
-    const timer = document.getElementById("redirect-timer")
-
-    const countdown = setInterval(()=>{
-
-        seconds--
-
-        timer.innerText = seconds
-
-        if(seconds <= 0){
-
-            clearInterval(countdown)
-
-        }
-
-    },1000)
-
-</script>
+<script src="{% static 'accounts/js/verification_success.js' %}"></script>
 
 {% endblock %}

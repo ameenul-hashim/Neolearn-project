@@ -7,242 +7,269 @@ Verify OTP
 
 {% block content %}
 
-<link rel="stylesheet" href="{% static 'accounts/css/verify_otp.css' %}">
 <link rel="stylesheet" href="{% static 'accounts/css/global-messages.css' %}">
 
-<div class="otp-page">
+<div class="w-full min-h-screen bg-[#020617] overflow-hidden">
 
-    <!-- LEFT VIDEO -->
+    <div class="flex w-full min-h-screen">
 
-    <div class="otp-left">
+        <!-- LEFT VIDEO SIDE -->
+        <!-- LARGE DEVICES ONLY -->
 
-        <video
-            autoplay
-            muted
-            loop
-            playsinline
-            class="otp-video"
-        >
+        <div class="hidden xl:block w-1/2 h-screen relative overflow-hidden bg-black">
 
-            <source
-                src="{% static 'accounts/videos/signup-verifyemail.mp4' %}"
-                type="video/mp4"
+            <video
+                autoplay
+                muted
+                loop
+                playsinline
+                class="w-full h-full object-cover object-center"
             >
 
-        </video>
+                <source
+                    src="{% static 'accounts/videos/signup-verifyemail.mp4' %}"
+                    type="video/mp4"
+                >
 
-        <div class="otp-overlay"></div>
+            </video>
 
-    </div>
+            <!-- OVERLAY -->
 
-    <!-- MOBILE LOGO -->
+            <div class="absolute inset-0 bg-gradient-to-b from-[#020617]/5 to-[#020617]/15 z-10"></div>
 
-    <div class="mobile-logo">
+        </div>
 
-        <img
-            src="{% static 'accounts/images/neolearn-logo.png' %}"
-            alt="NeoLearn"
-        >
+        <!-- RIGHT SIDE -->
 
-    </div>
+        <div class="w-full xl:w-1/2 min-h-screen flex items-center justify-center px-4 sm:px-6 lg:px-8 py-10 bg-[#020617] relative z-20 overflow-y-auto">
 
-    <!-- RIGHT SIDE -->
+            <div class="w-full flex flex-col items-center">
 
-    <div class="otp-right">
+                <!-- MOBILE/TABLET LOGO -->
 
-        <div class="otp-card">
+                <div class="xl:hidden w-full flex justify-center mb-7">
 
-            <div class="top-dot"></div>
-
-            <!-- ICON -->
-
-            <div class="shield-icon">
-
-                ✓
-
-            </div>
-
-            <!-- TITLE -->
-
-            <h2>
-
-                Verify Email
-
-            </h2>
-
-            <p class="otp-text">
-
-                Enter the verification code sent to
-
-            </p>
-
-            <!-- EMAIL -->
-
-            <span class="email-text">
-
-                {{ request.session.email }}
-
-            </span>
-
-            <!-- ERROR -->
-
-            {% if error %}
-
-                <div class="error-box">
-
-                    {{ error }}
-
-                </div>
-
-            {% endif %}
-
-            <!-- SUCCESS -->
-
-            {% if success %}
-
-                <div class="success-box">
-
-                    {{ success }}
-
-                </div>
-
-            {% endif %}
-
-            <!-- FORM -->
-
-            <form
-                method="POST"
-                id="otp-form"
-            >
-
-                {% csrf_token %}
-
-                <!-- OTP INPUTS -->
-
-                <div class="otp-inputs">
-
-                    <input
-                        type="text"
-                        maxlength="1"
-                        class="otp-box"
-                    >
-
-                    <input
-                        type="text"
-                        maxlength="1"
-                        class="otp-box"
-                    >
-
-                    <input
-                        type="text"
-                        maxlength="1"
-                        class="otp-box"
-                    >
-
-                    <input
-                        type="text"
-                        maxlength="1"
-                        class="otp-box"
-                    >
-
-                    <input
-                        type="text"
-                        maxlength="1"
-                        class="otp-box"
-                    >
-
-                    <input
-                        type="text"
-                        maxlength="1"
-                        class="otp-box"
+                    <img
+                        src="{% static 'accounts/images/neolearn-logo.png' %}"
+                        alt="NeoLearn"
+                        class="w-[150px] sm:w-[170px] object-contain"
                     >
 
                 </div>
 
-                <!-- FINAL OTP -->
+                <!-- CARD -->
 
-                <input
-                    type="hidden"
-                    name="otp"
-                    id="final-otp"
-                >
+                <div class="relative w-full max-w-[340px] rounded-[24px] border border-white/10 bg-[rgba(5,15,40,0.88)] backdrop-blur-[12px] px-[20px] py-[22px] shadow-[0_10px_35px_rgba(0,0,0,0.22)] overflow-hidden">
 
-                <!-- VERIFY BUTTON -->
+                    <!-- GLOW -->
 
-                <button
-                    type="submit"
-                    class="verify-btn"
-                >
+                    <div class="absolute -top-[80px] -right-[80px] w-[180px] h-[180px] bg-cyan-400/10 rounded-full blur-3xl"></div>
 
-                    Verify Account
+                    <!-- TOP DOT -->
 
-                </button>
+                    <div class="absolute top-[16px] right-[16px] w-2 h-2 rounded-full bg-[#00F5D4] shadow-[0_0_12px_#00F5D4]"></div>
 
-            </form>
+                    <!-- ICON -->
 
-            <!-- RESEND SECTION -->
+                    <div class="relative z-10 w-[56px] h-[56px] mx-auto mb-4 rounded-full border border-[#00F5D4] flex items-center justify-center text-[#00F5D4] text-[22px] bg-[rgba(0,245,212,0.04)]">
 
-            <div class="resend-section">
+                        ✓
 
-                <!-- TIMER -->
+                    </div>
 
-                <div
-                    class="timer-wrapper"
-                    id="timer-wrapper"
-                >
+                    <!-- TITLE -->
 
-                    <span class="didnt-text">
+                    <div class="relative z-10 text-center">
 
-                        Didn’t get a code?
+                        <h2 class="text-white text-[20px] font-bold mb-2">
 
-                    </span>
+                            Verify Email
 
-                    <span class="timer-text">
+                        </h2>
 
-                        Resend OTP in
+                        <p class="text-[#94A3B8] text-[13px]">
 
-                    </span>
+                            Enter the verification code sent to
 
-                    <span
-                        class="seconds"
-                        id="timer"
+                        </p>
+
+                        <!-- EMAIL -->
+
+                        <span class="block mt-[5px] mb-[18px] text-white text-[13px] font-bold">
+
+                            {{ request.session.email }}
+
+                        </span>
+
+                    </div>
+
+                    <!-- ERROR -->
+
+                    {% if error %}
+
+                        <div class="error-box mb-4">
+
+                            {{ error }}
+
+                        </div>
+
+                    {% endif %}
+
+                    <!-- SUCCESS -->
+
+                    {% if success %}
+
+                        <div class="success-box mb-4">
+
+                            {{ success }}
+
+                        </div>
+
+                    {% endif %}
+
+                    <!-- FORM -->
+
+                    <form
+                        method="POST"
+                        id="otp-form"
+                        class="relative z-10"
                     >
 
-                        59
+                        {% csrf_token %}
 
-                    </span>
+                        <!-- OTP INPUTS -->
 
-                    <span class="timer-text">
+                        <div class="flex justify-center gap-[6px] mb-5">
 
-                        s
+                            <input
+                                type="text"
+                                maxlength="1"
+                                class="otp-box w-[42px] h-[48px] rounded-[12px] border border-white/10 bg-[#071226] text-white text-center text-[18px] font-bold outline-none focus:border-[#00F5D4] transition duration-300"
+                            >
 
-                    </span>
+                            <input
+                                type="text"
+                                maxlength="1"
+                                class="otp-box w-[42px] h-[48px] rounded-[12px] border border-white/10 bg-[#071226] text-white text-center text-[18px] font-bold outline-none focus:border-[#00F5D4] transition duration-300"
+                            >
+
+                            <input
+                                type="text"
+                                maxlength="1"
+                                class="otp-box w-[42px] h-[48px] rounded-[12px] border border-white/10 bg-[#071226] text-white text-center text-[18px] font-bold outline-none focus:border-[#00F5D4] transition duration-300"
+                            >
+
+                            <input
+                                type="text"
+                                maxlength="1"
+                                class="otp-box w-[42px] h-[48px] rounded-[12px] border border-white/10 bg-[#071226] text-white text-center text-[18px] font-bold outline-none focus:border-[#00F5D4] transition duration-300"
+                            >
+
+                            <input
+                                type="text"
+                                maxlength="1"
+                                class="otp-box w-[42px] h-[48px] rounded-[12px] border border-white/10 bg-[#071226] text-white text-center text-[18px] font-bold outline-none focus:border-[#00F5D4] transition duration-300"
+                            >
+
+                            <input
+                                type="text"
+                                maxlength="1"
+                                class="otp-box w-[42px] h-[48px] rounded-[12px] border border-white/10 bg-[#071226] text-white text-center text-[18px] font-bold outline-none focus:border-[#00F5D4] transition duration-300"
+                            >
+
+                        </div>
+
+                        <!-- FINAL OTP -->
+
+                        <input
+                            type="hidden"
+                            name="otp"
+                            id="final-otp"
+                        >
+
+                        <!-- BUTTON -->
+
+                        <button
+                            type="submit"
+                            class="w-full h-[46px] rounded-[12px] bg-gradient-to-r from-[#00F5D4] to-[#4EA8FF] text-white text-[15px] font-bold transition duration-300 hover:-translate-y-[2px] hover:shadow-[0_8px_18px_rgba(34,211,238,0.18)]"
+                        >
+
+                            Verify Account
+
+                        </button>
+
+                    </form>
+
+                    <!-- RESEND -->
+
+                    <div class="relative z-10 mt-[18px] text-center">
+
+                        <!-- TIMER -->
+
+                        <div
+                            class="flex justify-center items-center gap-[6px] flex-wrap"
+                            id="timer-wrapper"
+                        >
+
+                            <span class="text-[#94A3B8] text-[13px]">
+
+                                Didn’t get a code?
+
+                            </span>
+
+                            <span class="text-[#00D9FF] text-[13px] font-semibold">
+
+                                Resend OTP in
+
+                            </span>
+
+                            <span
+                                class="text-[#00F5D4] text-[15px] font-bold min-w-[20px] text-center"
+                                id="timer"
+                            >
+
+                                59
+
+                            </span>
+
+                            <span class="text-[#00D9FF] text-[13px] font-semibold">
+
+                                s
+
+                            </span>
+
+                        </div>
+
+                        <!-- RESEND LINK -->
+
+                        <a
+                            href="{% url 'resend_otp' %}"
+                            id="resend-link"
+                            class="hidden mt-[10px] inline-block text-[#00F5D4] no-underline text-[14px] font-bold hover:text-cyan-300 transition duration-300"
+                        >
+
+                            ↻ Resend OTP
+
+                        </a>
+
+                    </div>
+
+                    <!-- BACK -->
+
+                    <div class="relative z-10 mt-[14px] text-center">
+
+                        <a
+                            href="{% url 'signup' %}"
+                            class="text-[#94A3B8] no-underline text-[12px] hover:text-white transition duration-300"
+                        >
+
+                            ← Back to Signup
+
+                        </a>
+
+                    </div>
 
                 </div>
-
-                <!-- RESEND LINK -->
-
-                <a
-                    href="{% url 'resend_otp' %}"
-                    id="resend-link"
-                    class="resend-link"
-                >
-
-                    ↻ Resend OTP
-
-                </a>
-
-            </div>
-
-            <!-- BACK -->
-
-            <div class="back-link">
-
-                <a href="{% url 'signup' %}">
-
-                    ← Back to Signup
-
-                </a>
 
             </div>
 
