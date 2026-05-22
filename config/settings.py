@@ -11,6 +11,7 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+
 # SECURITY SETTINGS
 
 SECRET_KEY = 'django-insecure-$r(eefie_c59rplz1*pfbd@0qnc3z1e5x#6u3x#9)_c^l3!sbf'
@@ -18,6 +19,7 @@ SECRET_KEY = 'django-insecure-$r(eefie_c59rplz1*pfbd@0qnc3z1e5x#6u3x#9)_c^l3!sbf
 DEBUG = True
 
 ALLOWED_HOSTS = []
+
 
 # INSTALLED APPS
 
@@ -49,6 +51,7 @@ INSTALLED_APPS = [
     'allauth.socialaccount.providers.google',
 ]
 
+
 # MIDDLEWARE
 
 MIDDLEWARE = [
@@ -70,9 +73,11 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
+
 # ROOT URL CONFIGURATION
 
 ROOT_URLCONF = 'config.urls'
+
 
 # TEMPLATES
 
@@ -99,9 +104,11 @@ TEMPLATES = [
     },
 ]
 
+
 # WSGI APPLICATION
 
 WSGI_APPLICATION = 'config.wsgi.application'
+
 
 # DATABASE
 
@@ -122,6 +129,7 @@ DATABASES = {
         'PORT': '5432',
     }
 }
+
 
 # PASSWORD VALIDATION
 
@@ -144,6 +152,7 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+
 # INTERNATIONALIZATION
 
 LANGUAGE_CODE = 'en-us'
@@ -154,6 +163,7 @@ USE_I18N = True
 
 USE_TZ = True
 
+
 # STATIC FILES
 
 STATIC_URL = 'static/'
@@ -163,15 +173,18 @@ STATICFILES_DIRS = [
     BASE_DIR / 'static',
 ]
 
+
 # MEDIA FILES
 
 MEDIA_URL = '/media/'
 
 MEDIA_ROOT = BASE_DIR / 'media'
 
+
 # DEFAULT PRIMARY KEY FIELD
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
 
 # EMAIL CONFIGURATION
 
@@ -187,11 +200,12 @@ EMAIL_HOST_USER = config('EMAIL_HOST_USER')
 
 EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')
 
+
 # SESSION CONFIGURATION
 
 SESSION_COOKIE_AGE = 3600
 
-SESSION_SAVE_EVERY_REQUEST = False
+SESSION_SAVE_EVERY_REQUEST = True
 
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 
@@ -203,15 +217,20 @@ SESSION_COOKIE_SECURE = False
 
 CSRF_COOKIE_SECURE = False
 
-# DJANGO ALLAUTH CONFIGURATION
+
+# DJANGO SITES
 
 SITE_ID = 1
+
+
+# LOGIN / LOGOUT REDIRECTS
 
 LOGIN_URL = '/signin/'
 
 LOGIN_REDIRECT_URL = '/dashboard/'
 
 LOGOUT_REDIRECT_URL = '/signin/'
+
 
 # AUTHENTICATION BACKENDS
 
@@ -222,7 +241,8 @@ AUTHENTICATION_BACKENDS = (
     'allauth.account.auth_backends.AuthenticationBackend',
 )
 
-# ACCOUNT SETTINGS
+
+# DJANGO ALLAUTH SETTINGS
 
 ACCOUNT_LOGIN_METHODS = {'username'}
 
@@ -246,43 +266,3 @@ ACCOUNT_LOGIN_ON_EMAIL_CONFIRMATION = False
 ACCOUNT_LOGOUT_ON_GET = True
 
 ACCOUNT_SESSION_REMEMBER = True
-
-# SOCIAL ACCOUNT SETTINGS
-
-SOCIALACCOUNT_AUTO_SIGNUP = True
-
-SOCIALACCOUNT_LOGIN_ON_GET = True
-
-SOCIALACCOUNT_QUERY_EMAIL = True
-
-SOCIALACCOUNT_EMAIL_AUTHENTICATION = True
-
-SOCIALACCOUNT_EMAIL_AUTHENTICATION_AUTO_CONNECT = True
-
-SOCIALACCOUNT_STORE_TOKENS = True
-
-SOCIALACCOUNT_FORMS = {}
-
-SOCIALACCOUNT_ADAPTER = 'accounts.adapters.CustomSocialAccountAdapter'
-
-# GOOGLE PROVIDER SETTINGS
-
-SOCIALACCOUNT_PROVIDERS = {
-
-    'google': {
-
-        'SCOPE': [
-
-            'profile',
-
-            'email',
-        ],
-
-        'AUTH_PARAMS': {
-
-            'access_type': 'online',
-        },
-
-        'OAUTH_PKCE_ENABLED': True,
-    }
-}

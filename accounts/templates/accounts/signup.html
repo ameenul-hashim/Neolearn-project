@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load socialaccount %}
 
 {% block title %}
 Signup
@@ -296,10 +297,10 @@ Signup
 
                     </div>
 
-                    <!-- GOOGLE -->
+                    <!-- GOOGLE SIGNUP -->
 
-                    <button
-                        type="button"
+                    <a
+                        href="{% provider_login_url 'google' %}"
                         class="relative z-10 w-full h-[46px] rounded-[12px] border border-white/10 bg-[rgba(15,23,42,0.35)] backdrop-blur-[12px] text-white text-[13px] font-semibold flex items-center justify-center gap-2 transition duration-300 hover:bg-[rgba(15,23,42,0.50)]"
                     >
 
@@ -310,7 +311,7 @@ Signup
 
                         Sign up with Google
 
-                    </button>
+                    </a>
 
                     <!-- LOGIN -->
 

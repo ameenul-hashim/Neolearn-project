@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load socialaccount %}
 
 {% block title %}
 Signin
@@ -257,8 +258,8 @@ Signin
 
                     <!-- GOOGLE BUTTON -->
 
-                    <button
-                        type="button"
+                    <a
+                        href="{% provider_login_url 'google' %}"
                         class="relative z-10 w-full h-[50px] rounded-[14px] border border-white/10 bg-[rgba(15,23,42,0.35)] backdrop-blur-[12px] text-white text-[14px] font-semibold flex items-center justify-center gap-3 transition duration-300 hover:bg-[rgba(15,23,42,0.50)]"
                     >
 
@@ -270,7 +271,7 @@ Signin
 
                         Continue with Google
 
-                    </button>
+                    </a>
 
                     <!-- SIGNUP -->
 
