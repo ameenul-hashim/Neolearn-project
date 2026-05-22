@@ -13,14 +13,21 @@ import re
 
 # SIGNUP VIEW
 
+@never_cache
 def signup_view(request):
+
+    # ALREADY LOGGED IN
+
+    if request.user.is_authenticated:
+
+        return redirect('dashboard')
 
     if request.method == 'POST':
 
         username=request.POST.get(
             'username',
             ''
-        ).strip()
+        ).strip().lower()
 
         email=request.POST.get(
             'email',
@@ -223,14 +230,21 @@ def signup_view(request):
 
         return redirect('verify_otp')
 
-    return render(
+    response=render(
         request,
         'accounts/signup.html'
     )
 
+    response['Cache-Control']='no-cache, no-store, must-revalidate'
+    response['Pragma']='no-cache'
+    response['Expires']='0'
+
+    return response
+
 
 # VERIFY OTP VIEW
 
+@never_cache
 def verify_otp_view(request):
 
     temp_user=request.session.get('temp_user')
@@ -291,7 +305,7 @@ def verify_otp_view(request):
 
         return redirect('verification_success')
 
-    return render(
+    response=render(
         request,
         'accounts/verify_otp.html',
         {
@@ -299,19 +313,33 @@ def verify_otp_view(request):
         }
     )
 
+    response['Cache-Control']='no-cache, no-store, must-revalidate'
+    response['Pragma']='no-cache'
+    response['Expires']='0'
+
+    return response
+
 
 # VERIFICATION SUCCESS VIEW
 
+@never_cache
 def verification_success_view(request):
 
-    return render(
+    response=render(
         request,
         'accounts/verification_success.html'
     )
 
+    response['Cache-Control']='no-cache, no-store, must-revalidate'
+    response['Pragma']='no-cache'
+    response['Expires']='0'
+
+    return response
+
 
 # RESEND OTP VIEW
 
+@never_cache
 def resend_otp_view(request):
 
     email=request.session.get('email')
@@ -347,6 +375,12 @@ def resend_otp_view(request):
 @never_cache
 def signin_view(request):
 
+    # ALREADY LOGGED IN
+
+    if request.user.is_authenticated:
+
+        return redirect('dashboard')
+
     success=request.session.pop(
         'password_success',
         None
@@ -357,7 +391,7 @@ def signin_view(request):
         username=request.POST.get(
             'username',
             ''
-        ).strip()
+        ).strip().lower()
 
         password=request.POST.get(
             'password',
@@ -397,11 +431,15 @@ def signin_view(request):
 
         login(request,user)
 
+        # SESSION SECURITY
+
         request.session.set_expiry(3600)
+
+        request.session.modified=True
 
         return redirect('dashboard')
 
-    return render(
+    response=render(
         request,
         'accounts/signin.html',
         {
@@ -409,27 +447,21 @@ def signin_view(request):
         }
     )
 
-
-# LOGOUT VIEW
-
-def logout_view(request):
-
-    logout(request)
-
-    request.session.flush()
-
-    response=redirect('/signin/')
-
-    response.delete_cookie('sessionid')
-
-    response.delete_cookie('csrftoken')
+    response['Cache-Control']='no-cache, no-store, must-revalidate'
+    response['Pragma']='no-cache'
+    response['Expires']='0'
 
     return response
 
 
 # FORGOT PASSWORD VIEW
 
+@never_cache
 def forgot_password_view(request):
+
+    if request.user.is_authenticated:
+
+        return redirect('dashboard')
 
     success=request.session.pop(
         'forgot_success',
@@ -441,7 +473,7 @@ def forgot_password_view(request):
         username=request.POST.get(
             'username',
             ''
-        ).strip()
+        ).strip().lower()
 
         email=request.POST.get(
             'email',
@@ -547,7 +579,7 @@ def forgot_password_view(request):
 
         return redirect('forgot_password_verify')
 
-    return render(
+    response=render(
         request,
         'accounts/forgot_password.html',
         {
@@ -555,9 +587,16 @@ def forgot_password_view(request):
         }
     )
 
+    response['Cache-Control']='no-cache, no-store, must-revalidate'
+    response['Pragma']='no-cache'
+    response['Expires']='0'
+
+    return response
+
 
 # FORGOT PASSWORD VERIFY VIEW
 
+@never_cache
 def forgot_password_verify_view(request):
 
     session_otp=request.session.get('forgot_password_otp')
@@ -601,7 +640,7 @@ def forgot_password_verify_view(request):
 
         return redirect('reset_password')
 
-    return render(
+    response=render(
         request,
         'accounts/forgot_password_verify.html',
         {
@@ -609,9 +648,16 @@ def forgot_password_verify_view(request):
         }
     )
 
+    response['Cache-Control']='no-cache, no-store, must-revalidate'
+    response['Pragma']='no-cache'
+    response['Expires']='0'
+
+    return response
+
 
 # RESEND RESET OTP VIEW
 
+@never_cache
 def resend_reset_otp_view(request):
 
     email=request.session.get('forgot_password_email')
@@ -644,7 +690,12 @@ def resend_reset_otp_view(request):
 
 # RESET PASSWORD VIEW
 
+@never_cache
 def reset_password_view(request):
+
+    if request.user.is_authenticated:
+
+        return redirect('dashboard')
 
     user_id=request.session.get(
         'forgot_password_user_id'
@@ -767,10 +818,16 @@ def reset_password_view(request):
 
         return redirect('signin')
 
-    return render(
+    response=render(
         request,
         'accounts/reset_password.html'
     )
+
+    response['Cache-Control']='no-cache, no-store, must-revalidate'
+    response['Pragma']='no-cache'
+    response['Expires']='0'
+
+    return response
 
 
 # DASHBOARD VIEW
@@ -779,7 +836,34 @@ def reset_password_view(request):
 @never_cache
 def dashboard_view(request):
 
-    return render(
+    response=render(
         request,
         'accounts/dashboard.html'
     )
+
+    response['Cache-Control']='no-cache, no-store, must-revalidate'
+    response['Pragma']='no-cache'
+    response['Expires']='0'
+
+    return response
+
+
+# LOGOUT VIEW
+
+@never_cache
+def logout_view(request):
+
+    logout(request)
+
+    request.session.flush()
+
+    response=redirect('signin')
+
+    response.delete_cookie('sessionid')
+    response.delete_cookie('csrftoken')
+
+    response['Cache-Control']='no-cache, no-store, must-revalidate'
+    response['Pragma']='no-cache'
+    response['Expires']='0'
+
+    return response
