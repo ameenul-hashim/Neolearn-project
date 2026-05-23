@@ -7,18 +7,24 @@ Verification Success
 
 {% block content %}
 
-<link rel="stylesheet" href="{% static 'accounts/css/global-messages.css' %}">
+<link
+    rel="stylesheet"
+    href="{% static 'accounts/css/global-messages.css' %}"
+>
 
-<meta http-equiv="refresh" content="4;url=/signin/">
+<meta
+    http-equiv="refresh"
+    content="4;url=/signin/"
+>
 
 <div class="w-full min-h-screen bg-[#020617] overflow-hidden">
 
     <div class="flex w-full min-h-screen">
 
         <!-- LEFT VIDEO SIDE -->
-        <!-- ONLY LARGE DESKTOPS -->
+        <!-- SHOW ON LARGE LAPTOPS & DESKTOPS -->
 
-        <div class="hidden 2xl:block w-1/2 h-screen relative overflow-hidden bg-black">
+        <div class="hidden xl:block w-1/2 h-screen relative overflow-hidden bg-black">
 
             <video
                 autoplay
@@ -43,13 +49,13 @@ Verification Success
 
         <!-- RIGHT SIDE -->
 
-        <div class="w-full 2xl:w-1/2 min-h-screen flex items-center justify-center px-4 sm:px-6 lg:px-8 py-10 bg-[#020617] relative z-20 overflow-y-auto">
+        <div class="w-full xl:w-1/2 min-h-screen flex items-center justify-center px-4 sm:px-6 lg:px-8 py-10 bg-[#020617] relative z-20 overflow-y-auto">
 
             <div class="w-full flex flex-col items-center">
 
                 <!-- MOBILE/TABLET LOGO -->
 
-                <div class="2xl:hidden w-full flex justify-center mb-7">
+                <div class="xl:hidden w-full flex justify-center mb-7">
 
                     <img
                         src="{% static 'accounts/images/neolearn-logo.png' %}"
@@ -141,6 +147,8 @@ Verification Success
     </div>
 
 </div>
+
+<script src="{% static 'accounts/js/auth-global.js' %}"></script>
 
 <script src="{% static 'accounts/js/verification_success.js' %}"></script>
 

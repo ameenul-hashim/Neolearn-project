@@ -1,11 +1,11 @@
-from django.shortcuts import render,redirect
+from django.shortcuts import render, redirect
 from django.core.mail import send_mail
 from django.core.validators import validate_email
 from django.core.exceptions import ValidationError
 from django.contrib.auth.models import User
-from django.contrib.auth import authenticate,login,logout
+from django.contrib.auth import (authenticate,login,logout)
 from django.contrib.auth.decorators import login_required
-from django.views.decorators.cache import never_cache
+from django.views.decorators.cache import (never_cache)
 from .models import EmailOTP
 import random
 import re
@@ -24,35 +24,43 @@ def signup_view(request):
 
     if request.method == 'POST':
 
-        username=request.POST.get(
+        username = request.POST.get(
             'username',
             ''
         ).strip().lower()
 
-        email=request.POST.get(
+        email = request.POST.get(
             'email',
             ''
         ).strip().lower()
 
-        password=request.POST.get(
+        password = request.POST.get(
             'password',
             ''
         )
 
-        confirm_password=request.POST.get(
+        confirm_password = request.POST.get(
             'confirm_password',
             ''
         )
 
         # EMPTY VALIDATION
 
-        if not username or not email or not password or not confirm_password:
+        if (
+            not username
+            or
+            not email
+            or
+            not password
+            or
+            not confirm_password
+        ):
 
             return render(
                 request,
                 'accounts/signup.html',
                 {
-                    'error':'All fields are required'
+                    'error': 'All fields are required'
                 }
             )
 
@@ -66,11 +74,11 @@ def signup_view(request):
                 request,
                 'accounts/signup.html',
                 {
-                    'error':'Username already exists'
+                    'error': 'Username already exists'
                 }
             )
 
-        # EMAIL FORMAT VALIDATION
+        # EMAIL VALIDATION
 
         try:
 
@@ -82,13 +90,13 @@ def signup_view(request):
                 request,
                 'accounts/signup.html',
                 {
-                    'error':'Enter a valid email address'
+                    'error': 'Enter a valid email address'
                 }
             )
 
-        # STRICT EMAIL DOMAIN VALIDATION
+        # VALID EMAIL PROVIDERS
 
-        valid_domains=[
+        valid_domains = [
 
             'gmail.com',
             'yahoo.com',
@@ -97,7 +105,7 @@ def signup_view(request):
             'icloud.com'
         ]
 
-        email_domain=email.split('@')[-1].lower()
+        email_domain = email.split('@')[-1].lower()
 
         if email_domain not in valid_domains:
 
@@ -105,7 +113,7 @@ def signup_view(request):
                 request,
                 'accounts/signup.html',
                 {
-                    'error':'Enter a valid email provider'
+                    'error': 'Enter a valid email provider'
                 }
             )
 
@@ -119,7 +127,7 @@ def signup_view(request):
                 request,
                 'accounts/signup.html',
                 {
-                    'error':'Email already exists'
+                    'error': 'Email already exists'
                 }
             )
 
@@ -131,7 +139,7 @@ def signup_view(request):
                 request,
                 'accounts/signup.html',
                 {
-                    'error':'Passwords do not match'
+                    'error': 'Passwords do not match'
                 }
             )
 
@@ -143,75 +151,88 @@ def signup_view(request):
                 request,
                 'accounts/signup.html',
                 {
-                    'error':'Password must contain at least 8 characters'
+                    'error': (
+                        'Password must contain at least 8 characters'
+                    )
                 }
             )
 
         # UPPERCASE CHECK
 
-        if not re.search(r'[A-Z]',password):
+        if not re.search(r'[A-Z]', password):
 
             return render(
                 request,
                 'accounts/signup.html',
                 {
-                    'error':'Password must contain at least one uppercase letter'
+                    'error': (
+                        'Password must contain at least one uppercase letter'
+                    )
                 }
             )
 
         # LOWERCASE CHECK
 
-        if not re.search(r'[a-z]',password):
+        if not re.search(r'[a-z]', password):
 
             return render(
                 request,
                 'accounts/signup.html',
                 {
-                    'error':'Password must contain at least one lowercase letter'
+                    'error': (
+                        'Password must contain at least one lowercase letter'
+                    )
                 }
             )
 
         # NUMBER CHECK
 
-        if not re.search(r'[0-9]',password):
+        if not re.search(r'[0-9]', password):
 
             return render(
                 request,
                 'accounts/signup.html',
                 {
-                    'error':'Password must contain at least one number'
+                    'error': (
+                        'Password must contain at least one number'
+                    )
                 }
             )
 
         # SPECIAL CHARACTER CHECK
 
-        if not re.search(r'[@$!%*?&]',password):
+        if not re.search(r'[@$!%*?&]', password):
 
             return render(
                 request,
                 'accounts/signup.html',
                 {
-                    'error':'Password must contain at least one special character'
+                    'error': (
+                        'Password must contain at least one special character'
+                    )
                 }
             )
 
         # SAVE TEMP USER
 
-        request.session['temp_user']={
+        request.session['temp_user'] = {
 
-            'username':username,
-            'email':email,
-            'password':password
+            'username': username,
+            'email': email,
+            'password': password
         }
 
         # GENERATE OTP
 
-        otp=str(random.randint(100000,999999))
+        otp = str(random.randint(100000, 999999))
 
-        request.session['otp']=otp
-        request.session['email']=email
+        request.session['otp'] = otp
 
-        request.session['otp_success']='OTP sent successfully to your email'
+        request.session['email'] = email
+
+        request.session['otp_success'] = (
+            'OTP sent successfully to your email'
+        )
 
         # SEND EMAIL
 
@@ -230,14 +251,18 @@ def signup_view(request):
 
         return redirect('verify_otp')
 
-    response=render(
+    response = render(
         request,
         'accounts/signup.html'
     )
 
-    response['Cache-Control']='no-cache, no-store, must-revalidate'
-    response['Pragma']='no-cache'
-    response['Expires']='0'
+    response['Cache-Control'] = (
+        'no-cache, no-store, must-revalidate'
+    )
+
+    response['Pragma'] = 'no-cache'
+
+    response['Expires'] = '0'
 
     return response
 
@@ -247,10 +272,11 @@ def signup_view(request):
 @never_cache
 def verify_otp_view(request):
 
-    temp_user=request.session.get('temp_user')
-    session_otp=request.session.get('otp')
+    temp_user = request.session.get('temp_user')
 
-    success=request.session.pop(
+    session_otp = request.session.get('otp')
+
+    success = request.session.pop(
         'otp_success',
         None
     )
@@ -261,7 +287,7 @@ def verify_otp_view(request):
 
     if request.method == 'POST':
 
-        entered_otp=request.POST.get('otp')
+        entered_otp = request.POST.get('otp')
 
         if not entered_otp:
 
@@ -269,8 +295,8 @@ def verify_otp_view(request):
                 request,
                 'accounts/verify_otp.html',
                 {
-                    'error':'Please enter OTP',
-                    'success':success
+                    'error': 'Please enter OTP',
+                    'success': success
                 }
             )
 
@@ -280,42 +306,52 @@ def verify_otp_view(request):
                 request,
                 'accounts/verify_otp.html',
                 {
-                    'error':'Invalid verification code',
-                    'success':success
+                    'error': 'Invalid verification code',
+                    'success': success
                 }
             )
 
-        user=User.objects.create_user(
+        user = User.objects.create_user(
 
             username=temp_user['username'],
+
             email=temp_user['email'],
+
             password=temp_user['password']
         )
 
         EmailOTP.objects.create(
 
             user=user,
+
             otp=session_otp,
+
             is_used=True
         )
 
-        request.session.pop('temp_user',None)
-        request.session.pop('otp',None)
-        request.session.pop('otp_success',None)
+        request.session.pop('temp_user', None)
+
+        request.session.pop('otp', None)
+
+        request.session.pop('otp_success', None)
 
         return redirect('verification_success')
 
-    response=render(
+    response = render(
         request,
         'accounts/verify_otp.html',
         {
-            'success':success
+            'success': success
         }
     )
 
-    response['Cache-Control']='no-cache, no-store, must-revalidate'
-    response['Pragma']='no-cache'
-    response['Expires']='0'
+    response['Cache-Control'] = (
+        'no-cache, no-store, must-revalidate'
+    )
+
+    response['Pragma'] = 'no-cache'
+
+    response['Expires'] = '0'
 
     return response
 
@@ -325,14 +361,18 @@ def verify_otp_view(request):
 @never_cache
 def verification_success_view(request):
 
-    response=render(
+    response = render(
         request,
         'accounts/verification_success.html'
     )
 
-    response['Cache-Control']='no-cache, no-store, must-revalidate'
-    response['Pragma']='no-cache'
-    response['Expires']='0'
+    response['Cache-Control'] = (
+        'no-cache, no-store, must-revalidate'
+    )
+
+    response['Pragma'] = 'no-cache'
+
+    response['Expires'] = '0'
 
     return response
 
@@ -342,17 +382,19 @@ def verification_success_view(request):
 @never_cache
 def resend_otp_view(request):
 
-    email=request.session.get('email')
+    email = request.session.get('email')
 
     if not email:
 
         return redirect('signup')
 
-    otp=str(random.randint(100000,999999))
+    otp = str(random.randint(100000, 999999))
 
-    request.session['otp']=otp
+    request.session['otp'] = otp
 
-    request.session['otp_success']='New OTP sent successfully'
+    request.session['otp_success'] = (
+        'New OTP sent successfully'
+    )
 
     send_mail(
 
@@ -381,19 +423,19 @@ def signin_view(request):
 
         return redirect('dashboard')
 
-    success=request.session.pop(
+    success = request.session.pop(
         'password_success',
         None
     )
 
     if request.method == 'POST':
 
-        username=request.POST.get(
+        username = request.POST.get(
             'username',
             ''
         ).strip().lower()
 
-        password=request.POST.get(
+        password = request.POST.get(
             'password',
             ''
         )
@@ -404,12 +446,14 @@ def signin_view(request):
                 request,
                 'accounts/signin.html',
                 {
-                    'error':'Both username and password are required',
-                    'success':success
+                    'error': (
+                        'Both username and password are required'
+                    ),
+                    'success': success
                 }
             )
 
-        user=authenticate(
+        user = authenticate(
 
             request,
 
@@ -418,38 +462,66 @@ def signin_view(request):
             password=password
         )
 
+        # INVALID USER
+
         if user is None:
 
             return render(
                 request,
                 'accounts/signin.html',
                 {
-                    'error':'Invalid username or password',
-                    'success':success
+                    'error': 'Invalid username or password',
+                    'success': success
                 }
             )
 
-        login(request,user)
+        # BLOCK ADMIN / STAFF LOGIN
+
+        if (
+            user.is_staff
+            or
+            user.is_superuser
+        ):
+
+            return render(
+                request,
+                'accounts/signin.html',
+                {
+                    'error': (
+                        'Admin login is not allowed here. '
+                        'Please use the admin login area.'
+                    ),
+                    'success': success
+                }
+            )
+
+        # NORMAL STUDENT LOGIN
+
+        login(request, user)
 
         # SESSION SECURITY
 
         request.session.set_expiry(3600)
 
-        request.session.modified=True
+        request.session.modified = True
 
         return redirect('dashboard')
 
-    response=render(
+    response = render(
         request,
         'accounts/signin.html',
         {
-            'success':success
+            'success': success
         }
     )
 
-    response['Cache-Control']='no-cache, no-store, must-revalidate'
-    response['Pragma']='no-cache'
-    response['Expires']='0'
+    response['Cache-Control'] = (
+        'no-cache, no-store, must-revalidate'
+    )
+
+    response['Pragma'] = 'no-cache'
+
+    response['Expires'] = '0'
 
     return response
 
@@ -463,19 +535,19 @@ def forgot_password_view(request):
 
         return redirect('dashboard')
 
-    success=request.session.pop(
+    success = request.session.pop(
         'forgot_success',
         None
     )
 
     if request.method == 'POST':
 
-        username=request.POST.get(
+        username = request.POST.get(
             'username',
             ''
         ).strip().lower()
 
-        email=request.POST.get(
+        email = request.POST.get(
             'email',
             ''
         ).strip().lower()
@@ -486,8 +558,10 @@ def forgot_password_view(request):
                 request,
                 'accounts/forgot_password.html',
                 {
-                    'error':'Username and email are required',
-                    'success':success
+                    'error': (
+                        'Username and email are required'
+                    ),
+                    'success': success
                 }
             )
 
@@ -501,12 +575,14 @@ def forgot_password_view(request):
                 request,
                 'accounts/forgot_password.html',
                 {
-                    'error':'Enter a valid email address',
-                    'success':success
+                    'error': (
+                        'Enter a valid email address'
+                    ),
+                    'success': success
                 }
             )
 
-        valid_domains=[
+        valid_domains = [
 
             'gmail.com',
             'yahoo.com',
@@ -515,7 +591,7 @@ def forgot_password_view(request):
             'icloud.com'
         ]
 
-        email_domain=email.split('@')[-1].lower()
+        email_domain = email.split('@')[-1].lower()
 
         if email_domain not in valid_domains:
 
@@ -523,14 +599,16 @@ def forgot_password_view(request):
                 request,
                 'accounts/forgot_password.html',
                 {
-                    'error':'Enter a valid email provider',
-                    'success':success
+                    'error': (
+                        'Enter a valid email provider'
+                    ),
+                    'success': success
                 }
             )
 
         try:
 
-            user=User.objects.get(
+            user = User.objects.get(
                 username=username
             )
 
@@ -540,8 +618,8 @@ def forgot_password_view(request):
                 request,
                 'accounts/forgot_password.html',
                 {
-                    'error':'Username not found',
-                    'success':success
+                    'error': 'Username not found',
+                    'success': success
                 }
             )
 
@@ -551,16 +629,20 @@ def forgot_password_view(request):
                 request,
                 'accounts/forgot_password.html',
                 {
-                    'error':'Email does not match this username',
-                    'success':success
+                    'error': (
+                        'Email does not match this username'
+                    ),
+                    'success': success
                 }
             )
 
-        otp=str(random.randint(100000,999999))
+        otp = str(random.randint(100000, 999999))
 
-        request.session['forgot_password_otp']=otp
-        request.session['forgot_password_user_id']=user.id
-        request.session['forgot_password_email']=email
+        request.session['forgot_password_otp'] = otp
+
+        request.session['forgot_password_user_id'] = user.id
+
+        request.session['forgot_password_email'] = email
 
         send_mail(
 
@@ -575,21 +657,27 @@ def forgot_password_view(request):
             fail_silently=False
         )
 
-        request.session['forgot_success']='Verification OTP sent successfully'
+        request.session['forgot_success'] = (
+            'Verification OTP sent successfully'
+        )
 
         return redirect('forgot_password_verify')
 
-    response=render(
+    response = render(
         request,
         'accounts/forgot_password.html',
         {
-            'success':success
+            'success': success
         }
     )
 
-    response['Cache-Control']='no-cache, no-store, must-revalidate'
-    response['Pragma']='no-cache'
-    response['Expires']='0'
+    response['Cache-Control'] = (
+        'no-cache, no-store, must-revalidate'
+    )
+
+    response['Pragma'] = 'no-cache'
+
+    response['Expires'] = '0'
 
     return response
 
@@ -599,11 +687,19 @@ def forgot_password_view(request):
 @never_cache
 def forgot_password_verify_view(request):
 
-    session_otp=request.session.get('forgot_password_otp')
-    email=request.session.get('forgot_password_email')
-    user_id=request.session.get('forgot_password_user_id')
+    session_otp = request.session.get(
+        'forgot_password_otp'
+    )
 
-    success=request.session.pop(
+    email = request.session.get(
+        'forgot_password_email'
+    )
+
+    user_id = request.session.get(
+        'forgot_password_user_id'
+    )
+
+    success = request.session.pop(
         'forgot_success',
         None
     )
@@ -614,7 +710,7 @@ def forgot_password_verify_view(request):
 
     if request.method == 'POST':
 
-        entered_otp=request.POST.get('otp')
+        entered_otp = request.POST.get('otp')
 
         if not entered_otp:
 
@@ -622,8 +718,10 @@ def forgot_password_verify_view(request):
                 request,
                 'accounts/forgot_password_verify.html',
                 {
-                    'error':'Please enter verification code',
-                    'success':success
+                    'error': (
+                        'Please enter verification code'
+                    ),
+                    'success': success
                 }
             )
 
@@ -633,24 +731,30 @@ def forgot_password_verify_view(request):
                 request,
                 'accounts/forgot_password_verify.html',
                 {
-                    'error':'Invalid verification code',
-                    'success':success
+                    'error': (
+                        'Invalid verification code'
+                    ),
+                    'success': success
                 }
             )
 
         return redirect('reset_password')
 
-    response=render(
+    response = render(
         request,
         'accounts/forgot_password_verify.html',
         {
-            'success':success
+            'success': success
         }
     )
 
-    response['Cache-Control']='no-cache, no-store, must-revalidate'
-    response['Pragma']='no-cache'
-    response['Expires']='0'
+    response['Cache-Control'] = (
+        'no-cache, no-store, must-revalidate'
+    )
+
+    response['Pragma'] = 'no-cache'
+
+    response['Expires'] = '0'
 
     return response
 
@@ -660,17 +764,21 @@ def forgot_password_verify_view(request):
 @never_cache
 def resend_reset_otp_view(request):
 
-    email=request.session.get('forgot_password_email')
+    email = request.session.get(
+        'forgot_password_email'
+    )
 
     if not email:
 
         return redirect('forgot_password')
 
-    otp=str(random.randint(100000,999999))
+    otp = str(random.randint(100000, 999999))
 
-    request.session['forgot_password_otp']=otp
+    request.session['forgot_password_otp'] = otp
 
-    request.session['forgot_success']='New OTP sent successfully'
+    request.session['forgot_success'] = (
+        'New OTP sent successfully'
+    )
 
     send_mail(
 
@@ -697,7 +805,7 @@ def reset_password_view(request):
 
         return redirect('dashboard')
 
-    user_id=request.session.get(
+    user_id = request.session.get(
         'forgot_password_user_id'
     )
 
@@ -707,7 +815,7 @@ def reset_password_view(request):
 
     try:
 
-        user=User.objects.get(id=user_id)
+        user = User.objects.get(id=user_id)
 
     except User.DoesNotExist:
 
@@ -715,12 +823,12 @@ def reset_password_view(request):
 
     if request.method == 'POST':
 
-        password=request.POST.get(
+        password = request.POST.get(
             'password',
             ''
         )
 
-        confirm_password=request.POST.get(
+        confirm_password = request.POST.get(
             'confirm_password',
             ''
         )
@@ -731,7 +839,9 @@ def reset_password_view(request):
                 request,
                 'accounts/reset_password.html',
                 {
-                    'error':'Please enter your new password'
+                    'error': (
+                        'Please enter your new password'
+                    )
                 }
             )
 
@@ -741,7 +851,7 @@ def reset_password_view(request):
                 request,
                 'accounts/reset_password.html',
                 {
-                    'error':'Passwords do not match'
+                    'error': 'Passwords do not match'
                 }
             )
 
@@ -751,47 +861,57 @@ def reset_password_view(request):
                 request,
                 'accounts/reset_password.html',
                 {
-                    'error':'Password must contain at least 8 characters'
+                    'error': (
+                        'Password must contain at least 8 characters'
+                    )
                 }
             )
 
-        if not re.search(r'[A-Z]',password):
+        if not re.search(r'[A-Z]', password):
 
             return render(
                 request,
                 'accounts/reset_password.html',
                 {
-                    'error':'Password must contain at least one uppercase letter'
+                    'error': (
+                        'Password must contain at least one uppercase letter'
+                    )
                 }
             )
 
-        if not re.search(r'[a-z]',password):
+        if not re.search(r'[a-z]', password):
 
             return render(
                 request,
                 'accounts/reset_password.html',
                 {
-                    'error':'Password must contain at least one lowercase letter'
+                    'error': (
+                        'Password must contain at least one lowercase letter'
+                    )
                 }
             )
 
-        if not re.search(r'[0-9]',password):
+        if not re.search(r'[0-9]', password):
 
             return render(
                 request,
                 'accounts/reset_password.html',
                 {
-                    'error':'Password must contain at least one number'
+                    'error': (
+                        'Password must contain at least one number'
+                    )
                 }
             )
 
-        if not re.search(r'[@$!%*?&]',password):
+        if not re.search(r'[@$!%*?&]', password):
 
             return render(
                 request,
                 'accounts/reset_password.html',
                 {
-                    'error':'Password must contain at least one special character'
+                    'error': (
+                        'Password must contain at least one special character'
+                    )
                 }
             )
 
@@ -814,36 +934,24 @@ def reset_password_view(request):
             None
         )
 
-        request.session['password_success']='Password updated successfully'
+        request.session['password_success'] = (
+            'Password updated successfully'
+        )
 
         return redirect('signin')
 
-    response=render(
+    response = render(
         request,
         'accounts/reset_password.html'
     )
 
-    response['Cache-Control']='no-cache, no-store, must-revalidate'
-    response['Pragma']='no-cache'
-    response['Expires']='0'
-
-    return response
-
-
-# DASHBOARD VIEW
-
-@login_required(login_url='/signin/')
-@never_cache
-def dashboard_view(request):
-
-    response=render(
-        request,
-        'accounts/dashboard.html'
+    response['Cache-Control'] = (
+        'no-cache, no-store, must-revalidate'
     )
 
-    response['Cache-Control']='no-cache, no-store, must-revalidate'
-    response['Pragma']='no-cache'
-    response['Expires']='0'
+    response['Pragma'] = 'no-cache'
+
+    response['Expires'] = '0'
 
     return response
 
@@ -857,13 +965,18 @@ def logout_view(request):
 
     request.session.flush()
 
-    response=redirect('signin')
+    response = redirect('signin')
 
     response.delete_cookie('sessionid')
+
     response.delete_cookie('csrftoken')
 
-    response['Cache-Control']='no-cache, no-store, must-revalidate'
-    response['Pragma']='no-cache'
-    response['Expires']='0'
+    response['Cache-Control'] = (
+        'no-cache, no-store, must-revalidate'
+    )
+
+    response['Pragma'] = 'no-cache'
+
+    response['Expires'] = '0'
 
     return response
