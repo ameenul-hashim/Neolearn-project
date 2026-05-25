@@ -49,7 +49,11 @@ INSTALLED_APPS = [
     'allauth.account',
     'allauth.socialaccount',
     'allauth.socialaccount.providers.google',
+    
+    'cloudinary',
+    'cloudinary_storage',
 ]
+
 
 
 # MIDDLEWARE

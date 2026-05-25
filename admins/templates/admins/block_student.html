@@ -1,0 +1,137 @@
+{% extends 'admins/admin_base.html' %}
+
+{% block title %}
+Block Student
+{% endblock %}
+
+{% block admin_content %}
+
+<div class="w-full h-[calc(100vh-120px)] flex items-center justify-center">
+
+    <div
+        class="
+            w-full
+            max-w-[520px]
+            rounded-[30px]
+            border
+            border-yellow-500/10
+            bg-yellow-500/10
+            backdrop-blur-xl
+            p-10
+            text-center
+            shadow-[0_0_40px_rgba(234,179,8,0.12)]
+        "
+    >
+
+        <!-- ICON -->
+
+        <div
+            class="
+                w-[90px]
+                h-[90px]
+                mx-auto
+                rounded-full
+                bg-yellow-500/10
+                border
+                border-yellow-500/20
+                flex
+                items-center
+                justify-center
+                mb-7
+            "
+        >
+
+            <i class="ri-forbid-2-line text-yellow-400 text-[42px]"></i>
+
+        </div>
+
+        <!-- TITLE -->
+
+        <h1 class="text-white text-[30px] font-bold mb-3">
+
+            Block Student
+
+        </h1>
+
+        <!-- TEXT -->
+
+        <p class="text-[#CBD5E1] text-[15px] leading-7">
+
+            Are you sure you want to block
+
+            <span class="text-yellow-400 font-semibold">
+
+                {{ student.username }}
+
+            </span>
+
+            ?
+
+        </p>
+
+        <p class="text-[#64748B] text-[14px] mt-3">
+
+            This student will lose access to the platform until unblocked.
+
+        </p>
+
+        <!-- BUTTONS -->
+
+        <div class="flex items-center justify-center gap-4 mt-10">
+
+            <a
+                href="{% url 'admin_students' %}"
+                class="
+                    h-[50px]
+                    px-7
+                    rounded-[16px]
+                    border
+                    border-white/10
+                    bg-white/5
+                    text-white
+                    flex
+                    items-center
+                    justify-center
+                    hover:bg-white/10
+                    transition
+                    text-[14px]
+                    font-medium
+                "
+            >
+
+                Cancel
+
+            </a>
+
+            <form method="POST">
+
+                {% csrf_token %}
+
+                <button
+                    type="submit"
+                    class="
+                        h-[50px]
+                        px-8
+                        rounded-[16px]
+                        bg-yellow-400
+                        text-black
+                        text-[14px]
+                        font-bold
+                        hover:scale-[1.03]
+                        transition
+                    "
+                >
+
+                    Confirm Block
+
+                </button>
+
+            </form>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

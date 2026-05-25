@@ -1,0 +1,675 @@
+{% extends 'admins/admin_base.html' %}
+
+{% block title %}
+Students Management
+{% endblock %}
+
+{% block admin_content %}
+
+<div class="w-full">
+
+    <!-- TOP SECTION -->
+
+    <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
+
+        <div>
+
+            <h1 class="text-white text-[30px] font-bold tracking-tight">
+
+                Students Management
+
+            </h1>
+
+            <p class="text-[#94A3B8] text-[14px] mt-1">
+
+                Manage enrolled students, progress, and accounts.
+
+            </p>
+
+        </div>
+
+        <!-- EXPORT -->
+
+        <button
+            class="
+                h-[50px]
+                px-6
+                rounded-[16px]
+                border
+                border-white/10
+                bg-[#0B1120]
+                text-white
+                text-[14px]
+                font-semibold
+                hover:border-cyan-400/20
+                hover:text-cyan-400
+                transition
+                duration-300
+            "
+        >
+
+            <i class="ri-download-2-line mr-2"></i>
+
+            Export CSV
+
+        </button>
+
+    </div>
+
+    <!-- MAIN CARD -->
+
+    <div
+        class="
+            rounded-[28px]
+            border
+            border-white/5
+            bg-[#081120]/95
+            backdrop-blur-xl
+            p-6
+        "
+    >
+
+        <!-- SEARCH + FILTER -->
+
+        <form
+            method="GET"
+            class="
+                flex
+                flex-col
+                2xl:flex-row
+                2xl:items-center
+                2xl:justify-between
+                gap-5
+                mb-6
+            "
+        >
+
+            <!-- SEARCH -->
+
+            <div class="flex items-center gap-3 w-full max-w-[620px]">
+
+                <div class="relative w-full">
+
+                    <input
+                        type="text"
+                        name="search"
+                        value="{{ search }}"
+                        placeholder="Search by name or email..."
+                        class="
+                            w-full
+                            h-[54px]
+                            rounded-[18px]
+                            border
+                            border-white/10
+                            bg-[#020817]
+                            pl-14
+                            pr-5
+                            text-white
+                            text-[14px]
+                            placeholder:text-[#64748B]
+                            outline-none
+                            focus:border-cyan-400
+                            transition
+                        "
+                    >
+
+                    <i
+                        class="
+                            ri-search-line
+                            absolute
+                            left-5
+                            top-1/2
+                            -translate-y-1/2
+                            text-[#64748B]
+                            text-[20px]
+                        "
+                    ></i>
+
+                </div>
+
+                <!-- CLEAR -->
+
+                <a
+                    href="{% url 'admin_students' %}"
+                    class="
+                        h-[54px]
+                        px-6
+                        rounded-[18px]
+                        bg-red-500/10
+                        border
+                        border-red-500/10
+                        text-red-400
+                        flex
+                        items-center
+                        justify-center
+                        hover:bg-red-500/20
+                        transition
+                        whitespace-nowrap
+                        text-[14px]
+                        font-medium
+                    "
+                >
+
+                    Clear
+
+                </a>
+
+            </div>
+
+            <!-- FILTERS -->
+
+            <div class="flex items-center gap-3 flex-wrap">
+
+                <!-- STATUS -->
+
+                <select
+                    name="status"
+                    class="
+                        h-[54px]
+                        min-w-[170px]
+                        px-5
+                        rounded-[18px]
+                        border
+                        border-white/10
+                        bg-[#020817]
+                        text-[#CBD5E1]
+                        text-[14px]
+                        outline-none
+                        focus:border-cyan-400
+                        transition
+                    "
+                >
+
+                    <option value="all" {% if status == 'all' %}selected{% endif %}>
+                        All Users
+                    </option>
+
+                    <option value="active" {% if status == 'active' %}selected{% endif %}>
+                        Active Users
+                    </option>
+
+                    <option value="inactive" {% if status == 'inactive' %}selected{% endif %}>
+                        Inactive Users
+                    </option>
+
+                </select>
+
+                <!-- SORT -->
+
+                <select
+                    name="sort"
+                    class="
+                        h-[54px]
+                        min-w-[190px]
+                        px-5
+                        rounded-[18px]
+                        border
+                        border-white/10
+                        bg-[#020817]
+                        text-[#CBD5E1]
+                        text-[14px]
+                        outline-none
+                        focus:border-cyan-400
+                        transition
+                    "
+                >
+
+                    <option value="newest" {% if sort == 'newest' %}selected{% endif %}>
+                        Newest First
+                    </option>
+
+                    <option value="oldest" {% if sort == 'oldest' %}selected{% endif %}>
+                        Oldest First
+                    </option>
+
+                    <option value="a-z" {% if sort == 'a-z' %}selected{% endif %}>
+                        Name A-Z
+                    </option>
+
+                    <option value="z-a" {% if sort == 'z-a' %}selected{% endif %}>
+                        Name Z-A
+                    </option>
+
+                </select>
+
+                <!-- APPLY -->
+
+                <button
+                    type="submit"
+                    class="
+                        h-[54px]
+                        min-w-[135px]
+                        px-8
+                        rounded-[18px]
+                        bg-cyan-400
+                        text-black
+                        text-[14px]
+                        font-bold
+                        hover:scale-[1.03]
+                        transition
+                        duration-300
+                        shadow-[0_0_22px_rgba(34,211,238,0.25)]
+                    "
+                >
+
+                    Apply
+
+                </button>
+
+            </div>
+
+        </form>
+
+        <!-- TABLE -->
+
+        <div class="overflow-x-auto">
+
+            <table class="w-full min-w-[1050px]">
+
+                <!-- HEAD -->
+
+                <thead>
+
+                    <tr
+                        class="
+                            h-[62px]
+                            bg-white/5
+                            text-left
+                            text-[#94A3B8]
+                            text-[12px]
+                            uppercase
+                            tracking-wide
+                        "
+                    >
+
+                        <th class="px-6 rounded-l-[16px]">
+                            Student
+                        </th>
+
+                        <th>
+                            Enrolled
+                        </th>
+
+                        <th>
+                            Joined
+                        </th>
+
+                        <th>
+                            Status
+                        </th>
+
+                        <th class="text-center rounded-r-[16px]">
+                            Actions
+                        </th>
+
+                    </tr>
+
+                </thead>
+
+                <!-- BODY -->
+
+                <tbody>
+
+                    {% for student in page_obj %}
+
+                    <tr
+                        class="
+                            border-b
+                            border-white/5
+                            hover:bg-white/[0.02]
+                            transition
+                            duration-300
+                        "
+                    >
+
+                        <!-- STUDENT -->
+
+                        <td class="px-6 py-5">
+
+                            <div class="flex items-center gap-4">
+
+                                <!-- AVATAR -->
+
+                                <div
+                                    class="
+                                        w-[50px]
+                                        h-[50px]
+                                        rounded-full
+                                        bg-cyan-400/10
+                                        border
+                                        border-cyan-400/10
+                                        flex
+                                        items-center
+                                        justify-center
+                                        text-cyan-400
+                                        text-[18px]
+                                        font-bold
+                                    "
+                                >
+
+                                    {{ student.username|slice:":1"|upper }}
+
+                                </div>
+
+                                <!-- INFO -->
+
+                                <div>
+
+                                    <h3
+                                        class="
+                                            text-white
+                                            text-[15px]
+                                            font-semibold
+                                        "
+                                    >
+
+                                        {{ student.username }}
+
+                                    </h3>
+
+                                    <p
+                                        class="
+                                            text-[#64748B]
+                                            text-[13px]
+                                            mt-[2px]
+                                        "
+                                    >
+
+                                        {{ student.email }}
+
+                                    </p>
+
+                                </div>
+
+                            </div>
+
+                        </td>
+
+                        <!-- ENROLLED -->
+
+                        <td class="text-[#CBD5E1] text-[14px] font-medium">
+
+                            {{ student.enrolled_courses|default:"0" }}
+
+                            <span class="text-[#64748B] text-[13px]">
+
+                                courses
+
+                            </span>
+
+                        </td>
+
+                        <!-- JOINED -->
+
+                        <td class="text-[#CBD5E1] text-[14px]">
+
+                            {{ student.date_joined|date:"d/m/Y" }}
+
+                        </td>
+
+                        <!-- STATUS -->
+
+                        <td>
+
+                            {% if student.is_active %}
+
+                            <div
+                                class="
+                                    w-fit
+                                    px-4
+                                    h-[32px]
+                                    rounded-full
+                                    bg-emerald-500/10
+                                    border
+                                    border-emerald-500/10
+                                    text-emerald-400
+                                    text-[13px]
+                                    flex
+                                    items-center
+                                    justify-center
+                                    font-medium
+                                "
+                            >
+
+                                Active
+
+                            </div>
+
+                            {% else %}
+
+                            <div
+                                class="
+                                    w-fit
+                                    px-4
+                                    h-[32px]
+                                    rounded-full
+                                    bg-red-500/10
+                                    border
+                                    border-red-500/10
+                                    text-red-400
+                                    text-[13px]
+                                    flex
+                                    items-center
+                                    justify-center
+                                    font-medium
+                                "
+                            >
+
+                                Inactive
+
+                            </div>
+
+                            {% endif %}
+
+                        </td>
+
+                        <!-- ACTIONS -->
+
+                        <td>
+
+                            <div class="flex items-center justify-center gap-3">
+
+                                <!-- VIEW -->
+
+                                <button
+                                    class="
+                                        w-[40px]
+                                        h-[40px]
+                                        rounded-[14px]
+                                        bg-white/5
+                                        text-[#CBD5E1]
+                                        hover:text-cyan-400
+                                        hover:bg-cyan-400/10
+                                        transition
+                                    "
+                                >
+
+                                    <i class="ri-eye-line text-[17px]"></i>
+
+                                </button>
+
+                                <!-- BLOCK -->
+
+                                {% if student.is_active %}
+
+                                <a
+                                    href="{% url 'block_student' student.id %}"
+                                    class="
+                                        w-[40px]
+                                        h-[40px]
+                                        rounded-[14px]
+                                        bg-red-500/10
+                                        text-red-400
+                                        flex
+                                        items-center
+                                        justify-center
+                                        hover:bg-red-500/20
+                                        transition
+                                    "
+                                >
+
+                                    <i class="ri-forbid-line text-[17px]"></i>
+
+                                </a>
+
+                                {% else %}
+
+                                <!-- UNBLOCK -->
+
+                                <a
+                                    href="{% url 'unblock_student' student.id %}"
+                                    class="
+                                        w-[40px]
+                                        h-[40px]
+                                        rounded-[14px]
+                                        bg-emerald-500/10
+                                        text-emerald-400
+                                        flex
+                                        items-center
+                                        justify-center
+                                        hover:bg-emerald-500/20
+                                        transition
+                                    "
+                                >
+
+                                    <i class="ri-check-line text-[17px]"></i>
+
+                                </a>
+
+                                {% endif %}
+
+                                <!-- DELETE -->
+
+                                <a
+                                    href="{% url 'delete_student' student.id %}"
+                                    class="
+                                        w-[40px]
+                                        h-[40px]
+                                        rounded-[14px]
+                                        bg-white/5
+                                        text-[#CBD5E1]
+                                        flex
+                                        items-center
+                                        justify-center
+                                        hover:text-red-400
+                                        hover:bg-red-500/10
+                                        transition
+                                    "
+                                >
+
+                                    <i class="ri-delete-bin-line text-[17px]"></i>
+
+                                </a>
+
+                            </div>
+
+                        </td>
+
+                    </tr>
+
+                    {% empty %}
+
+                    <tr>
+
+                        <td
+                            colspan="5"
+                            class="
+                                text-center
+                                py-20
+                                text-[#64748B]
+                                text-[15px]
+                            "
+                        >
+
+                            No students found.
+
+                        </td>
+
+                    </tr>
+
+                    {% endfor %}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+        <!-- PAGINATION -->
+
+        <div class="flex items-center justify-between mt-7">
+
+            <!-- LEFT -->
+
+            <p class="text-[#64748B] text-[14px]">
+
+                Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+
+            </p>
+
+            <!-- RIGHT -->
+
+            <div class="flex items-center gap-3">
+
+                {% if page_obj.has_previous %}
+
+                <a
+                    href="?page={{ page_obj.previous_page_number }}&search={{ search }}&status={{ status }}&sort={{ sort }}"
+                    class="
+                        h-[44px]
+                        px-6
+                        rounded-[14px]
+                        border
+                        border-white/10
+                        bg-[#020817]
+                        text-white
+                        text-[14px]
+                        flex
+                        items-center
+                        justify-center
+                        hover:border-cyan-400/20
+                        transition
+                    "
+                >
+
+                    Previous
+
+                </a>
+
+                {% endif %}
+
+                {% if page_obj.has_next %}
+
+                <a
+                    href="?page={{ page_obj.next_page_number }}&search={{ search }}&status={{ status }}&sort={{ sort }}"
+                    class="
+                        h-[44px]
+                        px-6
+                        rounded-[14px]
+                        bg-cyan-400
+                        text-black
+                        text-[14px]
+                        font-bold
+                        flex
+                        items-center
+                        justify-center
+                        hover:scale-[1.03]
+                        transition
+                    "
+                >
+
+                    Next
+
+                </a>
+
+                {% endif %}
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

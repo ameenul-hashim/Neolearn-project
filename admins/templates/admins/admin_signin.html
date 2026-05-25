@@ -1,0 +1,282 @@
+{% extends 'base.html' %}
+
+{% load static %}
+
+{% block title %}
+Admin Sign In
+{% endblock %}
+
+{% block content %}
+
+<link
+    rel="stylesheet"
+    href="{% static 'accounts/css/global-messages.css' %}"
+>
+
+<div class="relative w-full h-screen overflow-hidden bg-[#020617]">
+
+    <!-- GLOBAL BACKGROUND -->
+
+    <div
+        class="absolute inset-0 z-0"
+        style="
+            background:
+            radial-gradient(circle at top left, rgba(0,245,212,0.10), transparent 28%),
+            radial-gradient(circle at bottom right, rgba(139,92,246,0.12), transparent 30%),
+            linear-gradient(
+                135deg,
+                #06111f 0%,
+                #071426 25%,
+                #0b1120 55%,
+                #161133 100%
+            );
+        "
+    ></div>
+
+    <!-- SINGLE CONTINUOUS GRID -->
+
+    <div
+        class="absolute inset-0 z-0"
+        style="
+            background-image:
+            linear-gradient(rgba(255,255,255,0.045) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255,255,255,0.045) 1px, transparent 1px);
+
+            background-size: 32px 32px;
+
+            background-position: center center;
+        "
+    ></div>
+
+    <!-- MAIN WRAPPER -->
+
+    <div class="relative z-20 flex w-full h-screen overflow-hidden">
+
+        <!-- LEFT SIDE -->
+
+        <div class="w-full xl:w-[46%] h-screen relative flex items-center justify-center px-4 sm:px-6 lg:px-8">
+
+            <!-- SAME BACKGROUND TONE AS VIDEO -->
+
+            <div class="absolute inset-0 bg-[#08101f]/20"></div>
+
+            <!-- CYAN GLOW -->
+
+            <div class="absolute top-[-160px] left-[-120px] w-[320px] h-[320px] bg-cyan-400/10 rounded-full blur-3xl"></div>
+
+            <!-- PURPLE GLOW -->
+
+            <div class="absolute bottom-[-200px] right-[-80px] w-[320px] h-[320px] bg-violet-500/10 rounded-full blur-3xl"></div>
+
+            <!-- FORM CONTENT -->
+
+            <div class="w-full max-w-[360px] relative z-20">
+
+                <!-- ICON -->
+
+                <div class="w-[64px] h-[64px] rounded-[20px] border border-cyan-400/20 bg-cyan-400/5 backdrop-blur-sm flex items-center justify-center mx-auto mb-5 shadow-[0_0_35px_rgba(0,245,212,0.10)]">
+
+                    <span class="text-[28px] text-[#00F5D4]">
+
+                        🛡
+
+                    </span>
+
+                </div>
+
+                <!-- TITLE -->
+
+                <h1 class="text-white text-center text-[28px] sm:text-[38px] font-bold leading-tight mb-3">
+
+                    Neo<span class="text-[#00F5D4]">Learn</span> Admin
+
+                </h1>
+
+                <!-- SUBTITLE -->
+
+                <p class="text-[#94A3B8] text-center text-[13px] leading-[1.7] mb-7">
+
+                    Secure access to the enterprise control center.
+
+                </p>
+
+                <!-- LOGIN CARD -->
+
+                <div class="relative w-full rounded-[28px] border border-white/10 bg-[rgba(5,15,40,0.80)] backdrop-blur-[18px] px-5 py-5 shadow-[0_10px_40px_rgba(0,0,0,0.24)] overflow-hidden">
+
+                    <!-- CARD GLOW -->
+
+                    <div class="absolute -top-[100px] -right-[100px] w-[220px] h-[220px] bg-cyan-400/10 rounded-full blur-3xl"></div>
+
+                    <!-- STATUS DOT -->
+
+                    <div class="absolute top-[18px] right-[18px] w-[7px] h-[7px] rounded-full bg-[#00F5D4] shadow-[0_0_14px_#00F5D4]"></div>
+
+                    <!-- MESSAGES -->
+
+                    {% if messages %}
+
+                        {% for message in messages %}
+
+                            <div class="{% if message.tags == 'error' %}error-box{% else %}success-box{% endif %} mb-4 relative z-10">
+
+                                {{ message }}
+
+                            </div>
+
+                        {% endfor %}
+
+                    {% endif %}
+
+                    <!-- FORM -->
+
+                    <form
+                        method="POST"
+                        autocomplete="off"
+                        class="relative z-10"
+                    >
+
+                        {% csrf_token %}
+
+                        <!-- EMAIL -->
+
+                        <div class="mb-5">
+
+                            <label class="block mb-2 text-[#E2E8F0] text-[13px] font-semibold">
+
+                                Admin Email
+
+                            </label>
+
+                            <div class="relative">
+
+                                <span class="absolute top-1/2 left-[16px] -translate-y-1/2 text-[#94A3B8] text-[15px]">
+
+                                    ✉
+
+                                </span>
+
+                                <input
+                                    type="email"
+                                    name="email"
+                                    placeholder="admin@neolearn.ai"
+                                    autocomplete="email"
+                                    class="w-full h-[46px] rounded-[14px] border border-white/10 bg-[#071226] pl-[46px] pr-[16px] text-white text-[13px] outline-none focus:border-[#00F5D4] transition duration-300"
+                                >
+
+                            </div>
+
+                        </div>
+
+                        <!-- PASSWORD -->
+
+                        <div class="mb-6">
+
+                            <label class="block mb-2 text-[#E2E8F0] text-[13px] font-semibold">
+
+                                Password
+
+                            </label>
+
+                            <div class="relative">
+
+                                <span class="absolute top-1/2 left-[16px] -translate-y-1/2 text-[#94A3B8] text-[15px]">
+
+                                    🔒
+
+                                </span>
+
+                                <input
+                                    type="password"
+                                    name="password"
+                                    id="password"
+                                    placeholder="••••••••"
+                                    autocomplete="current-password"
+                                    class="w-full h-[46px] rounded-[14px] border border-white/10 bg-[#071226] pl-[46px] pr-[52px] text-white text-[13px] outline-none focus:border-[#00F5D4] transition duration-300"
+                                >
+
+                                <!-- TOGGLE -->
+
+                                <button
+                                    type="button"
+                                    id="togglePassword"
+                                    class="absolute top-1/2 right-[16px] -translate-y-1/2"
+                                >
+
+                                    <img
+                                        src="{% static 'accounts/images/eye.png' %}"
+                                        alt="Toggle Password"
+                                        class="w-[16px] h-[16px] opacity-70 hover:opacity-100 transition duration-300"
+                                    >
+
+                                </button>
+
+                            </div>
+
+                        </div>
+
+                        <!-- BUTTON -->
+
+                        <button
+                            type="submit"
+                            class="w-full h-[46px] rounded-[14px] bg-gradient-to-r from-[#00F5D4] to-[#4EA8FF] text-[#020617] text-[14px] font-bold transition duration-300 hover:-translate-y-[2px] hover:shadow-[0_12px_24px_rgba(0,245,212,0.18)]"
+                        >
+
+                            Secure Sign In →
+
+                        </button>
+
+                    </form>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- RIGHT SIDE -->
+
+        <div class="hidden xl:block w-[54%] h-screen relative overflow-hidden">
+
+            <!-- VIDEO -->
+
+            <video
+                autoplay
+                muted
+                loop
+                playsinline
+                preload="auto"
+                class="absolute inset-0 w-full h-full object-cover opacity-[0.82]"
+            >
+
+                <source
+                    src="{% static 'admins/videos/admin-login-animation.mp4' %}"
+                    type="video/mp4"
+                >
+
+            </video>
+
+            <!-- SAME GRID CONTINUATION -->
+
+            <div
+                class="absolute inset-0"
+                style="
+                    background-image:
+                    linear-gradient(rgba(255,255,255,0.045) 1px, transparent 1px),
+                    linear-gradient(90deg, rgba(255,255,255,0.045) 1px, transparent 1px);
+
+                    background-size: 32px 32px;
+
+                    background-position: center center;
+                "
+            ></div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<script src="{% static 'accounts/js/auth-global.js' %}"></script>
+
+{% endblock %}

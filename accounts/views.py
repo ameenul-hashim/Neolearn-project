@@ -3,8 +3,8 @@ from django.core.mail import send_mail
 from django.core.validators import validate_email
 from django.core.exceptions import ValidationError
 from django.contrib.auth.models import User
+from django.contrib import messages
 from django.contrib.auth import (authenticate,login,logout)
-from django.contrib.auth.decorators import login_required
 from django.views.decorators.cache import (never_cache)
 from .models import EmailOTP
 import random
@@ -415,6 +415,12 @@ def resend_otp_view(request):
 # SIGNIN VIEW
 
 @never_cache
+# SIGNIN VIEW
+
+@never_cache
+# SIGNIN VIEW
+
+@never_cache
 def signin_view(request):
 
     # ALREADY LOGGED IN
@@ -440,6 +446,8 @@ def signin_view(request):
             ''
         )
 
+        # EMPTY FIELD VALIDATION
+
         if not username or not password:
 
             return render(
@@ -453,6 +461,46 @@ def signin_view(request):
                 }
             )
 
+        # USER EXIST CHECK
+
+        try:
+
+            existing_user = User.objects.get(
+                username=username
+            )
+
+        except User.DoesNotExist:
+
+            return render(
+                request,
+                'accounts/signin.html',
+                {
+                    'error': (
+                        'Account not found. '
+                        'Please create an account first.'
+                    ),
+                    'success': success
+                }
+            )
+
+        # BLOCKED USER CHECK
+
+        if not existing_user.is_active:
+
+            return render(
+                request,
+                'accounts/signin.html',
+                {
+                    'error': (
+                        'Your account has been blocked by admin. '
+                        'Please contact support for help.'
+                    ),
+                    'success': success
+                }
+            )
+
+        # AUTHENTICATION
+
         user = authenticate(
 
             request,
@@ -462,7 +510,7 @@ def signin_view(request):
             password=password
         )
 
-        # INVALID USER
+        # INVALID PASSWORD
 
         if user is None:
 
@@ -470,7 +518,10 @@ def signin_view(request):
                 request,
                 'accounts/signin.html',
                 {
-                    'error': 'Invalid username or password',
+                    'error': (
+                        'Incorrect password. '
+                        'Please try again.'
+                    ),
                     'success': success
                 }
             )
@@ -495,7 +546,7 @@ def signin_view(request):
                 }
             )
 
-        # NORMAL STUDENT LOGIN
+        # LOGIN USER
 
         login(request, user)
 
@@ -504,6 +555,11 @@ def signin_view(request):
         request.session.set_expiry(3600)
 
         request.session.modified = True
+
+        messages.success(
+            request,
+            'Login successful.'
+        )
 
         return redirect('dashboard')
 
@@ -524,7 +580,6 @@ def signin_view(request):
     response['Expires'] = '0'
 
     return response
-
 
 # FORGOT PASSWORD VIEW
 

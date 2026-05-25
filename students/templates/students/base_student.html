@@ -1,0 +1,1201 @@
+{% load static %}
+
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>
+
+        {% block title %}
+        NeoLearn
+        {% endblock %}
+
+    </title>
+
+    <!-- TAILWIND -->
+
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- REMIX ICON -->
+
+    <link
+        rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/4.2.0/remixicon.min.css"
+    >
+
+    <!-- FONT -->
+
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet"
+    >
+
+    <style>
+
+        *{
+
+            font-family:'Inter',sans-serif;
+            scrollbar-width:none;
+
+        }
+
+        *::-webkit-scrollbar{
+
+            display:none;
+
+        }
+
+        body{
+
+            overflow:hidden;
+            background:#020817;
+            color:white;
+
+        }
+
+        .sidebar-bg{
+
+            background:
+            linear-gradient(
+                180deg,
+                #050B16 0%,
+                #020617 100%
+            );
+
+        }
+
+        .navbar-bg{
+
+            background:
+            rgba(4,9,20,0.94);
+
+            backdrop-filter:blur(20px);
+
+        }
+
+        .main-grid{
+
+            background-image:
+            linear-gradient(
+                rgba(255,255,255,0.03) 1px,
+                transparent 1px
+            ),
+
+            linear-gradient(
+                90deg,
+                rgba(255,255,255,0.03) 1px,
+                transparent 1px
+            );
+
+            background-size:42px 42px;
+
+        }
+
+        .active-menu{
+
+            background:
+            linear-gradient(
+                90deg,
+                rgba(0,255,224,0.14),
+                rgba(0,255,224,0.03)
+            );
+
+            border-left:3px solid #00F5D4;
+
+            color:#00F5D4;
+
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+<div class="flex w-full h-screen overflow-hidden">
+
+    <!-- MOBILE OVERLAY -->
+
+    <div
+        id="overlay"
+        class="
+            fixed
+            inset-0
+            bg-black/70
+            z-40
+            hidden
+            lg:hidden
+        "
+    ></div>
+
+    <!-- SIDEBAR -->
+
+    <aside
+        id="sidebar"
+        class="
+            fixed
+            top-0
+            left-0
+            z-50
+
+            w-[270px]
+            h-screen
+
+            sidebar-bg
+
+            border-r
+            border-white/5
+
+            flex
+            flex-col
+
+            transition-all
+            duration-300
+
+            -translate-x-full
+            lg:translate-x-0
+        "
+    >
+
+        <!-- LOGO -->
+
+        <div
+            class="
+                h-[80px]
+
+                border-b
+                border-white/5
+
+                px-7
+
+                flex
+                items-center
+                justify-between
+            "
+        >
+
+            <div class="flex items-center gap-3">
+
+                <!-- GLOW -->
+
+                <div class="relative">
+
+                    <!-- OUTER GLOW -->
+
+                    <div
+                        class="
+                            absolute
+                            inset-0
+
+                            rounded-[18px]
+
+                            bg-cyan-400/20
+
+                            blur-xl
+                            animate-pulse
+                        "
+                    ></div>
+
+                    <!-- MAIN BOX -->
+
+                    <div
+                        class="
+                            relative
+
+                            w-[48px]
+                            h-[48px]
+
+                            rounded-[16px]
+
+                            border
+                            border-cyan-400/20
+
+                            bg-[#071224]
+
+                            flex
+                            items-center
+                            justify-center
+                        "
+                    >
+
+                        <!-- HEXAGON -->
+
+                        <div
+                            class="
+                                w-[22px]
+                                h-[22px]
+
+                                border-[3px]
+                                border-cyan-400
+
+                                rotate-45
+
+                                rounded-[6px]
+                            "
+                        ></div>
+
+                    </div>
+
+                </div>
+
+                <!-- LOGO TEXT -->
+
+                <h1
+                    class="
+                        text-[22px]
+                        font-extrabold
+                        tracking-[-1px]
+                    "
+                >
+
+                    <span class="text-white">
+
+                        Neo
+
+                    </span>
+
+                    <span class="text-cyan-400">
+
+                        Learn
+
+                    </span>
+
+                </h1>
+
+            </div>
+
+            <!-- MOBILE CLOSE -->
+
+            <button
+                id="closeSidebar"
+                class="
+                    lg:hidden
+                    text-[#94A3B8]
+                "
+            >
+
+                <i class="ri-close-line text-[24px]"></i>
+
+            </button>
+
+        </div>
+
+        <!-- NAVIGATION -->
+
+        <div class="flex-1 overflow-y-auto px-4 py-5">
+
+            <nav class="space-y-2">
+
+                <!-- DASHBOARD -->
+
+                <a
+                    href="{% url 'dashboard' %}"
+
+                    class="
+                        h-[48px]
+
+                        rounded-[14px]
+
+                        px-4
+
+                        flex
+                        items-center
+                        gap-3
+
+                        text-[14px]
+                        font-semibold
+
+                        transition-all
+
+                        {% if request.resolver_match.url_name == 'dashboard' %}
+
+                            active-menu
+
+                        {% else %}
+
+                            text-[#94A3B8]
+                            hover:bg-white/5
+                            hover:text-white
+
+                        {% endif %}
+                    "
+                >
+
+                    <i class="ri-layout-grid-fill text-[18px]"></i>
+
+                    Dashboard
+
+                </a>
+
+                <!-- MY LEARNING -->
+
+                <a
+                    href="#"
+
+                    class="
+                        h-[48px]
+
+                        rounded-[14px]
+
+                        px-4
+
+                        flex
+                        items-center
+                        gap-3
+
+                        text-[#94A3B8]
+
+                        hover:bg-white/5
+                        hover:text-white
+
+                        transition-all
+                    "
+                >
+
+                    <i class="ri-book-open-line text-[18px]"></i>
+
+                    <span class="text-[14px] font-medium">
+
+                        My Learning
+
+                    </span>
+
+                </a>
+
+                <!-- MARKETPLACE -->
+
+                <a
+                    href="#"
+
+                    class="
+                        h-[48px]
+
+                        rounded-[14px]
+
+                        px-4
+
+                        flex
+                        items-center
+                        gap-3
+
+                        text-[#94A3B8]
+
+                        hover:bg-white/5
+                        hover:text-white
+
+                        transition-all
+                    "
+                >
+
+                    <i class="ri-shopping-bag-3-line text-[18px]"></i>
+
+                    <span class="text-[14px] font-medium">
+
+                        Marketplace
+
+                    </span>
+
+                </a>
+
+                <!-- LIVE -->
+
+                <a
+                    href="#"
+
+                    class="
+                        h-[48px]
+
+                        rounded-[14px]
+
+                        px-4
+
+                        flex
+                        items-center
+                        gap-3
+
+                        text-[#94A3B8]
+
+                        hover:bg-white/5
+                        hover:text-white
+
+                        transition-all
+                    "
+                >
+
+                    <i class="ri-live-line text-[18px]"></i>
+
+                    <span class="text-[14px] font-medium">
+
+                        Live Classes
+
+                    </span>
+
+                </a>
+
+                <!-- CERTIFICATE -->
+
+                <a
+                    href="#"
+
+                    class="
+                        h-[48px]
+
+                        rounded-[14px]
+
+                        px-4
+
+                        flex
+                        items-center
+                        gap-3
+
+                        text-[#94A3B8]
+
+                        hover:bg-white/5
+                        hover:text-white
+
+                        transition-all
+                    "
+                >
+
+                    <i class="ri-award-line text-[18px]"></i>
+
+                    <span class="text-[14px] font-medium">
+
+                        Certificates
+
+                    </span>
+
+                </a>
+
+                <!-- SETTINGS -->
+
+                <a
+                    href="#"
+
+                    class="
+                        h-[48px]
+
+                        rounded-[14px]
+
+                        px-4
+
+                        flex
+                        items-center
+                        gap-3
+
+                        text-[#94A3B8]
+
+                        hover:bg-white/5
+                        hover:text-white
+
+                        transition-all
+                    "
+                >
+
+                    <i class="ri-settings-3-line text-[18px]"></i>
+
+                    <span class="text-[14px] font-medium">
+
+                        Settings
+
+                    </span>
+
+                </a>
+
+            </nav>
+
+        </div>
+
+        <!-- LOGOUT -->
+
+        <div
+            class="
+                p-4
+                border-t
+                border-white/5
+            "
+        >
+
+            <a
+                href="{% url 'logout' %}"
+
+                class="
+                    h-[50px]
+
+                    rounded-[16px]
+
+                    bg-red-500/10
+
+                    border
+                    border-red-500/10
+
+                    text-red-400
+
+                    flex
+                    items-center
+                    justify-center
+                    gap-3
+
+                    font-semibold
+
+                    hover:bg-red-500/20
+
+                    transition-all
+                "
+            >
+
+                <i class="ri-logout-box-r-line text-[18px]"></i>
+
+                Logout
+
+            </a>
+
+        </div>
+
+    </aside>
+
+    <!-- MAIN -->
+
+    <div class="flex-1 lg:ml-[270px] flex flex-col">
+
+        <!-- NAVBAR -->
+
+        <header
+            class="
+                fixed
+                top-0
+                left-0
+                lg:left-[270px]
+                right-0
+
+                h-[80px]
+
+                px-4
+                lg:px-7
+
+                navbar-bg
+
+                border-b
+                border-white/5
+
+                flex
+                items-center
+                justify-between
+
+                z-30
+            "
+        >
+
+            <!-- LEFT -->
+
+            <div class="flex items-center gap-4">
+
+                <!-- MOBILE MENU -->
+
+                <button
+                    id="openSidebar"
+
+                    class="
+                        lg:hidden
+
+                        w-[42px]
+                        h-[42px]
+
+                        rounded-[14px]
+
+                        border
+                        border-white/10
+
+                        flex
+                        items-center
+                        justify-center
+
+                        text-[#94A3B8]
+                    "
+                >
+
+                    <i class="ri-menu-3-line text-[22px]"></i>
+
+                </button>
+
+                <!-- SEARCH -->
+
+                <div class="relative hidden md:block">
+
+                    <input
+                        type="text"
+
+                        placeholder="Search courses, instructors, topics..."
+
+                        class="
+                            w-[520px]
+                            xl:w-[650px]
+
+                            h-[50px]
+
+                            rounded-[18px]
+
+                            border
+                            border-white/10
+
+                            bg-white/[0.03]
+
+                            pl-12
+                            pr-5
+
+                            text-[13px]
+
+                            placeholder:text-[#64748B]
+
+                            outline-none
+
+                            focus:border-cyan-400/30
+                        "
+                    >
+
+                    <i
+                        class="
+                            ri-search-line
+
+                            absolute
+
+                            left-4
+                            top-1/2
+
+                            -translate-y-1/2
+
+                            text-[#64748B]
+                            text-[18px]
+                        "
+                    ></i>
+
+                </div>
+
+            </div>
+
+            <!-- RIGHT -->
+
+            <div class="flex items-center gap-5">
+
+                <!-- STREAK -->
+
+                <div
+                    class="
+                        hidden
+                        xl:flex
+
+                        items-center
+                        gap-2
+
+                        h-[38px]
+                        px-4
+
+                        rounded-full
+
+                        border
+                        border-orange-500/20
+
+                        bg-orange-500/10
+
+                        text-orange-300
+
+                        text-[12px]
+                        font-semibold
+                    "
+                >
+
+                    <i class="ri-fire-fill"></i>
+
+                    12-day streak
+
+                </div>
+
+                <!-- WISHLIST -->
+
+                <button
+                    class="
+                        text-red-400
+                        hover:text-red-300
+                        transition-all
+                    "
+                >
+
+                    <i class="ri-heart-3-fill text-[21px]"></i>
+
+                </button>
+
+                <!-- CART -->
+
+                <button
+                    class="
+                        relative
+                        text-[#CBD5E1]
+                        hover:text-white
+                        transition-all
+                    "
+                >
+
+                    <i class="ri-shopping-cart-2-line text-[21px]"></i>
+
+                    <span
+                        class="
+                            absolute
+                            -top-1
+                            -right-2
+
+                            w-[18px]
+                            h-[18px]
+
+                            rounded-full
+
+                            bg-cyan-400
+
+                            text-black
+                            text-[10px]
+                            font-bold
+
+                            flex
+                            items-center
+                            justify-center
+                        "
+                    >
+
+                        3
+
+                    </span>
+
+                </button>
+
+                <!-- NOTIFICATION -->
+
+                <button
+                    class="
+                        relative
+                        text-[#CBD5E1]
+                        hover:text-white
+                        transition-all
+                    "
+                >
+
+                    <i class="ri-notification-3-line text-[21px]"></i>
+
+                    <span
+                        class="
+                            absolute
+                            top-0
+                            right-0
+
+                            w-[8px]
+                            h-[8px]
+
+                            rounded-full
+
+                            bg-cyan-400
+                        "
+                    ></span>
+
+                </button>
+
+                <!-- PROFILE -->
+
+                <div class="relative group">
+
+                    <button
+                        class="
+                            flex
+                            items-center
+                            gap-3
+                        "
+                    >
+
+                        <img
+                            src="{% static 'accounts/images/student-profile.png' %}"
+
+                            class="
+                                w-[42px]
+                                h-[42px]
+
+                                rounded-full
+
+                                object-cover
+
+                                border
+                                border-white/10
+                            "
+                        >
+
+                        <div class="hidden md:block text-left">
+
+                            <h3
+                                class="
+                                    text-[14px]
+                                    font-semibold
+                                    capitalize
+                                    leading-tight
+                                    text-white
+                                "
+                            >
+
+                                {{ request.user.username }}
+
+                            </h3>
+
+                            <p
+                                class="
+                                    text-[12px]
+                                    text-[#94A3B8]
+                                "
+                            >
+
+                                Student
+
+                            </p>
+
+                        </div>
+
+                        <i
+                            class="
+                                ri-arrow-down-s-line
+
+                                text-[#94A3B8]
+                                text-[18px]
+                            "
+                        ></i>
+
+                    </button>
+
+                    <!-- DROPDOWN -->
+
+                    <div
+                        class="
+                            absolute
+                            right-0
+                            top-[58px]
+
+                            w-[250px]
+
+                            rounded-[18px]
+
+                            border
+                            border-white/10
+
+                            bg-[#071224]
+
+                            shadow-[0_0_40px_rgba(0,0,0,0.45)]
+
+                            overflow-hidden
+
+                            opacity-0
+                            invisible
+
+                            translate-y-3
+
+                            transition-all
+                            duration-300
+
+                            group-hover:opacity-100
+                            group-hover:visible
+                            group-hover:translate-y-0
+                        "
+                    >
+
+                        <!-- TOP -->
+
+                        <div
+                            class="
+                                px-5
+                                py-5
+
+                                border-b
+                                border-white/5
+
+                                flex
+                                items-center
+                                gap-3
+                            "
+                        >
+
+                            <!-- PROFILE LETTER -->
+
+                            <div
+                                class="
+                                    w-[42px]
+                                    h-[42px]
+
+                                    rounded-full
+
+                                    bg-gradient-to-br
+                                    from-cyan-400
+                                    to-blue-500
+
+                                    flex
+                                    items-center
+                                    justify-center
+
+                                    text-white
+                                    font-bold
+                                    text-[16px]
+                                    uppercase
+                                "
+                            >
+
+                                {{ request.user.username|slice:":1" }}
+
+                            </div>
+
+                            <!-- DETAILS -->
+
+                            <div class="overflow-hidden">
+
+                                <h2
+                                    class="
+                                        text-[15px]
+                                        font-semibold
+                                        text-white
+                                        capitalize
+                                        truncate
+                                    "
+                                >
+
+                                    {{ request.user.username }}
+
+                                </h2>
+
+                                <p
+                                    class="
+                                        text-[#94A3B8]
+                                        text-[12px]
+                                        truncate
+                                    "
+                                >
+
+                                    {{ request.user.email }}
+
+                                </p>
+
+                            </div>
+
+                        </div>
+
+                        <!-- MENU -->
+
+                        <div class="py-2">
+
+                            <a
+                                href="#"
+
+                                class="
+                                    h-[46px]
+
+                                    px-5
+
+                                    flex
+                                    items-center
+                                    gap-3
+
+                                    text-[#94A3B8]
+
+                                    hover:text-white
+                                    hover:bg-white/5
+
+                                    transition-all
+
+                                    text-[14px]
+                                    font-medium
+                                "
+                            >
+
+                                <i class="ri-user-line text-[18px]"></i>
+
+                                View Profile
+
+                            </a>
+
+                            <a
+                                href="#"
+
+                                class="
+                                    h-[46px]
+
+                                    px-5
+
+                                    flex
+                                    items-center
+                                    gap-3
+
+                                    text-white
+
+                                    hover:bg-white/5
+
+                                    transition-all
+
+                                    text-[14px]
+                                    font-medium
+                                "
+                            >
+
+                                <i class="ri-box-3-line text-[18px]"></i>
+
+                                My Orders
+
+                            </a>
+
+                            <a
+                                href="#"
+
+                                class="
+                                    h-[46px]
+
+                                    px-5
+
+                                    flex
+                                    items-center
+                                    gap-3
+
+                                    text-[#94A3B8]
+
+                                    hover:text-white
+                                    hover:bg-white/5
+
+                                    transition-all
+
+                                    text-[14px]
+                                    font-medium
+                                "
+                            >
+
+                                <i class="ri-settings-3-line text-[18px]"></i>
+
+                                Settings
+
+                            </a>
+
+                        </div>
+
+                        <!-- LOGOUT -->
+
+                        <div
+                            class="
+                                border-t
+                                border-white/5
+                                p-2
+                            "
+                        >
+
+                            <a
+                                href="{% url 'logout' %}"
+
+                                class="
+                                    h-[46px]
+
+                                    rounded-[14px]
+
+                                    px-4
+
+                                    flex
+                                    items-center
+                                    gap-3
+
+                                    text-red-400
+
+                                    hover:bg-red-500/10
+
+                                    transition-all
+
+                                    text-[14px]
+                                    font-medium
+                                "
+                            >
+
+                                <i class="ri-logout-box-r-line text-[18px]"></i>
+
+                                Logout
+
+                            </a>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </header>
+
+        <!-- CONTENT -->
+
+        <main
+            class="
+                flex-1
+
+                mt-[80px]
+
+                overflow-y-auto
+
+                p-4
+                md:p-6
+
+                main-grid
+            "
+        >
+
+            {% block student_content %}
+            {% endblock %}
+
+        </main>
+
+    </div>
+
+</div>
+
+<!-- MOBILE SCRIPT -->
+
+<script>
+
+    const sidebar = document.getElementById('sidebar');
+
+    const openSidebar = document.getElementById('openSidebar');
+
+    const closeSidebar = document.getElementById('closeSidebar');
+
+    const overlay = document.getElementById('overlay');
+
+    openSidebar.addEventListener('click',()=>{
+
+        sidebar.classList.remove('-translate-x-full');
+
+        overlay.classList.remove('hidden');
+
+    });
+
+    closeSidebar.addEventListener('click',()=>{
+
+        sidebar.classList.add('-translate-x-full');
+
+        overlay.classList.add('hidden');
+
+    });
+
+    overlay.addEventListener('click',()=>{
+
+        sidebar.classList.add('-translate-x-full');
+
+        overlay.classList.add('hidden');
+
+    });
+
+</script>
+
+</body>
+
+</html>
