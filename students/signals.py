@@ -5,7 +5,11 @@ from .models import StudentProfile
 
 
 @receiver(post_save,sender=User)
+
 def create_profile(sender,instance,created,**kwargs):
 
     if created:
-        StudentProfile.objects.create(user=instance)
+
+        StudentProfile.objects.create(
+            user=instance
+        )
