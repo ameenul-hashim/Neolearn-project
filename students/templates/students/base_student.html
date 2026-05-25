@@ -807,326 +807,376 @@
 
                 <!-- PROFILE -->
 
-                <div class="relative group">
+               <!-- PROFILE -->
 
-                    <button
-                        class="
-                            flex
-                            items-center
-                            gap-3
-                        "
-                    >
+<div class="relative group">
 
-                        <img
-                            src="{% static 'accounts/images/student-profile.png' %}"
+    <button
+        class="
+            flex
+            items-center
+            gap-3
+        "
+    >
 
-                            class="
-                                w-[42px]
-                                h-[42px]
+        <!-- DYNAMIC PROFILE IMAGE -->
 
-                                rounded-full
+        {% if request.user.studentprofile.profile_image %}
 
-                                object-cover
+        <img
+            src="{{ request.user.studentprofile.profile_image }}"
 
-                                border
-                                border-white/10
-                            "
-                        >
+            class="
+                w-[42px]
+                h-[42px]
 
-                        <div class="hidden md:block text-left">
+                rounded-full
 
-                            <h3
-                                class="
-                                    text-[14px]
-                                    font-semibold
-                                    capitalize
-                                    leading-tight
-                                    text-white
-                                "
-                            >
+                object-cover
 
-                                {{ request.user.username }}
+                border
+                border-white/10
+            "
+        >
 
-                            </h3>
+        {% else %}
 
-                            <p
-                                class="
-                                    text-[12px]
-                                    text-[#94A3B8]
-                                "
-                            >
+        <img
+            src="{% static 'accounts/images/student-profile.png' %}"
 
-                                Student
+            class="
+                w-[42px]
+                h-[42px]
 
-                            </p>
+                rounded-full
 
-                        </div>
+                object-cover
 
-                        <i
-                            class="
-                                ri-arrow-down-s-line
+                border
+                border-white/10
+            "
+        >
 
-                                text-[#94A3B8]
-                                text-[18px]
-                            "
-                        ></i>
+        {% endif %}
 
-                    </button>
+        <!-- USER DETAILS -->
 
-                    <!-- DROPDOWN -->
+        <div class="hidden md:block text-left">
 
-                    <div
-                        class="
-                            absolute
-                            right-0
-                            top-[58px]
+            <h3
+                class="
+                    text-[14px]
+                    font-semibold
+                    capitalize
+                    leading-tight
+                    text-white
+                "
+            >
 
-                            w-[250px]
+                {{ request.user.username }}
 
-                            rounded-[18px]
+            </h3>
 
-                            border
-                            border-white/10
+            <p
+                class="
+                    text-[12px]
+                    text-[#94A3B8]
+                "
+            >
 
-                            bg-[#071224]
+                Student
 
-                            shadow-[0_0_40px_rgba(0,0,0,0.45)]
+            </p>
 
-                            overflow-hidden
+        </div>
 
-                            opacity-0
-                            invisible
+        <i
+            class="
+                ri-arrow-down-s-line
 
-                            translate-y-3
+                text-[#94A3B8]
+                text-[18px]
+            "
+        ></i>
 
-                            transition-all
-                            duration-300
+    </button>
 
-                            group-hover:opacity-100
-                            group-hover:visible
-                            group-hover:translate-y-0
-                        "
-                    >
+    <!-- DROPDOWN -->
 
-                        <!-- TOP -->
+    <div
+        class="
+            absolute
+            right-0
+            top-[58px]
 
-                        <div
-                            class="
-                                px-5
-                                py-5
+            w-[250px]
 
-                                border-b
-                                border-white/5
+            rounded-[18px]
 
-                                flex
-                                items-center
-                                gap-3
-                            "
-                        >
+            border
+            border-white/10
 
-                            <!-- PROFILE LETTER -->
+            bg-[#071224]
 
-                            <div
-                                class="
-                                    w-[42px]
-                                    h-[42px]
+            shadow-[0_0_40px_rgba(0,0,0,0.45)]
 
-                                    rounded-full
+            overflow-hidden
 
-                                    bg-gradient-to-br
-                                    from-cyan-400
-                                    to-blue-500
+            opacity-0
+            invisible
 
-                                    flex
-                                    items-center
-                                    justify-center
+            translate-y-3
 
-                                    text-white
-                                    font-bold
-                                    text-[16px]
-                                    uppercase
-                                "
-                            >
+            transition-all
+            duration-300
 
-                                {{ request.user.username|slice:":1" }}
+            group-hover:opacity-100
+            group-hover:visible
+            group-hover:translate-y-0
+        "
+    >
 
-                            </div>
+        <!-- TOP -->
 
-                            <!-- DETAILS -->
+        <div
+            class="
+                px-5
+                py-5
 
-                            <div class="overflow-hidden">
+                border-b
+                border-white/5
 
-                                <h2
-                                    class="
-                                        text-[15px]
-                                        font-semibold
-                                        text-white
-                                        capitalize
-                                        truncate
-                                    "
-                                >
+                flex
+                items-center
+                gap-3
+            "
+        >
 
-                                    {{ request.user.username }}
+            <!-- DROPDOWN PROFILE IMAGE -->
 
-                                </h2>
+            {% if request.user.studentprofile.profile_image %}
 
-                                <p
-                                    class="
-                                        text-[#94A3B8]
-                                        text-[12px]
-                                        truncate
-                                    "
-                                >
+            <img
+                src="{{ request.user.studentprofile.profile_image }}"
 
-                                    {{ request.user.email }}
+                class="
+                    w-[42px]
+                    h-[42px]
 
-                                </p>
+                    rounded-full
 
-                            </div>
+                    object-cover
 
-                        </div>
+                    border
+                    border-white/10
+                "
+            >
 
-                        <!-- MENU -->
+            {% else %}
 
-                        <div class="py-2">
+            <div
+                class="
+                    w-[42px]
+                    h-[42px]
 
-                            <a
-                                href="#"
+                    rounded-full
 
-                                class="
-                                    h-[46px]
+                    bg-gradient-to-br
+                    from-cyan-400
+                    to-blue-500
 
-                                    px-5
+                    flex
+                    items-center
+                    justify-center
 
-                                    flex
-                                    items-center
-                                    gap-3
+                    text-white
+                    font-bold
+                    text-[16px]
+                    uppercase
+                "
+            >
 
-                                    text-[#94A3B8]
+                {{ request.user.username|slice:":1" }}
 
-                                    hover:text-white
-                                    hover:bg-white/5
+            </div>
 
-                                    transition-all
+            {% endif %}
 
-                                    text-[14px]
-                                    font-medium
-                                "
-                            >
+            <!-- DETAILS -->
 
-                                <i class="ri-user-line text-[18px]"></i>
+            <div class="overflow-hidden">
 
-                                View Profile
+                <h2
+                    class="
+                        text-[15px]
+                        font-semibold
+                        text-white
+                        capitalize
+                        truncate
+                    "
+                >
 
-                            </a>
+                    {{ request.user.username }}
 
-                            <a
-                                href="#"
+                </h2>
 
-                                class="
-                                    h-[46px]
+                <p
+                    class="
+                        text-[#94A3B8]
+                        text-[12px]
+                        truncate
+                    "
+                >
 
-                                    px-5
+                    {{ request.user.email }}
 
-                                    flex
-                                    items-center
-                                    gap-3
+                </p>
 
-                                    text-white
+            </div>
 
-                                    hover:bg-white/5
+        </div>
 
-                                    transition-all
+        <!-- MENU -->
 
-                                    text-[14px]
-                                    font-medium
-                                "
-                            >
+        <div class="py-2">
 
-                                <i class="ri-box-3-line text-[18px]"></i>
+            <a
+                href="{% url 'profile' %}"
 
-                                My Orders
+                class="
+                    h-[46px]
 
-                            </a>
+                    px-5
 
-                            <a
-                                href="#"
+                    flex
+                    items-center
+                    gap-3
 
-                                class="
-                                    h-[46px]
+                    text-[#94A3B8]
 
-                                    px-5
+                    hover:text-white
+                    hover:bg-white/5
 
-                                    flex
-                                    items-center
-                                    gap-3
+                    transition-all
 
-                                    text-[#94A3B8]
+                    text-[14px]
+                    font-medium
+                "
+            >
 
-                                    hover:text-white
-                                    hover:bg-white/5
+                <i class="ri-user-line text-[18px]"></i>
 
-                                    transition-all
+                View Profile
 
-                                    text-[14px]
-                                    font-medium
-                                "
-                            >
+            </a>
 
-                                <i class="ri-settings-3-line text-[18px]"></i>
+            <a
+                href="#"
 
-                                Settings
+                class="
+                    h-[46px]
 
-                            </a>
+                    px-5
 
-                        </div>
+                    flex
+                    items-center
+                    gap-3
 
-                        <!-- LOGOUT -->
+                    text-white
 
-                        <div
-                            class="
-                                border-t
-                                border-white/5
-                                p-2
-                            "
-                        >
+                    hover:bg-white/5
 
-                            <a
-                                href="{% url 'logout' %}"
+                    transition-all
 
-                                class="
-                                    h-[46px]
+                    text-[14px]
+                    font-medium
+                "
+            >
 
-                                    rounded-[14px]
+                <i class="ri-box-3-line text-[18px]"></i>
 
-                                    px-4
+                My Orders
 
-                                    flex
-                                    items-center
-                                    gap-3
+            </a>
 
-                                    text-red-400
+            <a
+                href="#"
 
-                                    hover:bg-red-500/10
+                class="
+                    h-[46px]
 
-                                    transition-all
+                    px-5
 
-                                    text-[14px]
-                                    font-medium
-                                "
-                            >
+                    flex
+                    items-center
+                    gap-3
 
-                                <i class="ri-logout-box-r-line text-[18px]"></i>
+                    text-[#94A3B8]
 
-                                Logout
+                    hover:text-white
+                    hover:bg-white/5
 
-                            </a>
+                    transition-all
 
-                        </div>
+                    text-[14px]
+                    font-medium
+                "
+            >
 
-                    </div>
+                <i class="ri-settings-3-line text-[18px]"></i>
 
-                </div>
+                Settings
+
+            </a>
+
+        </div>
+
+        <!-- LOGOUT -->
+
+        <div
+            class="
+                border-t
+                border-white/5
+                p-2
+            "
+        >
+
+            <a
+                href="{% url 'logout' %}"
+
+                class="
+                    h-[46px]
+
+                    rounded-[14px]
+
+                    px-4
+
+                    flex
+                    items-center
+                    gap-3
+
+                    text-red-400
+
+                    hover:bg-red-500/10
+
+                    transition-all
+
+                    text-[14px]
+                    font-medium
+                "
+            >
+
+                <i class="ri-logout-box-r-line text-[18px]"></i>
+
+                Logout
+
+            </a>
+
+        </div>
+
+    </div>
+
+</div>
 
             </div>
 
@@ -1158,43 +1208,7 @@
 
 </div>
 
-<!-- MOBILE SCRIPT -->
-
-<script>
-
-    const sidebar = document.getElementById('sidebar');
-
-    const openSidebar = document.getElementById('openSidebar');
-
-    const closeSidebar = document.getElementById('closeSidebar');
-
-    const overlay = document.getElementById('overlay');
-
-    openSidebar.addEventListener('click',()=>{
-
-        sidebar.classList.remove('-translate-x-full');
-
-        overlay.classList.remove('hidden');
-
-    });
-
-    closeSidebar.addEventListener('click',()=>{
-
-        sidebar.classList.add('-translate-x-full');
-
-        overlay.classList.add('hidden');
-
-    });
-
-    overlay.addEventListener('click',()=>{
-
-        sidebar.classList.add('-translate-x-full');
-
-        overlay.classList.add('hidden');
-
-    });
-
-</script>
+<script src="{% static 'students/js/student-base.js' %}"></script>
 
 </body>
 
