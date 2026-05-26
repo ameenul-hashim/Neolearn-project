@@ -25,6 +25,8 @@ const cancelCrop=document.getElementById(
 let cropper
 
 
+// OPEN FILE INPUT
+
 if(editButton){
 
     editButton.addEventListener(
@@ -37,6 +39,8 @@ if(editButton){
     )
 }
 
+
+// IMAGE SELECT
 
 if(fileInput){
 
@@ -70,12 +74,43 @@ if(fileInput){
                     cropper=new Cropper(
                         cropImage,
                         {
+
                             aspectRatio:1,
-                            viewMode:1,
+
+                            viewMode:2,
+
                             dragMode:'move',
+
                             autoCropArea:1,
+
                             responsive:true,
+
                             background:false,
+
+                            guides:true,
+
+                            center:true,
+
+                            highlight:true,
+
+                            cropBoxMovable:true,
+
+                            cropBoxResizable:false,
+
+                            toggleDragModeOnDblclick:false,
+
+                            movable:true,
+
+                            zoomable:true,
+
+                            scalable:false,
+
+                            rotatable:false,
+
+                            minContainerWidth:450,
+
+                            minContainerHeight:450,
+
                         }
                     )
                 }
@@ -86,6 +121,8 @@ if(fileInput){
     )
 }
 
+
+// CANCEL CROP
 
 if(cancelCrop){
 
@@ -101,11 +138,17 @@ if(cancelCrop){
                 'flex'
             )
 
-            cropper.destroy()
+            if(cropper){
+
+                cropper.destroy()
+            }
+
         }
     )
 }
 
+
+// SAVE CROPPED IMAGE
 
 if(saveCrop){
 
@@ -115,8 +158,12 @@ if(saveCrop){
 
             const canvas=cropper.getCroppedCanvas(
                 {
-                    width:500,
-                    height:500
+                    width:600,
+                    height:600,
+
+                    imageSmoothingEnabled:true,
+
+                    imageSmoothingQuality:'high',
                 }
             )
 
@@ -145,14 +192,18 @@ if(saveCrop){
                             body:formData
                         }
                     )
+
                     .then(response=>response.text())
+
                     .then(()=>{
 
                         window.location.reload()
 
                     })
 
-                }
+                },
+                'image/jpeg',
+                0.95
             )
         }
     )

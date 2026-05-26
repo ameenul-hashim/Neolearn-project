@@ -1035,3 +1035,7 @@ def logout_view(request):
     response['Expires'] = '0'
 
     return response
+
+def home_view(request):
+    
+    return render(request,'accounts/home.html')

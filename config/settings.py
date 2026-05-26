@@ -237,7 +237,7 @@ SITE_ID = 1
 
 LOGIN_URL = '/signin/'
 
-LOGIN_REDIRECT_URL = '/dashboard/'
+LOGIN_REDIRECT_URL='/students/dashboard/'
 
 LOGOUT_REDIRECT_URL = '/signin/'
 
@@ -292,3 +292,7 @@ CLOUDINARY_STORAGE = {
         'CLOUDINARY_API_SECRET'
     ),
 }
+
+ACCOUNT_SESSION_REMEMBER = True
+
+SOCIALACCOUNT_ADAPTER='accounts.adapters.GoogleAccountAdapter'
