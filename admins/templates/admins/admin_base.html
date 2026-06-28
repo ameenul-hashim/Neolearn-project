@@ -5,7 +5,7 @@
 <html lang="en">
 
 <head>
-
+<link rel="stylesheet" href="{% static 'global-messages.css' %}">
     <meta charset="UTF-8">
 
     <meta
@@ -344,10 +344,85 @@
 
                 </a>
 
-                <!-- COURSES -->
+
+                <!-- teachers -->
 
                 <a
-                    href="#"
+                    href="{% url 'admin_students' %}"
+
+                    class="
+                        relative
+                        flex
+                        items-center
+                        gap-4
+                        h-[52px]
+                        px-5
+                        rounded-[16px]
+                        overflow-hidden
+                        transition
+                        duration-300
+
+                        {% if request.resolver_match.url_name == 'admin_students' %}
+
+                            bg-cyan-400/10
+                            border
+                            border-cyan-400/10
+                            text-white
+
+                        {% else %}
+
+                            text-[#94A3B8]
+                            hover:bg-white/5
+                            hover:text-white
+
+                        {% endif %}
+                    "
+                >
+
+                    {% if request.resolver_match.url_name == 'admin_students' %}
+
+                    <div
+                        class="
+                            absolute
+                            left-0
+                            top-1/2
+                            -translate-y-1/2
+                            w-[4px]
+                            h-[30px]
+                            rounded-r-full
+                            bg-[#00F5D4]
+                            shadow-[0_0_14px_#00F5D4]
+                        "
+                    ></div>
+
+                    {% endif %}
+
+                    <i
+                        class="
+                            ri-team-line
+                            text-[18px]
+
+                            {% if request.resolver_match.url_name == 'admin_students' %}
+
+                                text-[#00F5D4]
+
+                            {% endif %}
+                        "
+                    ></i>
+
+                    <span class="text-[15px] font-medium">
+
+                        Teachers
+
+                    </span>
+
+                </a>
+
+
+                <!-- Batches -->
+
+                <a
+                    href="{% url 'admin_batches' %}"
                     class="
                         flex
                         items-center
@@ -366,13 +441,13 @@
 
                     <span class="text-[15px] font-medium">
 
-                        Courses
+                        Batches
 
                     </span>
 
                 </a>
 
-                <!-- CATEGORIES -->
+                <!-- subjects -->
 
                 <a
                     href="#"
@@ -394,7 +469,7 @@
 
                     <span class="text-[15px] font-medium">
 
-                        Categories
+                        Subjects
 
                     </span>
 

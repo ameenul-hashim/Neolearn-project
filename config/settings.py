@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     'admins',
     'home',
     'core',
+    'teachers',
 
     # DJANGO ALLAUTH
 

@@ -16,4 +16,5 @@ urlpatterns=[
     path('logout/',views.logout_view,name='logout'),
     path('google/signup/',google_signup,name='google_signup'),
     path('google/signin/',google_signin,name='google_signin'),
+    path('teacher/',views.teacher_view,name='teacher')
 ]

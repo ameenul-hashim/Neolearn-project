@@ -1,0 +1,178 @@
+{% extends "admins/admin_base.html" %}
+
+{% block title %}
+Create Batch
+{% endblock %}
+
+{% block admin_content %}
+
+<div class="w-full flex justify-center">
+
+    <div class="w-full max-w-[460px] rounded-xl border border-slate-600 bg-[#0F172A] shadow-xl">
+
+        <!-- Header -->
+
+        <div class="flex items-center justify-between px-6 py-4 border-b border-slate-600">
+
+            <h2 class="text-xl font-semibold text-white">
+
+                Create Batch
+
+            </h2>
+
+            <a href="{% url 'admin_batches' %}"
+               class="text-gray-400 hover:text-white text-xl transition">
+
+                ✕
+
+            </a>
+
+        </div>
+
+        <div class="p-4">
+
+
+            <form
+                method="POST"
+                enctype="multipart/form-data"
+                class="space-y-3">
+
+                {% csrf_token %}
+
+                <div>
+
+                    <label class="block text-sm font-medium text-gray-300 mb-2">
+
+                        Batch Name
+
+                    </label>
+
+                    <input
+                        type="text"
+                        name="batch_name"
+                        value="{{ request.POST.batch_name }}"
+                        placeholder="Enter batch name"
+                        class="w-full rounded-lg border border-slate-700 bg-slate-800 px-4 py-2.5 text-white placeholder-gray-500 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500 outline-none">
+
+                </div>
+
+                <div>
+
+                    <label class="block text-sm font-medium text-gray-300 mb-2">
+
+                        Price (₹)
+
+                    </label>
+
+                    <input
+                        type="number"
+                        name="batch_price"
+                        value="{{ request.POST.batch_price }}"
+                        min="0"
+                        step="0.01"
+                        placeholder="Enter price"
+                        class="w-full rounded-lg border border-slate-700 bg-slate-800 px-4 py-2.5 text-white placeholder-gray-500 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500 outline-none">
+                        </div>
+                                        <!-- Description -->
+
+                <div>
+
+                    <label class="block text-sm font-medium text-gray-300 mb-2">
+
+                        Description
+
+                    </label>
+
+                    <textarea
+                        name="batch_description"
+                        rows="3"
+                        placeholder="Enter batch description"
+                        class="w-full rounded-lg border border-slate-700 bg-slate-800 px-4 py-2.5 text-white placeholder-gray-500 resize-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500 outline-none">{{ request.POST.batch_description }}</textarea>
+
+                </div>
+
+                <!-- Status -->
+
+                <div>
+
+                    <label class="block text-sm font-medium text-gray-300 mb-2">
+
+                        Status
+
+                    </label>
+
+                    <select
+                        name="batch_status"
+                        class="w-full rounded-lg border border-slate-700 bg-slate-800 px-4 py-2.5 text-white focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500 outline-none">
+
+                        <option value="draft"
+                            {% if request.POST.batch_status == 'draft' %}selected{% endif %}>
+                            Draft
+                        </option>
+
+                        <option value="published"
+                            {% if request.POST.batch_status == 'published' %}selected{% endif %}>
+                            Published
+                        </option>
+
+                    </select>
+
+                </div>
+
+                <!-- Thumbnail -->
+
+                <div>
+
+                    <label class="block text-sm font-medium text-gray-300 mb-2">
+
+                        Batch Thumbnail
+
+                    </label>
+
+                    <input
+                        type="file"
+                        name="batch_thumbnail"
+                        accept="image/*"
+                        class="block w-full rounded-lg border border-slate-700 bg-slate-800 text-sm text-gray-300
+                        file:mr-3
+                        file:border-0
+                        file:rounded-lg
+                        file:bg-cyan-500
+                        file:px-4
+                        file:py-2
+                        file:font-medium
+                        file:text-slate-900
+                        hover:file:bg-cyan-400">
+
+                </div>
+
+                <!-- Action Buttons -->
+
+                <div class="flex justify-end gap-3 pt-1">
+                                        <a
+                        href="{% url 'admin_batches' %}"
+                        class="rounded-lg border border-slate-700 bg-slate-800 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-700">
+
+                        Cancel
+
+                    </a>
+
+                    <button
+                        type="submit"
+                        class="rounded-lg bg-cyan-500 px-5 py-2.5 text-sm font-semibold text-slate-900 transition hover:bg-cyan-400">
+
+                        Create Batch
+
+                    </button>
+
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

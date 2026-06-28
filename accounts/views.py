@@ -9,7 +9,7 @@ from django.views.decorators.cache import (never_cache)
 from .models import EmailOTP
 import random
 import re
-
+from django.http import HttpResponse
 
 # SIGNUP VIEW
 
@@ -1039,3 +1039,6 @@ def logout_view(request):
 def home_view(request):
     
     return render(request,'accounts/home.html')
+
+def teacher_view(request):
+    return HttpResponse("this is teacher view")

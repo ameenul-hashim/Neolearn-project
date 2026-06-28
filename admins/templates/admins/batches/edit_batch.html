@@ -1,0 +1,188 @@
+{% extends "admins/admin_base.html" %}
+
+{% block title %}
+Edit Batch
+{% endblock %}
+
+{% block admin_content %}
+
+<div class="min-h-[calc(100vh-90px)] flex items-center justify-center px-4">
+
+    <div class="w-full max-w-[420px] rounded-xl border border-slate-700 bg-[#0F172A] shadow-2xl">
+
+        <div class="flex items-center justify-between border-b border-slate-700 px-5 py-4">
+
+            <h2 class="text-lg font-semibold text-white">
+
+                Edit Batch
+
+            </h2>
+
+            <a
+                href="{% url 'admin_batches' %}"
+                class="text-gray-400 hover:text-white text-xl">
+
+                ✕
+
+            </a>
+
+        </div>
+
+        <form
+            method="POST"
+            enctype="multipart/form-data"
+            class="space-y-3 p-5">
+
+            {% csrf_token %}
+
+                        <!-- Batch Name -->
+
+            <div>
+
+                <label class="mb-1 block text-[11px] uppercase tracking-wide text-slate-400">
+
+                    Batch Name
+
+                </label>
+
+                <input
+                    type="text"
+                    name="batch_name"
+                    value="{{ batch.batch_name }}"
+                    class="w-full rounded-md border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-white outline-none focus:border-cyan-500">
+
+            </div>
+
+            <!-- Price -->
+
+            <div>
+
+                <label class="mb-1 block text-[11px] uppercase tracking-wide text-slate-400">
+
+                    Price (₹)
+
+                </label>
+
+                <input
+                    type="number"
+                    name="batch_price"
+                    value="{{ batch.batch_price }}"
+                    min="0"
+                    step="0.01"
+                    class="w-full rounded-md border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-white outline-none focus:border-cyan-500">
+
+            </div>
+
+            <!-- Description -->
+
+            <div>
+
+                <label class="mb-1 block text-[11px] uppercase tracking-wide text-slate-400">
+
+                    Description
+
+                </label>
+
+                <textarea
+                    name="batch_description"
+                    rows="3"
+                    class="w-full resize-none rounded-md border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-white outline-none focus:border-cyan-500">{{ batch.batch_description }}</textarea>
+
+            </div>
+
+            <!-- Status -->
+
+            <div>
+
+                <label class="mb-1 block text-[11px] uppercase tracking-wide text-slate-400">
+
+                    Status
+
+                </label>
+
+                <select
+                    name="batch_status"
+                    class="w-full rounded-md border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-white outline-none focus:border-cyan-500">
+
+                    <option value="draft"
+                        {% if batch.batch_status == "draft" %}selected{% endif %}>
+
+                        Draft
+
+                    </option>
+
+                    <option value="published"
+                        {% if batch.batch_status == "published" %}selected{% endif %}>
+
+                        Published
+
+                    </option>
+
+                </select>
+
+            </div>
+
+            <!-- Replace Thumbnail -->
+            
+
+            <div>
+
+                <label class="mb-1 block text-[11px] uppercase tracking-wide text-slate-400">
+
+                    Replace Thumbnail
+
+                </label>
+
+                <input
+                    type="file"
+                    name="batch_thumbnail"
+                    accept="image/*"
+                    class="block w-full rounded-md border border-slate-700 bg-slate-800 text-xs text-gray-300
+                        file:mr-3
+                        file:border-0
+                        file:rounded-md
+                        file:bg-cyan-500
+                        file:px-3
+                        file:py-2
+                        file:text-xs
+                        file:font-semibold
+                        file:text-slate-900
+                        hover:file:bg-cyan-400">
+
+                <p class="mt-1 text-[11px] text-slate-500">
+
+                    Leave empty to keep the existing thumbnail.
+
+                </p>
+
+            </div>
+
+                        <!-- Buttons -->
+
+            <div class="flex items-center justify-end gap-3 border-t border-slate-700 pt-4">
+
+                <a
+                    href="{% url 'admin_batches' %}"
+                    class="rounded-md bg-slate-800 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-700">
+
+                    Cancel
+
+                </a>
+
+                <button
+                    type="submit"
+                    class="rounded-md bg-cyan-500 px-4 py-2 text-sm font-semibold text-slate-900 transition hover:bg-cyan-400">
+
+                    Save Changes
+
+                </button>
+
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+
+{% endblock %}
