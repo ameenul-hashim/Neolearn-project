@@ -1,0 +1,197 @@
+{% extends "admins/admin_base.html" %}
+
+{% block title %}
+Delete Subject
+{% endblock %}
+
+{% block admin_content %}
+
+<div class="flex justify-center items-center">
+
+    <div class="w-full max-w-[500px] overflow-hidden rounded-xl border border-slate-700 bg-[#0F172A] shadow-2xl">
+
+        <!-- Header -->
+
+        <div class="flex items-center justify-between border-b border-slate-700 px-5 py-4">
+
+            <h2 class="text-xl font-bold text-white">
+
+                Delete Subject
+
+            </h2>
+
+            <a
+                href="{% url 'admin_subjects' %}"
+                class="text-3xl text-gray-400 transition hover:text-white">
+
+                ✕
+
+            </a>
+
+        </div>
+
+        <!-- Body -->
+
+        <form method="POST">
+
+            {% csrf_token %}
+
+            <div class="space-y-5 p-6">
+
+                <!-- Warning Icon -->
+
+                <div class="flex justify-center">
+
+                    <div class="flex h-16 w-16 items-center justify-center rounded-full bg-red-500/10">
+
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            class="h-9 w-9 text-red-500"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor">
+
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M12 9v2m0 4h.01M5.07 19h13.86c1.54 0 2.5-1.67 1.73-3L13.73 4c-.77-1.33-2.69-1.33-3.46 0L3.34 16c-.77 1.33.19 3 1.73 3z"/>
+
+                        </svg>
+
+                    </div>
+
+                </div>
+
+                <!-- Title -->
+
+                <div class="text-center">
+
+                    <h3 class="text-2xl font-bold text-white">
+
+                        Are you sure?
+
+                    </h3>
+
+                    <p class="mt-3 text-gray-400 leading-7">
+
+                        You are about to permanently delete
+
+                        <span class="font-bold text-white">
+
+                            {{ subject.subject_name }}
+
+                        </span>.
+
+                        This action cannot be undone.
+
+                    </p>
+
+                </div>
+
+                <!-- Confirm Input -->
+
+                <div>
+
+                    <label class="mb-2 block text-xs font-bold uppercase tracking-wider text-gray-400">
+
+                        Type the subject name to confirm
+
+                    </label>
+
+                    <input
+                        type="text"
+                        name="confirm_name"
+                        placeholder="{{ subject.subject_name }}"
+                        autocomplete="off"
+                        class="w-full rounded-xl border border-slate-700 bg-slate-800 px-4 py-3 text-white outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-500">
+
+                    <p class="mt-2 text-xs text-gray-500">
+
+                        Enter
+
+                        <span class="font-semibold text-red-400">
+
+                            {{ subject.subject_name }}
+
+                        </span>
+
+                        exactly as shown above.
+
+                    </p>
+
+                </div>
+                                <!-- Danger Box -->
+
+                <div class="rounded-xl border border-red-900 bg-red-500/10 p-4">
+
+                    <ul class="space-y-1 text-sm text-red-300">
+
+                        <li>
+
+                            • This action cannot be undone.
+
+                        </li>
+
+                        <li>
+
+                            • The subject will be permanently deleted.
+
+                        </li>
+
+                        <li>
+
+                            • Future chapters, lessons and resources linked to this subject may no longer be available.
+
+                        </li>
+
+                    </ul>
+
+                </div>
+
+                <!-- Messages -->
+
+                {% if messages %}
+
+                    {% for message in messages %}
+
+                        <div class="{% if message.tags == 'success' %}success-box{% else %}error-box{% endif %}">
+
+                            {{ message }}
+
+                        </div>
+
+                    {% endfor %}
+
+                {% endif %}
+
+                <!-- Action Buttons -->
+
+                <div class="flex justify-end gap-3 pt-2">
+
+                    <a
+                        href="{% url 'admin_subjects' %}"
+                        class="rounded-xl border border-slate-700 bg-slate-800 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700">
+
+                        Cancel
+
+                    </a>
+
+                    <button
+                        type="submit"
+                        class="rounded-xl bg-red-500 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-red-400">
+
+                        Delete Permanently
+
+                    </button>
+
+                </div>
+                            </div>
+
+        </form>
+
+    </div>
+
+</div>
+
+{% endblock %}

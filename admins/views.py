@@ -10,8 +10,11 @@ from django.core.paginator import Paginator
 from django.db.models import Q
 from .decorators import admin_required
 from decimal import Decimal, InvalidOperation
-from .models import Batch
+from .models import Batch,Subject
 from django.shortcuts import get_object_or_404
+from .models import Teacher
+from django.core.mail import send_mail
+
 
 @cache_control(no_cache=True,must_revalidate=True,no_store=True)
 def admin_signin_view(request):
@@ -211,10 +214,19 @@ def delete_student_view(request,user_id):
 @admin_required
 def admin_batches_view(request):
 
-    batches = Batch.objects.all()
-    context = {'batches': batches,}
-    return render(request,"admins/batches/batches.html",context)
-    
+    search = request.GET.get("search", "").strip()
+
+    batches = Batch.objects.all().order_by("-id")
+
+    if search:
+
+        batches = batches.filter(
+            Q(batch_name__icontains=search) |
+            Q(batch_description__icontains=search))
+
+    context = {"batches": batches,}
+
+    return render(request,"admins/batches/batches.html",context,)
 
 
 @cache_control(no_cache=True, must_revalidate=True, no_store=True)
@@ -451,6 +463,37 @@ def edit_batch_view(request, batch_id):
 
     return render(request,'admins/batches/edit_batch.html',{'batch': batch})
 
+@cache_control(no_cache=True, must_revalidate=True, no_store=True)
+@admin_required
+def batch_subjects(request, batch_id):
+
+    batch = get_object_or_404(
+        Batch,
+        id=batch_id
+    )
+
+    search = request.GET.get("search", "").strip()
+
+    subjects = Subject.objects.filter(
+        batch=batch
+    ).order_by("subject_name")
+
+    if search:
+
+        subjects = subjects.filter(
+            subject_name__icontains=search
+        )
+
+    context = {
+
+        "batch": batch,
+        "subjects": subjects,
+        "search": search,
+
+    }
+
+    return render(request,"admins/subjects/batch_subjects.html",context)
+
 
 @cache_control(no_cache=True, must_revalidate=True, no_store=True)
 @admin_required
@@ -517,3 +560,514 @@ def delete_batch_view(request, batch_id):
 
 
 
+@cache_control(no_cache=True, must_revalidate=True, no_store=True)
+@admin_required
+def admin_subjects_view(request):
+
+    search = request.GET.get("search", "").strip()
+    selected_batch = request.GET.get("batch", "")
+    batches = Batch.objects.order_by("batch_name")
+    subjects = Subject.objects.select_related("batch").all()
+
+    # Search
+    if search:
+        subjects = subjects.filter(
+            subject_name__icontains=search
+        )
+
+    # Batch Filter
+    if selected_batch:
+        subjects = subjects.filter(
+            batch_id=selected_batch
+        )
+
+    context = {
+        "subjects": subjects,
+        "batches": batches,
+        "selected_batch": selected_batch,
+        "search": search,
+    }
+
+    return render(request,"admins/subjects/subjects.html",context)
+
+
+from decimal import Decimal
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib import messages
+
+from .models import Batch, Subject
+
+
+@cache_control(no_cache=True, must_revalidate=True, no_store=True)
+@admin_required
+def create_subject_view(request):
+
+    batches = Batch.objects.order_by("batch_name")
+
+    if request.method == "POST":
+
+        batch_id = request.POST.get("batch", "").strip()
+        subject_name = request.POST.get("subject_name", "").strip()
+        subject_description = request.POST.get("subject_description", "").strip()
+        subject_status = request.POST.get("subject_status", "").strip()
+        subject_thumbnail = request.FILES.get("subject_thumbnail")
+
+        context = {
+            "batches": batches,
+        }
+
+        # ---------------- Batch ----------------
+
+        if not batch_id:
+
+            messages.error(request, "Please select a batch.")
+
+            return render(
+                request,
+                "admins/subjects/create_subject.html",
+                context,
+            )
+
+        try:
+
+            batch = Batch.objects.get(id=batch_id)
+
+        except Batch.DoesNotExist:
+
+            messages.error(request, "Selected batch does not exist.")
+
+            return render(
+                request,
+                "admins/subjects/create_subject.html",
+                context,
+            )
+
+        # ---------------- Subject Name ----------------
+
+        if not subject_name:
+
+            messages.error(request, "Subject name is required.")
+
+            return render(
+                request,
+                "admins/subjects/create_subject.html",
+                context,
+            )
+
+        # Duplicate inside same batch
+
+        if Subject.objects.filter(
+            batch=batch,
+            subject_name__iexact=subject_name
+        ).exists():
+
+            messages.error(
+                request,
+                "This subject already exists in the selected batch."
+            )
+
+            return render(
+                request,
+                "admins/subjects/create_subject.html",
+                context,
+            )
+
+        # ---------------- Description ----------------
+
+        if not subject_description:
+
+            messages.error(
+                request,
+                "Subject description is required."
+            )
+
+            return render(
+                request,
+                "admins/subjects/create_subject.html",
+                context,
+            )
+
+        # ---------------- Status ----------------
+
+        if subject_status not in ["draft", "published"]:
+
+            messages.error(
+                request,
+                "Invalid subject status."
+            )
+
+            return render(
+                request,
+                "admins/subjects/create_subject.html",
+                context,
+            )
+
+        # ---------------- Thumbnail ----------------
+
+        if not subject_thumbnail:
+
+            messages.error(
+                request,
+                "Subject thumbnail is required."
+            )
+
+            return render(
+                request,
+                "admins/subjects/create_subject.html",
+                context,
+            )
+
+        allowed_extensions = [
+            "jpg",
+            "jpeg",
+            "png",
+            "webp"
+        ]
+
+        extension = subject_thumbnail.name.split(".")[-1].lower()
+
+        if extension not in allowed_extensions:
+
+            messages.error(
+                request,
+                "Only JPG, JPEG, PNG and WEBP images are allowed."
+            )
+
+            return render(
+                request,
+                "admins/subjects/create_subject.html",
+                context,
+            )
+
+        if subject_thumbnail.size > 5 * 1024 * 1024:
+
+            messages.error(
+                request,
+                "Thumbnail must be less than 5 MB."
+            )
+
+            return render(
+                request,
+                "admins/subjects/create_subject.html",
+                context,
+            )
+
+        # ---------------- Save ----------------
+
+        Subject.objects.create(
+
+            batch=batch,
+
+            subject_name=subject_name,
+
+            subject_description=subject_description,
+
+            subject_thumbnail=subject_thumbnail,
+
+            subject_status=subject_status,
+
+        )
+
+        messages.success(request,"Subject created successfully.")
+
+        return redirect("admin_subjects")
+    context = {"batches": batches}
+    return render(request,"admins/subjects/create_subject.html",context)
+
+
+@cache_control(no_cache=True, must_revalidate=True, no_store=True)
+@admin_required
+def edit_subject_view(request, subject_id):
+
+    subject = get_object_or_404(
+        Subject,
+        id=subject_id
+    )
+
+    batches = Batch.objects.order_by("batch_name")
+
+    if request.method == "POST":
+        batch_id = request.POST.get("batch", "").strip()
+        subject_name = request.POST.get("subject_name", "").strip()
+        subject_description = request.POST.get("subject_description", "").strip()
+        subject_status = request.POST.get("subject_status", "").strip()
+        new_thumbnail = request.FILES.get("subject_thumbnail")
+
+        context = {
+            "subject": subject,
+            "batches": batches,
+        }
+
+        # ---------------- Batch ----------------
+
+        if not batch_id:
+
+            messages.error(request, "Please select a batch.")
+
+            return render(
+                request,
+                "admins/subjects/edit_subject.html",
+                context,
+            )
+
+        try:
+
+            batch = Batch.objects.get(id=batch_id)
+
+        except Batch.DoesNotExist:
+
+            messages.error(request, "Invalid batch selected.")
+
+            return render(
+                request,
+                "admins/subjects/edit_subject.html",
+                context,
+            )
+
+        # ---------------- Subject Name ----------------
+
+        if not subject_name:
+
+            messages.error(request, "Subject name is required.")
+
+            return render(
+                request,
+                "admins/subjects/edit_subject.html",
+                context,
+            )
+
+        duplicate = Subject.objects.filter(
+            batch=batch,
+            subject_name__iexact=subject_name
+        ).exclude(id=subject.id)
+
+        if duplicate.exists():
+
+            messages.error(
+                request,
+                "A subject with this name already exists in the selected batch."
+            )
+
+            return render(
+                request,
+                "admins/subjects/edit_subject.html",
+                context,
+            )
+
+        # ---------------- Description ----------------
+
+        if not subject_description:
+
+            messages.error(
+                request,
+                "Description is required."
+            )
+
+            return render(
+                request,
+                "admins/subjects/edit_subject.html",
+                context,
+            )
+
+        # ---------------- Status ----------------
+
+        if subject_status not in ["draft", "published"]:
+
+            messages.error(
+                request,
+                "Invalid subject status."
+            )
+
+            return render(
+                request,
+                "admins/subjects/edit_subject.html",
+                context,
+            )
+
+        # ---------------- Thumbnail Validation ----------------
+
+        if new_thumbnail:
+
+            allowed_extensions = [
+                "jpg",
+                "jpeg",
+                "png",
+                "webp",
+            ]
+
+            extension = new_thumbnail.name.split(".")[-1].lower()
+
+            if extension not in allowed_extensions:
+
+                messages.error(
+                    request,
+                    "Only JPG, JPEG, PNG and WEBP images are allowed."
+                )
+
+                return render(
+                    request,
+                    "admins/subjects/edit_subject.html",
+                    context,
+                )
+
+            if new_thumbnail.size > 5 * 1024 * 1024:
+
+                messages.error(
+                    request,
+                    "Thumbnail must be less than 5 MB."
+                )
+
+                return render(
+                    request,
+                    "admins/subjects/edit_subject.html",
+                    context,
+                )
+
+            subject.subject_thumbnail = new_thumbnail
+
+        # ---------------- Update ----------------
+
+        subject.batch = batch
+        subject.subject_name = subject_name
+        subject.subject_description = subject_description
+        subject.subject_status = subject_status
+
+        subject.save()
+
+        messages.success(request,"Subject updated successfully.")
+
+        return redirect("admin_subjects")
+    context = {"subject": subject,"batches": batches,}
+    return render(request,"admins/subjects/edit_subject.html",context,)
+
+
+@cache_control(no_cache=True, must_revalidate=True, no_store=True)
+@admin_required
+def delete_subject_view(request, subject_id):
+
+    subject = get_object_or_404(
+        Subject,
+        id=subject_id
+    )
+
+    if request.method == "POST":
+
+        confirm_name = request.POST.get(
+            "confirm_name",
+            ""
+        ).strip()
+
+        # Subject name confirmation
+
+        if confirm_name != subject.subject_name:
+
+            messages.error(request,"Subject name does not match.")
+            return render(request,"admins/subjects/delete_subject.html",{"subject": subject,},)
+
+        # Delete Subject
+
+        subject.delete()
+
+        messages.success(request,"Subject deleted successfully.")
+
+        return redirect("admin_subjects")
+
+    return render(request,"admins/subjects/delete_subject.html",{"subject": subject})
+
+
+
+@cache_control(no_cache=True, must_revalidate=True, no_store=True)
+@admin_required
+def admin_teachers(request):
+
+    teachers = Teacher.objects.select_related("user").order_by("-created_at")
+
+    context = {
+        "teachers": teachers,
+        "total_teachers": teachers.count(),
+        "active_teachers": teachers.filter(is_blocked=False).count(),
+        "blocked_teachers": teachers.filter(is_blocked=True).count(),
+        "pending_profiles": teachers.filter(profile_completed=False).count(),
+    }
+
+    return render(request,"admins/teachers/teachers.html",context)
+
+
+@cache_control(no_cache=True,must_revalidate=True,no_store=True)
+@admin_required
+def create_teacher_view(request):
+
+    if request.method == "POST":
+        email = request.POST.get("email","").strip().lower()
+        phone = request.POST.get("phone_number","").strip()
+
+
+        # Empty validation
+        if not email or not phone:
+            messages.error(request,"Email and phone number required.")
+            return redirect("create_teacher")
+
+        # Already exists
+        if User.objects.filter(email=email).exists():
+
+            messages.error(request,"Teacher already exists.")
+            return redirect("create_teacher")
+
+
+        # Generate password
+        password = f"Neo{phone}*#"
+        # Create auth user
+
+        user = User.objects.create_user(
+            username=email,
+            email=email,
+            password=password)
+
+
+        # Create teacher
+        Teacher.objects.create(user=user,full_name=email.split("@")[0],email=email,phone_number=phone,created_by=request.user)
+
+        # Email send using existing SMTP
+        send_mail(
+
+            "NeoLearn Teacher Login Details",
+
+
+            f"""
+
+Welcome to NeoLearn Teacher Portal
+
+
+Login URL:
+http://127.0.0.1:8000/teacher/login/
+
+
+Username:
+{email}
+
+
+Password:
+{password}
+
+
+Please change password after first login.
+
+
+            """,
+
+
+            None,
+
+
+            [email],
+
+
+            fail_silently=False
+
+        )
+
+
+        messages.success(request,"Teacher created successfully.")
+        return redirect("admin_teachers")
+
+    return render(request,"admins/teachers/create_teacher.html")

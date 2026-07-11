@@ -8,10 +8,6 @@ Admin Sign In
 
 {% block content %}
 
-<link
-    rel="stylesheet"
-    href="{% static 'accounts/css/global-messages.css' %}"
->
 
 <div class="relative w-full h-screen overflow-hidden bg-[#020617]">
 
@@ -112,23 +108,6 @@ Admin Sign In
 
                     <div class="absolute top-[18px] right-[18px] w-[7px] h-[7px] rounded-full bg-[#00F5D4] shadow-[0_0_14px_#00F5D4]"></div>
 
-                    <!-- MESSAGES -->
-
-                    {% if messages %}
-
-                        {% for message in messages %}
-
-                            <div class="{% if message.tags == 'error' %}error-box{% else %}success-box{% endif %} mb-4 relative z-10">
-
-                                {{ message }}
-
-                            </div>
-
-                        {% endfor %}
-
-                    {% endif %}
-
-                    <!-- FORM -->
 
                     <form
                         method="POST"

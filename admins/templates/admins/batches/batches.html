@@ -6,69 +6,97 @@ Batches
 
 {% block admin_content %}
 
-<div class="space-y-6">
+<div class="space-y-8">
 
     <!-- ================= HEADER ================= -->
 
-    <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
+    <div class="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+
+        <!-- Left -->
 
         <div>
 
-            <h1 class="text-4xl font-bold text-white">
+            <h1 class="text-4xl font-bold tracking-tight text-white">
 
                 Batches
 
             </h1>
 
-            <p class="mt-1 text-sm text-slate-400">
+            <p class="mt-2 text-slate-400">
 
-                Manage course batches and pricing
+                Manage course batches, pricing, subjects and student access.
 
             </p>
 
         </div>
 
-        <div class="flex items-center gap-3">
+        <!-- Right -->
+
+        <div class="flex flex-col gap-3 lg:flex-row lg:items-center">
 
             <!-- Search -->
 
             <form
                 method="GET"
-                class="relative">
+                class="flex flex-1 flex-col gap-3 sm:flex-row">
 
-                <input
-                    type="text"
-                    name="search"
-                    value="{{ request.GET.search }}"
-                    placeholder="Search batches..."
-                    class="w-72 rounded-lg border border-slate-700 bg-slate-800 py-2.5 pl-10 pr-4 text-sm text-white placeholder-slate-500 outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500">
+                <div class="relative flex-1">
 
-                <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    class="absolute left-3 top-3 h-4 w-4 text-slate-500"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor">
+                    <input
+                        type="text"
+                        name="search"
+                        value="{{ request.GET.search }}"
+                        placeholder="Search batches..."
+                        class="w-full rounded-xl border border-slate-700 bg-slate-800 py-3 pl-11 pr-4 text-white placeholder-slate-500 outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500">
 
-                    <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M21 21l-4.3-4.3m1.3-5.2a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        class="absolute left-4 top-3.5 h-5 w-5 text-slate-500"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor">
 
-                </svg>
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M21 21l-4-4m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+
+                    </svg>
+
+                </div>
+
+                <!-- Search -->
+
+                <button
+                    type="submit"
+                    class="rounded-xl bg-cyan-500 px-6 py-3 font-semibold text-slate-900 transition hover:bg-cyan-400">
+
+                    Search
+
+                </button>
+
+                <!-- Refresh -->
+
+                <a
+                    href="{% url 'admin_batches' %}"
+                    class="rounded-xl border border-slate-700 bg-slate-800 px-6 py-3 text-center font-semibold text-white transition hover:border-cyan-500 hover:text-cyan-400">
+
+                    Refresh
+
+                </a>
 
             </form>
 
-            <!-- Create Button -->
+            <!-- Create -->
 
             <a
                 href="{% url 'create_batch' %}"
-                class="inline-flex items-center gap-2 rounded-lg bg-cyan-500 px-5 py-2.5 text-sm font-semibold text-slate-900 transition hover:bg-cyan-400">
+                class="inline-flex items-center justify-center gap-2 rounded-xl bg-cyan-500 px-6 py-3 font-semibold text-slate-900 shadow-lg shadow-cyan-500/20 transition hover:bg-cyan-400">
 
                 <svg
                     xmlns="http://www.w3.org/2000/svg"
-                    class="h-4 w-4"
+                    class="h-5 w-5"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor">
@@ -91,25 +119,25 @@ Batches
 
     <!-- ================= BATCH GRID ================= -->
 
-    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+    <div class="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
 
         {% for batch in batches %}
 
-        <div class="overflow-hidden rounded-xl border border-slate-700 bg-[#111827] transition duration-300 hover:border-cyan-500 hover:shadow-xl hover:shadow-cyan-500/10">
+        <div class="overflow-hidden rounded-2xl border border-slate-700 bg-[#111827] transition duration-300 hover:-translate-y-1 hover:border-cyan-500 hover:shadow-2xl hover:shadow-cyan-500/10">
 
-    <!-- Thumbnail -->
+    <!-- ================= Thumbnail ================= -->
 
-    <div class="relative">
+    <div class="relative overflow-hidden">
 
         <img
             src="{{ batch.batch_thumbnail.url }}"
             alt="{{ batch.batch_name }}"
             loading="lazy"
-            class="h-28 w-full object-cover">
+            class="h-52 w-full object-cover transition duration-500 hover:scale-105">
 
-        <!-- Category Badge (Replace later with actual category if you add one) -->
+        <!-- Badge -->
 
-        <span class="absolute left-3 top-3 rounded bg-slate-800/90 px-2 py-1 text-[10px] font-semibold text-white">
+        <span class="absolute left-4 top-4 rounded-full bg-slate-900/90 px-3 py-1 text-xs font-semibold tracking-wide text-white">
 
             BATCH
 
@@ -119,7 +147,7 @@ Batches
 
         {% if batch.batch_status == "published" %}
 
-        <span class="absolute right-3 top-3 rounded bg-green-500 px-2 py-1 text-[10px] font-semibold text-white">
+        <span class="absolute right-4 top-4 rounded-full bg-green-500 px-3 py-1 text-xs font-semibold text-white">
 
             ● Published
 
@@ -127,7 +155,7 @@ Batches
 
         {% else %}
 
-        <span class="absolute right-3 top-3 rounded bg-yellow-500 px-2 py-1 text-[10px] font-semibold text-slate-900">
+        <span class="absolute right-4 top-4 rounded-full bg-yellow-500 px-3 py-1 text-xs font-semibold text-slate-900">
 
             ● Draft
 
@@ -137,37 +165,65 @@ Batches
 
     </div>
 
+    <!-- ================= Body ================= -->
 
+    <div class="p-5">
 
-    <!-- Card Body -->
-
-    <div class="p-4">
-
-        <h2 class="truncate text-xl font-bold text-white">
+        <h2 class="truncate text-2xl font-bold text-white">
 
             {{ batch.batch_name }}
 
         </h2>
 
-        <p class="mt-2 h-10 overflow-hidden text-sm leading-5 text-slate-400">
+        <!-- Description -->
 
-            {{ batch.batch_description|truncatechars:65 }}
+        <div class="mt-3">
 
-        </p>
+            <p
+                id="short-{{ batch.id }}"
+                class="text-sm leading-6 text-slate-400">
 
-        <!-- Price + Count -->
+                {{ batch.batch_description|truncatechars:120 }}
 
-        <div class="mt-4 flex items-end justify-between">
+            </p>
+
+            {% if batch.batch_description|length > 120 %}
+
+            <p
+                id="full-{{ batch.id }}"
+                class="hidden text-sm leading-6 text-slate-400">
+
+                {{ batch.batch_description }}
+
+            </p>
+
+            <button
+                type="button"
+                onclick="toggleDescription('{{ batch.id }}')"
+                id="btn-{{ batch.id }}"
+                class="mt-2 text-sm font-semibold text-cyan-400 hover:text-cyan-300">
+
+                Read More
+
+            </button>
+
+            {% endif %}
+
+        </div>
+
+        <!-- Price / Students -->
+
+        <div class="mt-6 flex items-end justify-between">
 
             <div>
 
-                <p class="text-xs text-slate-500">
+                <p class="text-xs uppercase tracking-wide text-slate-500">
 
                     Price
 
                 </p>
 
-                <h3 class="text-3xl font-bold text-white">
+                <h3 class="mt-1 text-3xl font-bold text-white">
 
                     ₹{{ batch.batch_price }}
 
@@ -177,33 +233,33 @@ Batches
 
             <div class="text-right">
 
-                <p class="text-xs text-slate-500">
+                <p class="text-xs uppercase tracking-wide text-slate-500">
 
-                    Enrolled
+                    Students
 
                 </p>
 
-                <p class="flex items-center justify-end gap-1 text-lg font-bold text-cyan-400">
+                <h3 class="mt-1 text-2xl font-bold text-cyan-400">
 
                     👥 0
 
-                </p>
+                </h3>
 
             </div>
 
         </div>
 
-        <hr class="my-4 border-slate-700">
+        <hr class="my-5 border-slate-700">
 
-        <!-- Bottom Actions -->
+        <!-- Bottom -->
 
         <div class="flex items-center justify-between">
 
-            <div class="flex items-center gap-4">
+            <div class="flex items-center gap-5">
 
                 <a
                     href="{% url 'edit_batch' batch.id %}"
-                    class="text-slate-400 transition hover:text-cyan-400"
+                    class="text-xl text-slate-400 transition hover:text-cyan-400"
                     title="Edit">
 
                     ✏️
@@ -212,7 +268,7 @@ Batches
 
                 <a
                     href="{% url 'delete_batch' batch.id %}"
-                    class="text-slate-400 transition hover:text-red-500"
+                    class="text-xl text-slate-400 transition hover:text-red-500"
                     title="Delete">
 
                     🗑️
@@ -222,8 +278,8 @@ Batches
             </div>
 
             <a
-                href="#"
-                class="rounded-lg border border-slate-700 bg-slate-800 px-4 py-2 text-xs font-semibold text-white transition hover:border-cyan-500 hover:text-cyan-400">
+                href="{% url 'batch_subjects' batch.id %}"
+                class="rounded-xl border border-slate-700 bg-slate-800 px-4 py-2 text-sm font-semibold text-white transition hover:border-cyan-500 hover:text-cyan-400">
 
                 👁 View Subjects
 
@@ -239,20 +295,22 @@ Batches
 
 <div class="col-span-full">
 
-    <div class="rounded-xl border border-dashed border-slate-700 bg-[#111827] py-20 text-center">
+    <div class="rounded-2xl border-2 border-dashed border-slate-700 bg-[#111827] py-20 text-center">
 
         <div class="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-slate-800">
 
-            <svg xmlns="http://www.w3.org/2000/svg"
-                 class="h-10 w-10 text-cyan-400"
-                 fill="none"
-                 viewBox="0 0 24 24"
-                 stroke="currentColor">
+            <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-10 w-10 text-cyan-400"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor">
 
-                <path stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M12 4v16m8-8H4"/>
+                <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M12 4v16m8-8H4"/>
 
             </svg>
 
@@ -260,30 +318,33 @@ Batches
 
         <h2 class="mt-6 text-2xl font-bold text-white">
 
-            No Batches Available
+            No Batches Found
 
         </h2>
 
-        <p class="mt-2 text-sm text-slate-400">
+        <p class="mt-3 text-slate-400">
 
-            You haven't created any batches yet.
+            No batches are available.
+            Create your first batch to get started.
 
         </p>
 
         <a
             href="{% url 'create_batch' %}"
-            class="mt-8 inline-flex items-center gap-2 rounded-lg bg-cyan-500 px-6 py-3 text-sm font-semibold text-slate-900 transition hover:bg-cyan-400">
+            class="mt-8 inline-flex items-center gap-2 rounded-xl bg-cyan-500 px-6 py-3 font-semibold text-slate-900 shadow-lg shadow-cyan-500/20 transition hover:bg-cyan-400">
 
-            <svg xmlns="http://www.w3.org/2000/svg"
-                 class="h-5 w-5"
-                 fill="none"
-                 viewBox="0 0 24 24"
-                 stroke="currentColor">
+            <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-5 w-5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor">
 
-                <path stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M12 4v16m8-8H4"/>
+                <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M12 4v16m8-8H4"/>
 
             </svg>
 
@@ -298,5 +359,39 @@ Batches
 {% endfor %}
 
 </div>
+
+</div>
+
+<script>
+
+function toggleDescription(id){
+
+    const shortText=document.getElementById("short-"+id);
+
+    const fullText=document.getElementById("full-"+id);
+
+    const button=document.getElementById("btn-"+id);
+
+    if(fullText.classList.contains("hidden")){
+
+        fullText.classList.remove("hidden");
+
+        shortText.classList.add("hidden");
+
+        button.innerText="Read Less";
+
+    }else{
+
+        fullText.classList.add("hidden");
+
+        shortText.classList.remove("hidden");
+
+        button.innerText="Read More";
+
+    }
+
+}
+
+</script>
 
 {% endblock %}

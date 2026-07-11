@@ -1,0 +1,229 @@
+{% extends "admins/admin_base.html" %}
+
+{% block title %}
+Edit Subject
+{% endblock %}
+
+{% block admin_content %}
+
+<div class="flex justify-center">
+
+    <div class="w-full max-w-[470px] rounded-xl border border-slate-600 bg-[#0F172A] shadow-xl">
+
+        <!-- Header -->
+
+        <div class="flex items-center justify-between border-b border-slate-600 px-5 py-4">
+
+            <h2 class="text-lg font-semibold text-white">
+
+                Edit Subject
+
+            </h2>
+
+            <a
+                href="{% url 'admin_subjects' %}"
+                class="text-xl text-gray-400 transition hover:text-white">
+
+                ✕
+
+            </a>
+
+        </div>
+
+        <div class="p-5">
+
+            <form
+                method="POST"
+                enctype="multipart/form-data"
+                class="space-y-4">
+
+                {% csrf_token %}
+
+                <!-- Subject Name -->
+
+                <div>
+
+                    <label class="mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-400">
+
+                        Subject Name
+
+                    </label>
+
+                    <input
+                        type="text"
+                        name="subject_name"
+                        value="{{ subject.subject_name }}"
+                        placeholder="e.g. Physics"
+                        class="w-full rounded-lg border border-slate-700 bg-slate-800 px-4 py-2.5 text-white placeholder-gray-500 outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500">
+
+                </div>
+
+                <!-- Batch -->
+
+                <div>
+
+                    <label class="mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-400">
+
+                        Batch
+
+                    </label>
+
+                    <select
+                        name="batch"
+                        class="w-full rounded-lg border border-slate-700 bg-slate-800 px-4 py-2.5 text-white outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500">
+
+                        {% for batch in batches %}
+
+                            <option
+                                value="{{ batch.id }}"
+                                {% if subject.batch.id == batch.id %}selected{% endif %}>
+
+                                {{ batch.batch_name }}
+
+                            </option>
+
+                        {% endfor %}
+
+                    </select>
+
+                </div>
+
+                                <!-- Current Thumbnail -->
+
+                <div>
+
+                    <label class="mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-400">
+
+                        Current Thumbnail
+
+                    </label>
+
+                    <img
+                        src="{{ subject.subject_thumbnail.url }}"
+                        alt="{{ subject.subject_name }}"
+                        class="h-32 w-full rounded-lg border border-slate-700 object-cover">
+
+                </div>
+
+
+
+                <!-- Replace Thumbnail -->
+
+                <div>
+
+                    <label class="mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-400">
+
+                        Replace Thumbnail
+
+                    </label>
+
+                    <input
+                        type="file"
+                        name="subject_thumbnail"
+                        accept="image/*"
+                        class="block w-full rounded-lg border border-slate-700 bg-slate-800 text-sm text-gray-300
+                               file:mr-3
+                               file:border-0
+                               file:rounded-lg
+                               file:bg-cyan-500
+                               file:px-4
+                               file:py-2
+                               file:font-medium
+                               file:text-slate-900
+                               hover:file:bg-cyan-400">
+
+                    <p class="mt-2 text-xs text-gray-500">
+
+                        Leave empty to keep the current thumbnail.
+
+                    </p>
+
+                </div>
+
+
+
+                <!-- Description -->
+
+                <div>
+
+                    <label class="mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-400">
+
+                        Description
+
+                    </label>
+
+                    <textarea
+                        name="subject_description"
+                        rows="4"
+                        placeholder="Brief description..."
+                        class="w-full resize-none rounded-lg border border-slate-700 bg-slate-800 px-4 py-2.5 text-white placeholder-gray-500 outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500">{{ subject.subject_description }}</textarea>
+
+                </div>
+
+
+
+                <!-- Status -->
+
+                <div>
+
+                    <label class="mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-400">
+
+                        Status
+
+                    </label>
+
+                    <select
+                        name="subject_status"
+                        class="w-full rounded-lg border border-slate-700 bg-slate-800 px-4 py-2.5 text-white outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500">
+
+                        <option
+                            value="draft"
+                            {% if subject.subject_status == "draft" %}selected{% endif %}>
+
+                            Draft
+
+                        </option>
+
+                        <option
+                            value="published"
+                            {% if subject.subject_status == "published" %}selected{% endif %}>
+
+                            Published
+
+                        </option>
+
+                    </select>
+
+                </div>
+
+                                <!-- Action Buttons -->
+
+                <div class="flex justify-end gap-3 pt-2">
+
+                    <a
+                        href="{% url 'admin_subjects' %}"
+                        class="rounded-lg border border-slate-700 bg-slate-800 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-slate-700">
+
+                        Cancel
+
+                    </a>
+
+                    <button
+                        type="submit"
+                        class="rounded-lg bg-cyan-500 px-5 py-2.5 text-sm font-semibold text-slate-900 transition hover:bg-cyan-400">
+
+                        Update Subject
+
+                    </button>
+
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

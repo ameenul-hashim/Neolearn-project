@@ -348,7 +348,7 @@
                 <!-- teachers -->
 
                 <a
-                    href="{% url 'admin_students' %}"
+                    href="{% url 'admin_teachers' %}"
 
                     class="
                         relative
@@ -362,7 +362,7 @@
                         transition
                         duration-300
 
-                        {% if request.resolver_match.url_name == 'admin_students' %}
+                        {% if request.resolver_match.url_name == 'admin_teachers' %}
 
                             bg-cyan-400/10
                             border
@@ -379,7 +379,7 @@
                     "
                 >
 
-                    {% if request.resolver_match.url_name == 'admin_students' %}
+                    {% if request.resolver_match.url_name == 'admin_teachers' %}
 
                     <div
                         class="
@@ -402,7 +402,7 @@
                             ri-team-line
                             text-[18px]
 
-                            {% if request.resolver_match.url_name == 'admin_students' %}
+                            {% if request.resolver_match.url_name == 'admin_teachers' %}
 
                                 text-[#00F5D4]
 
@@ -450,7 +450,7 @@
                 <!-- subjects -->
 
                 <a
-                    href="#"
+                    href="{% url 'admin_subjects' %}"
                     class="
                         flex
                         items-center
@@ -478,7 +478,7 @@
                 <!-- LIVE -->
 
                 <a
-                    href="#"
+                    href="{% url 'admin_subjects' %}"
                     class="
                         flex
                         items-center

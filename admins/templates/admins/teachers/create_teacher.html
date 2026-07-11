@@ -1,0 +1,260 @@
+{% extends "admins/admin_base.html" %}
+
+
+{% block title %}
+Create Teacher
+{% endblock %}
+
+
+{% block admin_content %}
+
+
+<div class="flex min-h-[70vh] items-center justify-center">
+
+
+    <div class="w-full max-w-xl rounded-2xl border border-slate-700 bg-[#111827] p-8 shadow-2xl shadow-cyan-500/10">
+
+
+        <!-- HEADER -->
+
+        <div class="mb-8 flex items-center justify-between">
+
+            <div>
+
+                <h1 class="text-2xl font-bold text-white">
+
+                    Create Teacher Account
+
+                </h1>
+
+
+                <p class="mt-2 text-sm text-slate-400">
+
+                    Create login credentials for teacher portal.
+
+                </p>
+
+            </div>
+
+
+            <a href="{% url 'admin_teachers' %}"
+               class="text-2xl text-slate-400 hover:text-white">
+
+                ×
+
+            </a>
+
+
+        </div>
+
+   {% if messages %}
+
+            {% for message in messages %}
+
+            <div class="mb-5 rounded-xl bg-red-500/10 px-4 py-3 text-red-400">
+
+                {{ message }}
+
+            </div>
+
+            {% endfor %}
+
+        {% endif %}
+
+
+        <!-- FORM -->
+
+
+        <form method="POST">
+
+            {% csrf_token %}
+
+
+
+            <!-- EMAIL -->
+
+
+            <div class="mb-5">
+
+                <label class="mb-2 block text-sm text-slate-400">
+
+                    Teacher Email Address
+
+                </label>
+
+
+                <input
+
+                    type="email"
+
+                    name="email"
+
+                    placeholder="teacher@neolearn.com"
+
+                    class="w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-white outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500"
+
+                >
+
+
+            </div>
+
+
+
+
+            <!-- PHONE -->
+
+
+            <div class="mb-5">
+
+                <label class="mb-2 block text-sm text-slate-400">
+
+                    Phone Number
+
+                </label>
+
+
+                <input
+
+                    type="text"
+
+                    name="phone_number"
+
+                    id="phone"
+
+                    maxlength="10"
+
+                    placeholder="9876543210"
+
+                    oninput="generatePassword()"
+
+                    class="w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-white outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500"
+
+                >
+
+
+            </div>
+
+
+
+
+
+            <!-- AUTO PASSWORD PREVIEW -->
+
+
+            <div class="mb-8 rounded-xl border border-slate-700 bg-slate-900 p-4">
+
+
+                <p class="text-sm text-slate-400">
+
+                    Temporary Password
+
+                </p>
+
+
+                <h3 id="passwordPreview"
+                    class="mt-2 text-lg font-bold text-cyan-400">
+
+                    NeoXXXXXXXXXX*#
+
+                </h3>
+
+
+                <p class="mt-2 text-xs text-slate-500">
+
+                    This password will be emailed automatically.
+
+                </p>
+
+
+            </div>
+
+
+
+
+
+            <!-- BUTTONS -->
+
+
+            <div class="flex justify-end gap-4">
+
+
+                <a href="{% url 'admin_teachers' %}"
+
+                class="rounded-xl bg-slate-800 px-6 py-3 font-semibold text-white transition hover:bg-slate-700">
+
+                    Cancel
+
+                </a>
+
+
+
+                <button
+
+                    type="submit"
+
+                    class="rounded-xl bg-cyan-500 px-6 py-3 font-bold text-slate-900 shadow-lg shadow-cyan-500/20 transition hover:bg-cyan-400">
+
+
+                    Create Teacher
+
+
+                </button>
+
+
+
+            </div>
+
+
+
+        </form>
+
+
+    </div>
+
+
+</div>
+
+
+<script src="{% static 'accounts/js/auth-global.js' %}"></script>
+
+<script>
+
+
+function generatePassword(){
+
+
+    let phone = document.getElementById(
+        "phone"
+    ).value;
+
+
+    let preview = document.getElementById(
+        "passwordPreview"
+    );
+
+
+    if(phone.length > 0){
+
+
+        preview.innerText =
+        "Neo" + phone + "*#";
+
+
+    }else{
+
+
+        preview.innerText =
+        "NeoXXXXXXXXXX*#";
+
+
+    }
+
+
+}
+
+
+</script>
+
+
+
+{% endblock %}
