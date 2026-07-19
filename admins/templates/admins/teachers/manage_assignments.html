@@ -1,0 +1,986 @@
+{% extends "admins/admin_base.html" %}
+{% load static %}
+
+{% block admin_content %}
+
+<div class="min-h-screen bg-slate-950 px-4 py-6">
+
+    <div class="mx-auto max-w-[1700px]">
+
+        <!-- ================= HEADER ================= -->
+
+        <div class="mb-6">
+
+            <a
+                href="{% url 'admin_teachers' %}"
+                class="inline-flex items-center gap-2 text-sm font-medium text-cyan-400 hover:text-cyan-300 transition">
+
+                <svg xmlns="http://www.w3.org/2000/svg"
+                    class="h-5 w-5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor">
+
+                    <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M15.75 19.5L8.25 12l7.5-7.5"/>
+
+                </svg>
+
+                Back to Teachers
+
+            </a>
+
+            <h1 class="mt-3 text-4xl font-bold text-white">
+
+                Manage Assignments
+
+            </h1>
+
+            <p class="mt-1 text-slate-400">
+
+                Manage all assigned batches and subjects for this teacher.
+
+            </p>
+
+        </div>
+
+
+
+
+        <div class="mb-8 overflow-hidden rounded-2xl border border-slate-800 bg-[#020617]">
+
+            <div class="flex flex-col gap-6 p-6 lg:flex-row lg:items-center lg:justify-between">
+
+                <!-- LEFT -->
+
+                <div class="flex items-center gap-5">
+
+                    {% if teacher.profile_image %}
+
+                        <img
+                            src="{{ teacher.profile_image.url }}"
+                            alt="{{ teacher.full_name }}"
+                            class="h-20 w-20 rounded-full border-2 border-cyan-500 object-cover">
+
+                    {% else %}
+
+                        <div
+                            class="flex h-20 w-20 items-center justify-center rounded-full bg-cyan-600 text-3xl font-bold text-white">
+
+                            {{ teacher.full_name|first|upper }}
+
+                        </div>
+
+                    {% endif %}
+
+                    <div>
+
+                        <h2 class="text-2xl font-bold text-white">
+
+                            {{ teacher.full_name }}
+
+                        </h2>
+
+                        <p class="mt-1 text-slate-400">
+
+                            {{ teacher.phone_number }}
+
+                        </p>
+
+                        <span
+                            class="mt-3 inline-flex rounded-full bg-cyan-500/10 px-3 py-1 text-xs font-semibold text-cyan-400">
+
+                            Teacher Profile
+
+                        </span>
+
+                    </div>
+
+                </div>
+
+
+
+                <!-- RIGHT -->
+
+                <div
+                    class="grid grid-cols-2 gap-4 lg:w-[420px]">
+
+                    <div
+                        class="rounded-xl border border-slate-800 bg-slate-900 p-4">
+
+                        <p class="text-xs uppercase tracking-wider text-slate-500">
+
+                            Assigned Batches
+
+                        </p>
+
+                        <h3 class="mt-2 text-3xl font-bold text-cyan-400">
+
+                            {{ teacher_batches|length }}
+
+                        </h3>
+
+                    </div>
+
+                    <div
+                        class="rounded-xl border border-slate-800 bg-slate-900 p-4">
+
+                        <p class="text-xs uppercase tracking-wider text-slate-500">
+
+                            Assigned Subjects
+
+                        </p>
+
+                        <h3 class="mt-2 text-3xl font-bold text-emerald-400">
+
+                            {{ total_subjects }}
+
+                        </h3>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+
+        <div class="mb-5">
+
+            <h2 class="text-2xl font-bold text-white">
+
+                Assigned Batches
+
+            </h2>
+
+            <p class="mt-1 text-slate-400">
+
+                Click a batch to manage assigned subjects.
+
+            </p>
+
+        </div>
+
+
+
+        {% if teacher_batches %}
+
+        <div class="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-4">
+
+            {% for assignment in teacher_batches %}
+
+<div
+    class="
+        overflow-hidden
+        rounded-2xl
+        border
+        border-slate-800
+        bg-[#020617]
+        shadow-lg
+        transition
+        duration-300
+        hover:border-cyan-500
+        hover:-translate-y-1
+    ">
+
+    <div class="relative h-40 overflow-hidden">
+
+        {% if assignment.batch.batch_thumbnail %}
+
+<img
+    src="{{ assignment.batch.batch_thumbnail.url }}"
+                alt="{{ assignment.batch.batch_name }}"
+                class="h-full w-full object-cover">
+
+        {% else %}
+
+            <img
+                src="{% static 'admins/images/default_batch.jpg' %}"
+                alt="Default Batch"
+                class="h-full w-full object-cover">
+
+        {% endif %}
+
+        <div class="absolute left-3 top-3">
+
+            <span
+                class="rounded-full bg-slate-900/90 px-3 py-1 text-[11px] font-semibold text-white">
+
+                BATCH
+
+            </span>
+
+        </div>
+
+        <div class="absolute right-3 top-3">
+
+            <span
+                class="rounded-full bg-emerald-500 px-3 py-1 text-[11px] font-semibold text-white">
+
+                Assigned
+
+            </span>
+
+        </div>
+
+    </div>
+
+    <!-- ================= CONTENT ================= -->
+
+    <div class="p-4">
+
+        <h3 class="truncate text-xl font-bold text-white">
+
+            {{ assignment.batch.batch_name }}
+
+        </h3>
+
+        <p class="mt-2 line-clamp-2 text-sm text-slate-400">
+
+            {{ assignment.batch.batch_description }}
+
+        </p>
+
+        <!-- ================= STATS ================= -->
+
+        <div class="mt-4 grid grid-cols-2 gap-3">
+
+            <div
+                class="rounded-xl bg-slate-900 p-3 text-center">
+
+                <p class="text-[11px] uppercase tracking-wider text-slate-500">
+
+                    Subjects
+
+                </p>
+
+                <h4 class="mt-1 text-xl font-bold text-cyan-400">
+
+                    {{ assignment.subject_count |default:"1" }}
+
+                </h4>
+
+            </div>
+
+            <div
+                class="rounded-xl bg-slate-900 p-3 text-center">
+
+                <p class="text-[11px] uppercase tracking-wider text-slate-500">
+
+                    Teachers
+
+                </p>
+
+                <h4 class="mt-1 text-xl font-bold text-emerald-400">
+
+                    {{ assignment.teacher_count }}
+
+                </h4>
+
+            </div>
+
+        </div>
+
+        <hr class="my-4 border-slate-800">
+
+        <!-- ====================================================== -->
+<!-- ACTION BUTTONS -->
+<!-- ====================================================== -->
+
+<div class="flex items-center justify-between gap-2">
+
+    <!-- View Subjects -->
+
+    <a
+        href="{% url 'admin_view_teacher_subjects' teacher.id assignment.batch.id %}"
+        title="View Subjects"
+        class="
+            flex-1
+            inline-flex
+            items-center
+            justify-center
+            gap-2
+            rounded-xl
+            border
+            border-cyan-500
+            bg-cyan-500/10
+            py-2.5
+            text-sm
+            font-semibold
+            text-cyan-400
+            transition
+            hover:bg-cyan-500
+            hover:text-white
+        ">
+
+        <svg xmlns="http://www.w3.org/2000/svg"
+             class="h-4 w-4"
+             fill="none"
+             viewBox="0 0 24 24"
+             stroke="currentColor">
+
+            <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M2.25 12S5.25 5.25 12 5.25 21.75 12 21.75 12 18.75 18.75 12 18.75 2.25 12 2.25 12z"/>
+
+            <circle
+                cx="12"
+                cy="12"
+                r="3"/>
+
+        </svg>
+
+        Subjects
+
+    </a>
+
+
+
+    <!-- Edit -->
+
+    <a
+        href="{% url 'admin_assign_teacher_batch' teacher.id %}?batch_id={{ assignment.batch.id }}"
+        title="Edit Subjects"
+        class="
+            h-10
+            w-10
+            inline-flex
+            items-center
+            justify-center
+            rounded-xl
+            border
+            border-amber-500
+            bg-amber-500/10
+            text-amber-400
+            transition
+            hover:bg-amber-500
+            hover:text-white
+        ">
+
+        <svg xmlns="http://www.w3.org/2000/svg"
+             class="h-4 w-4"
+             fill="none"
+             viewBox="0 0 24 24"
+             stroke="currentColor">
+
+            <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M16.862 4.487a2.25 2.25 0 113.182 3.182L8.25 19.463 3.75 20.25l.787-4.5L16.862 4.487z"/>
+
+        </svg>
+
+    </a>
+
+
+
+    <!-- Remove -->
+
+    <button
+        type="button"
+        title="Remove Batch Access"
+        data-batch="{{ assignment.batch.batch_name }}"
+        data-id="{{ assignment.id }}"
+        class="
+            remove-access-btn
+            h-10
+            w-10
+            inline-flex
+            items-center
+            justify-center
+            rounded-xl
+            border
+            border-red-500
+            bg-red-500/10
+            text-red-400
+            transition
+            hover:bg-red-500
+            hover:text-white
+        ">
+
+        <svg xmlns="http://www.w3.org/2000/svg"
+             class="h-4 w-4"
+             fill="none"
+             viewBox="0 0 24 24"
+             stroke="currentColor">
+
+            <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M6 7.5h12M9.75 7.5V6A2.25 2.25 0 0112 3.75 2.25 2.25 0 0114.25 6v1.5m-6.75 0V18A2.25 2.25 0 009.75 20.25h4.5A2.25 2.25 0 0016.5 18V7.5"/>
+
+        </svg>
+
+    </button>
+
+</div>
+
+</div>
+
+</div>
+
+{% endfor %}
+
+</div>
+
+{% else %}
+
+<div class="rounded-2xl border border-dashed border-slate-700 bg-[#020617] py-16">
+
+    <div class="mx-auto max-w-md text-center">
+
+        <div
+            class="
+                mx-auto
+                flex
+                h-16
+                w-16
+                items-center
+                justify-center
+                rounded-full
+                bg-slate-900
+                text-3xl
+            ">
+
+            📚
+
+        </div>
+
+        <h2 class="mt-5 text-2xl font-bold text-white">
+
+            No Batch Assigned
+
+        </h2>
+
+        <p class="mt-3 text-slate-400">
+
+            This teacher doesn't have any assigned batches yet.
+
+        </p>
+
+        <a
+            href="{% url 'admin_assign_teacher_batch' teacher.id %}"
+            class="
+                mt-6
+                inline-flex
+                items-center
+                rounded-xl
+                bg-cyan-600
+                px-6
+                py-3
+                font-semibold
+                text-white
+                transition
+                hover:bg-cyan-700
+            ">
+
+            Assign Batch
+
+        </a>
+
+    </div>
+
+</div>
+
+{% endif %}
+
+<!-- ===================================================== -->
+<!-- REMOVE ACCESS MODAL - CENTERED WITH SCROLLABLE CONTENT -->
+<!-- ===================================================== -->
+
+<div
+    id="removeBatchModal"
+    class="fixed inset-0 z-[999] hidden items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+
+    <div
+        class="
+            w-full
+            max-w-2xl
+            lg:max-w-3xl
+            xl:max-w-4xl
+            overflow-hidden
+            rounded-3xl
+            border
+            border-slate-700
+            bg-[#020617]
+            shadow-[0_30px_90px_rgba(0,0,0,0.65)]
+            max-h-[85vh]
+            md:max-h-[80vh]
+            lg:max-h-[75vh]
+            flex
+            flex-col
+        ">
+
+        <!-- =========================================== -->
+        <!-- HEADER - Fixed -->
+        <!-- =========================================== -->
+
+        <div
+            class="
+                flex
+                items-center
+                justify-between
+                border-b
+                border-slate-800
+                px-4
+                sm:px-6
+                md:px-7
+                py-3
+                sm:py-4
+                flex-shrink-0
+            ">
+
+            <div>
+
+                <h2
+                    class="text-lg sm:text-xl font-bold text-red-400">
+
+                    Remove Batch Access
+
+                </h2>
+
+                <p
+                    class="mt-0.5 sm:mt-1 text-xs sm:text-sm leading-5 text-slate-400">
+
+                    This action only removes this teacher's access to the batch.
+
+                </p>
+
+            </div>
+
+        </div>
+
+        <!-- =========================================== -->
+        <!-- BODY - Scrollable -->
+        <!-- =========================================== -->
+
+        <div class="overflow-y-auto flex-1 p-4 sm:p-5 md:p-6">
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
+
+                <!-- =========================================== -->
+                <!-- IMPORTANT NOTICE - Full Width -->
+                <!-- =========================================== -->
+
+                <div
+                    class="
+                        lg:col-span-2
+                        rounded-2xl
+                        border
+                        border-amber-500/30
+                        bg-amber-500/10
+                        p-3 sm:p-4 md:p-5
+                    ">
+
+                    <div class="flex items-start gap-2 sm:gap-3">
+
+                        <div class="text-xl sm:text-2xl mt-0.5">
+
+                            ⚠️
+
+                        </div>
+
+                        <div>
+
+                            <h3
+                                class="font-semibold text-amber-300 text-sm sm:text-base">
+
+                                Important: Only Teacher Access Will Be Removed
+
+                            </h3>
+
+                            <p
+                                class="mt-1 sm:mt-2 text-xs sm:text-sm leading-6 sm:leading-7 text-amber-100">
+
+                                <strong>This action will:</strong>
+
+                                <br>
+
+                                ✅ Remove this teacher's access to view and manage 
+                                <strong id="modalBatchNameInline">{{ batch.batch_name }}</strong> batch and its subjects.
+
+                                <br><br>
+
+                                <strong>What remains UNCHANGED:</strong>
+
+                                <br>
+
+                                ✅ All videos, chapters, PDFs, quizzes, assignments and 
+                                other contents remain completely safe.
+
+                                <br>
+
+                                ✅ The batch and all its content remain in the system.
+
+                                <br>
+
+                                ✅ Other teachers assigned to this batch retain full access.
+
+                                <br><br>
+
+                                <span class="text-amber-200 font-semibold text-xs sm:text-sm">
+
+                                    Only this teacher's permission to access this batch will be restricted.
+
+                                </span>
+
+                            </p>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- =========================================== -->
+                <!-- Teacher -->
+                <!-- =========================================== -->
+
+                <div>
+
+                    <label
+                        class="
+                            mb-1
+                            block
+                            text-[10px]
+                            font-semibold
+                            uppercase
+                            tracking-widest
+                            text-slate-500
+                        ">
+
+                        Teacher
+
+                    </label>
+
+                    <div
+                        class="
+                            flex
+                            items-center
+                            gap-2 sm:gap-3
+                            rounded-2xl
+                            border
+                            border-slate-700
+                            bg-slate-900/70
+                            px-2.5 sm:px-3
+                            py-2 sm:py-2.5
+                        ">
+
+                        {% if teacher.profile_image %}
+
+                            <img
+                                src="{{ teacher.profile_image.url }}"
+                                alt="{{ teacher.full_name }}"
+                                class="h-8 w-8 sm:h-10 sm:w-10 rounded-full object-cover border border-slate-700">
+
+                        {% else %}
+
+                            <div
+                                class="
+                                    flex
+                                    h-8 w-8 sm:h-10 sm:w-10
+                                    items-center
+                                    justify-center
+                                    rounded-full
+                                    bg-cyan-600
+                                    font-bold
+                                    text-white
+                                    text-xs sm:text-sm
+                                ">
+
+                                {{ teacher.full_name|first|upper }}
+
+                            </div>
+
+                        {% endif %}
+
+                        <div>
+
+                            <h4 class="font-semibold text-white text-xs sm:text-sm">
+
+                                {{ teacher.full_name }}
+
+                            </h4>
+
+                            <p class="text-[10px] sm:text-xs text-slate-400">
+
+                                {{ teacher.phone_number }}
+
+                            </p>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- =========================================== -->
+                <!-- Batch -->
+                <!-- =========================================== -->
+
+                <div>
+
+                    <label
+                        class="
+                            mb-1
+                            block
+                            text-[10px]
+                            font-semibold
+                            uppercase
+                            tracking-widest
+                            text-slate-500
+                        ">
+
+                        Batch
+
+                    </label>
+
+                    <div
+                        id="modalBatchName"
+                        class="
+                            rounded-2xl
+                            border
+                            border-cyan-500/30
+                            bg-cyan-500/10
+                            px-2.5 sm:px-3
+                            py-2 sm:py-2.5
+                            font-semibold
+                            text-cyan-400
+                            text-xs sm:text-sm
+                        ">
+
+                    </div>
+
+                </div>
+
+                <!-- =========================================== -->
+                <!-- Confirmation -->
+                <!-- =========================================== -->
+
+                <div>
+
+                    <label
+                        class="
+                            mb-1
+                            block
+                            text-[10px]
+                            font-semibold
+                            uppercase
+                            tracking-widest
+                            text-slate-500
+                        ">
+
+                        Confirm Batch Name
+
+                    </label>
+
+                    <input
+                        id="confirmBatchInput"
+                        type="text"
+                        autocomplete="off"
+                        placeholder="Type batch name to confirm"
+                        class="
+                            w-full
+                            rounded-2xl
+                            border
+                            border-slate-700
+                            bg-slate-900
+                            px-2.5 sm:px-3
+                            py-2 sm:py-2.5
+                            text-white
+                            text-xs sm:text-sm
+                            outline-none
+                            transition
+                            focus:border-red-500
+                            focus:ring-2
+                            focus:ring-red-500/20
+                            placeholder:text-slate-600
+                        ">
+
+                    <p
+                        class="mt-1 text-[9px] sm:text-[10px] text-slate-500">
+
+                        Type the exact batch name to enable the
+                        <span class="font-semibold text-red-400">
+
+                            Remove Access
+
+                        </span>
+
+                        button.
+
+                    </p>
+
+                </div>
+
+                <!-- =========================================== -->
+                <!-- Summary Box -->
+                <!-- =========================================== -->
+
+                <div
+                    class="
+                        lg:col-span-2
+                        rounded-2xl
+                        border
+                        border-blue-500/20
+                        bg-blue-500/5
+                        p-3 sm:p-4
+                    ">
+
+                    <div class="flex items-start gap-2 sm:gap-3 text-blue-300">
+
+                        <svg xmlns="http://www.w3.org/2000/svg"
+                            class="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0 mt-0.5"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor">
+
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+
+                        </svg>
+
+                        <p class="text-xs sm:text-sm text-blue-100">
+
+                            <span class="font-semibold">What happens after removal?</span>
+
+                            <br>
+
+                            The teacher will no longer see this batch in their assigned batches list. 
+                            All content (videos, chapters, quizzes, PDFs) remain intact and accessible 
+                            to other teachers and students.
+
+                        </p>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- =========================================== -->
+        <!-- FOOTER - Fixed -->
+        <!-- =========================================== -->
+
+        <div
+            class="
+                flex
+                flex-col-reverse
+                gap-2
+                border-t
+                border-slate-800
+                px-4 sm:px-6
+                py-3 sm:py-3.5
+                sm:flex-row
+                sm:items-center
+                sm:justify-end
+                flex-shrink-0
+            ">
+
+            <!-- Cancel -->
+
+            <button
+                type="button"
+                id="cancelRemoveBatch"
+                class="
+                    flex
+                    h-9 sm:h-10
+                    min-w-[100px] sm:min-w-[120px]
+                    items-center
+                    justify-center
+                    rounded-xl
+                    border
+                    border-slate-700
+                    bg-slate-900
+                    px-3 sm:px-4
+                    text-xs sm:text-sm
+                    font-medium
+                    text-slate-300
+                    transition-all
+                    duration-200
+                    hover:border-slate-500
+                    hover:bg-slate-800
+                    hover:text-white
+                ">
+
+                Cancel
+
+            </button>
+
+            <!-- Remove Form -->
+
+            <form
+                id="removeBatchForm"
+                method="POST"
+                action="">
+
+                {% csrf_token %}
+
+                <button
+                    id="confirmRemoveBtn"
+                    type="submit"
+                    disabled
+                    class="
+                        flex
+                        h-9 sm:h-10
+                        min-w-[140px] sm:min-w-[160px]
+                        items-center
+                        justify-center
+                        rounded-xl
+                        bg-red-600
+                        px-3 sm:px-4
+                        text-xs sm:text-sm
+                        font-semibold
+                        text-white
+                        opacity-50
+                        transition-all
+                        duration-200
+                        hover:bg-red-700
+                        disabled:cursor-not-allowed
+                        disabled:opacity-50
+                    ">
+
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        class="mr-1.5 sm:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor">
+
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M6 7.5h12M9.75 7.5V6A2.25 2.25 0 0112 3.75 2.25 2.25 0 0114.25 6v1.5m-6.75 0V18A2.25 2.25 0 009.75 20.25h4.5A2.25 2.25 0 0016.5 18V7.5"/>
+
+                    </svg>
+
+                    Remove Access
+
+                </button>
+
+            </form>
+
+        </div>
+
+    </div>
+
+</div>
+
+<script src="{% static 'admins/js/manage_assignments.js' %}"></script>
+
+{% endblock %}

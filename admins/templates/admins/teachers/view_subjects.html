@@ -1,0 +1,1055 @@
+{% extends "admins/admin_base.html" %}
+{% load static %}
+
+{% block title %}
+View Assigned Subjects
+{% endblock %}
+
+{% block admin_content %}
+
+<div class="min-h-screen bg-slate-950 px-4 py-6">
+
+    <div class="mx-auto max-w-[1800px]">
+
+        <!-- ====================================================== -->
+        <!-- PAGE HEADER -->
+        <!-- ====================================================== -->
+
+        <div class="mb-8">
+
+            <a
+                href="{% url 'admin_teacher_assignments' teacher.id %}"
+                class="inline-flex items-center gap-2 text-cyan-400 transition hover:text-cyan-300">
+
+                <svg xmlns="http://www.w3.org/2000/svg"
+                    class="h-5 w-5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor">
+
+                    <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M15.75 19.5L8.25 12l7.5-7.5"/>
+
+                </svg>
+
+                <span class="font-medium">
+
+                    Back to Assignments
+
+                </span>
+
+            </a>
+
+            <h1 class="mt-4 text-4xl font-bold text-white">
+
+                View Assigned Subjects
+
+            </h1>
+
+            <p class="mt-2 text-slate-400">
+
+                View all assigned subjects, manage teacher access and monitor subject ownership.
+
+            </p>
+
+        </div>
+
+
+
+        <!-- ====================================================== -->
+        <!-- TOP SUMMARY -->
+        <!-- ====================================================== -->
+
+        <div class="mb-8 grid gap-5 xl:grid-cols-2">
+
+            <!-- =========================================== -->
+            <!-- TEACHER CARD -->
+            <!-- =========================================== -->
+
+            <div
+                class="rounded-2xl border border-slate-800 bg-[#020617] p-5 shadow-lg">
+
+                <div class="flex items-center gap-5">
+
+                    {% if teacher.profile_image %}
+
+                        <img
+                            src="{{ teacher.profile_image.url }}"
+                            alt="{{ teacher.full_name }}"
+                            class="h-20 w-20 rounded-full border-2 border-cyan-500 object-cover">
+
+                    {% else %}
+
+                        <div
+                            class="flex h-20 w-20 items-center justify-center rounded-full bg-cyan-600 text-3xl font-bold text-white">
+
+                            {{ teacher.initials }}
+
+                        </div>
+
+                    {% endif %}
+
+                    <div class="flex-1">
+
+                        <h2 class="text-2xl font-bold text-white">
+
+                            {{ teacher.full_name }}
+
+                        </h2>
+
+                        <p class="mt-1 text-slate-400">
+
+                            {{ teacher.phone_number }}
+
+                        </p>
+
+                        <span
+                            class="mt-3 inline-flex rounded-full bg-cyan-500/10 px-3 py-1 text-xs font-semibold text-cyan-400">
+
+                            Active Teacher
+
+                        </span>
+
+                    </div>
+
+                </div>
+
+                <div class="mt-6 grid grid-cols-2 gap-4">
+
+                    <div
+                        class="rounded-xl bg-slate-900 p-4 text-center">
+
+                        <p class="text-xs uppercase tracking-widest text-slate-500">
+
+                            Assigned Subjects
+
+                        </p>
+
+                        <h3 class="mt-2 text-3xl font-bold text-cyan-400">
+
+                            {{ subject_count }}
+
+                        </h3>
+
+                    </div>
+
+                    <div
+                        class="rounded-xl bg-slate-900 p-4 text-center">
+
+                        <p class="text-xs uppercase tracking-widest text-slate-500">
+
+                            Teachers Assigned
+
+                        </p>
+
+                        <h3 class="mt-2 text-3xl font-bold text-emerald-400">
+
+                            {{ batch_teacher_count }}
+
+                        </h3>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+
+            <!-- =========================================== -->
+            <!-- BATCH CARD -->
+            <!-- =========================================== -->
+
+            <div
+                class="rounded-2xl border border-slate-800 bg-[#020617] p-5 shadow-lg">
+
+                <div class="flex gap-4">
+
+                    {% if batch.batch_thumbnail %}
+
+                        <img
+                            src="{{ batch.batch_thumbnail.url }}"
+                            alt="{{ batch.batch_name }}"
+                            class="h-24 w-36 rounded-xl border border-slate-700 object-cover">
+
+                    {% else %}
+
+                        <img
+                            src="{% static 'admins/images/default_batch.jpg' %}"
+                            class="h-24 w-36 rounded-xl border border-slate-700 object-cover">
+
+                    {% endif %}
+
+                    <div class="flex-1">
+
+                        <h2 class="text-2xl font-bold text-white">
+
+                            {{ batch.batch_name }}
+
+                        </h2>
+
+                        <p class="mt-2 line-clamp-3 text-sm text-slate-400">
+
+                            {{ batch.batch_description }}
+
+                        </p>
+
+                    </div>
+
+                </div>
+
+                <div class="mt-6 grid grid-cols-2 gap-4">
+
+                    <div
+                        class="rounded-xl bg-slate-900 p-4 text-center">
+
+                        <p class="text-xs uppercase tracking-widest text-slate-500">
+
+                            Published Subjects
+
+                        </p>
+
+                        <h3 class="mt-2 text-3xl font-bold text-cyan-400">
+
+                            {{ published_subject_count }}
+
+                        </h3>
+
+                    </div>
+
+                    <div
+                        class="rounded-xl bg-slate-900 p-4 text-center">
+
+                        <p class="text-xs uppercase tracking-widest text-slate-500">
+
+                            Chapters
+
+                        </p>
+
+                        <h3 class="mt-2 text-3xl font-bold text-amber-400">
+
+                            0
+
+                        </h3>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+
+        <!-- ====================================================== -->
+        <!-- SUBJECTS HEADER -->
+        <!-- ====================================================== -->
+
+        <div class="mb-6 flex items-center justify-between">
+
+            <div>
+
+                <h2 class="text-3xl font-bold text-white">
+
+                    Assigned Subjects
+
+                </h2>
+
+                <p class="mt-2 text-slate-400">
+
+                    {{ subject_count }} Assigned Subject{{ subject_count|pluralize }}
+
+                </p>
+
+            </div>
+
+        </div>
+
+        {% if assigned_subjects %}
+
+        <div class="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-4">
+
+            {% for assignment in assigned_subjects %}
+
+<div
+    class="
+        overflow-hidden
+        rounded-2xl
+        border
+        border-slate-800
+        bg-[#020617]
+        shadow-lg
+        transition-all
+        duration-300
+        hover:-translate-y-1
+        hover:border-cyan-500
+    ">
+
+    <!-- ======================================= -->
+    <!-- SUBJECT IMAGE -->
+    <!-- ======================================= -->
+
+    <div class="relative h-36 overflow-hidden">
+
+        {% if assignment.subject.subject_thumbnail %}
+
+            <img
+                src="{{ assignment.subject.subject_thumbnail.url }}"
+                alt="{{ assignment.subject.subject_name }}"
+                class="h-full w-full object-cover">
+
+        {% else %}
+
+            <img
+                src="{% static 'admins/images/default_subject.jpg' %}"
+                alt="Subject"
+                class="h-full w-full object-cover">
+
+        {% endif %}
+
+        <div class="absolute left-3 top-3">
+
+            <span
+                class="
+                    rounded-full
+                    bg-cyan-600
+                    px-3
+                    py-1
+                    text-[11px]
+                    font-semibold
+                    text-white
+                ">
+
+                SUBJECT
+
+            </span>
+
+        </div>
+
+    </div>
+
+    <!-- ======================================= -->
+    <!-- BODY -->
+    <!-- ======================================= -->
+
+    <div class="p-4">
+
+        <h3 class="truncate text-lg font-bold text-white">
+
+            {{ assignment.subject.subject_name }}
+
+        </h3>
+
+        <p class="mt-2 line-clamp-2 text-sm leading-6 text-slate-400">
+
+            {{ assignment.subject.subject_description }}
+
+        </p>
+
+        <!-- ======================================= -->
+        <!-- STATS -->
+        <!-- ======================================= -->
+
+        <div class="mt-5 grid grid-cols-2 gap-3">
+
+            <!-- Teachers -->
+
+            <div
+                class="
+                    rounded-xl
+                    bg-slate-900
+                    p-3
+                    text-center
+                ">
+
+                <p
+                    class="
+                        text-[10px]
+                        uppercase
+                        tracking-widest
+                        text-slate-500
+                    ">
+
+                    Teachers
+
+                </p>
+
+                <h4
+                    class="
+                        mt-2
+                        text-2xl
+                        font-bold
+                        text-cyan-400
+                    ">
+
+                    {{ assignment.teacher_count }}
+
+                </h4>
+
+            </div>
+
+            <!-- Chapters -->
+
+            <div
+                class="
+                    rounded-xl
+                    bg-slate-900
+                    p-3
+                    text-center
+                ">
+
+                <p
+                    class="
+                        text-[10px]
+                        uppercase
+                        tracking-widest
+                        text-slate-500
+                    ">
+
+                    Chapters
+
+                </p>
+
+                <h4
+                    class="
+                        mt-2
+                        text-2xl
+                        font-bold
+                        text-amber-400
+                    ">
+
+                    0
+
+                </h4>
+
+            </div>
+
+        </div>
+
+        <hr class="my-5 border-slate-800">
+
+        <!-- ======================================= -->
+<!-- ACTION BUTTONS -->
+<!-- ======================================= -->
+
+<div class="flex items-center gap-2">
+
+    <!-- View Contents -->
+
+    <a
+        href="#"
+        title="View Contents"
+        class="
+            flex-1
+            inline-flex
+            items-center
+            justify-center
+            gap-2
+            rounded-xl
+            bg-cyan-600
+            px-4
+            py-2.5
+            text-sm
+            font-semibold
+            text-white
+            transition
+            hover:bg-cyan-700
+        ">
+
+        <svg xmlns="http://www.w3.org/2000/svg"
+            class="h-4 w-4"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor">
+
+            <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M2.25 12S5.25 5.25 12 5.25 21.75 12 21.75 12 18.75 18.75 12 18.75 2.25 12 2.25 12z"/>
+
+            <circle
+                cx="12"
+                cy="12"
+                r="3"/>
+
+        </svg>
+
+        View Contents
+
+    </a>
+
+    <!-- Remove Subject -->
+
+    <button
+        type="button"
+        data-id="{{ assignment.id }}"
+        data-subject="{{ assignment.subject.subject_name }}"
+        title="Remove Subject"
+        class="
+            remove-subject-btn
+            inline-flex
+            h-11
+            w-11
+            items-center
+            justify-center
+            rounded-xl
+            border
+            border-red-500
+            bg-red-500/10
+            text-red-400
+            transition
+            hover:bg-red-500
+            hover:text-white
+        ">
+
+        <svg xmlns="http://www.w3.org/2000/svg"
+            class="h-5 w-5"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor">
+
+            <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M6 7.5h12M9.75 7.5V6A2.25 2.25 0 0112 3.75A2.25 2.25 0 0114.25 6v1.5m-6.75 0V18A2.25 2.25 0 009.75 20.25h4.5A2.25 2.25 0 0016.5 18V7.5"/>
+
+        </svg>
+
+    </button>
+
+</div>
+
+</div>
+
+</div>
+
+{% endfor %}
+
+</div>
+
+{% else %}
+
+<!-- ======================================= -->
+<!-- EMPTY STATE -->
+<!-- ======================================= -->
+
+<div
+    class="
+        rounded-2xl
+        border
+        border-dashed
+        border-slate-700
+        bg-[#020617]
+        py-20
+    ">
+
+    <div class="mx-auto max-w-md text-center">
+
+        <div
+            class="
+                mx-auto
+                flex
+                h-20
+                w-20
+                items-center
+                justify-center
+                rounded-full
+                bg-slate-900
+                text-4xl
+            ">
+
+            📚
+
+        </div>
+
+        <h2 class="mt-6 text-2xl font-bold text-white">
+
+            No Subjects Assigned
+
+        </h2>
+
+        <p class="mt-3 text-slate-400 leading-7">
+
+            This teacher currently has no active subject assignments
+            for this batch.
+
+        </p>
+
+        <a
+            href="{% url 'admin_teacher_assignments' teacher.id %}"
+            class="
+                mt-8
+                inline-flex
+                items-center
+                rounded-xl
+                bg-cyan-600
+                px-6
+                py-3
+                font-semibold
+                text-white
+                transition
+                hover:bg-cyan-700
+            ">
+
+            Back to Assignments
+
+        </a>
+
+    </div>
+
+</div>
+
+{% endif %}
+
+<!-- ====================================================== -->
+<!-- REMOVE SUBJECT MODAL - CENTERED WITH REDUCED HEIGHT -->
+<!-- ====================================================== -->
+
+<div
+    id="removeSubjectModal"
+    class="fixed inset-0 z-[999] hidden items-center justify-center bg-black/80 backdrop-blur-md p-4">
+
+    <div
+        class="
+            relative
+            w-full
+            max-w-2xl
+            lg:max-w-3xl
+            overflow-hidden
+            rounded-3xl
+            border
+            border-slate-700
+            bg-[#020617]
+            shadow-[0_30px_90px_rgba(0,0,0,0.65)]
+            max-h-[90vh]
+            flex
+            flex-col
+        ">
+
+        <!-- =========================================== -->
+        <!-- HEADER - Without X button -->
+        <!-- =========================================== -->
+
+        <div
+            class="
+                flex
+                items-center
+                justify-between
+                border-b
+                border-slate-800
+                px-7
+                py-4
+                flex-shrink-0
+            ">
+
+            <div>
+
+                <h2
+                    class="text-xl font-bold text-red-400">
+
+                    Remove Subject Access
+
+                </h2>
+
+                <p
+                    class="mt-1 text-sm leading-5 text-slate-400">
+
+                    This will remove this teacher's access to the selected
+                    subject only.
+
+                </p>
+
+            </div>
+
+        </div>
+
+        <!-- =========================================== -->
+        <!-- BODY - Compact with reduced padding -->
+        <!-- =========================================== -->
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 p-5 overflow-y-auto flex-1">
+
+            <!-- Warning -->
+
+            <div
+                class="
+                    lg:col-span-2
+                    rounded-2xl
+                    border
+                    border-amber-500/30
+                    bg-amber-500/10
+                    p-4
+                ">
+
+                <h3
+                    class="font-semibold text-amber-300 text-sm">
+
+                    ⚠ Important Notice
+
+                </h3>
+
+                <p
+                    class="mt-2 text-sm leading-6 text-amber-100">
+
+                    Removing this assignment only removes this teacher's
+                    access.
+
+                    <br>
+
+                    Videos, Chapters, PDFs, Quizzes, Assignments and all
+                    uploaded contents remain safe and will not be deleted.
+
+                </p>
+
+            </div>
+
+            <!-- =========================================== -->
+            <!-- Teacher -->
+            <!-- =========================================== -->
+
+            <div>
+
+                <label
+                    class="
+                        mb-1.5
+                        block
+                        text-[10px]
+                        font-semibold
+                        uppercase
+                        tracking-widest
+                        text-slate-500
+                    ">
+
+                    Teacher
+
+                </label>
+
+                <div
+                    class="
+                        flex
+                        items-center
+                        gap-3
+                        rounded-2xl
+                        border
+                        border-slate-700
+                        bg-slate-900/70
+                        px-3
+                        py-2.5
+                    ">
+
+                    {% if teacher.profile_image %}
+
+                        <img
+                            src="{{ teacher.profile_image.url }}"
+                            alt="{{ teacher.full_name }}"
+                            class="h-10 w-10 rounded-full object-cover border border-slate-700">
+
+                    {% else %}
+
+                        <div
+                            class="
+                                flex
+                                h-10
+                                w-10
+                                items-center
+                                justify-center
+                                rounded-full
+                                bg-cyan-600
+                                font-bold
+                                text-white
+                                text-sm
+                            ">
+
+                            {{ teacher.initials }}
+
+                        </div>
+
+                    {% endif %}
+
+                    <div>
+
+                        <h4 class="font-semibold text-white text-sm">
+
+                            {{ teacher.full_name }}
+
+                        </h4>
+
+                        <p class="text-xs text-slate-400">
+
+                            {{ teacher.phone_number }}
+
+                        </p>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- =========================================== -->
+            <!-- Batch -->
+            <!-- =========================================== -->
+
+            <div>
+
+                <label
+                    class="
+                        mb-1.5
+                        block
+                        text-[10px]
+                        font-semibold
+                        uppercase
+                        tracking-widest
+                        text-slate-500
+                    ">
+
+                    Batch
+
+                </label>
+
+                <div
+                    class="
+                        rounded-2xl
+                        border
+                        border-slate-700
+                        bg-slate-900/70
+                        px-3
+                        py-2.5
+                    ">
+
+                    <h4
+                        class="font-semibold text-cyan-400 text-sm">
+
+                        {{ batch.batch_name }}
+
+                    </h4>
+
+                    <p
+                        class="mt-0.5 text-xs text-slate-400">
+
+                        Teacher assigned batch
+
+                    </p>
+
+                </div>
+
+            </div>
+
+            <!-- =========================================== -->
+            <!-- Subject -->
+            <!-- =========================================== -->
+
+            <div>
+
+                <label
+                    class="
+                        mb-1.5
+                        block
+                        text-[10px]
+                        font-semibold
+                        uppercase
+                        tracking-widest
+                        text-slate-500
+                    ">
+
+                    Subject
+
+                </label>
+
+                <div
+                    id="modalSubjectName"
+                    class="
+                        rounded-2xl
+                        border
+                        border-emerald-500/30
+                        bg-emerald-500/10
+                        px-3
+                        py-2.5
+                        font-semibold
+                        text-emerald-400
+                        text-sm
+                    ">
+
+                </div>
+
+            </div>
+
+            <!-- =========================================== -->
+            <!-- Confirmation -->
+            <!-- =========================================== -->
+
+            <div>
+
+                <label
+                    class="
+                        mb-1.5
+                        block
+                        text-[10px]
+                        font-semibold
+                        uppercase
+                        tracking-widest
+                        text-slate-500
+                    ">
+
+                    Confirm Subject Name
+
+                </label>
+
+                <input
+                    id="confirmSubjectInput"
+                    type="text"
+                    autocomplete="off"
+                    placeholder="Type subject name"
+                    class="
+                        w-full
+                        rounded-2xl
+                        border
+                        border-slate-700
+                        bg-slate-900
+                        px-3
+                        py-2.5
+                        text-white
+                        text-sm
+                        outline-none
+                        transition
+                        focus:border-red-500
+                        focus:ring-2
+                        focus:ring-red-500/20
+                    ">
+
+                <p
+                    class="mt-1.5 text-[10px] text-slate-500">
+
+                    Type the exact subject name to enable the
+                    <span class="font-semibold text-red-400">
+
+                        Remove Subject
+
+                    </span>
+
+                    button.
+
+                </p>
+
+            </div>
+
+        </div>
+
+        <!-- =========================================== -->
+        <!-- FOOTER - Compact -->
+        <!-- =========================================== -->
+
+        <div
+            class="
+                flex
+                flex-col-reverse
+                gap-2
+                border-t
+                border-slate-800
+                px-6
+                py-3.5
+                sm:flex-row
+                sm:items-center
+                sm:justify-end
+                flex-shrink-0
+            ">
+
+            <!-- Cancel -->
+
+            <button
+                type="button"
+                id="cancelRemoveSubject"
+                class="
+                    flex
+                    h-10
+                    min-w-[120px]
+                    items-center
+                    justify-center
+                    rounded-xl
+                    border
+                    border-slate-700
+                    bg-slate-900
+                    px-4
+                    text-sm
+                    font-medium
+                    text-slate-300
+                    transition-all
+                    duration-200
+                    hover:border-slate-500
+                    hover:bg-slate-800
+                    hover:text-white
+                ">
+
+                Cancel
+
+            </button>
+
+            <!-- Remove Form -->
+
+            <form
+                id="removeSubjectForm"
+                method="POST"
+                action="">
+
+                {% csrf_token %}
+
+                <button
+                    id="confirmRemoveSubjectBtn"
+                    type="submit"
+                    disabled
+                    class="
+                        flex
+                        h-10
+                        min-w-[150px]
+                        items-center
+                        justify-center
+                        rounded-xl
+                        bg-red-600
+                        px-4
+                        text-sm
+                        font-semibold
+                        text-white
+                        opacity-50
+                        transition-all
+                        duration-200
+                        hover:bg-red-700
+                        disabled:cursor-not-allowed
+                        disabled:opacity-50
+                    ">
+
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        class="mr-2 h-4 w-4"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor">
+
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M19 7H5M10 11V17M14 11V17M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2M6 7l1 12a2 2 0 002 2h6a2 2 0 002-2l1-12"/>
+
+                    </svg>
+
+                    Remove Subject
+
+                </button>
+
+            </form>
+
+        </div>
+
+    </div>
+
+</div>
+
+<script src="{% static 'admins/js/view_subjects.js' %}"></script>
+
+{% endblock %}

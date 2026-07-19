@@ -3,7 +3,7 @@ from .oauth_views import *
 from . import views
 
 urlpatterns=[
-    path('',views.home_view,name='home'),
+    
     path('signup/',views.signup_view,name='signup'),
     path('verify-otp/',views.verify_otp_view,name='verify_otp'),
     path('verification-success/',views.verification_success_view,name='verification_success'),
@@ -16,5 +16,5 @@ urlpatterns=[
     path('logout/',views.logout_view,name='logout'),
     path('google/signup/',google_signup,name='google_signup'),
     path('google/signin/',google_signin,name='google_signin'),
-    path('teacher/',views.teacher_view,name='teacher')
+
 ]

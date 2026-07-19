@@ -1,0 +1,831 @@
+{% extends 'students/base_student.html' %}
+
+{% load static %}
+
+{% block title %}
+Marketplace | NeoLearn
+{% endblock %}
+
+{% block student_content %}
+
+<div class="space-y-8">
+
+    <!-- HERO -->
+
+    <section
+        class="
+            relative
+            overflow-hidden
+            rounded-[28px]
+            border
+            border-cyan-500/10
+            bg-gradient-to-r
+            from-cyan-500/10
+            via-slate-900
+            to-blue-900/40
+            p-8
+            lg:p-12
+        "
+    >
+
+        <div
+            class="
+                absolute
+                right-[-120px]
+                top-[-120px]
+
+                w-[320px]
+                h-[320px]
+
+                rounded-full
+
+                bg-cyan-400/10
+
+                blur-3xl
+            "
+        ></div>
+
+        <div class="relative z-10">
+
+            <span
+                class="
+                    inline-flex
+                    items-center
+                    gap-2
+
+                    rounded-full
+
+                    bg-cyan-500/10
+
+                    px-4
+                    py-2
+
+                    text-cyan-300
+                    text-sm
+                    font-semibold
+                "
+            >
+
+                <i class="ri-graduation-cap-line"></i>
+
+                NeoLearn Marketplace
+
+            </span>
+
+            <h1
+                class="
+                    mt-6
+
+                    text-4xl
+                    lg:text-5xl
+
+                    font-extrabold
+
+                    leading-tight
+                "
+            >
+
+                Discover Your
+
+                <span class="text-cyan-400">
+
+                    Next Skill
+
+                </span>
+
+            </h1>
+
+            <p
+                class="
+                    mt-5
+
+                    max-w-3xl
+
+                    text-slate-300
+
+                    text-lg
+                    leading-8
+                "
+            >
+
+                Browse all published batches created by our instructors.
+                Purchase courses, start learning and build your career with
+                NeoLearn.
+
+            </p>
+
+        </div>
+
+    </section>
+
+    <!-- SEARCH -->
+
+    <section
+        class="
+            rounded-3xl
+
+            border
+            border-white/10
+
+            bg-[#071224]
+
+            p-6
+        "
+    >
+
+        <div
+            class="
+                flex
+                flex-col
+                lg:flex-row
+
+                gap-4
+            "
+        >
+
+            <!-- SEARCH -->
+
+            <div class="relative flex-1">
+
+                <input
+                    id="searchInput"
+                    type="text"
+
+                    placeholder="Search batches..."
+
+                    class="
+                        w-full
+                        h-14
+
+                        rounded-2xl
+
+                        bg-slate-900
+
+                        border
+                        border-white/10
+
+                        pl-14
+                        pr-5
+
+                        outline-none
+
+                        focus:border-cyan-400
+                    "
+                >
+
+                <i
+                    class="
+                        ri-search-line
+
+                        absolute
+
+                        left-5
+                        top-1/2
+
+                        -translate-y-1/2
+
+                        text-slate-400
+                        text-xl
+                    "
+                ></i>
+
+            </div>
+
+            <!-- FILTER -->
+
+            <select
+                class="
+                    h-14
+
+                    rounded-2xl
+
+                    bg-slate-900
+
+                    border
+                    border-white/10
+
+                    px-6
+
+                    outline-none
+                "
+            >
+
+                <option>
+
+                    All Courses
+
+                </option>
+
+                <option>
+
+                    Latest
+
+                </option>
+
+                <option>
+
+                    Price Low
+
+                </option>
+
+                <option>
+
+                    Price High
+
+                </option>
+
+            </select>
+
+        </div>
+
+    </section>
+
+    <!-- SECTION TITLE -->
+
+    <div
+        class="
+            flex
+            items-center
+            justify-between
+        "
+    >
+
+        <div>
+
+            <h2
+                class="
+                    text-3xl
+                    font-bold
+                "
+            >
+
+                Published Batches
+
+            </h2>
+
+            <p class="text-slate-400 mt-2">
+
+                Browse all available learning programs.
+
+            </p>
+
+        </div>
+
+        <div
+            class="
+                rounded-full
+
+                bg-cyan-500/10
+
+                px-5
+                py-2
+
+                text-cyan-300
+
+                font-semibold
+            "
+        >
+
+            {{ batches.count }} Courses
+
+        </div>
+
+    </div>
+
+    <!-- COURSE GRID -->
+
+    <div
+        class="
+            grid
+
+            grid-cols-1
+            md:grid-cols-2
+            xl:grid-cols-3
+
+            gap-8
+        "
+    >
+
+        {% for batch in batches %}
+
+                <!-- COURSE CARD -->
+
+        <div
+            class="
+                group
+
+                overflow-hidden
+
+                rounded-[28px]
+
+                border
+                border-white/10
+
+                bg-[#071224]
+
+                transition-all
+                duration-300
+
+                hover:-translate-y-2
+                hover:border-cyan-400/30
+                hover:shadow-[0_20px_60px_rgba(6,182,212,0.18)]
+            "
+        >
+
+            <!-- THUMBNAIL -->
+
+            <div class="relative overflow-hidden">
+
+                <img
+                    src="{{ batch.batch_thumbnail.url }}"
+                    alt="{{ batch.batch_name }}"
+
+                    class="
+                        w-full
+                        h-[220px]
+
+                        object-cover
+
+                        transition-all
+                        duration-500
+
+                        group-hover:scale-110
+                    "
+                >
+
+                <!-- STATUS -->
+
+                <div
+                    class="
+                        absolute
+                        top-4
+                        left-4
+
+                        rounded-full
+
+                        bg-emerald-500
+
+                        px-3
+                        py-1
+
+                        text-xs
+                        font-bold
+                        text-white
+                    "
+                >
+
+                    Published
+
+                </div>
+
+                <!-- WISHLIST -->
+
+                <button
+                    class="
+                        absolute
+                        top-4
+                        right-4
+
+                        w-11
+                        h-11
+
+                        rounded-full
+
+                        bg-black/50
+                        backdrop-blur-md
+
+                        flex
+                        items-center
+                        justify-center
+
+                        text-white
+
+                        hover:bg-cyan-500
+
+                        transition-all
+                    "
+                >
+
+                    <i class="ri-heart-3-line text-xl"></i>
+
+                </button>
+
+            </div>
+
+            <!-- CONTENT -->
+
+            <div class="p-6">
+
+                <h2
+                    class="
+                        text-2xl
+                        font-bold
+
+                        text-white
+
+                        line-clamp-2
+                    "
+                >
+
+                    {{ batch.batch_name }}
+
+                </h2>
+
+                <p
+                    class="
+                        mt-4
+
+                        text-slate-400
+
+                        text-sm
+
+                        leading-7
+
+                        line-clamp-3
+                    "
+                >
+
+                    {{ batch.batch_description }}
+
+                </p>
+
+                <!-- INFO -->
+
+                <div
+                    class="
+                        mt-6
+
+                        grid
+                        grid-cols-2
+
+                        gap-4
+                    "
+                >
+
+                    <!-- SUBJECTS -->
+
+                    <div
+                        class="
+                            rounded-2xl
+
+                            bg-slate-900
+
+                            p-4
+                        "
+                    >
+
+                        <p
+                            class="
+                                text-xs
+                                text-slate-500
+                            "
+                        >
+
+                            Subjects
+
+                        </p>
+
+                        <h3
+                            class="
+                                mt-2
+
+                                text-xl
+                                font-bold
+                            "
+                        >
+
+                            {{ batch.subjects.count }}
+
+                        </h3>
+
+                    </div>
+
+                    <!-- TEACHERS -->
+
+                    <div
+                        class="
+                            rounded-2xl
+
+                            bg-slate-900
+
+                            p-4
+                        "
+                    >
+
+                        <p
+                            class="
+                                text-xs
+                                text-slate-500
+                            "
+                        >
+
+                            Teachers
+
+                        </p>
+
+                        <h3
+                            class="
+                                mt-2
+
+                                text-xl
+                                font-bold
+                            "
+                        >
+
+                            {{ batch.assigned_teachers.count }}
+
+                        </h3>
+
+                    </div>
+
+                </div>
+
+                <!-- PRICE -->
+
+                <div
+                    class="
+                        mt-6
+
+                        flex
+                        items-center
+                        justify-between
+                    "
+                >
+
+                    <div>
+
+                        <p
+                            class="
+                                text-xs
+                                text-slate-500
+                            "
+                        >
+
+                            Course Fee
+
+                        </p>
+
+                        <h2
+                            class="
+                                mt-1
+
+                                text-3xl
+                                font-extrabold
+
+                                text-cyan-400
+                            "
+                        >
+
+                            ₹{{ batch.batch_price }}
+
+                        </h2>
+
+                    </div>
+
+                    <!-- CART -->
+
+                    <button
+                        class="
+                            w-12
+                            h-12
+
+                            rounded-xl
+
+                            border
+                            border-white/10
+
+                            flex
+                            items-center
+                            justify-center
+
+                            text-white
+
+                            hover:bg-cyan-500
+                            hover:border-cyan-500
+
+                            transition-all
+                        "
+                    >
+
+                        <i class="ri-shopping-cart-2-line text-xl"></i>
+
+                    </button>
+
+                </div>
+
+                <!-- BUTTONS -->
+
+                <div
+                    class="
+                        mt-8
+
+                        grid
+                        grid-cols-2
+
+                        gap-3
+                    "
+                >
+
+                    <a
+                        href="{% url 'marketplace_detail' batch.id %}"
+
+                        class="
+                            h-12
+
+                            rounded-xl
+
+                            border
+                            border-cyan-400
+
+                            flex
+                            items-center
+                            justify-center
+
+                            text-cyan-400
+                            font-semibold
+
+                            hover:bg-cyan-400
+                            hover:text-black
+
+                            transition-all
+                        "
+                    >
+
+                        View Details
+
+                    </a>
+
+                    <button
+                        disabled
+
+                        class="
+                            h-12
+
+                            rounded-xl
+
+                            bg-cyan-500
+
+                            text-black
+
+                            font-bold
+
+                            opacity-70
+
+                            cursor-not-allowed
+                        "
+                    >
+
+                        Coming Soon
+
+                    </button>
+
+                </div>
+
+            </div>
+
+        </div>
+        {% empty %}
+
+        <!-- EMPTY STATE -->
+
+        <div
+            class="
+                col-span-full
+
+                rounded-[30px]
+
+                border
+                border-dashed
+                border-cyan-500/20
+
+                bg-[#071224]
+
+                py-24
+                px-8
+
+                text-center
+            "
+        >
+
+            <div
+                class="
+                    mx-auto
+
+                    w-28
+                    h-28
+
+                    rounded-full
+
+                    bg-cyan-500/10
+
+                    flex
+                    items-center
+                    justify-center
+                "
+            >
+
+                <i
+                    class="
+                        ri-book-open-line
+
+                        text-5xl
+
+                        text-cyan-400
+                    "
+                ></i>
+
+            </div>
+
+            <h2
+                class="
+                    mt-8
+
+                    text-3xl
+
+                    font-bold
+
+                    text-white
+                "
+            >
+
+                No Published Batches
+
+            </h2>
+
+            <p
+                class="
+                    mt-4
+
+                    max-w-xl
+
+                    mx-auto
+
+                    text-slate-400
+
+                    leading-8
+                "
+            >
+
+                There are currently no published batches available in the
+                marketplace. Please check back later for new learning
+                programs.
+
+            </p>
+
+        </div>
+
+        {% endfor %}
+
+    </div>
+
+</div>
+
+<script>
+
+const searchInput=document.getElementById(
+    "searchInput"
+);
+
+const cards=document.querySelectorAll(
+    ".group"
+);
+
+searchInput.addEventListener(
+    "keyup",
+    function(){
+
+        const value=this.value.toLowerCase();
+
+        cards.forEach(function(card){
+
+            const title=card.querySelector("h2")
+                .innerText
+                .toLowerCase();
+
+            const description=card.querySelector("p")
+                .innerText
+                .toLowerCase();
+
+            if(
+                title.includes(value) ||
+                description.includes(value)
+            ){
+
+                card.style.display="block";
+
+            }
+
+            else{
+
+                card.style.display="none";
+
+            }
+
+        });
+
+    }
+);
+
+</script>
+
+{% endblock %}

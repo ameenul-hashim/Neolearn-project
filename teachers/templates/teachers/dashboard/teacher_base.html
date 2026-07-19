@@ -1,0 +1,1147 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+
+    {% load static %}
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>
+
+        {% block title %}
+            Teacher Panel | NeoLearn
+        {% endblock %}
+
+    </title>
+
+    <!-- Tailwind CSS -->
+
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Remix Icons -->
+
+    <link
+        rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/4.6.0/remixicon.min.css"
+    >
+
+    <!-- Hide Scrollbar -->
+
+    <style>
+
+        ::-webkit-scrollbar{
+            width:0;
+            height:0;
+        }
+
+        *{
+            scrollbar-width:none;
+        }
+
+        html{
+            scroll-behavior:smooth;
+        }
+
+    </style>
+
+<link rel="stylesheet" href="{% static 'global-messages.css' %}">
+    <meta charset="UTF-8">
+
+</head>
+
+
+<body
+class="
+bg-[#090C12]
+text-white
+overflow-hidden
+antialiased
+"
+>
+
+<!-- ======================================== -->
+<!-- APPLICATION -->
+<!-- ======================================== -->
+
+<div
+class="
+flex
+
+h-screen
+w-full
+
+overflow-hidden
+
+bg-[#090C12]
+"
+>
+
+<!-- ======================================== -->
+<!-- MOBILE OVERLAY -->
+<!-- ======================================== -->
+
+<div
+
+id="sidebarOverlay"
+
+class="
+hidden
+
+fixed
+inset-0
+
+z-40
+
+bg-black/70
+
+backdrop-blur-sm
+
+lg:hidden
+"
+
+></div>
+
+<!-- ======================================== -->
+<!-- SIDEBAR -->
+<!-- ======================================== -->
+
+<aside
+
+id="sidebar"
+
+class="
+fixed
+lg:relative
+
+top-0
+left-0
+
+z-50
+
+w-[250px]
+xl:w-[260px]
+
+h-screen
+
+bg-[#0D1118]
+
+border-r
+border-[#202734]
+
+flex
+flex-col
+
+transition-transform
+duration-300
+
+-translate-x-full
+lg:translate-x-0
+"
+>
+
+<!-- ======================================== -->
+<!-- LOGO -->
+<!-- ======================================== -->
+
+<div
+    class="
+        h-[74px]
+
+        flex
+        items-center
+        justify-between
+
+        px-5
+        lg:px-6
+
+        shrink-0
+    "
+>
+
+    <div
+        class="
+            flex
+            items-center
+
+            gap-2
+        "
+    >
+
+        <i
+            class="
+                ri-flashlight-fill
+
+                text-cyan-400
+
+                text-[24px]
+            "
+        ></i>
+
+        <h1
+            class="
+                text-[17px]
+
+                font-extrabold
+
+                tracking-wide
+
+                leading-none
+
+                text-white
+            "
+        >
+
+            NEO<span class="text-cyan-400">LEARN</span>
+
+        </h1>
+
+    </div>
+
+    <!-- MOBILE CLOSE -->
+
+    <button
+
+        id="closeSidebar"
+
+        class="
+            lg:hidden
+
+            flex
+            items-center
+            justify-center
+
+            w-9
+            h-9
+
+            rounded-lg
+
+            hover:bg-[#171E29]
+
+            transition
+
+            text-slate-400
+
+            hover:text-white
+
+            focus:outline-none
+        "
+    >
+
+        <i
+            class="
+                ri-close-line
+
+                text-[20px]
+            "
+        ></i>
+
+    </button>
+
+</div>
+
+<!-- ======================================== -->
+<!-- MENU START -->
+<!-- ======================================== -->
+
+<nav
+
+    class="
+        flex-1
+
+        overflow-y-auto
+
+        px-3
+        md:px-4
+
+        pb-4
+
+        space-y-1.5
+    "
+>
+
+<!-- ======================================== -->
+<!-- DASHBOARD -->
+<!-- ======================================== -->
+
+<a
+    href="{% url 'teacher_dashboard' %}"
+    class="
+        flex
+        items-center
+
+        gap-3
+
+        px-4
+        py-3
+
+        rounded-xl
+
+        bg-[#101C26]
+
+        border-l-[3px]
+        border-cyan-400
+
+        text-white
+
+        transition-all
+        duration-200
+    "
+>
+
+    <i
+        class="
+            ri-dashboard-fill
+
+            text-[18px]
+
+            text-cyan-400
+
+            shrink-0
+        "
+    ></i>
+
+    <span class="text-[15px] font-semibold">
+
+        Dashboard
+
+    </span>
+
+</a>
+
+<!-- ======================================== -->
+<!-- MY BATCHES -->
+<!-- ======================================== -->
+
+<a
+    href="{% url 'teacher_batches' %}"
+    class="
+        flex
+        items-center
+
+        gap-3
+
+        px-4
+        py-3
+
+        rounded-xl
+
+        text-slate-400
+
+        hover:bg-[#171E29]
+
+        hover:text-white
+
+        transition
+    "
+>
+
+    <i class="ri-stack-fill text-[18px] shrink-0"></i>
+
+    <span class="text-[15px]">
+
+        My Batches
+
+    </span>
+
+</a>
+
+<!-- ======================================== -->
+<!-- LIVE CLASSES -->
+<!-- ======================================== -->
+
+<a
+    href="#"
+    class="
+        flex
+        items-center
+
+        gap-3
+
+        px-4
+        py-3
+
+        rounded-xl
+
+        text-slate-400
+
+        hover:bg-[#171E29]
+
+        hover:text-white
+
+        transition
+    "
+>
+
+    <i class="ri-live-fill text-[18px] shrink-0"></i>
+
+    <span class="text-[15px]">
+
+        Live Classes
+
+    </span>
+
+</a>
+
+<!-- ======================================== -->
+<!-- ANALYTICS -->
+<!-- ======================================== -->
+
+<a
+    href="#"
+    class="
+        flex
+        items-center
+
+        gap-3
+
+        px-4
+        py-3
+
+        rounded-xl
+
+        text-slate-400
+
+        hover:bg-[#171E29]
+
+        hover:text-white
+
+        transition
+    "
+>
+
+    <i class="ri-line-chart-fill text-[18px] shrink-0"></i>
+
+    <span class="text-[15px]">
+
+        Analytics
+
+    </span>
+
+</a>
+
+<!-- ======================================== -->
+<!-- REVIEWS -->
+<!-- ======================================== -->
+
+<a
+    href="#"
+    class="
+        flex
+        items-center
+
+        gap-3
+
+        px-4
+        py-3
+
+        rounded-xl
+
+        text-slate-400
+
+        hover:bg-[#171E29]
+
+        hover:text-white
+
+        transition
+    "
+>
+
+    <i class="ri-star-fill text-[18px] shrink-0"></i>
+
+    <span class="text-[15px]">
+
+        Reviews
+
+    </span>
+
+</a>
+
+<!-- ======================================== -->
+<!-- NOTIFICATIONS -->
+<!-- ======================================== -->
+
+<a
+    href="#"
+    class="
+        flex
+        items-center
+
+        gap-3
+
+        px-4
+        py-3
+
+        rounded-xl
+
+        text-slate-400
+
+        hover:bg-[#171E29]
+
+        hover:text-white
+
+        transition
+    "
+>
+
+    <i class="ri-notification-3-fill text-[18px] shrink-0"></i>
+
+    <span class="text-[15px]">
+
+        Notifications
+
+    </span>
+
+</a>
+
+<!-- ======================================== -->
+<!-- SETTINGS -->
+<!-- ======================================== -->
+
+<a
+    href="#"
+    class="
+        flex
+        items-center
+
+        gap-3
+
+        px-4
+        py-3
+
+        rounded-xl
+
+        text-slate-400
+
+        hover:bg-[#171E29]
+
+        hover:text-white
+
+        transition
+    "
+>
+
+    <i class="ri-settings-4-fill text-[18px] shrink-0"></i>
+
+    <span class="text-[15px]">
+
+        Settings
+
+    </span>
+
+</a>
+
+<!-- ======================================== -->
+<!-- LOGOUT -->
+<!-- ======================================== -->
+
+<a
+    href="{% url 'teacher_logout' %}"
+    class="
+        flex
+        items-center
+
+        gap-3
+
+        mt-2
+
+        px-4
+        py-3
+
+        rounded-xl
+
+        text-red-400
+
+        hover:bg-red-500/10
+
+        transition
+    "
+>
+
+    <i class="ri-logout-box-r-line text-[18px] shrink-0"></i>
+
+    <span class="text-[15px] font-semibold">
+
+        Logout
+
+    </span>
+
+</a>
+
+</nav>
+
+<!-- ======================================== -->
+<!-- SYSTEM STATUS -->
+<!-- ======================================== -->
+
+<div
+    class="
+        px-4
+        pb-4
+    "
+>
+
+    <div
+        class="
+            rounded-xl
+
+            bg-gradient-to-br
+
+            from-[#1E3A5F]
+            to-[#17243A]
+
+            border
+            border-cyan-900/30
+
+            p-4
+        "
+    >
+
+        <h3
+            class="
+                text-[14px]
+
+                font-semibold
+            "
+        >
+
+            System Status
+
+        </h3>
+
+        <div
+            class="
+                mt-3
+
+                flex
+                items-center
+
+                gap-2
+            "
+        >
+
+            <span
+                class="
+                    w-2
+                    h-2
+
+                    rounded-full
+
+                    bg-green-400
+
+                    animate-pulse
+                "
+            ></span>
+
+            <span
+                class="
+                    text-[12px]
+
+                    text-slate-300
+                "
+            >
+
+                All systems operational
+
+            </span>
+
+        </div>
+
+    </div>
+
+</div>
+
+</aside>
+
+<!-- ======================================== -->
+<!-- MAIN AREA -->
+<!-- ======================================== -->
+
+<div
+    class="
+        flex-1
+
+        min-w-0
+
+        flex
+        flex-col
+
+        overflow-hidden
+    "
+>
+
+<!-- ======================================== -->
+<!-- TOP NAVIGATION -->
+<!-- ======================================== -->
+
+<header
+    class="
+        h-[72px]
+
+        bg-[#0D1118]
+
+        border-b
+        border-[#202734]
+
+        flex
+        items-center
+        justify-between
+
+        px-4
+        sm:px-5
+        md:px-6
+        lg:px-7
+        xl:px-8
+
+        shrink-0
+    "
+>
+
+    <!-- LEFT -->
+
+    <div
+        class="
+            flex
+            items-center
+
+            gap-4
+        "
+    >
+
+        <!-- MOBILE MENU -->
+
+        <button
+
+            id="menuButton"
+
+            class="
+                lg:hidden
+
+                w-10
+                h-10
+
+                rounded-lg
+
+                hover:bg-[#171E29]
+
+                transition
+
+                flex
+                items-center
+                justify-center
+            "
+        >
+
+            <i
+                class="
+                    ri-menu-line
+
+                    text-[22px]
+                "
+            ></i>
+
+        </button>
+
+        <!-- SEARCH -->
+
+        <div
+
+            class="
+                hidden
+                md:flex
+
+                items-center
+
+                gap-3
+
+                w-[230px]
+                lg:w-[300px]
+                xl:w-[380px]
+
+                h-[42px]
+
+                rounded-xl
+
+                bg-[#171E29]
+
+                border
+                border-[#252E40]
+
+                px-4
+
+                focus-within:border-cyan-400
+
+                transition
+            "
+        >
+
+            <i
+                class="
+                    ri-search-line
+
+                    text-slate-400
+                "
+            ></i>
+
+            <input
+
+                type="text"
+
+                placeholder="Search..."
+
+                class="
+                    w-full
+
+                    bg-transparent
+
+                    outline-none
+
+                    text-[14px]
+
+                    placeholder:text-slate-500
+                "
+            >
+
+        </div>
+
+    </div>
+
+    <!-- RIGHT -->
+
+    <div
+        class="
+            flex
+            items-center
+
+            gap-4
+            lg:gap-5
+        "
+    >
+
+        <!-- NOTIFICATION -->
+
+        <button
+
+            class="
+                relative
+
+                text-[20px]
+
+                text-slate-300
+
+                hover:text-cyan-400
+
+                transition
+            "
+        >
+
+            <i class="ri-notification-3-line"></i>
+
+            <span
+                class="
+                    absolute
+
+                    top-0
+                    right-0
+
+                    w-2
+                    h-2
+
+                    rounded-full
+
+                    bg-red-500
+                "
+            ></span>
+
+        </button>
+
+        <!-- PROFILE -->
+
+        <div class="relative">
+
+            <button
+
+                id="profileButton"
+
+                class="
+                    flex
+                    items-center
+
+                    gap-3
+                "
+            >
+
+                {% if request.user.teacher_profile.profile_image %}
+
+                <img
+
+                    src="{{ request.user.teacher_profile.profile_image.url }}"
+
+                    class="
+                        w-10
+                        h-10
+
+                        rounded-full
+
+                        object-cover
+
+                        border
+                        border-[#2D3748]
+                    "
+                >
+
+                {% else %}
+
+                <div
+                    class="
+                        w-10
+                        h-10
+
+                        rounded-full
+
+                        bg-cyan-400
+
+                        flex
+                        items-center
+                        justify-center
+
+                        text-black
+
+                        font-bold
+                    "
+                >
+
+                    {{ request.user.teacher_profile.full_name|first }}
+
+                </div>
+
+                {% endif %}
+
+                <div
+                    class="
+                        hidden
+                        lg:block
+                    "
+                >
+
+                    <h4
+                        class="
+                            text-[14px]
+
+                            font-semibold
+                        "
+                    >
+
+                        {{ request.user.teacher_profile.full_name }}
+
+                    </h4>
+
+                    <p
+                        class="
+                            text-[12px]
+
+                            text-slate-400
+                        "
+                    >
+
+                        Teacher
+
+                    </p>
+
+                </div>
+
+                <i
+                    class="
+                        ri-arrow-down-s-line
+
+                        hidden
+                        lg:block
+
+                        text-slate-500
+                    "
+                ></i>
+
+            </button>
+
+            <!-- PROFILE DROPDOWN -->
+
+            <div
+
+                id="profileDropdown"
+
+                class="
+                    hidden
+
+                    absolute
+
+                    right-0
+
+                    mt-3
+
+                    w-[240px]
+
+                    rounded-2xl
+
+                    overflow-hidden
+
+                    bg-[#0F141D]
+
+                    border
+                    border-[#232C3A]
+
+                    shadow-2xl
+
+                    z-50
+                "
+            >
+
+                <a
+                    href="#"
+
+                    class="
+                        flex
+                        items-center
+
+                        gap-3
+
+                        px-5
+                        py-4
+
+                        hover:bg-[#1A2230]
+
+                        transition
+                    "
+                >
+
+                    <i class="ri-user-settings-line"></i>
+
+                    <span>Profile Settings</span>
+
+                </a>
+
+                <a
+                    href="#"
+
+                    class="
+                        flex
+                        items-center
+
+                        gap-3
+
+                        px-5
+                        py-4
+
+                        hover:bg-[#1A2230]
+
+                        transition
+                    "
+                >
+
+                    <i class="ri-shield-keyhole-line"></i>
+
+                    <span>Update Credentials</span>
+
+                </a>
+
+                <div class="border-t border-[#232C3A]"></div>
+
+                <a
+
+                    href="{% url 'teacher_logout' %}"
+
+                    class="
+                        flex
+                        items-center
+
+                        gap-3
+
+                        px-5
+                        py-4
+
+                        text-red-400
+
+                        hover:bg-red-500/10
+
+                        transition
+                    "
+                >
+
+                    <i class="ri-logout-box-r-line"></i>
+
+                    <span>Logout</span>
+
+                </a>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</header>
+
+<!-- ======================================== -->
+<!-- MAIN CONTENT -->
+<!-- ======================================== -->
+
+<main
+
+    class="
+        flex-1
+
+        overflow-y-auto
+
+        bg-[#090C12]
+
+        px-4
+        sm:px-5
+        md:px-6
+        lg:px-8
+
+        py-5
+        lg:py-6
+    "
+>
+
+    {% if messages %}
+
+        {% for message in messages %}
+
+            <div
+                class="
+                    {% if message.tags == 'error' %}
+                        error-box
+                    {% elif message.tags == 'success' %}
+                        success-box
+                    {% else %}
+                        message-box
+                    {% endif %}
+                    mb-4
+                "
+            >
+
+                {{ message }}
+
+            </div>
+
+        {% endfor %}
+
+    {% endif %}
+
+    {% block teacher_content %}
+
+    {% endblock %}
+
+</main>
+
+<script src="{% static 'teachers/js/teacher_base.js' %}"></script>
+<script src="{% static 'teachers/js/teacher_global.js' %}"></script>
+</body>
+
+</html>

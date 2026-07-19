@@ -107,7 +107,19 @@ Admin Sign In
                     <!-- STATUS DOT -->
 
                     <div class="absolute top-[18px] right-[18px] w-[7px] h-[7px] rounded-full bg-[#00F5D4] shadow-[0_0_14px_#00F5D4]"></div>
+{% if messages %}
 
+                {% for message in messages %}
+
+                    <div class="{% if message.tags == 'error' %}error-box{% else %}success-box{% endif %} mb-4">
+
+                        {{ message }}
+
+                    </div>
+
+                {% endfor %}
+
+            {% endif %}
 
                     <form
                         method="POST"

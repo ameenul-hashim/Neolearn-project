@@ -1,0 +1,552 @@
+{% extends "admins/admin_base.html" %}
+{% load static %}
+
+{% block title %}
+Assign Batch & Subjects
+{% endblock %}
+
+{% block admin_content %}
+
+<div class="min-h-screen bg-slate-950 px-4 py-8">
+
+    <div class="mx-auto max-w-7xl">
+
+        <!-- ================= PAGE HEADER ================= -->
+
+        <div class="mb-8 flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+
+            <div>
+
+                <a
+                    href="{% url 'admin_teachers' %}"
+                    class="inline-flex items-center gap-2 text-sm font-medium text-cyan-400 transition hover:text-cyan-300">
+
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke-width="2"
+                        stroke="currentColor"
+                        class="h-5 w-5">
+
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            d="M15.75 19.5L8.25 12l7.5-7.5" />
+
+                    </svg>
+
+                    Back to Teachers
+
+                </a>
+
+                <h1 class="mt-4 text-3xl font-bold tracking-tight text-white">
+
+                    Assign Batch & Subjects
+
+                </h1>
+
+                <p class="mt-2 max-w-2xl text-sm text-slate-400">
+
+                    Select a published batch and assign one or more published
+                    subjects to this teacher.
+
+                </p>
+
+            </div>
+
+        </div>
+
+        <!-- ================= TEACHER INFORMATION ================= -->
+
+        <div class="overflow-hidden rounded-3xl border border-slate-800 bg-[#020617] shadow-2xl">
+
+            <div class="border-b border-slate-800 px-8 py-6">
+
+                <h2 class="text-xl font-semibold text-white">
+
+                    Teacher Information
+
+                </h2>
+
+            </div>
+
+            <div class="grid gap-8 p-8 lg:grid-cols-[180px_1fr]">
+
+                <!-- PROFILE -->
+
+                <div class="flex flex-col items-center">
+
+                    {% if teacher.profile_image %}
+
+                        <img
+                            src="{{ teacher.profile_image.url }}"
+                            alt="{{ teacher.full_name }}"
+                            class="h-40 w-40 rounded-full border-4 border-cyan-500 object-cover">
+
+                    {% else %}
+
+                        <div class="flex h-40 w-40 items-center justify-center rounded-full bg-cyan-600 text-5xl font-bold text-white">
+
+                            {{ teacher.initials }}
+
+                        </div>
+
+                    {% endif %}
+
+                    <span class="mt-5 rounded-full bg-cyan-500/10 px-4 py-2 text-sm font-medium text-cyan-400">
+
+                        Teacher Profile
+
+                    </span>
+
+                </div>
+
+                <!-- DETAILS -->
+
+                <div class="grid gap-6 md:grid-cols-2">
+
+                    <div>
+
+                        <p class="mb-2 text-xs uppercase tracking-wider text-slate-500">
+
+                            Full Name
+
+                        </p>
+
+                        <div class="rounded-xl border border-slate-800 bg-slate-900 px-5 py-4 text-white">
+
+                            {{ teacher.full_name }}
+
+                        </div>
+
+                    </div>
+
+                    <div>
+
+                        <p class="mb-2 text-xs uppercase tracking-wider text-slate-500">
+
+                            Email Address
+
+                        </p>
+
+                        <div class="rounded-xl border border-slate-800 bg-slate-900 px-5 py-4 text-white">
+
+                            {{ teacher.email }}
+
+                        </div>
+
+                    </div>
+
+                    <div>
+
+                        <p class="mb-2 text-xs uppercase tracking-wider text-slate-500">
+
+                            Phone Number
+
+                        </p>
+
+                        <div class="rounded-xl border border-slate-800 bg-slate-900 px-5 py-4 text-white">
+
+                            {{ teacher.phone_number }}
+
+                        </div>
+
+                    </div>
+
+                    <div>
+
+                        <p class="mb-2 text-xs uppercase tracking-wider text-slate-500">
+
+                            Experience
+
+                        </p>
+
+                        <div class="rounded-xl border border-slate-800 bg-slate-900 px-5 py-4 text-white">
+
+                            {{ teacher.experience }} Years
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+       
+
+        <!-- ================= BATCH ASSIGNMENT START ================= -->
+
+<div class="mt-8 overflow-hidden rounded-3xl border border-slate-800 bg-[#020617] shadow-2xl">
+
+    <!-- HEADER -->
+
+    <div class="border-b border-slate-800 px-8 py-6">
+
+        <h2 class="text-xl font-semibold text-white">
+
+            Batch Assignment
+
+        </h2>
+
+        <p class="mt-2 text-sm text-slate-400">
+
+            Select a published batch. After selecting the batch, its published
+            subjects will be displayed below.
+
+        </p>
+
+    </div>
+
+    <div class="p-8">
+
+        <!-- ================= GET FORM ================= -->
+
+        <form method="GET">
+
+            <div class="mb-8">
+
+                <label
+                    for="batch"
+                    class="mb-3 block text-sm font-semibold text-slate-300">
+
+                    Select Batch
+
+                </label>
+
+                <select
+                    id="batch"
+                    name="batch"
+                    onchange="this.form.submit()"
+                    class="
+                        w-full
+                        rounded-xl
+                        border
+                        border-slate-700
+                        bg-slate-900
+                        px-5
+                        py-4
+                        text-white
+                        outline-none
+                        transition
+                        focus:border-cyan-500
+                    ">
+
+                    <option value="">
+
+                        -- Select Batch --
+
+                    </option>
+
+                    {% for batch in batches %}
+
+                        <option
+                            value="{{ batch.id }}"
+                            {% if selected_batch and selected_batch.id == batch.id %}
+                                selected
+                            {% endif %}
+                        >
+
+                            {{ batch.batch_name }}
+
+                        </option>
+
+                    {% endfor %}
+
+                </select>
+
+            </div>
+
+        </form>
+
+        <!-- ================= POST FORM ================= -->
+
+<form method="POST">
+
+    {% csrf_token %}
+
+    <input
+        type="hidden"
+        name="batch"
+        value="{% if selected_batch %}{{ selected_batch.id }}{% endif %}">
+
+    <!-- AVAILABLE SUBJECTS -->
+
+    <div>
+
+        <div class="mb-5 flex items-center justify-between">
+
+            <div>
+
+                <h3 class="text-lg font-semibold text-white">
+
+                    Available Subjects
+
+                </h3>
+
+                <p class="mt-1 text-sm text-slate-400">
+
+                    Already assigned subjects are locked. You can assign only new
+                    subjects from this page. To remove a subject, use
+                    <span class="font-medium text-cyan-400">
+                        View Subjects
+                    </span>.
+
+                </p>
+
+            </div>
+
+            <span
+                class="
+                    rounded-full
+                    bg-cyan-500/10
+                    px-3
+                    py-1
+                    text-xs
+                    font-medium
+                    text-cyan-400
+                ">
+
+                Published Subjects
+
+            </span>
+
+        </div>
+
+        <div
+            class="
+                rounded-2xl
+                border
+                border-dashed
+                border-slate-700
+                bg-slate-900
+                p-8
+            ">
+
+            {% if selected_batch %}
+
+                <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+
+                    {% for subject in subjects %}
+
+                        <label
+                            class="
+                                flex
+                                items-center
+                                gap-4
+                                rounded-xl
+                                border
+                                p-4
+                                transition
+
+                                {% if subject.id in assigned_subject_ids %}
+
+                                    border-emerald-500/40
+                                    bg-emerald-500/10
+                                    cursor-not-allowed
+
+                                {% else %}
+
+                                    border-slate-700
+                                    bg-slate-800
+                                    cursor-pointer
+                                    hover:border-cyan-500
+
+                                {% endif %}
+                            ">
+
+                            {% if subject.id in assigned_subject_ids %}
+
+                                <input
+                                    type="checkbox"
+                                    checked
+                                    disabled
+                                    class="h-5 w-5 accent-emerald-500 cursor-not-allowed">
+
+                                <input
+                                    type="hidden"
+                                    name="subjects"
+                                    value="{{ subject.id }}">
+
+                            {% else %}
+
+                                <input
+                                    type="checkbox"
+                                    name="subjects"
+                                    value="{{ subject.id }}"
+                                    class="subject-checkbox h-5 w-5 accent-cyan-500">
+
+                            {% endif %}
+
+                            <div class="flex-1">
+
+                                <div class="flex items-center justify-between gap-3">
+
+                                    <h4 class="font-semibold text-white">
+
+                                        {{ subject.subject_name }}
+
+                                    </h4>
+
+                                    {% if subject.id in assigned_subject_ids %}
+
+                                        <span
+                                            class="
+                                                rounded-full
+                                                bg-emerald-500/15
+                                                px-3
+                                                py-1
+                                                text-[11px]
+                                                font-semibold
+                                                uppercase
+                                                tracking-wide
+                                                text-emerald-400
+                                            ">
+
+                                            🔒 Assigned
+
+                                        </span>
+
+                                    {% endif %}
+
+                                </div>
+
+                                {% if subject.id in assigned_subject_ids %}
+
+                                    <p class="mt-2 text-xs text-emerald-300">
+
+                                        Already assigned to this teacher.
+                                        Removal is available only from
+                                        <strong>View Subjects</strong>.
+
+                                    </p>
+
+                                {% else %}
+
+                                    <p class="mt-2 text-xs text-slate-400">
+
+                                        Available to assign.
+
+                                    </p>
+
+                                {% endif %}
+
+                            </div>
+
+                        </label>
+
+                    {% empty %}
+
+                        <div class="col-span-full py-12 text-center">
+
+                            <h3 class="text-lg font-semibold text-slate-300">
+
+                                No Published Subjects
+
+                            </h3>
+
+                            <p class="mt-2 text-slate-500">
+
+                                There are no published subjects available in
+                                this batch.
+
+                            </p>
+
+                        </div>
+
+                    {% endfor %}
+
+                </div>
+
+            {% else %}
+
+                <div class="py-12 text-center">
+
+                    <h3 class="text-lg font-semibold text-slate-300">
+
+                        No Batch Selected
+
+                    </h3>
+
+                    <p class="mt-2 text-slate-500">
+
+                        Please select a batch to load its available subjects.
+
+                    </p>
+
+                </div>
+
+            {% endif %}
+
+        </div>
+
+    </div>
+<!-- ================= ACTION BUTTONS ================= -->
+
+<div
+    class="
+        mt-8
+        flex
+        flex-col
+        gap-4
+        sm:flex-row
+        sm:justify-end
+    ">
+
+    <a
+        href="{% url 'admin_teachers' %}"
+        class="
+            inline-flex
+            items-center
+            justify-center
+            rounded-xl
+            border
+            border-slate-700
+            bg-slate-900
+            px-8
+            py-4
+            font-medium
+            text-slate-300
+            transition
+            hover:bg-slate-800
+            hover:border-slate-600
+        ">
+
+        Cancel
+
+    </a>
+
+    <button
+        type="submit"
+        class="
+            inline-flex
+            items-center
+            justify-center
+            rounded-xl
+            bg-cyan-600
+            px-8
+            py-4
+            font-semibold
+            text-white
+            transition
+            hover:bg-cyan-700
+        ">
+
+        Assign Batch & Subjects
+
+    </button>
+
+</div>
+
+</form>
+
+</div>
+
+</div>
+
+</div>
+<script src="{% static 'admins/js/assign_batch.js' %}"></script>
+{% endblock %}

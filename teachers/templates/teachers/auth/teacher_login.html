@@ -1,32 +1,50 @@
+{% extends "base.html" %}
 {% load static %}
-<!DOCTYPE html>
-<html lang="en">
 
-<head>
+{% block title %}
+Teacher Login | NeoLearn
+{% endblock %}
 
-    <meta charset="UTF-8">
+{% block content %}
 
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <title>Teacher Login | NeoLearn</title>
-
-    <script src="https://cdn.tailwindcss.com"></script>
-
-</head>
-
-<body class="min-h-screen bg-[#020617] text-white overflow-hidden">
+<div class="min-h-screen bg-[#020617] text-white overflow-hidden">
 
     <!-- MAIN WRAPPER -->
+
     <div class="min-h-screen grid grid-cols-1 lg:grid-cols-2">
 
-        <!-- ================= LEFT BRAND SIDE ================= -->
+        <!-- ================= LEFT SIDE ================= -->
 
-        <div class="hidden lg:flex relative items-center justify-center overflow-hidden bg-gradient-to-br from-cyan-950 via-[#031b22] to-black">
+        <div
+            class="
+                hidden
+                lg:flex
+                relative
+                items-center
+                justify-center
+                overflow-hidden
+                bg-gradient-to-br
+                from-cyan-950
+                via-[#031b22]
+                to-black
+            "
+        >
 
-            <!-- BACKGROUND EFFECT -->
-            <div class="absolute h-[500px] w-[500px] rounded-full bg-cyan-500/20 blur-[150px]"></div>
+            <!-- BACKGROUND GLOW -->
+
+            <div
+                class="
+                    absolute
+                    h-[500px]
+                    w-[500px]
+                    rounded-full
+                    bg-cyan-500/20
+                    blur-[150px]
+                "
+            ></div>
 
             <!-- CONTENT -->
+
             <div class="relative z-10 text-center px-10">
 
                 <div class="flex items-center justify-center gap-5">
@@ -41,213 +59,275 @@
 
                 </div>
 
-                <p class="mt-10 max-w-xl text-2xl leading-relaxed text-slate-400">
+                <p
+                    class="
+                        mt-10
+                        max-w-xl
+                        text-2xl
+                        leading-relaxed
+                        text-slate-400
+                    "
+                >
                     Teacher Portal Workspace.
-                    Manage your subjects, live classes, and mentor students efficiently.
+                    <br>
+                    Manage your subjects, live classes and mentor students efficiently.
                 </p>
 
             </div>
 
         </div>
 
-        <!-- ================= RIGHT LOGIN SIDE ================= -->
+        <!-- ================= RIGHT SIDE ================= -->
 
-        <div class="flex items-center justify-center bg-[#111827] px-6 py-12 sm:px-10 lg:px-20">
+<div
+    class="
+        flex
+        items-center
+        justify-center
+        bg-[#111827]
+        px-6
+        py-12
+        sm:px-10
+        lg:px-20
+    "
+>
 
-            <div class="w-full max-w-md">
+    <div class="w-full max-w-md">
 
-                <!-- MOBILE LOGO -->
+        <!-- MOBILE LOGO -->
 
-                <div class="mb-12 flex items-center justify-center gap-3 lg:hidden">
+        <div
+            class="
+                mb-12
+                flex
+                items-center
+                justify-center
+                gap-3
+                lg:hidden
+            "
+        >
 
-                    <div class="text-4xl text-cyan-400 font-black">
-                        ⚡
-                    </div>
-
-                    <h1 class="text-4xl font-black">
-                        NEO<span class="text-cyan-400">LEARN</span>
-                    </h1>
-
-                </div>
-
-                <!-- TITLE -->
-
-                <h2 class="text-4xl font-black tracking-tight text-white">
-                    Welcome Back
-                </h2>
-
-                <p class="mt-4 text-slate-400">
-                    Sign in using the credentials provided by the Admin.
-                </p>
-
-                <!-- MESSAGES -->
-
-                {% if messages %}
-
-                <div class="mt-8 space-y-3">
-
-                    {% for message in messages %}
-
-                    <div class="
-                        rounded-xl
-                        border
-                        px-5
-                        py-3
-                        text-sm
-                        {% if message.tags == 'error' %}
-                            border-red-500/40
-                            bg-red-500/10
-                            text-red-400
-                        {% else %}
-                            border-green-500/40
-                            bg-green-500/10
-                            text-green-400
-                        {% endif %}
-                    ">
-
-                        {{ message }}
-
-                    </div>
-
-                    {% endfor %}
-
-                </div>
-
-                {% endif %}
-
-                <!-- LOGIN FORM -->
-
-                <form method="POST" class="mt-10 space-y-8">
-
-                    {% csrf_token %}
-
-                    <!-- EMAIL -->
-
-                    <div>
-
-                        <label class="block mb-3 text-sm text-slate-400">
-                            Email Address / Username
-                        </label>
-
-                        <div class="
-                            flex
-                            items-center
-                            gap-4
-                            rounded-xl
-                            bg-slate-800
-                            border
-                            border-slate-700
-                            px-5
-                            py-4
-                            focus-within:border-cyan-400
-                        ">
-
-                            <span class="text-slate-400">
-                                ✉
-                            </span>
-
-                            <input
-                                type="text"
-                                name="email"
-                                placeholder="teacher@neolearn.edu"
-                                class="
-                                    w-full
-                                    bg-transparent
-                                    outline-none
-                                    text-white
-                                    placeholder-slate-500
-                                "
-                            >
-
-                        </div>
-
-                    </div>
-
-                    <!-- PASSWORD -->
-
-                    <div>
-
-                        <label class="block mb-3 text-sm text-slate-400">
-                            Password
-                        </label>
-
-                        <div class="
-                            flex
-                            items-center
-                            gap-4
-                            rounded-xl
-                            bg-slate-800
-                            border
-                            border-slate-700
-                            px-5
-                            py-4
-                            focus-within:border-cyan-400
-                        ">
-
-                            <span class="text-slate-400">
-                                🔒
-                            </span>
-
-                            <input
-                                type="password"
-                                name="password"
-                                placeholder="Enter your password"
-                                class="
-                                    w-full
-                                    bg-transparent
-                                    outline-none
-                                    text-white
-                                    placeholder-slate-500
-                                "
-                            >
-
-                        </div>
-
-                    </div>
-
-                    <!-- BUTTON -->
-
-                    <button
-                        type="submit"
-                        class="
-                            w-full
-                            rounded-xl
-                            bg-cyan-400
-                            py-4
-                            font-bold
-                            text-black
-                            text-lg
-                            transition
-                            hover:bg-cyan-300
-                            shadow-lg
-                            shadow-cyan-500/20
-                        "
-                    >
-                        Sign In →
-                    </button>
-
-                </form>
-
-                <!-- HELP -->
-
-                <p class="
-                    mt-8
-                    text-center
-                    text-sm
-                    text-cyan-400
-                    cursor-pointer
-                    hover:text-cyan-300
-                ">
-                    Need help logging in?
-                </p>
-
+            <div class="text-4xl text-cyan-400 font-black">
+                ⚡
             </div>
+
+            <h1 class="text-4xl font-black">
+                NEO<span class="text-cyan-400">LEARN</span>
+            </h1>
+
+        </div>
+
+        <!-- TITLE -->
+
+        <h2
+            class="
+                text-4xl
+                font-black
+                tracking-tight
+                text-white
+            "
+        >
+            Welcome Back
+        </h2>
+
+        <p class="mt-4 text-slate-400">
+            Sign in using the credentials provided by the Admin.
+        </p><br>
+
+        <!-- GLOBAL MESSAGES -->
+
+        {% if messages %}
+
+            {% for message in messages %}
+
+                <div class="
+                    {% if message.tags == 'success' %}
+                        success-box
+                    {% elif message.tags == 'error' %}
+                        error-box
+                    {% else %}
+                        message-box
+                    {% endif %}
+                ">
+
+                    {{ message }}
+
+                </div>
+
+            {% endfor %}
+
+        {% endif %}
+
+        <form
+            method="POST"
+            class="mt-8 space-y-8"
+        >
+
+            {% csrf_token %}
+
+                <!-- EMAIL -->
+
+    <div>
+
+        <label
+            class="
+                block
+                mb-3
+                text-sm
+                text-slate-400
+            "
+        >
+            Email Address / Username
+        </label>
+
+        <div
+            class="
+                flex
+                items-center
+                gap-4
+                rounded-xl
+                bg-slate-800
+                border
+                border-slate-700
+                px-5
+                py-4
+                focus-within:border-cyan-400
+            "
+        >
+
+            <span class="text-slate-400">
+                ✉
+            </span>
+
+            <input
+                type="text"
+                name="email"
+                placeholder="teacher@neolearn.edu"
+                class="
+                    w-full
+                    bg-transparent
+                    outline-none
+                    text-white
+                    placeholder-slate-500
+                "
+            >
 
         </div>
 
     </div>
-<script src="{% static 'accounts/js/auth-global.js' %}"></script>
 
-</body>
+    <!-- PASSWORD -->
 
-</html>
+    <div>
+
+        <label
+            class="
+                block
+                mb-3
+                text-sm
+                text-slate-400
+            "
+        >
+            Password
+        </label>
+
+        <div
+            class="
+                flex
+                items-center
+                gap-4
+                rounded-xl
+                bg-slate-800
+                border
+                border-slate-700
+                px-5
+                py-4
+                focus-within:border-cyan-400
+            "
+        >
+
+            <span class="text-slate-400">
+                🔒
+            </span>
+
+            <input
+                id="password"
+                type="password"
+                name="password"
+                placeholder="Enter your password"
+                class="
+                    w-full
+                    bg-transparent
+                    outline-none
+                    text-white
+                    placeholder-slate-500
+                "
+            >
+
+            <button
+    type="button"
+    id="togglePassword"
+    class="
+        flex
+        items-center
+        justify-center
+        text-slate-400
+        hover:text-cyan-400
+        transition
+        w-5
+        h-5
+        shrink-0
+    "
+></button>
+
+        </div>
+
+    </div>
+
+    <!-- LOGIN BUTTON -->
+
+    <button
+        type="submit"
+        class="
+            w-full
+            rounded-xl
+            bg-cyan-400
+            py-4
+            font-bold
+            text-black
+            text-lg
+            transition
+            hover:bg-cyan-300
+            shadow-lg
+            shadow-cyan-500/20
+        "
+    >
+        Sign In →
+    </button>
+
+</form>
+
+<!-- HELP -->
+
+<p
+    class="
+        mt-8
+        text-center
+        text-sm
+        text-cyan-400
+        hover:text-cyan-300
+        cursor-pointer
+    "
+>
+    Need help logging in?
+</p>
+
+    </div>
+
+</div>
+
+</div>
+
+<script src="{% static 'teachers/js/teacher_global.js' %}"></script>
+
+{% endblock %}

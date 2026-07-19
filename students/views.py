@@ -3,7 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.views.decorators.cache import cache_control
 from django.contrib import messages
 import cloudinary.uploader
-
+from admins.models import Batch
 from .models import StudentProfile
 
 
@@ -128,3 +128,47 @@ def update_profile_image_view(request):
             )
 
     return redirect('profile')
+
+@login_required(login_url="signin")
+@cache_control(no_cache=True, must_revalidate=True, no_store=True)
+def marketplace_view(request):
+
+    batches = (
+        Batch.objects.filter(
+            batch_status="published",
+        )
+        .prefetch_related(
+            "subjects",
+            "assigned_teachers",
+        )
+        .order_by("-created_at")
+    )
+
+    return render(
+        request,
+        "students/marketplace.html",
+        {
+            "batches": batches,
+        },
+    )
+    
+@login_required(login_url="signin")
+@cache_control(no_cache=True, must_revalidate=True, no_store=True)
+def marketplace_detail_view(request, batch_id):
+
+    batch = Batch.objects.prefetch_related(
+        "subjects",
+        "assigned_teachers",
+    ).get(
+        id=batch_id,
+        batch_status="published",
+        marketplace_visible=True,
+    )
+
+    return render(
+        request,
+        "students/marketplace-detail.html",
+        {
+            "batch": batch,
+        },
+    )

@@ -20,5 +20,13 @@ urlpatterns = [
     path("subjects/",admin_subjects_view,name="admin_subjects"),
     path("teachers/",admin_teachers,name="admin_teachers"),
     path("teachers/create/",create_teacher_view,name="create_teacher"),
-    
+    path("teachers/<int:teacher_id>/assign-batch/",admin_assign_teacher_batch,name="admin_assign_teacher_batch"),
+    path("teachers/<int:teacher_id>/assignments/",admin_teacher_assignments,name="admin_teacher_assignments"),
+    path("teachers/<int:teacher_id>/assign-batch/",admin_assign_teacher_batch,name="admin_assign_teacher_batch"),
+    path("teachers/<int:teacher_id>/batch/<int:batch_id>/subjects/",admin_view_teacher_subjects,name="admin_view_teacher_subjects"),
+    path("teacher-batch/<int:assignment_id>/remove/",admin_remove_teacher_batch,name="admin_remove_teacher_batch"),
+    path("teacher-subject/<int:assignment_id>/remove/",admin_remove_teacher_subject,name="admin_remove_teacher_subject"),
+    path("teachers/<int:teacher_id>/block/",admin_block_teacher,name="admin_block_teacher"),
+    path("teachers/<int:teacher_id>/unblock/",admin_unblock_teacher,name="admin_unblock_teacher"),
+    path("teachers/<int:teacher_id>/delete/",admin_delete_teacher,name="admin_delete_teacher"),
 ]

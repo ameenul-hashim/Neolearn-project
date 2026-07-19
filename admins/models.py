@@ -6,6 +6,7 @@ class Batch(models.Model):
     STATUS_CHOICES = [
         ('draft', 'Draft'),
         ('published', 'Published'),
+        ('archived', 'Archived')
     ]
 
     batch_name = models.CharField(max_length=200, unique=True)
@@ -15,6 +16,7 @@ class Batch(models.Model):
     batch_status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    marketplace_visible = models.BooleanField(default=False)
 
     class Meta:
         ordering = ['-created_at']
@@ -31,7 +33,7 @@ from cloudinary.models import CloudinaryField
 
 class Subject(models.Model):
 
-    STATUS_CHOICES = [('draft', 'Draft'),('published', 'Published')]
+    STATUS_CHOICES = [('draft', 'Draft'),('published', 'Published'),('archived', 'Archived')]
     batch = models.ForeignKey(Batch,on_delete=models.CASCADE,related_name='subjects')
     subject_name = models.CharField(max_length=200)
     subject_description = models.TextField()
@@ -87,3 +89,34 @@ class Teacher(models.Model):
     def __str__(self):
 
         return self.full_name
+    
+    
+class TeacherBatch(models.Model):
+
+    teacher = models.ForeignKey(Teacher,on_delete=models.CASCADE,related_name="assigned_batches")
+    batch = models.ForeignKey(Batch,on_delete=models.CASCADE,related_name="assigned_teachers")
+    assigned_by = models.ForeignKey(User,on_delete=models.SET_NULL,null=True,blank=True,related_name="teacher_batch_assignments")
+    is_active = models.BooleanField(default=True)
+    assigned_at = models.DateTimeField(auto_now_add=True)
+    class Meta:
+        unique_together = ("teacher", "batch")
+    def __str__(self):
+        return f"{self.teacher.full_name} → {self.batch.batch_name}"
+    
+class TeacherSubject(models.Model):
+
+    teacher = models.ForeignKey(Teacher,on_delete=models.CASCADE,related_name="assigned_subjects")
+    batch = models.ForeignKey(Batch,on_delete=models.CASCADE,related_name="teacher_subject_batches")
+    subject = models.ForeignKey(Subject,on_delete=models.CASCADE,related_name="assigned_teachers")
+    assigned_by = models.ForeignKey(User,on_delete=models.SET_NULL,null=True,blank=True,related_name="teacher_subject_assignments")
+    is_active = models.BooleanField(default=True)
+    assigned_at = models.DateTimeField(auto_now_add=True)
+    class Meta:
+        unique_together = (
+            "teacher",
+            "batch",
+            "subject",
+        )
+
+    def __str__(self):
+        return (f"{self.teacher.full_name} → " f"{self.subject.subject_name}")

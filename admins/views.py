@@ -3,17 +3,17 @@ from django.contrib.auth import authenticate,login,logout
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.cache import cache_control
 from django.contrib import messages
+from django.views.decorators.http import require_POST
 from django.core.validators import validate_email
 from django.core.exceptions import ValidationError
 from django.contrib.auth.models import User
 from django.core.paginator import Paginator
-from django.db.models import Q
+from django.db.models import Count,Q
 from .decorators import admin_required
 from decimal import Decimal, InvalidOperation
-from .models import Batch,Subject
 from django.shortcuts import get_object_or_404
-from .models import Teacher
 from django.core.mail import send_mail
+from admins.models import (Teacher,Batch,Subject,TeacherBatch,TeacherSubject)
 
 
 @cache_control(no_cache=True,must_revalidate=True,no_store=True)
@@ -127,7 +127,7 @@ def admin_students_view(request):
 
     sort=request.GET.get('sort','newest')
 
-    students=User.objects.filter(is_staff=False,is_superuser=False)
+    students = User.objects.filter(is_staff=False,is_superuser=False,teacher_profile__isnull=True)
 
     # SEARCH FILTER
 
@@ -594,7 +594,6 @@ def admin_subjects_view(request):
 from decimal import Decimal
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
-
 from .models import Batch, Subject
 
 
@@ -979,15 +978,28 @@ def delete_subject_view(request, subject_id):
 @cache_control(no_cache=True, must_revalidate=True, no_store=True)
 @admin_required
 def admin_teachers(request):
+    search = request.GET.get("search", "").strip()
 
-    teachers = Teacher.objects.select_related("user").order_by("-created_at")
+    teachers = (Teacher.objects.select_related("user").order_by("-created_at"))
 
+    if search:
+        teachers = teachers.filter(
+            Q(full_name__icontains=search) |
+            Q(email__icontains=search) |
+            Q(phone_number__icontains=search) |
+            Q(user__username__icontains=search))
+
+    total_teachers = Teacher.objects.count()
+    active_teachers = Teacher.objects.filter(is_blocked=False).count()
+    blocked_teachers = Teacher.objects.filter(is_blocked=True).count()
+    pending_profiles = Teacher.objects.filter(profile_completed=False).count()
     context = {
         "teachers": teachers,
-        "total_teachers": teachers.count(),
-        "active_teachers": teachers.filter(is_blocked=False).count(),
-        "blocked_teachers": teachers.filter(is_blocked=True).count(),
-        "pending_profiles": teachers.filter(profile_completed=False).count(),
+        "search": search,
+        "total_teachers": total_teachers,
+        "active_teachers": active_teachers,
+        "blocked_teachers": blocked_teachers,
+        "pending_profiles": pending_profiles,
     }
 
     return render(request,"admins/teachers/teachers.html",context)
@@ -1071,3 +1083,434 @@ Please change password after first login.
         return redirect("admin_teachers")
 
     return render(request,"admins/teachers/create_teacher.html")
+
+
+@login_required(login_url="admin_signin")
+@admin_required
+@cache_control(no_cache=True, must_revalidate=True, no_store=True)
+def admin_assign_teacher_batch(request, teacher_id):
+
+    teacher = get_object_or_404(
+        Teacher,
+        id=teacher_id
+    )
+
+    batches = Batch.objects.filter(
+        batch_status="published"
+    ).order_by("batch_name")
+
+    selected_batch = None
+    subjects = Subject.objects.none()
+    assigned_subject_ids = []
+
+    # =====================================================
+    # SAVE ASSIGNMENT
+    # =====================================================
+
+    if request.method == "POST":
+
+        batch_id = request.POST.get("batch")
+        subject_ids = request.POST.getlist("subjects")
+
+        # -------------------------------
+        # Batch Validation
+        # -------------------------------
+
+        if not batch_id:
+
+            messages.error(
+                request,
+                "Please select a batch."
+            )
+
+            return redirect(
+                "admin_assign_teacher_batch",
+                teacher_id=teacher.id
+            )
+
+        # -------------------------------
+        # Subject Validation
+        # -------------------------------
+
+        if len(subject_ids) == 0:
+
+            messages.error(
+                request,
+                "Please select at least one subject."
+            )
+
+            return redirect(
+                "admin_assign_teacher_batch",
+                teacher_id=teacher.id
+            )
+
+        selected_batch = get_object_or_404(
+            Batch,
+            id=batch_id,
+            batch_status="published"
+        )
+
+        # -------------------------------
+        # Validate Selected Subjects
+        # -------------------------------
+
+        selected_subjects = Subject.objects.filter(
+            id__in=subject_ids,
+            batch=selected_batch,
+            subject_status="published"
+        )
+
+        if selected_subjects.count() != len(subject_ids):
+
+            messages.error(
+                request,
+                "Invalid subject selection."
+            )
+
+            return redirect(
+                "admin_assign_teacher_batch",
+                teacher_id=teacher.id
+            )
+
+        # -------------------------------
+        # Save / Reactivate Teacher Batch
+        # -------------------------------
+
+        TeacherBatch.objects.update_or_create(
+            teacher=teacher,
+            batch=selected_batch,
+            defaults={
+                "assigned_by": request.user,
+                "is_active": True,
+            }
+        )
+
+        # -------------------------------
+        # Save / Reactivate Subjects
+        # -------------------------------
+
+        for subject in selected_subjects:
+
+            TeacherSubject.objects.update_or_create(
+                teacher=teacher,
+                batch=selected_batch,
+                subject=subject,
+                defaults={
+                    "assigned_by": request.user,
+                    "is_active": True,
+                }
+            )
+
+        # -------------------------------
+        # Deactivate Unchecked Subjects
+        # -------------------------------
+
+        TeacherSubject.objects.filter(
+            teacher=teacher,
+            batch=selected_batch,
+            is_active=True
+        ).exclude(
+            subject_id__in=subject_ids
+        ).update(
+            is_active=False
+        )
+
+        messages.success(
+            request,
+            "Batch and subjects assigned successfully."
+        )
+
+        return redirect(
+            "admin_teacher_assignments",
+            teacher_id=teacher.id
+        )
+
+    # =====================================================
+    # LOAD SUBJECTS
+    # =====================================================
+
+    batch_id = request.GET.get("batch")
+
+    if batch_id:
+
+        selected_batch = get_object_or_404(
+            Batch,
+            id=batch_id,
+            batch_status="published"
+        )
+
+        subjects = Subject.objects.filter(
+            batch=selected_batch,
+            subject_status="published"
+        ).order_by("subject_name")
+
+        assigned_subject_ids = list(
+            TeacherSubject.objects.filter(
+                teacher=teacher,
+                batch=selected_batch,
+                is_active=True
+            ).values_list(
+                "subject_id",
+                flat=True
+            )
+        )
+
+    context = {
+        "teacher": teacher,
+        "batches": batches,
+        "selected_batch": selected_batch,
+        "subjects": subjects,
+        "assigned_subject_ids": assigned_subject_ids,
+    }
+
+    return render(
+        request,
+        "admins/teachers/assign_batch.html",
+        context,
+    )
+
+
+@login_required(login_url="admin_signin")
+@admin_required
+@cache_control(no_cache=True, must_revalidate=True, no_store=True)
+def admin_teacher_assignments(request, teacher_id):
+
+    teacher = get_object_or_404(
+        Teacher,
+        id=teacher_id,
+    )
+
+    teacher_batches = (
+        TeacherBatch.objects.filter(
+            teacher=teacher,
+            is_active=True,
+        )
+        .select_related("batch")
+        .order_by("-assigned_at")
+    )
+
+    total_subjects = 0
+
+    for assignment in teacher_batches:
+
+        assignment.subject_count = TeacherSubject.objects.filter(
+            teacher=teacher,
+            batch=assignment.batch,
+            is_active=True,
+        ).count()
+
+        assignment.teacher_count = TeacherBatch.objects.filter(
+            batch=assignment.batch,
+            is_active=True,
+        ).count()
+
+        total_subjects += assignment.subject_count
+
+    context = {
+        "teacher": teacher,
+        "teacher_batches": teacher_batches,
+        "total_subjects": total_subjects,
+    }
+
+    return render(
+        request,
+        "admins/teachers/manage_assignments.html",
+        context,
+    )
+    
+
+@login_required(login_url="admin_signin")
+@admin_required
+@cache_control(no_cache=True, must_revalidate=True, no_store=True)
+def admin_view_teacher_subjects(request, teacher_id, batch_id):
+
+    teacher = get_object_or_404(
+        Teacher,
+        id=teacher_id,
+    )
+
+    batch = get_object_or_404(
+        Batch,
+        id=batch_id,
+    )
+
+    assigned_subjects = (
+        TeacherSubject.objects.filter(
+            teacher=teacher,
+            batch=batch,
+            is_active=True,
+        )
+        .select_related("subject")
+        .order_by("subject__subject_name")
+    )
+
+    for assignment in assigned_subjects:
+
+        assignment.teacher_count = TeacherSubject.objects.filter(
+            subject=assignment.subject,
+            is_active=True,
+        ).count()
+
+    subject_count = assigned_subjects.count()
+
+    batch_teacher_count = TeacherBatch.objects.filter(
+        batch=batch,
+        is_active=True,
+    ).count()
+
+    published_subject_count = Subject.objects.filter(
+        batch=batch,
+        subject_status="published",
+    ).count()
+
+    context = {
+        "teacher": teacher,
+        "batch": batch,
+        "assigned_subjects": assigned_subjects,
+        "subject_count": subject_count,
+        "batch_teacher_count": batch_teacher_count,
+        "published_subject_count": published_subject_count,
+    }
+
+    return render(
+        request,
+        "admins/teachers/view_subjects.html",
+        context,
+    )
+@login_required(login_url="admin_signin")
+@admin_required
+@require_POST
+def admin_remove_teacher_subject(request, assignment_id):
+
+    assignment = get_object_or_404(
+        TeacherSubject,
+        id=assignment_id,
+        is_active=True,
+    )
+
+    teacher_id = assignment.teacher.id
+    batch_id = assignment.batch.id
+
+    assignment.delete()
+
+    messages.success(
+        request,
+        "Subject access removed successfully.",
+    )
+
+    return redirect(
+        "admin_view_teacher_subjects",
+        teacher_id=teacher_id,
+        batch_id=batch_id,
+    )
+    
+    
+@login_required(login_url="admin_signin")
+@admin_required
+@require_POST
+def admin_remove_teacher_batch(request, assignment_id):
+
+    assignment = get_object_or_404(
+        TeacherBatch,
+        id=assignment_id,
+        is_active=True,
+    )
+
+    teacher_id = assignment.teacher.id
+
+    TeacherSubject.objects.filter(
+        teacher=assignment.teacher,
+        batch=assignment.batch,
+        is_active=True,
+    ).delete()
+
+    assignment.delete()
+
+    messages.success(
+        request,
+        "Batch access removed successfully.",
+    )
+
+    return redirect(
+        "admin_teacher_assignments",
+        teacher_id=teacher_id,
+    )
+    
+# ======================================================
+# BLOCK TEACHER
+# ======================================================
+
+@login_required(login_url="admin_signin")
+@admin_required
+@require_POST
+def admin_block_teacher(request, teacher_id):
+
+    teacher = get_object_or_404(
+        Teacher,
+        id=teacher_id,
+    )
+
+    teacher.is_blocked = True
+    teacher.save(update_fields=["is_blocked"])
+
+    messages.success(
+        request,
+        f"{teacher.full_name} has been blocked successfully.",
+    )
+
+    return redirect("admin_teachers")
+
+
+# ======================================================
+# UNBLOCK TEACHER
+# ======================================================
+
+@login_required(login_url="admin_signin")
+@admin_required
+@require_POST
+def admin_unblock_teacher(request, teacher_id):
+
+    teacher = get_object_or_404(
+        Teacher,
+        id=teacher_id,
+    )
+
+    teacher.is_blocked = False
+    teacher.save(update_fields=["is_blocked"])
+
+    messages.success(
+        request,
+        f"{teacher.full_name} has been unblocked successfully.",
+    )
+
+    return redirect("admin_teachers")
+
+
+# ======================================================
+# DELETE TEACHER
+# ======================================================
+
+@login_required(login_url="admin_signin")
+@admin_required
+@require_POST
+def admin_delete_teacher(request, teacher_id):
+
+    teacher = get_object_or_404(
+        Teacher,
+        id=teacher_id,
+    )
+
+    teacher_name = teacher.full_name
+    user = teacher.user
+
+    teacher.delete()
+
+    if user:
+        user.delete()
+
+    messages.success(
+        request,
+        f"{teacher_name} has been deleted successfully.",
+    )
+
+    return redirect("admin_teachers")

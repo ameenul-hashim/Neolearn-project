@@ -1036,9 +1036,5 @@ def logout_view(request):
 
     return response
 
-def home_view(request):
-    
-    return render(request,'accounts/home.html')
 
-def teacher_view(request):
-    return HttpResponse("this is teacher view")
+
