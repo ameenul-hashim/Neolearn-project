@@ -1,20 +1,12 @@
-from django.shortcuts import (
-    render,
-    redirect,
-    get_object_or_404,
-)
+from django.shortcuts import (render,redirect,get_object_or_404,)
 from django.contrib import messages
 from django.contrib.auth import (authenticate,login,logout,update_session_auth_hash,)
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.views.decorators.cache import cache_control
 import re
-from admins.models import (
-    Teacher,
-    TeacherBatch,
-    TeacherSubject,
-    Batch,
-)
+from admins.models import (Teacher,TeacherBatch,TeacherSubject,Batch,Subject)
+from teachers.models import CourseChapter
 
 
 @cache_control(no_cache=True, must_revalidate=True, no_store=True)
@@ -225,49 +217,7 @@ def teacher_batches_view(request):
         "teachers/batches/batches.html",
         context,
     )
-    
-@login_required(login_url="teacher_login")
-@cache_control(no_cache=True, must_revalidate=True, no_store=True)
-def teacher_subjects_view(request, batch_id):
 
-    if not hasattr(request.user, "teacher_profile"):
-        messages.error(request, "Access denied.")
-        return redirect("teacher_login")
-
-    teacher = request.user.teacher_profile
-
-    batch = get_object_or_404(
-        Batch,
-        id=batch_id,
-    )
-
-    assigned_subjects = (
-        TeacherSubject.objects
-        .filter(
-            teacher=teacher,
-            batch=batch,
-            is_active=True,
-        )
-        .select_related("subject")
-        .order_by("subject__subject_name")
-    )
-
-    context = {
-
-        "teacher": teacher,
-
-        "batch": batch,
-
-        "assigned_subjects": assigned_subjects,
-
-    }
-
-    return render(
-        request,
-        "teachers/subjects/subjects.html",
-        context,
-    )
-    
 @login_required(login_url="teacher_login")
 @cache_control(no_cache=True, must_revalidate=True, no_store=True)
 def teacher_subjects_view(request, batch_id):
@@ -297,16 +247,28 @@ def teacher_subjects_view(request, batch_id):
         .order_by("subject__subject_name")
     )
 
+    # ============================================================
+    # ADD TEACHER COUNT FOR EACH SUBJECT
+    # ============================================================
+    for assignment in assigned_subjects:
+        # Count how many teachers are assigned to this subject (in any batch)
+        assignment.teacher_count = TeacherSubject.objects.filter(
+            subject=assignment.subject,
+            is_active=True,
+        ).count()
+
+    # Count total teachers in this batch
+    batch_teacher_count = TeacherBatch.objects.filter(
+        batch=batch,
+        is_active=True,
+    ).count()
+
     context = {
-
         "teacher": teacher,
-
         "batch": batch,
-
         "assigned_subjects": assigned_subjects,
-
         "subject_count": assigned_subjects.count(),
-
+        "batch_teacher_count": batch_teacher_count,
     }
 
     return render(
@@ -314,3 +276,204 @@ def teacher_subjects_view(request, batch_id):
         "teachers/batches/subjects.html",
         context,
     )
+    
+@login_required(login_url="teacher_login")
+@cache_control(no_cache=True, must_revalidate=True, no_store=True)
+def teacher_course_builder_view(request, subject_id):
+
+    if not hasattr(request.user, "teacher_profile"):
+        messages.error(request, "Access denied.")
+        return redirect("teacher_login")
+
+    teacher = request.user.teacher_profile
+
+    assignment = get_object_or_404(
+        TeacherSubject.objects.select_related(
+            "subject",
+            "batch",
+        ),
+        teacher=teacher,
+        subject_id=subject_id,
+        is_active=True,
+    )
+
+    assigned_teachers = (
+        TeacherSubject.objects
+        .filter(
+            subject=assignment.subject,
+            is_active=True,
+        )
+        .select_related("teacher")
+        .order_by("teacher__full_name")
+    )
+
+    # ==========================================================
+    # CREATE CHAPTER
+    # ==========================================================
+
+    if request.method == "POST":
+
+        chapter_name = request.POST.get(
+            "chapter_name",
+            "",
+        ).strip()
+
+        chapter_order = request.POST.get(
+            "chapter_order",
+            "",
+        ).strip()
+
+        status = request.POST.get(
+            "status",
+            "draft",
+        ).strip()
+
+        # -----------------------------------------
+        # VALIDATION
+        # -----------------------------------------
+
+        if not chapter_name:
+            messages.error(
+                request,
+                "Chapter name is required.",
+            )
+            return redirect(
+                "teacher_course_builder",
+                subject_id=subject_id,
+            )
+
+        if len(chapter_name) > 255:
+            messages.error(
+                request,
+                "Chapter name cannot exceed 255 characters.",
+            )
+            return redirect(
+                "teacher_course_builder",
+                subject_id=subject_id,
+            )
+
+        if not chapter_order:
+            messages.error(
+                request,
+                "Chapter order is required.",
+            )
+            return redirect(
+                "teacher_course_builder",
+                subject_id=subject_id,
+            )
+
+        try:
+            chapter_order = int(chapter_order)
+
+        except ValueError:
+
+            messages.error(
+                request,
+                "Invalid chapter order.",
+            )
+            return redirect(
+                "teacher_course_builder",
+                subject_id=subject_id,
+            )
+
+        if chapter_order < 1:
+            messages.error(
+                request,
+                "Chapter order must be greater than zero.",
+            )
+            return redirect(
+                "teacher_course_builder",
+                subject_id=subject_id,
+            )
+
+        if status not in [
+            "draft",
+            "published",
+        ]:
+            status = "draft"
+
+        duplicate_chapter = CourseChapter.objects.filter(
+            batch=assignment.batch,
+            subject=assignment.subject,
+            chapter_name__iexact=chapter_name,
+            is_deleted=False,
+        ).exists()
+
+        if duplicate_chapter:
+            messages.error(
+                request,
+                "A chapter with this name already exists.",
+            )
+            return redirect(
+                "teacher_course_builder",
+                subject_id=subject_id,
+            )
+            
+                # ==========================================================
+        # CREATE CHAPTER
+        # ==========================================================
+
+        CourseChapter.objects.create(
+            batch=assignment.batch,
+            subject=assignment.subject,
+            created_by=teacher,
+            updated_by=teacher,
+            chapter_name=chapter_name,
+            chapter_order=chapter_order,
+            status=status,
+        )
+
+        messages.success(
+            request,
+            "Chapter created successfully.",
+        )
+
+        return redirect(
+            "teacher_course_builder",
+            subject_id=subject_id,
+        )
+
+    # ==========================================================
+    # LOAD CHAPTERS
+    # ==========================================================
+
+    chapters = (
+        CourseChapter.objects
+        .filter(
+            batch=assignment.batch,
+            subject=assignment.subject,
+            is_deleted=False,
+        )
+        .order_by(
+            "chapter_order",
+            "id",
+        )
+    )
+
+    chapter_count = chapters.count()
+
+    context = {
+
+        "teacher": teacher,
+
+        "subject": assignment.subject,
+
+        "batch": assignment.batch,
+
+        "assignment": assignment,
+
+        "assigned_teachers": assigned_teachers,
+
+        "chapters": chapters,
+
+        "chapter_count": chapter_count,
+
+    }
+
+    return render(
+        request,
+        "teachers/content_builder/course_builder.html",
+        context,
+    )
+    
+    

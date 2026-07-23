@@ -115,11 +115,131 @@
 
         }
 
+        .nav-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            color: #475569;
+            padding: 16px 16px 8px 16px;
+        }
+
+        /* Message styling */
+        .message-container {
+            position: fixed;
+            top: 90px;
+            right: 20px;
+            z-index: 9999;
+            max-width: 400px;
+            width: 100%;
+        }
+        .message-item {
+
+    padding: 14px 20px;
+
+    border-radius: 14px;
+
+    margin-bottom: 10px;
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 12px;
+
+    backdrop-filter: blur(12px);
+
+    border: 1px solid rgba(255,255,255,.08);
+
+    box-shadow: 0 8px 32px rgba(0,0,0,.45);
+
+    overflow: hidden;
+
+    max-height: 120px;
+
+    transition:
+        opacity .45s ease,
+        transform .45s ease,
+        max-height .45s ease,
+        margin .45s ease,
+        padding .45s ease;
+
+    animation: slideIn .4s ease;
+
+}
+        .message-item.success {
+            background: rgba(16, 185, 129, 0.15);
+            border-color: rgba(16, 185, 129, 0.3);
+            color: #6EE7B7;
+        }
+        .message-item.error {
+            background: rgba(239, 68, 68, 0.15);
+            border-color: rgba(239, 68, 68, 0.3);
+            color: #FCA5A5;
+        }
+        .message-item.warning {
+            background: rgba(251, 191, 36, 0.15);
+            border-color: rgba(251, 191, 36, 0.3);
+            color: #FCD34D;
+        }
+        .message-item.info {
+            background: rgba(96, 165, 250, 0.15);
+            border-color: rgba(96, 165, 250, 0.3);
+            color: #93C5FD;
+        }
+        .message-close {
+            margin-left: auto;
+            cursor: pointer;
+            opacity: 0.6;
+            transition: opacity 0.2s;
+            font-size: 18px;
+        }
+        .message-close:hover {
+            opacity: 1;
+        }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(40px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        /* Profile image styling */
+        .profile-img {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid rgba(0,255,224,0.2);
+        }
+        .profile-img-placeholder {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, rgba(0,255,224,0.2), rgba(0,150,255,0.1));
+            border: 2px solid rgba(0,255,224,0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            color: #00F5D4;
+        }
+
     </style>
 
 </head>
 
 <body>
+
+<!-- MESSAGES DISPLAY -->
+{% if messages %}
+<div class="message-container" id="messageContainer">
+    {% for message in messages %}
+    <div class="message-item {{ message.tags }}">
+        <i class="ri-{% if message.tags == 'success' %}check-line{% elif message.tags == 'error' %}close-circle-line{% elif message.tags == 'warning' %}alert-line{% else %}information-line{% endif %} text-[18px]"></i>
+        <span class="text-sm font-medium">{{ message }}</span>
+        <span class="message-close" onclick="this.parentElement.remove()">&times;</span>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
 
 <div class="flex w-full h-screen overflow-hidden">
 
@@ -291,12 +411,14 @@
 
         <!-- NAVIGATION -->
 
-        <div class="flex-1 overflow-y-auto px-4 py-5">
+        <div class="flex-1 overflow-y-auto px-4 py-1">
 
-            <nav class="space-y-2">
+            <nav class="space-y-0.5">
+
+                <!-- LEARNING label -->
+                <div class="nav-label">Learning</div>
 
                 <!-- DASHBOARD -->
-
                 <a
                     href="{% url 'dashboard' %}"
 
@@ -337,7 +459,6 @@
                 </a>
 
                 <!-- MY LEARNING -->
-
                 <a
                     href="#"
 
@@ -352,12 +473,22 @@
                         items-center
                         gap-3
 
-                        text-[#94A3B8]
-
-                        hover:bg-white/5
-                        hover:text-white
+                        text-[14px]
+                        font-semibold
 
                         transition-all
+
+                        {% if request.resolver_match.url_name == 'my_learning' %}
+
+                            active-menu
+
+                        {% else %}
+
+                            text-[#94A3B8]
+                            hover:bg-white/5
+                            hover:text-white
+
+                        {% endif %}
                     "
                 >
 
@@ -372,7 +503,6 @@
                 </a>
 
                 <!-- MARKETPLACE -->
-
                 <a
                     href="{% url 'marketplace' %}"
 
@@ -387,12 +517,22 @@
                         items-center
                         gap-3
 
-                        text-[#94A3B8]
-
-                        hover:bg-white/5
-                        hover:text-white
+                        text-[14px]
+                        font-semibold
 
                         transition-all
+
+                        {% if request.resolver_match.url_name == 'marketplace' %}
+
+                            active-menu
+
+                        {% else %}
+
+                            text-[#94A3B8]
+                            hover:bg-white/5
+                            hover:text-white
+
+                        {% endif %}
                     "
                 >
 
@@ -406,8 +546,7 @@
 
                 </a>
 
-                <!-- LIVE -->
-
+                <!-- LIVE CLASSES -->
                 <a
                     href="#"
 
@@ -422,12 +561,22 @@
                         items-center
                         gap-3
 
-                        text-[#94A3B8]
-
-                        hover:bg-white/5
-                        hover:text-white
+                        text-[14px]
+                        font-semibold
 
                         transition-all
+
+                        {% if request.resolver_match.url_name == 'live_classes' %}
+
+                            active-menu
+
+                        {% else %}
+
+                            text-[#94A3B8]
+                            hover:bg-white/5
+                            hover:text-white
+
+                        {% endif %}
                     "
                 >
 
@@ -441,8 +590,7 @@
 
                 </a>
 
-                <!-- CERTIFICATE -->
-
+                <!-- TEACHERS -->
                 <a
                     href="#"
 
@@ -457,12 +605,66 @@
                         items-center
                         gap-3
 
-                        text-[#94A3B8]
-
-                        hover:bg-white/5
-                        hover:text-white
+                        text-[14px]
+                        font-semibold
 
                         transition-all
+
+                        {% if request.resolver_match.url_name == 'teachers' %}
+
+                            active-menu
+
+                        {% else %}
+
+                            text-[#94A3B8]
+                            hover:bg-white/5
+                            hover:text-white
+
+                        {% endif %}
+                    "
+                >
+
+                    <i class="ri-user-star-line text-[18px]"></i>
+
+                    <span class="text-[14px] font-medium">
+
+                        Teachers
+
+                    </span>
+
+                </a>
+
+                <!-- ACHIEVEMENTS -->
+                <a
+                    href="#"
+
+                    class="
+                        h-[48px]
+
+                        rounded-[14px]
+
+                        px-4
+
+                        flex
+                        items-center
+                        gap-3
+
+                        text-[14px]
+                        font-semibold
+
+                        transition-all
+
+                        {% if request.resolver_match.url_name == 'achievements' %}
+
+                            active-menu
+
+                        {% else %}
+
+                            text-[#94A3B8]
+                            hover:bg-white/5
+                            hover:text-white
+
+                        {% endif %}
                     "
                 >
 
@@ -470,14 +672,13 @@
 
                     <span class="text-[14px] font-medium">
 
-                        Certificates
+                        Achievements
 
                     </span>
 
                 </a>
 
-                <!-- SETTINGS -->
-
+                <!-- LEARNING PROGRESS -->
                 <a
                     href="#"
 
@@ -492,12 +693,113 @@
                         items-center
                         gap-3
 
-                        text-[#94A3B8]
-
-                        hover:bg-white/5
-                        hover:text-white
+                        text-[14px]
+                        font-semibold
 
                         transition-all
+
+                        {% if request.resolver_match.url_name == 'learning_progress' %}
+
+                            active-menu
+
+                        {% else %}
+
+                            text-[#94A3B8]
+                            hover:bg-white/5
+                            hover:text-white
+
+                        {% endif %}
+                    "
+                >
+
+                    <i class="ri-bar-chart-2-line text-[18px]"></i>
+
+                    <span class="text-[14px] font-medium">
+
+                        Learning Progress
+
+                    </span>
+
+                </a>
+
+                <!-- ACCOUNT label -->
+                <div class="nav-label mt-4">Account</div>
+
+                <!-- SUPPORT -->
+                <a
+                    href="#"
+
+                    class="
+                        h-[48px]
+
+                        rounded-[14px]
+
+                        px-4
+
+                        flex
+                        items-center
+                        gap-3
+
+                        text-[14px]
+                        font-semibold
+
+                        transition-all
+
+                        {% if request.resolver_match.url_name == 'support' %}
+
+                            active-menu
+
+                        {% else %}
+
+                            text-[#94A3B8]
+                            hover:bg-white/5
+                            hover:text-white
+
+                        {% endif %}
+                    "
+                >
+
+                    <i class="ri-question-line text-[18px]"></i>
+
+                    <span class="text-[14px] font-medium">
+
+                        Support
+
+                    </span>
+
+                </a>
+
+                <!-- SETTINGS -->
+                <a
+                    href="#"
+
+                    class="
+                        h-[48px]
+
+                        rounded-[14px]
+
+                        px-4
+
+                        flex
+                        items-center
+                        gap-3
+
+                        text-[14px]
+                        font-semibold
+
+                        transition-all
+
+                        {% if request.resolver_match.url_name == 'settings' %}
+
+                            active-menu
+
+                        {% else %}
+
+                            text-[#94A3B8]
+                            hover:bg-white/5
+                            hover:text-white
+
+                        {% endif %}
                     "
                 >
 
@@ -516,7 +818,6 @@
         </div>
 
         <!-- LOGOUT -->
-
         <div
             class="
                 p-4
@@ -805,378 +1106,304 @@
 
                 </button>
 
-                <!-- PROFILE -->
+                <!-- PROFILE DROPDOWN - with image -->
 
-               <!-- PROFILE -->
+                <div class="relative group">
 
-<div class="relative group">
+                    <button
+                        class="
+                            flex
+                            items-center
+                            gap-3
+                        "
+                    >
 
-    <button
-        class="
-            flex
-            items-center
-            gap-3
-        "
-    >
+                        <!-- PROFILE IMAGE -->
+                        {% if request.user.studentprofile.profile_image %}
+                            <img src="{{ request.user.studentprofile.profile_image }}" alt="Profile" class="profile-img">
+                        {% else %}
+                            <div class="profile-img-placeholder">
+                                <i class="ri-user-3-fill"></i>
+                            </div>
+                        {% endif %}
 
-        <!-- DYNAMIC PROFILE IMAGE -->
+                        <!-- USER DETAILS -->
 
-        {% if request.user.studentprofile.profile_image %}
+                        <div class="hidden md:block text-left">
 
-        <img
-            src="{{ request.user.studentprofile.profile_image }}"
+                            <h3
+                                class="
+                                    text-[14px]
+                                    font-semibold
+                                    capitalize
+                                    leading-tight
+                                    text-white
+                                "
+                            >
 
-            class="
-                w-[42px]
-                h-[42px]
+                                {{ request.user.username }}
 
-                rounded-full
+                            </h3>
 
-                object-cover
+                            <p
+                                class="
+                                    text-[12px]
+                                    text-[#94A3B8]
+                                "
+                            >
 
-                border
-                border-white/10
-            "
-        >
+                                Student
 
-        {% else %}
+                            </p>
 
-        <img
-            src="{% static 'accounts/images/student-profile.png' %}"
+                        </div>
 
-            class="
-                w-[42px]
-                h-[42px]
+                        <i
+                            class="
+                                ri-arrow-down-s-line
 
-                rounded-full
+                                text-[#94A3B8]
+                                text-[18px]
+                            "
+                        ></i>
 
-                object-cover
+                    </button>
 
-                border
-                border-white/10
-            "
-        >
+                    <!-- DROPDOWN -->
 
-        {% endif %}
+                    <div
+                        class="
+                            absolute
+                            right-0
+                            top-[58px]
 
-        <!-- USER DETAILS -->
+                            w-[250px]
 
-        <div class="hidden md:block text-left">
+                            rounded-[18px]
 
-            <h3
-                class="
-                    text-[14px]
-                    font-semibold
-                    capitalize
-                    leading-tight
-                    text-white
-                "
-            >
+                            border
+                            border-white/10
 
-                {{ request.user.username }}
+                            bg-[#071224]
 
-            </h3>
+                            shadow-[0_0_40px_rgba(0,0,0,0.45)]
 
-            <p
-                class="
-                    text-[12px]
-                    text-[#94A3B8]
-                "
-            >
+                            overflow-hidden
 
-                Student
+                            opacity-0
+                            invisible
 
-            </p>
+                            translate-y-3
 
-        </div>
+                            transition-all
+                            duration-300
 
-        <i
-            class="
-                ri-arrow-down-s-line
+                            group-hover:opacity-100
+                            group-hover:visible
+                            group-hover:translate-y-0
+                        "
+                    >
 
-                text-[#94A3B8]
-                text-[18px]
-            "
-        ></i>
+                        <!-- TOP -->
 
-    </button>
+                        <div
+                            class="
+                                px-5
+                                py-5
 
-    <!-- DROPDOWN -->
+                                border-b
+                                border-white/5
 
-    <div
-        class="
-            absolute
-            right-0
-            top-[58px]
+                                flex
+                                items-center
+                                gap-3
+                            "
+                        >
 
-            w-[250px]
+                            <!-- PROFILE IMAGE -->
+                            {% if request.user.studentprofile.profile_image %}
+                                <img src="{{ request.user.studentprofile.profile_image }}" alt="Profile" class="profile-img">
+                            {% else %}
+                                <div class="profile-img-placeholder">
+                                    <i class="ri-user-3-fill"></i>
+                                </div>
+                            {% endif %}
 
-            rounded-[18px]
+                            <!-- DETAILS -->
 
-            border
-            border-white/10
+                            <div class="overflow-hidden">
 
-            bg-[#071224]
+                                <h2
+                                    class="
+                                        text-[15px]
+                                        font-semibold
+                                        text-white
+                                        capitalize
+                                        truncate
+                                    "
+                                >
 
-            shadow-[0_0_40px_rgba(0,0,0,0.45)]
+                                    {{ request.user.username }}
 
-            overflow-hidden
+                                </h2>
 
-            opacity-0
-            invisible
+                                <p
+                                    class="
+                                        text-[#94A3B8]
+                                        text-[12px]
+                                        truncate
+                                    "
+                                >
 
-            translate-y-3
+                                    {{ request.user.email }}
 
-            transition-all
-            duration-300
+                                </p>
 
-            group-hover:opacity-100
-            group-hover:visible
-            group-hover:translate-y-0
-        "
-    >
+                            </div>
 
-        <!-- TOP -->
+                        </div>
 
-        <div
-            class="
-                px-5
-                py-5
+                        <!-- MENU -->
 
-                border-b
-                border-white/5
+                        <div class="py-2">
 
-                flex
-                items-center
-                gap-3
-            "
-        >
+                            <a
+                                href="{% url 'profile' %}"
 
-            <!-- DROPDOWN PROFILE IMAGE -->
+                                class="
+                                    h-[46px]
 
-            {% if request.user.studentprofile.profile_image %}
+                                    px-5
 
-            <img
-                src="{{ request.user.studentprofile.profile_image }}"
+                                    flex
+                                    items-center
+                                    gap-3
 
-                class="
-                    w-[42px]
-                    h-[42px]
+                                    text-[#94A3B8]
 
-                    rounded-full
+                                    hover:text-white
+                                    hover:bg-white/5
 
-                    object-cover
+                                    transition-all
 
-                    border
-                    border-white/10
-                "
-            >
+                                    text-[14px]
+                                    font-medium
+                                "
+                            >
 
-            {% else %}
+                                <i class="ri-user-line text-[18px]"></i>
 
-            <div
-                class="
-                    w-[42px]
-                    h-[42px]
+                                View Profile
 
-                    rounded-full
+                            </a>
 
-                    bg-gradient-to-br
-                    from-cyan-400
-                    to-blue-500
+                            <a
+                                href="#"
 
-                    flex
-                    items-center
-                    justify-center
+                                class="
+                                    h-[46px]
 
-                    text-white
-                    font-bold
-                    text-[16px]
-                    uppercase
-                "
-            >
+                                    px-5
 
-                {{ request.user.username|slice:":1" }}
+                                    flex
+                                    items-center
+                                    gap-3
 
-            </div>
+                                    text-white
 
-            {% endif %}
+                                    hover:bg-white/5
 
-            <!-- DETAILS -->
+                                    transition-all
 
-            <div class="overflow-hidden">
+                                    text-[14px]
+                                    font-medium
+                                "
+                            >
 
-                <h2
-                    class="
-                        text-[15px]
-                        font-semibold
-                        text-white
-                        capitalize
-                        truncate
-                    "
-                >
+                                <i class="ri-box-3-line text-[18px]"></i>
 
-                    {{ request.user.username }}
+                                My Orders
 
-                </h2>
+                            </a>
 
-                <p
-                    class="
-                        text-[#94A3B8]
-                        text-[12px]
-                        truncate
-                    "
-                >
+                            <a
+                                href="#"
 
-                    {{ request.user.email }}
+                                class="
+                                    h-[46px]
 
-                </p>
+                                    px-5
 
-            </div>
+                                    flex
+                                    items-center
+                                    gap-3
 
-        </div>
+                                    text-[#94A3B8]
 
-        <!-- MENU -->
+                                    hover:text-white
+                                    hover:bg-white/5
 
-        <div class="py-2">
+                                    transition-all
 
-            <a
-                href="{% url 'profile' %}"
+                                    text-[14px]
+                                    font-medium
+                                "
+                            >
 
-                class="
-                    h-[46px]
+                                <i class="ri-settings-3-line text-[18px]"></i>
 
-                    px-5
+                                Settings
 
-                    flex
-                    items-center
-                    gap-3
+                            </a>
 
-                    text-[#94A3B8]
+                        </div>
 
-                    hover:text-white
-                    hover:bg-white/5
+                        <!-- LOGOUT -->
 
-                    transition-all
+                        <div
+                            class="
+                                border-t
+                                border-white/5
+                                p-2
+                            "
+                        >
 
-                    text-[14px]
-                    font-medium
-                "
-            >
+                            <a
+                                href="{% url 'logout' %}"
 
-                <i class="ri-user-line text-[18px]"></i>
+                                class="
+                                    h-[46px]
 
-                View Profile
+                                    rounded-[14px]
 
-            </a>
+                                    px-4
 
-            <a
-                href="#"
+                                    flex
+                                    items-center
+                                    gap-3
 
-                class="
-                    h-[46px]
+                                    text-red-400
 
-                    px-5
+                                    hover:bg-red-500/10
 
-                    flex
-                    items-center
-                    gap-3
+                                    transition-all
 
-                    text-white
+                                    text-[14px]
+                                    font-medium
+                                "
+                            >
 
-                    hover:bg-white/5
+                                <i class="ri-logout-box-r-line text-[18px]"></i>
 
-                    transition-all
+                                Logout
 
-                    text-[14px]
-                    font-medium
-                "
-            >
+                            </a>
 
-                <i class="ri-box-3-line text-[18px]"></i>
+                        </div>
 
-                My Orders
+                    </div>
 
-            </a>
-
-            <a
-                href="#"
-
-                class="
-                    h-[46px]
-
-                    px-5
-
-                    flex
-                    items-center
-                    gap-3
-
-                    text-[#94A3B8]
-
-                    hover:text-white
-                    hover:bg-white/5
-
-                    transition-all
-
-                    text-[14px]
-                    font-medium
-                "
-            >
-
-                <i class="ri-settings-3-line text-[18px]"></i>
-
-                Settings
-
-            </a>
-
-        </div>
-
-        <!-- LOGOUT -->
-
-        <div
-            class="
-                border-t
-                border-white/5
-                p-2
-            "
-        >
-
-            <a
-                href="{% url 'logout' %}"
-
-                class="
-                    h-[46px]
-
-                    rounded-[14px]
-
-                    px-4
-
-                    flex
-                    items-center
-                    gap-3
-
-                    text-red-400
-
-                    hover:bg-red-500/10
-
-                    transition-all
-
-                    text-[14px]
-                    font-medium
-                "
-            >
-
-                <i class="ri-logout-box-r-line text-[18px]"></i>
-
-                Logout
-
-            </a>
-
-        </div>
-
-    </div>
-
-</div>
+                </div>
 
             </div>
 

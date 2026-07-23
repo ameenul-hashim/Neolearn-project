@@ -14,6 +14,7 @@ from decimal import Decimal, InvalidOperation
 from django.shortcuts import get_object_or_404
 from django.core.mail import send_mail
 from admins.models import (Teacher,Batch,Subject,TeacherBatch,TeacherSubject)
+from django.http import JsonResponse
 
 
 @cache_control(no_cache=True,must_revalidate=True,no_store=True)
@@ -1514,3 +1515,35 @@ def admin_delete_teacher(request, teacher_id):
     )
 
     return redirect("admin_teachers")
+
+@login_required(login_url="admin_signin")
+@admin_required
+def get_teacher_batches_data(request, teacher_id):
+    """Get teacher's assigned batches and subjects"""
+    teacher = get_object_or_404(Teacher, id=teacher_id)
+    
+    teacher_batches = TeacherBatch.objects.filter(
+        teacher=teacher,
+        is_active=True
+    ).select_related('batch')
+    
+    data = {
+        'batches': []
+    }
+    
+    for tb in teacher_batches:
+        subjects = TeacherSubject.objects.filter(
+            teacher=teacher,
+            batch=tb.batch,
+            is_active=True
+        ).select_related('subject')
+        
+        batch_data = {
+            'batch_name': tb.batch.batch_name,
+            'subject_count': subjects.count(),
+            'student_count': 0,
+            'subjects': [s.subject.subject_name for s in subjects]
+        }
+        data['batches'].append(batch_data)
+    
+    return JsonResponse(data)

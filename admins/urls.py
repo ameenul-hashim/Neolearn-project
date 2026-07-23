@@ -29,4 +29,5 @@ urlpatterns = [
     path("teachers/<int:teacher_id>/block/",admin_block_teacher,name="admin_block_teacher"),
     path("teachers/<int:teacher_id>/unblock/",admin_unblock_teacher,name="admin_unblock_teacher"),
     path("teachers/<int:teacher_id>/delete/",admin_delete_teacher,name="admin_delete_teacher"),
+    path("teachers/<int:teacher_id>/batches-data/", get_teacher_batches_data, name="get_teacher_batches_data"),
 ]

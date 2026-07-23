@@ -5,1329 +5,268 @@
 Teachers
 {% endblock %}
 
-
 {% block admin_content %}
-
 
 <div class="space-y-8">
 
+    <!-- ================= HEADER ================= -->
+    <div class="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+        <!-- TITLE -->
+        <div>
+            <h1 class="text-4xl font-bold text-white">Teachers</h1>
+            <p class="mt-2 text-slate-400">Manage faculty, assignments and performance.</p>
+        </div>
 
+        <!-- ACTION AREA -->
+        <div class="flex flex-col gap-3 lg:flex-row">
+            <!-- SEARCH -->
+            <form method="GET" class="flex gap-3">
+                <input
+                    type="text"
+                    name="search"
+                    value="{{ request.GET.search }}"
+                    placeholder="Search teachers..."
+                    class="w-64 rounded-lg border border-slate-700 bg-slate-800 px-5 py-3 text-sm text-white placeholder-slate-500 outline-none focus:border-cyan-400">
+                <button type="submit" class="rounded-lg bg-cyan-500 px-6 font-semibold text-slate-900 transition hover:bg-cyan-400">Search</button>
+                
+                <!-- CLEAR BUTTON -->
+                {% if request.GET.search %}
+                <a href="{% url 'admin_teachers' %}" 
+                   class="rounded-lg border border-slate-700 bg-slate-800 px-6 py-3 text-sm font-medium text-slate-400 transition hover:border-red-500 hover:text-red-400">
+                    ✕ Clear
+                </a>
+                {% endif %}
+            </form>
 
-<!-- ================= HEADER ================= -->
-
-
-<div class="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-
-
-    <!-- TITLE -->
-
-
-    <div>
-
-
-        <h1 class="text-4xl font-bold text-white">
-
-            Teachers
-
-        </h1>
-
-
-        <p class="mt-2 text-slate-400">
-
-            Manage faculty, assignments and performance.
-
-        </p>
-
-
+            <!-- CREATE TEACHER -->
+            <a href="{% url 'create_teacher' %}" class="rounded-lg bg-cyan-500 px-6 py-3 font-semibold text-slate-900 shadow-lg shadow-cyan-500/20 transition hover:bg-cyan-400">+ Create Teacher</a>
+        </div>
     </div>
 
+    <!-- ================= TOP STATUS CARDS ================= -->
+    <div class="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4">
+        <!-- TOTAL TEACHERS -->
+        <div class="rounded-xl border border-slate-700 bg-[#111827] p-6">
+            <p class="text-sm text-slate-400">Total Faculty</p>
+            <h2 class="mt-3 text-4xl font-bold text-white">{{ total_teachers }}</h2>
+            <p class="mt-2 text-sm text-cyan-400">Registered Teachers</p>
+        </div>
 
+        <!-- ACTIVE -->
+        <div class="rounded-xl border border-slate-700 bg-[#111827] p-6">
+            <p class="text-sm text-slate-400">Active</p>
+            <h2 class="mt-3 text-4xl font-bold text-white">{{ active_teachers }}</h2>
+            <p class="mt-2 text-sm text-green-400">Can Login</p>
+        </div>
 
+        <!-- RATING -->
+        <div class="rounded-xl border border-slate-700 bg-[#111827] p-6">
+            <p class="text-sm text-slate-400">Avg Rating</p>
+            <h2 class="mt-3 text-4xl font-bold text-white">0.0 ⭐</h2>
+            <p class="mt-2 text-sm text-green-400">Coming from reviews</p>
+        </div>
 
-
-    <!-- ACTION AREA -->
-
-
-    <div class="flex flex-col gap-3 lg:flex-row">
-
-
-
-        <!-- SEARCH -->
-
-
-        <form method="GET" class="flex gap-3">
-
-
-            <input
-                type="text"
-                name="search"
-                value="{{ request.GET.search }}"
-                placeholder="Search teachers..."
-                class="
-                w-64
-                rounded-lg
-                border
-                border-slate-700
-                bg-slate-800
-                px-5
-                py-3
-                text-sm
-                text-white
-                placeholder-slate-500
-                outline-none
-                focus:border-cyan-400">
-
-
-
-            <button
-                type="submit"
-                class="
-                rounded-lg
-                bg-cyan-500
-                px-6
-                font-semibold
-                text-slate-900
-                transition
-                hover:bg-cyan-400">
-
-
-                Search
-
-
-            </button>
-
-
-        </form>
-
-
-
-
-
-
-        <!-- INVITE -->
-
-
-        <a href="#"
-            class="
-            rounded-lg
-            border
-            border-slate-700
-            bg-slate-800
-            px-5
-            py-3
-            text-white
-            transition
-            hover:border-cyan-400
-            hover:text-cyan-400">
-
-
-            ✉ Invite
-
-
-        </a>
-
-
-
-
-
-
-
-        <!-- CREATE TEACHER -->
-
-
-        <a href="{% url 'create_teacher' %}"
-            class="
-            rounded-lg
-            bg-cyan-500
-            px-6
-            py-3
-            font-semibold
-            text-slate-900
-            shadow-lg
-            shadow-cyan-500/20
-            transition
-            hover:bg-cyan-400">
-
-
-            + Create Teacher
-
-
-        </a>
-
-
-
+        <!-- BLOCKED -->
+        <div class="rounded-xl border border-slate-700 bg-[#111827] p-6">
+            <p class="text-sm text-slate-400">Blocked</p>
+            <h2 class="mt-3 text-4xl font-bold text-white">{{ blocked_teachers }}</h2>
+            <p class="mt-2 text-sm text-red-400">Login Disabled</p>
+        </div>
     </div>
 
-
-
-</div>
-
-
-
-
-
-
-
-
-
-
-<!-- ================= TOP STATUS CARDS ================= -->
-
-
-<div class="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4">
-
-
-
-
-
-<!-- TOTAL TEACHERS -->
-
-
-<div class="
-rounded-xl
-border
-border-slate-700
-bg-[#111827]
-p-6">
-
-
-<p class="text-sm text-slate-400">
-
-Total Faculty
-
-</p>
-
-
-
-<h2 class="
-mt-3
-text-4xl
-font-bold
-text-white">
-
-
-{{ total_teachers }}
-
-
-</h2>
-
-
-
-
-<p class="
-mt-2
-text-sm
-text-cyan-400">
-
-
-Registered Teachers
-
-
-</p>
-
-
-</div>
-
-
-
-
-
-
-
-
-
-<!-- ACTIVE -->
-
-
-<div class="
-rounded-xl
-border
-border-slate-700
-bg-[#111827]
-p-6">
-
-
-
-<p class="text-sm text-slate-400">
-
-Active
-
-</p>
-
-
-
-
-<h2 class="
-mt-3
-text-4xl
-font-bold
-text-white">
-
-
-{{ active_teachers }}
-
-
-</h2>
-
-
-
-
-<p class="
-mt-2
-text-sm
-text-green-400">
-
-
-Can Login
-
-
-</p>
-
-
-
-</div>
-
-
-
-
-
-
-
-
-
-
-<!-- RATING -->
-
-
-<div class="
-rounded-xl
-border
-border-slate-700
-bg-[#111827]
-p-6">
-
-
-<p class="text-sm text-slate-400">
-
-Avg Rating
-
-</p>
-
-
-
-
-<h2 class="
-mt-3
-text-4xl
-font-bold
-text-white">
-
-
-0.0 ⭐
-
-
-</h2>
-
-
-
-
-<p class="
-mt-2
-text-sm
-text-green-400">
-
-
-Coming from reviews
-
-
-</p>
-
-
-
-</div>
-
-
-
-
-
-
-
-
-
-<!-- BLOCKED -->
-
-
-<div class="
-rounded-xl
-border
-border-slate-700
-bg-[#111827]
-p-6">
-
-
-<p class="text-sm text-slate-400">
-
-Blocked
-
-</p>
-
-
-
-
-<h2 class="
-mt-3
-text-4xl
-font-bold
-text-white">
-
-
-{{ blocked_teachers }}
-
-
-</h2>
-
-
-
-
-<p class="
-mt-2
-text-sm
-text-red-400">
-
-
-Login Disabled
-
-
-</p>
-
-
-
-
-</div>
-
-
-
-</div>
-
-<!-- ================= TEACHER GRID ================= -->
-
-
-<div class="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
-
-
-{% for teacher in teachers %}
-
-
-
-<!-- ================= TEACHER CARD ================= -->
-
-
-<div class="
-relative
-rounded-xl
-border
-border-slate-800
-bg-[#111827]
-transition
-hover:-translate-y-1
-hover:border-cyan-500
-hover:shadow-xl
-hover:shadow-cyan-500/10">
-
-
-
-
-
-<!-- ================= CARD HEADER ================= -->
-
-
-<div class="flex items-start justify-between p-5">
-
-
-
-<div class="flex items-center gap-3">
-
-
-
-<!-- PROFILE IMAGE -->
-
-
-{% if teacher.profile_image %}
-
-
-<img
-src="{{ teacher.profile_image.url }}"
-class="
-h-12
-w-12
-rounded-lg
-object-cover">
-
-
-{% else %}
-
-
-<!-- DEFAULT LETTER AVATAR -->
-
-
-<div class="
-flex
-h-12
-w-12
-items-center
-justify-center
-rounded-lg
-bg-gradient-to-br
-from-cyan-400
-to-blue-500
-text-sm
-font-bold
-text-white">
-
-
-{% if teacher.full_name %}
-
-{{ teacher.initials }}
-
-{% elif teacher.email %}
-
-{{ teacher.email|slice:":2"|upper }}
-
-{% else %}
-
-{{ teacher.user.email|slice:":2"|upper }}
-
-{% endif %}
-
-
-</div>
-
-
-{% endif %}
-
-<div>
-<!-- NAME -->
-<h2 class="
-text-base
-font-bold
-text-white">
-
-
-{% if teacher.full_name %}
-
-{{ teacher.full_name }}
-
-{% else %}
-
-{{ teacher.user.email|cut:"@gmail.com" }}
-
-{% endif %}
-
-
-</h2>
-
-
-<p class="
-mt-1
-text-xs
-text-slate-400">
-
-
-{% if teacher.email %}
-
-{{ teacher.email }}
-
-{% else %}
-
-{{ teacher.user.email }}
-
-{% endif %}
-
-
-</p>
-
-<!-- PHONE -->
-<p class="
-mt-1
-text-xs
-text-slate-500">
-
-
-{{ teacher.phone_number }}
-
-
-</p>
-
-{% if teacher.is_blocked %}
-
-<span class="mt-2 inline-flex rounded-full bg-red-500/15 px-2 py-1 text-[11px] font-semibold text-red-400">
-
-    🔴 Blocked
-
-</span>
-
-{% else %}
-
-<span class="mt-2 inline-flex rounded-full bg-green-500/15 px-2 py-1 text-[11px] font-semibold text-green-400">
-
-    🟢 Active
-
-</span>
-
-{% endif %}
-
-</div>
-
-
-
-
-</div>
-
-
-<!-- ================= THREE DOT MENU (INSIDE CARD) ================= -->
-
-<div class="relative teacher-menu-wrapper">
-
-<button
-type="button"
-class="
-teacher-menu-btn
-px-2
-text-xl
-text-slate-400
-hover:text-white">
-
-
-⋮
-
-
-</button>
-
-
-<!-- DROPDOWN -->
-
-
-<div class="
-teacher-menu
-invisible
-absolute
-right-0
-z-50
-mt-2
-w-52
-rounded-xl
-border
-border-slate-700
-bg-[#020617]
-py-2
-opacity-0
-shadow-2xl
-transition">
-
-<!-- VIEW PROFILE -->
-
-
-<a
-href="#"
-class="
-block
-px-4
-py-2
-text-sm
-text-slate-300
-hover:text-cyan-400">
-
-
-👁 View Profile
-
-
-</a>
-
-<!-- EDIT TEACHER -->
-
-
-<a
-href="#"
-class="
-block
-px-4
-py-2
-text-sm
-text-yellow-400
-hover:text-yellow-300">
-
-
-✏️ Edit Teacher
-
-
-</a>
-
-<!-- ASSIGN BATCH -->
-
-
-<a
-href="{% url 'admin_assign_teacher_batch' teacher.id %}"
-class="
-block
-px-4
-py-2
-text-sm
-text-slate-300
-hover:text-cyan-400">
-
-
-📚 Assign Batch
-
-
-</a>
-
-<!-- MANAGE ASSIGNMENTS -->
-
-<a
-href="{% url 'admin_teacher_assignments' teacher.id %}"
-class="
-block
-px-4
-py-2
-text-sm
-text-slate-300
-hover:text-cyan-400">
-
-🗂 Manage Assignments
-
-</a>
-
-</div>
-
-
-
-</div>
-
-
-
-</div>
-
-
-
-
-
-
-
-
-
-
-<!-- ================= FOOTER STATS ================= -->
-
-
-<div class="
-grid
-grid-cols-3
-border-t
-border-slate-800
-px-5
-py-3">
-
-
-
-
-
-
-<!-- RATING -->
-
-
-<div>
-
-
-<p class="
-text-sm
-font-bold
-text-yellow-400">
-
-
-⭐ 0.0
-
-
-</p>
-
-
-<p class="
-text-[10px]
-uppercase
-text-slate-500">
-
-
-Rating
-
-
-</p>
-
-
-
-</div>
-
-
-
-
-
-
-
-
-<!-- STUDENTS -->
-
-
-<div class="text-center">
-
-
-
-<p class="
-text-sm
-font-bold
-text-white">
-
-
-{{ teacher.total_students|default:"0" }}
-
-
-</p>
-
-
-
-<p class="
-text-[10px]
-uppercase
-text-slate-500">
-
-
-Students
-
-
-</p>
-
-
-</div>
-
-
-
-
-
-
-
-
-<!-- BATCH COUNT -->
-
-
-<div class="text-right">
-
-
-<p class="
-text-sm
-font-bold
-text-white">
-
-
-{{ teacher.batch_count|default:"0" }}
-
-
-</p>
-
-
-
-<p class="
-text-[10px]
-uppercase
-text-slate-500">
-
-
-Batches
-
-
-</p>
-
-
-
-</div>
-
-
-
-
-</div>
-
-
-<!-- ================= BOTTOM ACTION BUTTONS ================= -->
-
-
-<div class="flex items-center justify-between gap-2 border-t border-slate-800 px-5 py-3">
-
-    <!-- VIEW ASSIGNED BATCHES BUTTON -->
-    <button 
-        type="button"
-        onclick="document.getElementById('batchesModal').classList.remove('hidden')"
-        class="
-            inline-flex
-            items-center
-            gap-2
-            rounded-lg
-            bg-cyan-500/20
-            px-4
-            py-2
-            text-sm
-            font-medium
-            text-cyan-400
-            transition
-            hover:bg-cyan-500/30
-            hover:text-cyan-300
-        ">
-        <span>📚</span>
-        <span>View Assigned</span>
-        <span class="text-xs bg-cyan-500/30 px-2 py-0.5 rounded-full">
-            {{ teacher.batches.count }}
-        </span>
-    </button>
-
-    <div class="flex items-center gap-2">
-
-        <!-- BLOCK/UNBLOCK ICON BUTTON -->
-        {% if teacher.is_blocked %}
-        <button
-            type="button"
-            class="
-                teacher-block-btn
-                inline-flex
-                items-center
-                gap-1.5
-                rounded-lg
-                bg-green-500/20
-                px-3
-                py-2
-                text-xs
-                font-medium
-                text-green-400
-                transition
-                hover:bg-green-500/30
-                hover:text-green-300
-            "
-            data-id="{{ teacher.id }}"
-            data-name="{{ teacher.full_name }}"
-            data-action="unblock">
-
-            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
-            </svg>
-            Unblock
-
-        </button>
-        {% else %}
-        <button
-            type="button"
-            class="
-                teacher-block-btn
-                inline-flex
-                items-center
-                gap-1.5
-                rounded-lg
-                bg-orange-500/20
-                px-3
-                py-2
-                text-xs
-                font-medium
-                text-orange-400
-                transition
-                hover:bg-orange-500/30
-                hover:text-orange-300
-            "
-            data-id="{{ teacher.id }}"
-            data-name="{{ teacher.full_name }}"
-            data-action="block">
-
-            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
-            </svg>
-            Block
-
-        </button>
-        {% endif %}
-
-        <!-- DELETE ICON BUTTON -->
-        <button
-            type="button"
-            class="
-                teacher-delete-btn
-                inline-flex
-                items-center
-                gap-1.5
-                rounded-lg
-                bg-red-500/20
-                px-3
-                py-2
-                text-xs
-                font-medium
-                text-red-400
-                transition
-                hover:bg-red-500/30
-                hover:text-red-300
-            "
-            data-id="{{ teacher.id }}"
-            data-name="{{ teacher.full_name }}">
-
-            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-            </svg>
-            Delete
-
-        </button>
-
-    </div>
-
-</div>
-
-
-
-
-</div>
-
-{% empty %}
-
-
-<!-- ================= EMPTY STATE ================= -->
-
-
-<div class="col-span-full">
-
-
-<div class="
-rounded-2xl
-border-2
-border-dashed
-border-slate-700
-bg-[#111827]
-px-10
-py-20
-text-center">
-
-
-
-
-
-<!-- EMPTY ICON -->
-
-
-<div class="
-mx-auto
-flex
-h-20
-w-20
-items-center
-justify-center
-rounded-xl
-bg-gradient-to-br
-from-cyan-400
-to-blue-500
-text-3xl
-font-bold
-text-white">
-
-
-+
-
-
-</div>
-
-
-
-
-
-
-
-<h2 class="
-mt-8
-text-3xl
-font-bold
-text-white">
-
-
-No Teachers Found
-
-
-</h2>
-
-
-
-
-
-
-
-<p class="
-mx-auto
-mt-4
-max-w-xl
-text-slate-400">
-
-
-No teacher accounts have been created yet.
-Create a teacher account and send login credentials
-to access the NeoLearn Teacher Portal.
-
-
-</p>
-
-
-
-
-
-
-
-
-<div class="
-mt-8
-flex
-justify-center">
-
-
-
-<a
-href="{% url 'create_teacher' %}"
-class="
-rounded-xl
-bg-cyan-500
-px-6
-py-3
-font-semibold
-text-slate-900
-transition
-hover:bg-cyan-400">
-
-
-+ Create Teacher
-
-
-</a>
-
-
-
-</div>
-
-
-
-
-
-</div>
-
-
-
-</div>
-
-
-{% endfor %}
-
-
-
-</div>
-
-
-<!-- ================= PAGINATION ================= -->
-
-
-{% if teachers %}
-
-
-<div class="
-flex
-items-center
-justify-between
-rounded-xl
-border
-border-slate-800
-bg-[#111827]
-px-6
-py-4">
-
-<!-- LEFT COUNT -->
-
-
-<p class="
-text-sm
-text-slate-400">
-
-
-Showing
-
-
-<span class="
-font-semibold
-text-white">
-
-
-{{ teachers|length }}
-
-
-</span>
-
-
-teacher{{ teachers|length|pluralize }}
-
-
-</p>
-
-<!-- BUTTONS -->
-
-
-<div class="
-flex
-items-center
-gap-3">
-
-<button
-disabled
-class="
-rounded-lg
-border
-border-slate-700
-bg-slate-800
-px-4
-py-2
-text-sm
-text-slate-500">
-
-
-Previous
-
-
-</button>
-
-<button
-disabled
-class="
-rounded-lg
-border
-border-slate-700
-bg-slate-800
-px-4
-py-2
-text-sm
-text-slate-500">
-
-
-Next
-
-
-</button>
-
-
-
-
-
-
-</div>
-
-
-
-
-
-
-</div>
-
-
-
-{% endif %}
-
-</div>
-
-
-<!-- ================= ASSIGNED BATCHES MODAL (SIMPLE STRUCTURE) ================= -->
-
-<div id="batchesModal" class="fixed inset-0 z-50 hidden overflow-y-auto">
-    <!-- Modal backdrop -->
-    <div class="fixed inset-0 bg-black/70 backdrop-blur-sm" onclick="document.getElementById('batchesModal').classList.add('hidden')"></div>
-    
-    <!-- Modal content -->
-    <div class="relative min-h-screen flex items-center justify-center p-4">
-        <div class="relative w-full max-w-2xl rounded-2xl border border-slate-700 bg-[#0f172a] shadow-2xl">
-            
-            <!-- Modal header -->
-            <div class="flex items-center justify-between border-b border-slate-700 px-6 py-4">
-                <div>
-                    <h3 class="text-xl font-bold text-white">📚 Assigned Batches</h3>
-                    <p class="text-sm text-slate-400">View all batches and subjects assigned to this teacher</p>
+    <!-- ================= TEACHER GRID ================= -->
+    <div class="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+        {% for teacher in teachers %}
+
+        <!-- ================= TEACHER CARD ================= -->
+        <div class="relative rounded-xl border border-slate-800 bg-[#111827] transition hover:-translate-y-1 hover:border-cyan-500 hover:shadow-xl hover:shadow-cyan-500/10">
+
+            <!-- ================= CARD HEADER ================= -->
+            <div class="flex items-start justify-between p-5">
+                <div class="flex items-center gap-3">
+                    <!-- PROFILE IMAGE -->
+                    {% if teacher.profile_image %}
+                    <img src="{{ teacher.profile_image.url }}" class="h-12 w-12 rounded-lg object-cover">
+                    {% else %}
+                    <!-- DEFAULT LETTER AVATAR -->
+                    <div class="flex h-12 w-12 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-400 to-blue-500 text-sm font-bold text-white">
+                        {% if teacher.full_name %}
+                            {{ teacher.initials }}
+                        {% elif teacher.email %}
+                            {{ teacher.email|slice:":2"|upper }}
+                        {% else %}
+                            {{ teacher.user.email|slice:":2"|upper }}
+                        {% endif %}
+                    </div>
+                    {% endif %}
+
+                    <div>
+                        <!-- NAME -->
+                        <h2 class="text-base font-bold text-white">
+                            {% if teacher.full_name %}
+                                {{ teacher.full_name }}
+                            {% else %}
+                                {{ teacher.user.email|cut:"@gmail.com" }}
+                            {% endif %}
+                        </h2>
+                        <p class="mt-1 text-xs text-slate-400">
+                            {% if teacher.email %}
+                                {{ teacher.email }}
+                            {% else %}
+                                {{ teacher.user.email }}
+                            {% endif %}
+                        </p>
+                        <!-- PHONE -->
+                        <p class="mt-1 text-xs text-slate-500">{{ teacher.phone_number }}</p>
+
+                        {% if teacher.is_blocked %}
+                        <span class="mt-2 inline-flex rounded-full bg-red-500/15 px-2 py-1 text-[11px] font-semibold text-red-400">🔴 Blocked</span>
+                        {% else %}
+                        <span class="mt-2 inline-flex rounded-full bg-green-500/15 px-2 py-1 text-[11px] font-semibold text-green-400">🟢 Active</span>
+                        {% endif %}
+                    </div>
                 </div>
-                <button
-                    type="button"
-                    onclick="document.getElementById('batchesModal').classList.add('hidden')"
-                    class="rounded-lg p-2 text-slate-400 transition hover:bg-slate-700 hover:text-white">
+
+                <!-- ================= THREE DOT MENU (INSIDE CARD) ================= -->
+                <div class="relative teacher-menu-wrapper">
+                    <button type="button" class="teacher-menu-btn px-2 text-xl text-slate-400 hover:text-white">⋮</button>
+                    <!-- DROPDOWN -->
+                    <div class="teacher-menu invisible absolute right-0 z-50 mt-2 w-52 rounded-xl border border-slate-700 bg-[#020617] py-2 opacity-0 shadow-2xl transition">
+                        <a href="#" class="block px-4 py-2 text-sm text-slate-300 hover:text-cyan-400">👁 View Profile</a>
+                        <a href="#" class="block px-4 py-2 text-sm text-yellow-400 hover:text-yellow-300">✏️ Edit Teacher</a>
+                        <a href="{% url 'admin_assign_teacher_batch' teacher.id %}" class="block px-4 py-2 text-sm text-slate-300 hover:text-cyan-400">📚 Assign Batch</a>
+                        <a href="{% url 'admin_teacher_assignments' teacher.id %}" class="block px-4 py-2 text-sm text-slate-300 hover:text-cyan-400">🗂 Manage Assignments</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ================= FOOTER STATS ================= -->
+            <div class="grid grid-cols-3 border-t border-slate-800 px-5 py-3">
+                <!-- RATING -->
+                <div>
+                    <p class="text-sm font-bold text-yellow-400">⭐ 0.0</p>
+                    <p class="text-[10px] uppercase text-slate-500">Rating</p>
+                </div>
+                <!-- STUDENTS -->
+                <div class="text-center">
+                    <p class="text-sm font-bold text-white">{{ teacher.total_students|default:"0" }}</p>
+                    <p class="text-[10px] uppercase text-slate-500">Students</p>
+                </div>
+                <!-- BATCH COUNT -->
+                <div class="text-right">
+                    <p class="text-sm font-bold text-white">{{ teacher.batch_count|default:"0" }}</p>
+                    <p class="text-[10px] uppercase text-slate-500">Batches</p>
+                </div>
+            </div>
+
+            <!-- ================= BOTTOM ACTION BUTTONS ================= -->
+            <div class="flex items-center justify-between gap-2 border-t border-slate-800 px-5 py-3">
+                <!-- ASSIGNED BUTTON -->
+                <button type="button" 
+                        onclick="openBatchesModal('{{ teacher.id }}', '{{ teacher.full_name|escapejs }}')" 
+                        class="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-indigo-500/20 to-purple-500/20 px-4 py-2 text-sm font-medium text-indigo-300 transition hover:from-indigo-500/30 hover:to-purple-500/30 hover:text-indigo-200 hover:shadow-lg hover:shadow-indigo-500/20 border border-indigo-500/20">
+                    <span class="text-lg">📋</span>
+                    <span>Assigned</span>
+                    <span class="text-xs bg-gradient-to-r from-indigo-500 to-purple-500 px-2 py-0.5 rounded-full text-white">{{ teacher.batches.count }}</span>
+                </button>
+
+                <div class="flex items-center gap-2">
+                    <!-- BLOCK / UNBLOCK BUTTON -->
+                    {% if teacher.is_blocked %}
+                    <button type="button" onclick="openTeacherModal('{{ teacher.id }}', '{{ teacher.full_name|escapejs }}', 'unblock')" class="inline-flex items-center gap-1.5 rounded-lg bg-green-500/20 px-3 py-2 text-xs font-medium text-green-400 transition hover:bg-green-500/30 hover:text-green-300">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                        </svg>
+                        Unblock
+                    </button>
+                    {% else %}
+                    <button type="button" onclick="openTeacherModal('{{ teacher.id }}', '{{ teacher.full_name|escapejs }}', 'block')" class="inline-flex items-center gap-1.5 rounded-lg bg-orange-500/20 px-3 py-2 text-xs font-medium text-orange-400 transition hover:bg-orange-500/30 hover:text-orange-300">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                        </svg>
+                        Block
+                    </button>
+                    {% endif %}
+
+                    <!-- DELETE BUTTON -->
+                    <button type="button" onclick="openDeleteModal('{{ teacher.id }}', '{{ teacher.full_name|escapejs }}')" class="inline-flex items-center gap-1.5 rounded-lg bg-red-500/20 px-3 py-2 text-xs font-medium text-red-400 transition hover:bg-red-500/30 hover:text-red-300">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                        </svg>
+                        Delete
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        {% empty %}
+
+        <!-- ================= EMPTY STATE ================= -->
+        <div class="col-span-full">
+            <div class="rounded-2xl border-2 border-dashed border-slate-700 bg-[#111827] px-10 py-20 text-center">
+                <div class="mx-auto flex h-20 w-20 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-400 to-blue-500 text-3xl font-bold text-white">+</div>
+                <h2 class="mt-8 text-3xl font-bold text-white">No Teachers Found</h2>
+                <p class="mx-auto mt-4 max-w-xl text-slate-400">No teacher accounts have been created yet. Create a teacher account and send login credentials to access the NeoLearn Teacher Portal.</p>
+                <div class="mt-8 flex justify-center">
+                    <a href="{% url 'create_teacher' %}" class="rounded-xl bg-cyan-500 px-6 py-3 font-semibold text-slate-900 transition hover:bg-cyan-400">+ Create Teacher</a>
+                </div>
+            </div>
+        </div>
+
+        {% endfor %}
+    </div>
+
+    <!-- ================= PAGINATION ================= -->
+    {% if teachers %}
+    <div class="flex items-center justify-between rounded-xl border border-slate-800 bg-[#111827] px-6 py-4">
+        <p class="text-sm text-slate-400">
+            Showing <span class="font-semibold text-white">{{ teachers|length }}</span> teacher{{ teachers|length|pluralize }}
+        </p>
+        <div class="flex items-center gap-3">
+            <button disabled class="rounded-lg border border-slate-700 bg-slate-800 px-4 py-2 text-sm text-slate-500">Previous</button>
+            <button disabled class="rounded-lg border border-slate-700 bg-slate-800 px-4 py-2 text-sm text-slate-500">Next</button>
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+
+<!-- ===================================================== -->
+<!-- ASSIGNED BATCHES MODAL -->
+<!-- ===================================================== -->
+<div id="batchesModal" class="fixed inset-0 z-50 hidden overflow-y-auto">
+    <div class="fixed inset-0 bg-black/70 backdrop-blur-sm" onclick="closeBatchesModal()"></div>
+    <div class="relative min-h-screen flex items-center justify-center p-4">
+        <div class="relative w-full max-w-3xl rounded-2xl border border-slate-700 bg-gradient-to-br from-[#0f172a] to-[#1a2332] shadow-2xl">
+            
+            <!-- MODAL HEADER -->
+            <div class="flex items-center justify-between border-b border-slate-700 px-6 py-4 bg-[#0f172a]/50 rounded-t-2xl">
+                <div>
+                    <h3 class="text-2xl font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">📋 Assigned Batches</h3>
+                    <p class="text-sm text-slate-400 mt-1" id="modalTeacherName">
+                        <span class="text-indigo-400 font-semibold">Teacher Name</span>
+                    </p>
+                </div>
+                <button type="button" onclick="closeBatchesModal()" class="rounded-lg p-2 text-slate-400 transition hover:bg-slate-700 hover:text-white">
                     <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                     </svg>
                 </button>
             </div>
             
-            <!-- Modal body - You can add your content here -->
-            <div class="px-6 py-4 max-h-[60vh] overflow-y-auto" id="batchesModalBody">
-                
-                <!-- Example batch item - Replace with your dynamic content -->
-                <div class="rounded-lg border border-slate-700 bg-slate-800/50 p-4 mb-3">
-                    <div class="flex items-center justify-between">
-                        <span class="text-base font-medium text-white">
-                            📋 Batch Name Here
-                        </span>
-                        <span class="text-xs text-slate-400">
-                            👥 0 students
-                        </span>
-                    </div>
-                    
-                    <!-- Subjects -->
-                    <div class="flex flex-wrap gap-1.5 mt-2">
-                        <span class="rounded bg-purple-600/30 px-2.5 py-1 text-[10px] font-medium text-purple-300">
-                            📖 Subject 1
-                        </span>
-                        <span class="rounded bg-purple-600/30 px-2.5 py-1 text-[10px] font-medium text-purple-300">
-                            📖 Subject 2
-                        </span>
-                        <span class="rounded bg-purple-600/30 px-2.5 py-1 text-[10px] font-medium text-purple-300">
-                            📖 Subject 3
-                        </span>
+            <!-- MODAL BODY - SCROLLABLE -->
+            <div class="px-6 py-4 max-h-[60vh] overflow-y-auto scrollbar-thin scrollbar-thumb-slate-600 scrollbar-track-transparent" id="batchesModalBody">
+                <div id="batchesContent">
+                    <div class="text-center py-8 text-slate-400">
+                        <div class="inline-block animate-spin rounded-full h-10 w-10 border-4 border-indigo-500 border-t-transparent"></div>
+                        <p class="mt-3">Loading assigned batches...</p>
                     </div>
                 </div>
-                
-                <!-- Another batch example -->
-                <div class="rounded-lg border border-slate-700 bg-slate-800/50 p-4 mb-3">
-                    <div class="flex items-center justify-between">
-                        <span class="text-base font-medium text-white">
-                            📋 Another Batch
-                        </span>
-                        <span class="text-xs text-slate-400">
-                            👥 5 students
-                        </span>
-                    </div>
-                    
-                    <!-- Subjects -->
-                    <div class="flex flex-wrap gap-1.5 mt-2">
-                        <span class="rounded bg-purple-600/30 px-2.5 py-1 text-[10px] font-medium text-purple-300">
-                            📖 Mathematics
-                        </span>
-                        <span class="rounded bg-purple-600/30 px-2.5 py-1 text-[10px] font-medium text-purple-300">
-                            📖 Physics
-                        </span>
-                    </div>
-                </div>
-                
-                <!-- No batches state -->
-                <!--
-                <div class="text-center py-8">
-                    <div class="text-4xl mb-3">📚</div>
-                    <p class="text-slate-400">No batches assigned to this teacher yet.</p>
-                    <a href="#" class="inline-block mt-4 rounded-lg bg-cyan-500 px-4 py-2 text-sm font-medium text-slate-900 transition hover:bg-cyan-400">
-                        + Assign Batch
-                    </a>
-                </div>
-                -->
-                
             </div>
             
-            <!-- Modal footer -->
-            <div class="border-t border-slate-700 px-6 py-4">
-                <button
-                    type="button"
-                    onclick="document.getElementById('batchesModal').classList.add('hidden')"
-                    class="w-full rounded-lg bg-slate-700 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-600">
+            <!-- MODAL FOOTER -->
+            <div class="border-t border-slate-700 px-6 py-4 flex justify-end bg-[#0f172a]/50 rounded-b-2xl">
+                <button type="button" onclick="closeBatchesModal()" class="rounded-lg bg-gradient-to-r from-slate-700 to-slate-600 px-6 py-2 text-sm font-medium text-white transition hover:from-slate-600 hover:to-slate-500">
                     Close
                 </button>
             </div>
@@ -1335,6 +274,163 @@ Next
     </div>
 </div>
 
+<!-- ===================================================== -->
+<!-- BLOCK/UNBLOCK TEACHER MODAL - UPDATED MESSAGES -->
+<!-- ===================================================== -->
+<div id="teacherActionModal" class="fixed inset-0 z-[999] hidden items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+    <div class="w-full max-w-2xl lg:max-w-3xl overflow-hidden rounded-3xl border border-slate-700 bg-[#020617] shadow-[0_30px_90px_rgba(0,0,0,0.65)] max-h-[85vh] flex flex-col">
+
+        <!-- HEADER -->
+        <div class="flex items-center justify-between border-b border-slate-800 px-4 sm:px-6 py-3 sm:py-4 flex-shrink-0">
+            <div>
+                <h2 id="teacherActionTitle" class="text-lg sm:text-xl font-bold text-orange-400">Block Teacher</h2>
+                <p id="teacherActionSubtitle" class="mt-0.5 text-xs sm:text-sm text-slate-400">Restrict teacher access to the portal</p>
+            </div>
+            <button type="button" onclick="closeTeacherModal()" class="rounded-lg p-2 text-slate-400 transition hover:bg-slate-800 hover:text-white">
+                <svg class="h-5 w-5 sm:h-6 sm:w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+
+        <!-- BODY -->
+        <div class="overflow-y-auto flex-1 p-4 sm:p-6">
+            <div class="grid grid-cols-1 gap-4">
+
+                <!-- Warning/Notice Box - UPDATED MESSAGES -->
+                <div id="teacherActionNotice" class="rounded-2xl border border-orange-500/30 bg-orange-500/10 p-4">
+                    <div class="flex items-start gap-3">
+                        <div id="teacherActionIcon" class="text-2xl mt-0.5">⚠️</div>
+                        <div>
+                            <h3 id="teacherActionHeading" class="font-semibold text-orange-300 text-sm sm:text-base">Blocking This Teacher Will:</h3>
+                            <ul id="teacherActionList" class="mt-2 space-y-1 text-xs sm:text-sm text-orange-100 list-disc list-inside">
+                                <li>❌ Prevent the teacher from logging in</li>
+                                <li>📚 All uploaded content (videos, PDFs, chapters) will remain</li>
+                                <li>👨‍🎓 Students can still access all content</li>
+                                <li>👨‍🏫 Other teachers can still manage the content</li>
+                                <li>🔒 Teacher cannot upload new content while blocked</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Teacher Info -->
+                <div>
+                    <label class="mb-1 block text-[10px] font-semibold uppercase tracking-widest text-slate-500">Teacher</label>
+                    <div class="flex items-center gap-3 rounded-2xl border border-slate-700 bg-slate-900/70 px-3 py-2.5">
+                        <div id="teacherAvatar" class="flex h-10 w-10 items-center justify-center rounded-full bg-orange-600 font-bold text-white text-sm">T</div>
+                        <div>
+                            <h4 id="teacherNameDisplay" class="font-semibold text-white text-sm">Teacher Name</h4>
+                            <p id="teacherEmailDisplay" class="text-xs text-slate-400">teacher@email.com</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Confirmation Input -->
+                <div>
+                    <label id="teacherConfirmLabel" class="mb-1 block text-[10px] font-semibold uppercase tracking-widest text-slate-500">Confirm Teacher Name</label>
+                    <input id="teacherConfirmInput" type="text" autocomplete="off" placeholder="Type teacher name to confirm" class="w-full rounded-2xl border border-slate-700 bg-slate-900 px-3 py-2.5 text-white text-sm outline-none transition focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 placeholder:text-slate-600">
+                    <p class="mt-1 text-[10px] text-slate-500">
+                        Type the exact teacher name to enable the <span id="teacherConfirmBtnLabel" class="font-semibold text-orange-400">Block</span> button.
+                    </p>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- FOOTER -->
+        <div class="flex flex-col-reverse gap-2 border-t border-slate-800 px-4 sm:px-6 py-3 sm:py-3.5 sm:flex-row sm:items-center sm:justify-end flex-shrink-0">
+            <button type="button" onclick="closeTeacherModal()" class="flex h-10 min-w-[100px] items-center justify-center rounded-xl border border-slate-700 bg-slate-900 px-4 text-sm font-medium text-slate-300 transition hover:border-slate-500 hover:bg-slate-800 hover:text-white">Cancel</button>
+            <form id="teacherActionForm" method="POST">
+                {% csrf_token %}
+                <input type="hidden" id="teacherActionInput" name="confirm_name" value="">
+                <button id="teacherActionConfirmBtn" type="submit" disabled class="flex h-10 min-w-[140px] items-center justify-center rounded-xl bg-orange-600 px-4 text-sm font-semibold text-white opacity-50 transition hover:bg-orange-700 disabled:cursor-not-allowed disabled:opacity-50">Confirm Block</button>
+            </form>
+        </div>
+
+    </div>
+</div>
+
+<!-- ===================================================== -->
+<!-- DELETE TEACHER MODAL - UPDATED MESSAGES -->
+<!-- ===================================================== -->
+<div id="deleteTeacherModal" class="fixed inset-0 z-[999] hidden items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+    <div class="w-full max-w-2xl lg:max-w-3xl overflow-hidden rounded-3xl border border-slate-700 bg-[#020617] shadow-[0_30px_90px_rgba(0,0,0,0.65)] max-h-[85vh] flex flex-col">
+
+        <!-- HEADER -->
+        <div class="flex items-center justify-between border-b border-slate-800 px-4 sm:px-6 py-3 sm:py-4 flex-shrink-0">
+            <div>
+                <h2 class="text-lg sm:text-xl font-bold text-red-400">Delete Teacher</h2>
+                <p class="mt-0.5 text-xs sm:text-sm text-slate-400">This action removes the teacher account</p>
+            </div>
+            <button type="button" onclick="closeDeleteModal()" class="rounded-lg p-2 text-slate-400 transition hover:bg-slate-800 hover:text-white">
+                <svg class="h-5 w-5 sm:h-6 sm:w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+
+        <!-- BODY -->
+        <div class="overflow-y-auto flex-1 p-4 sm:p-6">
+            <div class="grid grid-cols-1 gap-4">
+
+                <!-- Danger Notice - UPDATED MESSAGES -->
+                <div class="rounded-2xl border border-red-500/30 bg-red-500/10 p-4">
+                    <div class="flex items-start gap-3">
+                        <div class="text-2xl mt-0.5">⚠️</div>
+                        <div>
+                            <h3 class="font-semibold text-red-300 text-sm sm:text-base">Deleting This Teacher Will:</h3>
+                            <ul class="mt-2 space-y-1 text-xs sm:text-sm text-red-100 list-disc list-inside">
+                                <li>🗑️ Permanently remove the teacher's account</li>
+                                <li>📚 All uploaded content (videos, PDFs, chapters) will remain</li>
+                                <li>👨‍🎓 Students can still access all content</li>
+                                <li>👨‍🏫 Other teachers can still manage the content</li>
+                                <li>🔓 Content ownership stays with the platform</li>
+                                <li>⚠️ This action is <strong>irreversible</strong></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Teacher Info -->
+                <div>
+                    <label class="mb-1 block text-[10px] font-semibold uppercase tracking-widest text-slate-500">Teacher</label>
+                    <div class="flex items-center gap-3 rounded-2xl border border-slate-700 bg-slate-900/70 px-3 py-2.5">
+                        <div id="deleteTeacherAvatar" class="flex h-10 w-10 items-center justify-center rounded-full bg-red-600 font-bold text-white text-sm">T</div>
+                        <div>
+                            <h4 id="deleteTeacherNameDisplay" class="font-semibold text-white text-sm">Teacher Name</h4>
+                            <p class="text-xs text-slate-400">teacher@email.com</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Confirmation Input -->
+                <div>
+                    <label class="mb-1 block text-[10px] font-semibold uppercase tracking-widest text-slate-500">Confirm Teacher Name</label>
+                    <input id="deleteConfirmInput" type="text" autocomplete="off" placeholder="Type teacher name to confirm" class="w-full rounded-2xl border border-slate-700 bg-slate-900 px-3 py-2.5 text-white text-sm outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-500/20 placeholder:text-slate-600">
+                    <p class="mt-1 text-[10px] text-slate-500">
+                        Type the exact teacher name to enable the <span class="font-semibold text-red-400">Delete</span> button.
+                    </p>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- FOOTER -->
+        <div class="flex flex-col-reverse gap-2 border-t border-slate-800 px-4 sm:px-6 py-3 sm:py-3.5 sm:flex-row sm:items-center sm:justify-end flex-shrink-0">
+            <button type="button" onclick="closeDeleteModal()" class="flex h-10 min-w-[100px] items-center justify-center rounded-xl border border-slate-700 bg-slate-900 px-4 text-sm font-medium text-slate-300 transition hover:border-slate-500 hover:bg-slate-800 hover:text-white">Cancel</button>
+            <form id="deleteTeacherForm" method="POST">
+                {% csrf_token %}
+                <input type="hidden" id="deleteTeacherInput" name="confirm_name" value="">
+                <button id="deleteConfirmBtn" type="submit" disabled class="flex h-10 min-w-[140px] items-center justify-center rounded-xl bg-red-600 px-4 text-sm font-semibold text-white opacity-50 transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50">Confirm Delete</button>
+            </form>
+        </div>
+
+    </div>
+</div>
+
 <script src="{% static 'admins/js/teacher_menu.js' %}"></script>
+<script src="{% static 'admins/js/teacher_actions.js' %}"></script>
+<script src="{% static 'admins/js/teacher_batches.js' %}"></script>
 
 {% endblock %}
