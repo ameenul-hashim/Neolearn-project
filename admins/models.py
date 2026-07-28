@@ -334,7 +334,14 @@ class Batch(models.Model):
         # -----------------------------------------
         # Save
         # -----------------------------------------
+        # -----------------------------------------
+        # Marketplace Visibility
+        # -----------------------------------------
 
+        if self.batch_status == "draft":
+            self.marketplace_visible = False
+        else:
+            self.marketplace_visible = True
 
         super().save(*args, **kwargs)
     

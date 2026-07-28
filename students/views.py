@@ -4,7 +4,10 @@ from django.views.decorators.cache import cache_control
 from django.contrib import messages
 import cloudinary.uploader
 from admins.models import Batch
-from .models import StudentProfile
+from django.http import JsonResponse
+from django.shortcuts import get_object_or_404
+from .models import StudentProfile, StudentWishlist
+
 
 
 @login_required(login_url='signin')
@@ -136,6 +139,7 @@ def marketplace_view(request):
     batches = (
         Batch.objects.filter(
             batch_status="published",
+            marketplace_visible=True,
         )
         .prefetch_related(
             "subjects",
@@ -144,11 +148,24 @@ def marketplace_view(request):
         .order_by("-created_at")
     )
 
+    wishlisted_batch_ids = set(
+        StudentWishlist.objects.filter(
+            student=request.user
+        ).values_list(
+            "batch_id",
+            flat=True,
+        )
+    )
+
+    wishlist_count = len(wishlisted_batch_ids)
+
     return render(
         request,
         "students/marketplace.html",
         {
             "batches": batches,
+            "wishlisted_batch_ids": wishlisted_batch_ids,
+            "wishlist_count": wishlist_count,
         },
     )
     
@@ -171,4 +188,89 @@ def marketplace_detail_view(request, batch_id):
         {
             "batch": batch,
         },
+    )
+    
+@login_required(login_url="signin")
+@cache_control(no_cache=True, must_revalidate=True, no_store=True)
+def wishlist_view(request):
+
+    wishlist_items = (
+        StudentWishlist.objects.filter(student=request.user)
+        .select_related("batch")
+        .order_by("-created_at")
+    )
+
+    return render(
+        request,
+        "students/wishlist/wishlist.html",
+        {
+            "wishlist_items": wishlist_items,
+        },
+    )
+    
+@login_required(login_url="signin")
+@cache_control(no_cache=True, must_revalidate=True, no_store=True)
+def toggle_wishlist_view(request, batch_id):
+
+    if request.method != "POST":
+
+        return JsonResponse(
+            {
+                "success": False,
+                "message": "Invalid request.",
+            },
+            status=400,
+        )
+
+    batch = get_object_or_404(
+        Batch,
+        id=batch_id,
+        batch_status="published",
+        marketplace_visible=True,
+    )
+
+    wishlist = StudentWishlist.objects.filter(
+        student=request.user,
+        batch=batch,
+    ).first()
+
+    if wishlist:
+
+        wishlist.delete()
+
+        wishlisted = False
+
+    else:
+
+        StudentWishlist.objects.create(
+            student=request.user,
+            batch=batch,
+        )
+
+        wishlisted = True
+
+    wishlist_count = StudentWishlist.objects.filter(
+        student=request.user
+    ).count()
+
+    return JsonResponse(
+        {
+            "success": True,
+            "wishlisted": wishlisted,
+            "wishlist_count": wishlist_count,
+        }
+    )
+    
+@login_required(login_url="signin")
+@cache_control(no_cache=True, must_revalidate=True, no_store=True)
+def wishlist_count_view(request):
+
+    count = StudentWishlist.objects.filter(
+        student=request.user
+    ).count()
+
+    return JsonResponse(
+        {
+            "count": count,
+        }
     )

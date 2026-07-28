@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
+from admins.models import Batch
 
 
 class StudentProfile(models.Model):
@@ -11,3 +12,26 @@ class StudentProfile(models.Model):
     joined_at=models.DateTimeField(auto_now_add=True)
     def __str__(self):
         return self.user.username
+    
+class StudentWishlist(models.Model):
+    student = models.ForeignKey(
+    User,
+    on_delete=models.CASCADE,
+    related_name="wishlists"
+)
+    batch = models.ForeignKey(Batch,on_delete=models.CASCADE,related_name="wishlisted_by")
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "student_wishlist"
+        ordering = ["-created_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["student", "batch"],
+                name="unique_student_batch_wishlist"
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.student.username} ❤️ {self.batch.batch_name}"

@@ -8,5 +8,7 @@ urlpatterns = [
     path('profile/',profile_view,name='profile'),
     path("marketplace/",marketplace_view,name="marketplace",),
     path("marketplace/<int:batch_id>/",marketplace_detail_view,name="marketplace_detail"),
-
+    path('wishlist/', wishlist_view, name='wishlist'),
+    path('wishlist/toggle/<int:batch_id>/', toggle_wishlist_view, name='toggle_wishlist'),
+    path('wishlist/count/', wishlist_count_view, name='wishlist_count'),
 ]

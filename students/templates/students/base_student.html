@@ -982,17 +982,43 @@
 
                 <!-- WISHLIST -->
 
-                <button
-                    class="
-                        text-red-400
-                        hover:text-red-300
-                        transition-all
-                    "
-                >
+<a
+    href="{% url 'wishlist' %}"
+    class="
+        relative
+        text-red-400
+        hover:text-red-300
+        transition-all
+    "
+    title="Wishlist"
+>
 
-                    <i class="ri-heart-3-fill text-[21px]"></i>
+    <i class="ri-heart-3-fill text-[21px]"></i>
 
-                </button>
+    {% if wishlist_count %}
+    <span
+        id="wishlist-count"
+        class="
+            absolute
+            -top-2
+            -right-2
+            w-5
+            h-5
+            rounded-full
+            bg-red-500
+            text-white
+            text-[10px]
+            font-bold
+            flex
+            items-center
+            justify-center
+        "
+    >
+        {{ wishlist_count }}
+    </span>
+    {% endif %}
+
+</a>
 
                 <!-- CART -->
 
