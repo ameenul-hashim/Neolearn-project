@@ -39,6 +39,12 @@
         rel="stylesheet"
     >
 
+    <!-- SHARED TOAST CSS -->
+<link rel="stylesheet" href="{% static 'toast-messages.css' %}">
+
+<!-- shared js messages -->
+<script src="{% static 'toast-messages.js' %}"></script>
+
     <style>
 
         *{
@@ -123,83 +129,7 @@
             padding: 16px 16px 8px 16px;
         }
 
-        /* Message styling */
-        .message-container {
-            position: fixed;
-            top: 90px;
-            right: 20px;
-            z-index: 9999;
-            max-width: 400px;
-            width: 100%;
-        }
-        .message-item {
-
-    padding: 14px 20px;
-
-    border-radius: 14px;
-
-    margin-bottom: 10px;
-
-    display: flex;
-
-    align-items: center;
-
-    gap: 12px;
-
-    backdrop-filter: blur(12px);
-
-    border: 1px solid rgba(255,255,255,.08);
-
-    box-shadow: 0 8px 32px rgba(0,0,0,.45);
-
-    overflow: hidden;
-
-    max-height: 120px;
-
-    transition:
-        opacity .45s ease,
-        transform .45s ease,
-        max-height .45s ease,
-        margin .45s ease,
-        padding .45s ease;
-
-    animation: slideIn .4s ease;
-
-}
-        .message-item.success {
-            background: rgba(16, 185, 129, 0.15);
-            border-color: rgba(16, 185, 129, 0.3);
-            color: #6EE7B7;
-        }
-        .message-item.error {
-            background: rgba(239, 68, 68, 0.15);
-            border-color: rgba(239, 68, 68, 0.3);
-            color: #FCA5A5;
-        }
-        .message-item.warning {
-            background: rgba(251, 191, 36, 0.15);
-            border-color: rgba(251, 191, 36, 0.3);
-            color: #FCD34D;
-        }
-        .message-item.info {
-            background: rgba(96, 165, 250, 0.15);
-            border-color: rgba(96, 165, 250, 0.3);
-            color: #93C5FD;
-        }
-        .message-close {
-            margin-left: auto;
-            cursor: pointer;
-            opacity: 0.6;
-            transition: opacity 0.2s;
-            font-size: 18px;
-        }
-        .message-close:hover {
-            opacity: 1;
-        }
-        @keyframes slideIn {
-            from { opacity: 0; transform: translateX(40px); }
-            to { opacity: 1; transform: translateX(0); }
-        }
+        
 
         /* Profile image styling */
         .profile-img {
@@ -227,15 +157,45 @@
 </head>
 
 <body>
+<!-- display message -->
 
-<!-- MESSAGES DISPLAY -->
 {% if messages %}
 <div class="message-container" id="messageContainer">
     {% for message in messages %}
     <div class="message-item {{ message.tags }}">
-        <i class="ri-{% if message.tags == 'success' %}check-line{% elif message.tags == 'error' %}close-circle-line{% elif message.tags == 'warning' %}alert-line{% else %}information-line{% endif %} text-[18px]"></i>
-        <span class="text-sm font-medium">{{ message }}</span>
-        <span class="message-close" onclick="this.parentElement.remove()">&times;</span>
+
+        <div class="message-header">
+
+            <div class="message-left">
+
+                <div class="message-icon">
+                    <i class="ri-{% if message.tags == 'success' %}check-line{% elif message.tags == 'error' %}close-circle-line{% elif message.tags == 'warning' %}alert-line{% else %}information-line{% endif %}"></i>
+                </div>
+
+                <div class="message-title">
+                    {% if message.tags == "success" %}
+                        Success
+                    {% elif message.tags == "error" %}
+                        Error
+                    {% elif message.tags == "warning" %}
+                        Warning
+                    {% else %}
+                        Information
+                    {% endif %}
+                </div>
+
+            </div>
+
+            <button class="message-close" type="button">
+                <i class="ri-close-line"></i>
+            </button>
+
+        </div>
+
+        <div class="message-text">
+            {{ message }}
+        </div>
+
     </div>
     {% endfor %}
 </div>

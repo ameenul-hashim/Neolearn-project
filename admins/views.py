@@ -15,6 +15,11 @@ from django.shortcuts import get_object_or_404
 from django.core.mail import send_mail
 from admins.models import (Teacher,Batch,Subject,TeacherBatch,TeacherSubject)
 from django.http import JsonResponse
+from datetime import datetime
+from django.utils import timezone
+from .validators import (validate_create_batch,validate_edit_batch,)
+from .helpers import (create_batch,update_batch,build_batch_context,can_delete_batch,can_archive_batch,can_publish_batch,can_edit_batch,)
+from cloudinary.uploader import destroy
 
 
 @cache_control(no_cache=True,must_revalidate=True,no_store=True)
@@ -234,235 +239,157 @@ def admin_batches_view(request):
 @admin_required
 def create_batch_view(request):
 
-    if request.method == 'POST':
+    context = build_batch_context()
 
-        batch_name = request.POST.get('batch_name', '').strip()
-        batch_description = request.POST.get('batch_description', '').strip()
-        batch_price = request.POST.get('batch_price', '').strip()
-        batch_status = request.POST.get('batch_status', '').strip()
-        batch_thumbnail = request.FILES.get('batch_thumbnail')
-
-        # Batch Name Validation
-
-        if not batch_name:
-            messages.error(request, 'Batch name is required.')
-            return render(request, 'admins/batches/create_batch.html')
-
-        if Batch.objects.filter(batch_name__iexact=batch_name).exists():
-            messages.error(request, 'Batch name already exists.')
-            return render(request, 'admins/batches/create_batch.html')
-
-        # Description Validation
-
-        if not batch_description:
-            messages.error(request, 'Batch description is required.')
-            return render(request, 'admins/batches/create_batch.html')
-
-        # Price Validation
-
-        if not batch_price:
-            messages.error(request, 'Batch price is required.')
-            return render(request, 'admins/batches/create_batch.html')
+    if request.method == "POST":
 
         try:
-            batch_price = Decimal(batch_price)
-        except InvalidOperation:
-            messages.error(request, 'Enter a valid batch price.')
-            return render(request, 'admins/batches/create_batch.html')
 
-        if batch_price < 0:
-            messages.error(request, 'Batch price cannot be negative.')
-            return render(request, 'admins/batches/create_batch.html')
+            cleaned_data = validate_create_batch(request)
 
-        # Status Validation
+            create_batch(cleaned_data)
 
-        if batch_status not in ['draft', 'published']:
-            messages.error(request, 'Invalid batch status.')
-            return render(request, 'admins/batches/create_batch.html')
+            messages.success(
+                request,
+                "Batch created successfully."
+            )
 
-        # Thumbnail Validation
+            return redirect(
+                "admin_batches"
+            )
+        
+        except ValidationError as e:
 
-        if not batch_thumbnail:
-            messages.error(request, 'Batch thumbnail is required.')
-            return render(request, 'admins/batches/create_batch.html')
+            messages.error(
+                request,
+                e.messages[0]
+            )
 
-        allowed_extensions = ['jpg', 'jpeg', 'png', 'webp']
+            context["form_data"] = request.POST
 
-        extension = batch_thumbnail.name.split('.')[-1].lower()
+            return render(
+                request,
+                "admins/batches/create_batch.html",
+                context,
+            )
 
-        if extension not in allowed_extensions:
-            messages.error(request, 'Only JPG, JPEG, PNG and WEBP images are allowed.')
-            return render(request, 'admins/batches/create_batch.html')
+        except Exception as e:
 
-        # Maximum 5 MB
+            import traceback
+            traceback.print_exc()
 
-        if batch_thumbnail.size > 5 * 1024 * 1024:
-            messages.error(request, 'Thumbnail must be less than 5 MB.')
-            return render(request, 'admins/batches/create_batch.html')
+            messages.error(
+                request,
+                str(e)
+            )
 
-        # Create Batch
+            context["form_data"] = request.POST
 
-        Batch.objects.create(
-            batch_name=batch_name,
-            batch_description=batch_description,
-            batch_price=batch_price,
-            batch_status=batch_status,
-            batch_thumbnail=batch_thumbnail,
-        )
+            return render(
+                request,
+                "admins/batches/create_batch.html",
+                context,
+            )
 
-        messages.success(request, 'Batch created successfully.')
+    context["form_data"] = {}
 
-        return redirect('admin_batches')
-    
-    return render(request, 'admins/batches/create_batch.html')
-
+    return render(
+        request,
+        "admins/batches/create_batch.html",
+        context,
+    )
 
 @cache_control(no_cache=True, must_revalidate=True, no_store=True)
 @admin_required
 def edit_batch_view(request, batch_id):
 
-    batch = get_object_or_404(Batch, id=batch_id)
+    batch = get_object_or_404(
+        Batch,
+        id=batch_id,
+    )
 
-    if request.method == 'POST':
+    # ==========================================================
+    # Temporary Student Count
+    # Replace with actual enrollment count later
+    # ==========================================================
 
-        batch_name = request.POST.get('batch_name', '').strip()
-        batch_description = request.POST.get('batch_description', '').strip()
-        batch_price = request.POST.get('batch_price', '').strip()
-        batch_status = request.POST.get('batch_status', '').strip()
-        batch_thumbnail = request.FILES.get('batch_thumbnail')
+    student_count = 0
 
-        # Batch Name
+    context = build_batch_context(
+        batch=batch,
+        extra_context={
+            "student_count": student_count,
+            "editable_fields": can_edit_batch(
+                batch,
+                student_count,
+            ),
+        },
+    )
 
-        if not batch_name:
-            messages.error(request, 'Batch name is required.')
-            return render(
-                request,
-                'admins/batches/edit_batch.html',
-                {'batch': batch}
-            )
-
-        if Batch.objects.filter(
-            batch_name__iexact=batch_name
-        ).exclude(id=batch.id).exists():
-
-            messages.error(request, 'Batch name already exists.')
-
-            return render(
-                request,
-                'admins/batches/edit_batch.html',
-                {'batch': batch}
-            )
-
-        # Description
-
-        if not batch_description:
-
-            messages.error(request, 'Batch description is required.')
-
-            return render(
-                request,
-                'admins/batches/edit_batch.html',
-                {'batch': batch}
-            )
-
-        # Price
-
-        if not batch_price:
-
-            messages.error(request, 'Batch price is required.')
-
-            return render(
-                request,
-                'admins/batches/edit_batch.html',
-                {'batch': batch}
-            )
+    if request.method == "POST":
 
         try:
 
-            batch_price = Decimal(batch_price)
+            cleaned_data = validate_edit_batch(
+                request=request,
+                batch=batch,
+                student_count=student_count,
+            )
 
-        except InvalidOperation:
+            update_batch(
+                batch=batch,
+                cleaned_data=cleaned_data,
+            )
 
-            messages.error(request, 'Enter a valid batch price.')
+            messages.success(
+                request,
+                "Batch updated successfully.",
+            )
+
+            return redirect(
+                "admin_batches",
+            )
+
+        except ValidationError as e:
+
+            messages.error(
+                request,
+                e.messages[0],
+            )
+
+            context["form_data"] = request.POST
 
             return render(
                 request,
-                'admins/batches/edit_batch.html',
-                {'batch': batch}
+                "admins/batches/edit_batch.html",
+                context,
             )
 
-        if batch_price < 0:
+        except Exception as e:
 
-            messages.error(request, 'Batch price cannot be negative.')
+            import traceback
+            traceback.print_exc()
+
+            messages.error(
+                request,
+                str(e),
+            )
+
+            context["form_data"] = request.POST
 
             return render(
                 request,
-                'admins/batches/edit_batch.html',
-                {'batch': batch}
+                "admins/batches/edit_batch.html",
+                context,
             )
 
-        # Status
+    context["form_data"] = batch
 
-        if batch_status not in ['draft', 'published']:
-
-            messages.error(request, 'Invalid batch status.')
-
-            return render(
-                request,
-                'admins/batches/edit_batch.html',
-                {'batch': batch}
-            )
-
-        # Thumbnail Validation (only if uploading new image)
-
-        if batch_thumbnail:
-
-            allowed_extensions = ['jpg', 'jpeg', 'png', 'webp']
-
-            extension = batch_thumbnail.name.split('.')[-1].lower()
-
-            if extension not in allowed_extensions:
-
-                messages.error(
-                    request,
-                    'Only JPG, JPEG, PNG and WEBP images are allowed.'
-                )
-
-                return render(
-                    request,
-                    'admins/batches/edit_batch.html',
-                    {'batch': batch}
-                )
-
-            if batch_thumbnail.size > 5 * 1024 * 1024:
-
-                messages.error(
-                    request,
-                    'Thumbnail must be less than 5 MB.'
-                )
-
-                return render(
-                    request,
-                    'admins/batches/edit_batch.html',
-                    {'batch': batch}
-                )
-
-            batch.batch_thumbnail = batch_thumbnail
-
-        # Update Fields
-
-        batch.batch_name = batch_name
-        batch.batch_description = batch_description
-        batch.batch_price = batch_price
-        batch.batch_status = batch_status
-
-        batch.save()
-
-        messages.success(request, 'Batch updated successfully.')
-
-        return redirect('admin_batches')
-
-    return render(request,'admins/batches/edit_batch.html',{'batch': batch})
+    return render(
+        request,
+        "admins/batches/edit_batch.html",
+        context,
+    )
 
 @cache_control(no_cache=True, must_revalidate=True, no_store=True)
 @admin_required
@@ -496,6 +423,7 @@ def batch_subjects(request, batch_id):
     return render(request,"admins/subjects/batch_subjects.html",context)
 
 
+
 @cache_control(no_cache=True, must_revalidate=True, no_store=True)
 @admin_required
 def delete_batch_view(request, batch_id):
@@ -506,7 +434,9 @@ def delete_batch_view(request, batch_id):
 
         confirm_name = request.POST.get("confirm_name", "").strip()
 
-        # EMPTY FIELD VALIDATION
+        # =====================================================
+        # Empty Validation
+        # =====================================================
 
         if not confirm_name:
 
@@ -519,11 +449,13 @@ def delete_batch_view(request, batch_id):
                 request,
                 "admins/batches/delete_batch.html",
                 {
-                    "batch": batch
-                }
+                    "batch": batch,
+                },
             )
 
-        # BATCH NAME MATCH VALIDATION
+        # =====================================================
+        # Batch Name Validation
+        # =====================================================
 
         if confirm_name != batch.batch_name:
 
@@ -536,17 +468,66 @@ def delete_batch_view(request, batch_id):
                 request,
                 "admins/batches/delete_batch.html",
                 {
-                    "batch": batch
-                }
+                    "batch": batch,
+                },
             )
 
-        # DELETE CLOUDINARY IMAGE
+        # =====================================================
+        # Archived Batch Validation
+        # =====================================================
 
-        if batch.batch_thumbnail:
+        if batch.batch_status == "archived":
 
-            batch.batch_thumbnail.delete(save=False)
+            messages.error(
+                request,
+                "Archived batches cannot be deleted."
+            )
 
-        # DELETE BATCH
+            return redirect("admin_batches")
+
+        # =====================================================
+        # Student Enrollment Validation
+        # =====================================================
+        #
+        # Add your enrollment/purchase check here later.
+        #
+        # Example:
+        #
+        # if StudentEnrollment.objects.filter(batch=batch).exists():
+        #
+        #     messages.error(
+        #         request,
+        #         "Students are already enrolled in this batch. Deletion is not allowed."
+        #     )
+        #
+        #     return redirect("admin_batches")
+        #
+        # =====================================================
+
+        # =====================================================
+        # Delete Cloudinary Image (Safe)
+        # =====================================================
+
+        try:
+
+            if batch.batch_thumbnail:
+
+                public_id = getattr(
+                    batch.batch_thumbnail,
+                    "public_id",
+                    None,
+                )
+
+                if public_id:
+                    destroy(public_id)
+
+        except Exception:
+            # Ignore Cloudinary errors and continue deleting batch
+            pass
+
+        # =====================================================
+        # Delete Batch
+        # =====================================================
 
         batch.delete()
 
@@ -557,8 +538,13 @@ def delete_batch_view(request, batch_id):
 
         return redirect("admin_batches")
 
-    return render(request,"admins/batches/delete_batch.html",{"batch": batch})
-
+    return render(
+        request,
+        "admins/batches/delete_batch.html",
+        {
+            "batch": batch,
+        },
+    )
 
 
 @cache_control(no_cache=True, must_revalidate=True, no_store=True)

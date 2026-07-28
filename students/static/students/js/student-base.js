@@ -78,44 +78,6 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
 
-// ============================================
-// AUTO DISMISS DJANGO MESSAGES
-// ============================================
-
-if (messageContainer) {
-
-    const messages = messageContainer.querySelectorAll(".message-item");
-
-    setTimeout(function () {
-
-        messages.forEach(function (message) {
-
-            message.style.transition =
-                "opacity .45s ease, transform .45s ease, max-height .45s ease, margin .45s ease, padding .45s ease";
-
-            message.style.opacity = "0";
-            message.style.transform = "translateX(30px) scale(.96)";
-            message.style.maxHeight = "0";
-            message.style.marginBottom = "0";
-            message.style.paddingTop = "0";
-            message.style.paddingBottom = "0";
-
-            setTimeout(function () {
-
-                message.remove();
-
-                if (!messageContainer.children.length) {
-                    messageContainer.remove();
-                }
-
-            }, 450);
-
-        });
-
-    }, 3000);
-
-}
-
     // ============================================
     // WINDOW RESIZE
     // ============================================

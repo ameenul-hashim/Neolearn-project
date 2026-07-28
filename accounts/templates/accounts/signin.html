@@ -98,27 +98,24 @@ Signin
                     <!-- ERROR -->
 
                     {% if error %}
+    <div class="message-box">
+        {{ error }}
+    </div>
+{% endif %}
 
-                        <div class="message-box mb-4">
+{% if success %}
+    <div class="success-box">
+        {{ success }}
+    </div>
+{% endif %}
 
-                            {{ error }}
-
-                        </div>
-
-                    {% endif %}
-
-                    <!-- SUCCESS -->
-
-                    {% if success %}
-
-                        <div class="success-box mb-4">
-
-                            {{ success }}
-
-                        </div>
-
-                    {% endif %}
-
+{% if messages %}
+    {% for message in messages %}
+        <div class="{% if message.tags == 'success' %}success-box{% else %}message-box{% endif %}">
+            {{ message }}
+        </div>
+    {% endfor %}
+{% endif %}
                     <!-- FORM -->
 
                     <form

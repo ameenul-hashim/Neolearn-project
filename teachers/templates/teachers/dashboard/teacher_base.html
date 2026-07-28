@@ -51,7 +51,8 @@
 
     </style>
 
-<link rel="stylesheet" href="{% static 'global-messages.css' %}">
+<link rel="stylesheet" href="{% static 'toast-messages.css' %}">
+
     <meta charset="UTF-8">
 
 </head>
@@ -1179,39 +1180,68 @@ lg:translate-x-0
     "
 >
 
-    {% if messages %}
+{% if messages %}
 
-        {% for message in messages %}
+<div class="message-container" id="messageContainer">
 
-            <div
-                class="
-                    {% if message.tags == 'error' %}
-                        error-box
-                    {% elif message.tags == 'success' %}
-                        success-box
+    {% for message in messages %}
+
+    <div class="message-item {{ message.tags }}">
+
+        <div class="message-header">
+
+            <div class="message-left">
+
+                <div class="message-icon">
+
+                    <i class="ri-{% if message.tags == 'success' %}check-line{% elif message.tags == 'error' %}close-circle-line{% elif message.tags == 'warning' %}alert-line{% else %}information-line{% endif %}"></i>
+
+                </div>
+
+                <div class="message-title">
+
+                    {% if message.tags == "success" %}
+                        Success
+                    {% elif message.tags == "error" %}
+                        Error
+                    {% elif message.tags == "warning" %}
+                        Warning
                     {% else %}
-                        message-box
+                        Information
                     {% endif %}
-                    mb-4
-                "
-            >
 
-                {{ message }}
+                </div>
 
             </div>
 
-        {% endfor %}
+            <button
+                type="button"
+                class="message-close"
+            >
+                <i class="ri-close-line"></i>
+            </button>
 
-    {% endif %}
+        </div>
 
-    {% block teacher_content %}
+        <div class="message-text">
+            {{ message }}
+        </div>
 
-    {% endblock %}
+    </div>
+
+    {% endfor %}
+
+</div>
+
+{% endif %}
+
+{% block teacher_content %}
+{% endblock %}
 
 </main>
 
 <script src="{% static 'teachers/js/teacher_base.js' %}"></script>
-<script src="{% static 'teachers/js/teacher_global.js' %}"></script>
-</body>
+<script src="{% static 'toast-messages.js' %}"></script>
 
+</body>
 </html>

@@ -1,902 +1,312 @@
 {% load static %}
 
 <!DOCTYPE html>
-
 <html lang="en">
 
 <head>
-<link rel="stylesheet" href="{% static 'global-messages.css' %}">
     <meta charset="UTF-8">
-
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <title>
-
         {% block title %}
         NeoLearn Admin
         {% endblock %}
-
     </title>
 
     <!-- TAILWIND -->
-
     <script src="https://cdn.tailwindcss.com"></script>
 
     <!-- REMIX ICON -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/4.2.0/remixicon.min.css">
 
-    <link
-        rel="stylesheet"
-        href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/4.2.0/remixicon.min.css"
-    >
-
-    <!-- GLOBAL MESSAGES -->
-
-    <link
-        rel="stylesheet"
-        href="{% static 'accounts/css/global-messages.css' %}"
-    >
+    <!-- TOAST MESSAGES CSS -->
+    <link rel="stylesheet" href="{% static 'toast-messages.css' %}">
 
     <!-- SCROLLBAR -->
-
     <style>
-
-        ::-webkit-scrollbar{
-
-            width:0px;
-            height:0px;
-
+        ::-webkit-scrollbar {
+            width: 0px;
+            height: 0px;
         }
 
-        *{
-
-            scrollbar-width:none;
-
+        * {
+            scrollbar-width: none;
         }
 
-        html{
-
-            scroll-behavior:smooth;
-
+        html {
+            scroll-behavior: smooth;
         }
 
+        /* Fixed toast messages — float above content */
+        .message-container {
+            position: fixed;
+            top: 90px;
+            right: 25px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            max-width: 400px;
+            width: 100%;
+        }
     </style>
-
 </head>
 
 <body class="bg-[#020617] overflow-hidden font-sans">
 
     <!-- BACKGROUND -->
-
     <div class="fixed inset-0 bg-[#030712] z-0"></div>
 
     <!-- CYAN GLOW -->
-
-    <div
-        class="
-            fixed
-            top-[-260px]
-            left-[-200px]
-            w-[600px]
-            h-[600px]
-            rounded-full
-            bg-cyan-400/10
-            blur-3xl
-            z-0
-        "
-    ></div>
+    <div class="fixed top-[-260px] left-[-200px] w-[600px] h-[600px] rounded-full bg-cyan-400/10 blur-3xl z-0"></div>
 
     <!-- PURPLE GLOW -->
-
-    <div
-        class="
-            fixed
-            bottom-[-260px]
-            right-[-220px]
-            w-[650px]
-            h-[650px]
-            rounded-full
-            bg-violet-500/10
-            blur-3xl
-            z-0
-        "
-    ></div>
+    <div class="fixed bottom-[-260px] right-[-220px] w-[650px] h-[650px] rounded-full bg-violet-500/10 blur-3xl z-0"></div>
 
     <!-- GRID -->
-
-    <div
-        class="fixed inset-0 z-0 opacity-[0.14]"
+    <div class="fixed inset-0 z-0 opacity-[0.14]"
         style="
             background-image:
             linear-gradient(rgba(255,255,255,0.06) 1px, transparent 1px),
             linear-gradient(90deg, rgba(255,255,255,0.06) 1px, transparent 1px);
-
             background-size:40px 40px;
-        "
-    ></div>
+        "></div>
 
     <!-- SIDEBAR -->
-
-    <aside
-        class="
-            fixed
-            top-0
-            left-0
-            z-40
-            w-[270px]
-            h-screen
-            bg-[#030712]/95
-            border-r
-            border-white/5
-            backdrop-blur-[14px]
-            flex
-            flex-col
-        "
-    >
+    <aside class="fixed top-0 left-0 z-40 w-[270px] h-screen bg-[#030712]/95 border-r border-white/5 backdrop-blur-[14px] flex flex-col">
 
         <!-- LOGO -->
-
-        <div
-            class="
-                h-[74px]
-                border-b
-                border-white/5
-                flex
-                items-center
-                px-7
-            "
-        >
-
+        <div class="h-[74px] border-b border-white/5 flex items-center px-7">
             <div class="flex items-center gap-3">
-
-                <i
-                    class="
-                        ri-flashlight-fill
-                        text-[#00F5D4]
-                        text-[24px]
-                    "
-                ></i>
-
-                <h1
-                    class="
-                        text-[22px]
-                        font-extrabold
-                        tracking-wide
-                        text-white
-                    "
-                >
-
+                <i class="ri-flashlight-fill text-[#00F5D4] text-[24px]"></i>
+                <h1 class="text-[22px] font-extrabold tracking-wide text-white">
                     NEO<span class="text-[#00F5D4]">LEARN</span>
-
                 </h1>
-
             </div>
-
         </div>
 
         <!-- NAVIGATION -->
-
         <div class="flex-1 overflow-y-auto px-4 py-6">
-
-            <p
-                class="
-                    text-[#64748B]
-                    text-[11px]
-                    uppercase
-                    tracking-[2px]
-                    font-bold
-                    mb-5
-                    px-3
-                "
-            >
-
-                Admin Panel
-
-            </p>
+            <p class="text-[#64748B] text-[11px] uppercase tracking-[2px] font-bold mb-5 px-3">Admin Panel</p>
 
             <nav class="space-y-2">
 
                 <!-- DASHBOARD -->
-
-                <a
-                    href="{% url 'admin_dashboard' %}"
-
-                    class="
-                        relative
-                        flex
-                        items-center
-                        gap-4
-                        h-[52px]
-                        px-5
-                        rounded-[16px]
-                        overflow-hidden
-                        transition
-                        duration-300
-
+                <a href="{% url 'admin_dashboard' %}"
+                    class="relative flex items-center gap-4 h-[52px] px-5 rounded-[16px] overflow-hidden transition duration-300
                         {% if request.resolver_match.url_name == 'admin_dashboard' %}
-
-                            bg-cyan-400/10
-                            border
-                            border-cyan-400/10
-                            text-white
-
+                            bg-cyan-400/10 border border-cyan-400/10 text-white
                         {% else %}
-
-                            text-[#94A3B8]
-                            hover:bg-white/5
-                            hover:text-white
-
-                        {% endif %}
-                    "
-                >
+                            text-[#94A3B8] hover:bg-white/5 hover:text-white
+                        {% endif %}">
 
                     {% if request.resolver_match.url_name == 'admin_dashboard' %}
-
-                    <div
-                        class="
-                            absolute
-                            left-0
-                            top-1/2
-                            -translate-y-1/2
-                            w-[4px]
-                            h-[30px]
-                            rounded-r-full
-                            bg-[#00F5D4]
-                            shadow-[0_0_14px_#00F5D4]
-                        "
-                    ></div>
-
+                    <div class="absolute left-0 top-1/2 -translate-y-1/2 w-[4px] h-[30px] rounded-r-full bg-[#00F5D4] shadow-[0_0_14px_#00F5D4]"></div>
                     {% endif %}
 
-                    <i
-                        class="
-                            ri-layout-grid-fill
-                            text-[18px]
-
-                            {% if request.resolver_match.url_name == 'admin_dashboard' %}
-
-                                text-[#00F5D4]
-
-                            {% endif %}
-                        "
-                    ></i>
-
-                    <span class="text-[15px] font-semibold">
-
-                        Dashboard
-
-                    </span>
-
+                    <i class="ri-layout-grid-fill text-[18px] {% if request.resolver_match.url_name == 'admin_dashboard' %}text-[#00F5D4]{% endif %}"></i>
+                    <span class="text-[15px] font-semibold">Dashboard</span>
                 </a>
 
                 <!-- STUDENTS -->
-
-                <a
-                    href="{% url 'admin_students' %}"
-
-                    class="
-                        relative
-                        flex
-                        items-center
-                        gap-4
-                        h-[52px]
-                        px-5
-                        rounded-[16px]
-                        overflow-hidden
-                        transition
-                        duration-300
-
+                <a href="{% url 'admin_students' %}"
+                    class="relative flex items-center gap-4 h-[52px] px-5 rounded-[16px] overflow-hidden transition duration-300
                         {% if request.resolver_match.url_name == 'admin_students' %}
-
-                            bg-cyan-400/10
-                            border
-                            border-cyan-400/10
-                            text-white
-
+                            bg-cyan-400/10 border border-cyan-400/10 text-white
                         {% else %}
-
-                            text-[#94A3B8]
-                            hover:bg-white/5
-                            hover:text-white
-
-                        {% endif %}
-                    "
-                >
+                            text-[#94A3B8] hover:bg-white/5 hover:text-white
+                        {% endif %}">
 
                     {% if request.resolver_match.url_name == 'admin_students' %}
-
-                    <div
-                        class="
-                            absolute
-                            left-0
-                            top-1/2
-                            -translate-y-1/2
-                            w-[4px]
-                            h-[30px]
-                            rounded-r-full
-                            bg-[#00F5D4]
-                            shadow-[0_0_14px_#00F5D4]
-                        "
-                    ></div>
-
+                    <div class="absolute left-0 top-1/2 -translate-y-1/2 w-[4px] h-[30px] rounded-r-full bg-[#00F5D4] shadow-[0_0_14px_#00F5D4]"></div>
                     {% endif %}
 
-                    <i
-                        class="
-                            ri-team-line
-                            text-[18px]
-
-                            {% if request.resolver_match.url_name == 'admin_students' %}
-
-                                text-[#00F5D4]
-
-                            {% endif %}
-                        "
-                    ></i>
-
-                    <span class="text-[15px] font-medium">
-
-                        Students
-
-                    </span>
-
+                    <i class="ri-team-line text-[18px] {% if request.resolver_match.url_name == 'admin_students' %}text-[#00F5D4]{% endif %}"></i>
+                    <span class="text-[15px] font-medium">Students</span>
                 </a>
 
-
-                <!-- teachers -->
-
-                <a
-                    href="{% url 'admin_teachers' %}"
-
-                    class="
-                        relative
-                        flex
-                        items-center
-                        gap-4
-                        h-[52px]
-                        px-5
-                        rounded-[16px]
-                        overflow-hidden
-                        transition
-                        duration-300
-
+                <!-- TEACHERS -->
+                <a href="{% url 'admin_teachers' %}"
+                    class="relative flex items-center gap-4 h-[52px] px-5 rounded-[16px] overflow-hidden transition duration-300
                         {% if request.resolver_match.url_name == 'admin_teachers' %}
-
-                            bg-cyan-400/10
-                            border
-                            border-cyan-400/10
-                            text-white
-
+                            bg-cyan-400/10 border border-cyan-400/10 text-white
                         {% else %}
-
-                            text-[#94A3B8]
-                            hover:bg-white/5
-                            hover:text-white
-
-                        {% endif %}
-                    "
-                >
+                            text-[#94A3B8] hover:bg-white/5 hover:text-white
+                        {% endif %}">
 
                     {% if request.resolver_match.url_name == 'admin_teachers' %}
-
-                    <div
-                        class="
-                            absolute
-                            left-0
-                            top-1/2
-                            -translate-y-1/2
-                            w-[4px]
-                            h-[30px]
-                            rounded-r-full
-                            bg-[#00F5D4]
-                            shadow-[0_0_14px_#00F5D4]
-                        "
-                    ></div>
-
+                    <div class="absolute left-0 top-1/2 -translate-y-1/2 w-[4px] h-[30px] rounded-r-full bg-[#00F5D4] shadow-[0_0_14px_#00F5D4]"></div>
                     {% endif %}
 
-                    <i
-                        class="
-                            ri-team-line
-                            text-[18px]
-
-                            {% if request.resolver_match.url_name == 'admin_teachers' %}
-
-                                text-[#00F5D4]
-
-                            {% endif %}
-                        "
-                    ></i>
-
-                    <span class="text-[15px] font-medium">
-
-                        Teachers
-
-                    </span>
-
+                    <i class="ri-team-line text-[18px] {% if request.resolver_match.url_name == 'admin_teachers' %}text-[#00F5D4]{% endif %}"></i>
+                    <span class="text-[15px] font-medium">Teachers</span>
                 </a>
 
+                <!-- BATCHES -->
+                <a href="{% url 'admin_batches' %}"
+                    class="relative flex items-center gap-4 h-[52px] px-5 rounded-[16px] overflow-hidden transition duration-300
+                        {% if 'batch' in request.resolver_match.url_name %}
+                            bg-cyan-400/10 border border-cyan-400/10 text-white
+                        {% else %}
+                            text-[#94A3B8] hover:bg-white/5 hover:text-white
+                        {% endif %}">
 
-                <!-- Batches -->
+                    {% if 'batch' in request.resolver_match.url_name %}
+                    <div class="absolute left-0 top-1/2 -translate-y-1/2 w-[4px] h-[30px] rounded-r-full bg-[#00F5D4] shadow-[0_0_14px_#00F5D4]"></div>
+                    {% endif %}
 
-                <a
-                    href="{% url 'admin_batches' %}"
-                    class="
-                        flex
-                        items-center
-                        gap-4
-                        h-[52px]
-                        px-5
-                        rounded-[16px]
-                        text-[#94A3B8]
-                        hover:bg-white/5
-                        hover:text-white
-                        transition
-                    "
-                >
-
-                    <i class="ri-book-open-line text-[18px]"></i>
-
-                    <span class="text-[15px] font-medium">
-
-                        Batches
-
-                    </span>
-
+                    <i class="ri-book-open-line text-[18px] {% if 'batch' in request.resolver_match.url_name %}text-[#00F5D4]{% endif %}"></i>
+                    <span class="text-[15px] font-medium">Batches</span>
                 </a>
 
-                <!-- subjects -->
+                <!-- SUBJECTS -->
+                <a href="{% url 'admin_subjects' %}"
+                    class="relative flex items-center gap-4 h-[52px] px-5 rounded-[16px] overflow-hidden transition duration-300
+                        {% if 'subject' in request.resolver_match.url_name %}
+                            bg-cyan-400/10 border border-cyan-400/10 text-white
+                        {% else %}
+                            text-[#94A3B8] hover:bg-white/5 hover:text-white
+                        {% endif %}">
 
-                <a
-                    href="{% url 'admin_subjects' %}"
-                    class="
-                        flex
-                        items-center
-                        gap-4
-                        h-[52px]
-                        px-5
-                        rounded-[16px]
-                        text-[#94A3B8]
-                        hover:bg-white/5
-                        hover:text-white
-                        transition
-                    "
-                >
+                    {% if 'subject' in request.resolver_match.url_name %}
+                    <div class="absolute left-0 top-1/2 -translate-y-1/2 w-[4px] h-[30px] rounded-r-full bg-[#00F5D4] shadow-[0_0_14px_#00F5D4]"></div>
+                    {% endif %}
 
-                    <i class="ri-stack-line text-[18px]"></i>
-
-                    <span class="text-[15px] font-medium">
-
-                        Subjects
-
-                    </span>
-
+                    <i class="ri-stack-line text-[18px] {% if 'subject' in request.resolver_match.url_name %}text-[#00F5D4]{% endif %}"></i>
+                    <span class="text-[15px] font-medium">Subjects</span>
                 </a>
 
                 <!-- LIVE -->
-
-                <a
-                    href="{% url 'admin_subjects' %}"
-                    class="
-                        flex
-                        items-center
-                        gap-4
-                        h-[52px]
-                        px-5
-                        rounded-[16px]
-                        text-[#94A3B8]
-                        hover:bg-white/5
-                        hover:text-white
-                        transition
-                    "
-                >
-
+                <a href="#"
+                    class="flex items-center gap-4 h-[52px] px-5 rounded-[16px] text-[#94A3B8] hover:bg-white/5 hover:text-white transition">
                     <i class="ri-live-line text-[18px]"></i>
-
-                    <span class="text-[15px] font-medium">
-
-                        Live Classes
-
-                    </span>
-
+                    <span class="text-[15px] font-medium">Live Classes</span>
                 </a>
 
                 <!-- REVIEWS -->
-
-                <a
-                    href="#"
-                    class="
-                        flex
-                        items-center
-                        gap-4
-                        h-[52px]
-                        px-5
-                        rounded-[16px]
-                        text-[#94A3B8]
-                        hover:bg-white/5
-                        hover:text-white
-                        transition
-                    "
-                >
-
+                <a href="#"
+                    class="flex items-center gap-4 h-[52px] px-5 rounded-[16px] text-[#94A3B8] hover:bg-white/5 hover:text-white transition">
                     <i class="ri-star-line text-[18px]"></i>
-
-                    <span class="text-[15px] font-medium">
-
-                        Reviews
-
-                    </span>
-
+                    <span class="text-[15px] font-medium">Reviews</span>
                 </a>
 
                 <!-- PAYMENTS -->
-
-                <a
-                    href="#"
-                    class="
-                        flex
-                        items-center
-                        gap-4
-                        h-[52px]
-                        px-5
-                        rounded-[16px]
-                        text-[#94A3B8]
-                        hover:bg-white/5
-                        hover:text-white
-                        transition
-                    "
-                >
-
+                <a href="#"
+                    class="flex items-center gap-4 h-[52px] px-5 rounded-[16px] text-[#94A3B8] hover:bg-white/5 hover:text-white transition">
                     <i class="ri-bank-card-line text-[18px]"></i>
-
-                    <span class="text-[15px] font-medium">
-
-                        Payments
-
-                    </span>
-
+                    <span class="text-[15px] font-medium">Payments</span>
                 </a>
 
                 <!-- COUPONS -->
-
-                <a
-                    href="#"
-                    class="
-                        flex
-                        items-center
-                        gap-4
-                        h-[52px]
-                        px-5
-                        rounded-[16px]
-                        text-[#94A3B8]
-                        hover:bg-white/5
-                        hover:text-white
-                        transition
-                    "
-                >
-
+                <a href="#"
+                    class="flex items-center gap-4 h-[52px] px-5 rounded-[16px] text-[#94A3B8] hover:bg-white/5 hover:text-white transition">
                     <i class="ri-coupon-3-line text-[18px]"></i>
-
-                    <span class="text-[15px] font-medium">
-
-                        Coupons
-
-                    </span>
-
+                    <span class="text-[15px] font-medium">Coupons</span>
                 </a>
 
                 <!-- INVOICES -->
-
-                <a
-                    href="#"
-                    class="
-                        flex
-                        items-center
-                        gap-4
-                        h-[52px]
-                        px-5
-                        rounded-[16px]
-                        text-[#94A3B8]
-                        hover:bg-white/5
-                        hover:text-white
-                        transition
-                    "
-                >
-
+                <a href="#"
+                    class="flex items-center gap-4 h-[52px] px-5 rounded-[16px] text-[#94A3B8] hover:bg-white/5 hover:text-white transition">
                     <i class="ri-file-list-3-line text-[18px]"></i>
-
-                    <span class="text-[15px] font-medium">
-
-                        Invoices
-
-                    </span>
-
+                    <span class="text-[15px] font-medium">Invoices</span>
                 </a>
 
                 <!-- CERTIFICATES -->
-
-                <a
-                    href="#"
-                    class="
-                        flex
-                        items-center
-                        gap-4
-                        h-[52px]
-                        px-5
-                        rounded-[16px]
-                        text-[#94A3B8]
-                        hover:bg-white/5
-                        hover:text-white
-                        transition
-                    "
-                >
-
+                <a href="#"
+                    class="flex items-center gap-4 h-[52px] px-5 rounded-[16px] text-[#94A3B8] hover:bg-white/5 hover:text-white transition">
                     <i class="ri-award-line text-[18px]"></i>
-
-                    <span class="text-[15px] font-medium">
-
-                        Certificates
-
-                    </span>
-
+                    <span class="text-[15px] font-medium">Certificates</span>
                 </a>
 
                 <!-- ANALYTICS -->
-
-                <a
-                    href="#"
-                    class="
-                        flex
-                        items-center
-                        gap-4
-                        h-[52px]
-                        px-5
-                        rounded-[16px]
-                        text-[#94A3B8]
-                        hover:bg-white/5
-                        hover:text-white
-                        transition
-                    "
-                >
-
+                <a href="#"
+                    class="flex items-center gap-4 h-[52px] px-5 rounded-[16px] text-[#94A3B8] hover:bg-white/5 hover:text-white transition">
                     <i class="ri-line-chart-line text-[18px]"></i>
-
-                    <span class="text-[15px] font-medium">
-
-                        Analytics
-
-                    </span>
-
+                    <span class="text-[15px] font-medium">Analytics</span>
                 </a>
 
             </nav>
-
         </div>
 
         <!-- LOGOUT -->
-
         <div class="p-4 border-t border-white/5">
-
-            <a
-                href="{% url 'admin_logout' %}"
-                class="
-                    flex
-                    items-center
-                    justify-center
-                    gap-3
-                    h-[50px]
-                    rounded-[16px]
-                    border
-                    border-red-500/10
-                    bg-red-500/10
-                    text-red-400
-                    hover:bg-red-500/20
-                    transition
-                    duration-300
-                    font-semibold
-                    text-[14px]
-                "
-            >
-
+            <a href="{% url 'admin_logout' %}"
+                class="flex items-center justify-center gap-3 h-[50px] rounded-[16px] border border-red-500/10 bg-red-500/10 text-red-400 hover:bg-red-500/20 transition duration-300 font-semibold text-[14px]">
                 <i class="ri-logout-box-r-line text-[18px]"></i>
-
                 Logout
-
             </a>
-
         </div>
 
     </aside>
 
     <!-- NAVBAR -->
-
-    <header
-        class="
-            fixed
-            top-0
-            left-[270px]
-            right-0
-            z-30
-            h-[74px]
-            border-b
-            border-white/5
-            bg-[#030712]/95
-            backdrop-blur-[14px]
-            flex
-            items-center
-            justify-between
-            px-7
-        "
-    >
+    <header class="fixed top-0 left-[270px] right-0 z-30 h-[74px] border-b border-white/5 bg-[#030712]/95 backdrop-blur-[14px] flex items-center justify-between px-7">
 
         <!-- SEARCH -->
-
         <div class="relative w-[360px]">
-
-            <input
-                type="text"
-                placeholder="Search anything..."
-                class="
-                    w-full
-                    h-[46px]
-                    rounded-[15px]
-                    border
-                    border-white/10
-                    bg-[#0B1120]
-                    pl-12
-                    pr-4
-                    text-[14px]
-                    text-white
-                    placeholder:text-[#64748B]
-                    outline-none
-                    focus:border-[#00F5D4]
-                    transition
-                "
-            >
-
-            <i
-                class="
-                    ri-search-line
-                    absolute
-                    left-4
-                    top-1/2
-                    -translate-y-1/2
-                    text-[#64748B]
-                    text-[18px]
-                "
-            ></i>
-
+            <input type="text" placeholder="Search anything..."
+                class="w-full h-[46px] rounded-[15px] border border-white/10 bg-[#0B1120] pl-12 pr-4 text-[14px] text-white placeholder:text-[#64748B] outline-none focus:border-[#00F5D4] transition">
+            <i class="ri-search-line absolute left-4 top-1/2 -translate-y-1/2 text-[#64748B] text-[18px]"></i>
         </div>
 
         <!-- RIGHT -->
-
         <div class="flex items-center gap-7">
-
             <!-- NOTIFICATION -->
-
-            <button
-                class="
-                    relative
-                    w-[42px]
-                    h-[42px]
-                    rounded-full
-                    border
-                    border-white/10
-                    bg-[#0B1120]
-                    flex
-                    items-center
-                    justify-center
-                    text-[#94A3B8]
-                    hover:text-white
-                    hover:border-cyan-400/20
-                    transition
-                "
-            >
-
+            <button class="relative w-[42px] h-[42px] rounded-full border border-white/10 bg-[#0B1120] flex items-center justify-center text-[#94A3B8] hover:text-white hover:border-cyan-400/20 transition">
                 <i class="ri-notification-3-line text-[18px]"></i>
-
-                <span
-                    class="
-                        absolute
-                        top-[9px]
-                        right-[10px]
-                        w-[7px]
-                        h-[7px]
-                        rounded-full
-                        bg-pink-500
-                        shadow-[0_0_8px_#ec4899]
-                    "
-                ></span>
-
+                <span class="absolute top-[9px] right-[10px] w-[7px] h-[7px] rounded-full bg-pink-500 shadow-[0_0_8px_#ec4899]"></span>
             </button>
 
             <!-- PROFILE -->
-
             <div class="flex items-center gap-3">
-
-                <img
-                    src="{% static 'admins/images/admin-profile.png' %}"
-                    alt="Admin"
-                    class="
-                        w-[42px]
-                        h-[42px]
-                        rounded-full
-                        border
-                        border-white/10
-                        object-cover
-                    "
-                >
-
+                <img src="{% static 'admins/images/admin-profile.png' %}" alt="Admin"
+                    class="w-[42px] h-[42px] rounded-full border border-white/10 object-cover">
                 <div>
-
-                    <h3
-                        class="
-                            text-white
-                            text-[14px]
-                            font-semibold
-                            leading-tight
-                        "
-                    >
-
-                        Admin User
-
-                    </h3>
-
-                    <p class="text-[#94A3B8] text-[12px]">
-
-                        Super Admin
-
-                    </p>
-
+                    <h3 class="text-white text-[14px] font-semibold leading-tight">Admin User</h3>
+                    <p class="text-[#94A3B8] text-[12px]">Super Admin</p>
                 </div>
-
             </div>
-
         </div>
 
     </header>
 
-    <!-- MAIN CONTENT -->
-
-    <main
-        class="
-            ml-[270px]
-            pt-[74px]
-            h-screen
-            overflow-y-auto
-            relative
-            z-10
-        "
-    >
-
-        <div class="p-6">
-
-            {% if messages %}
-
-                {% for message in messages %}
-
-                    <div class="{% if message.tags == 'error' %}error-box{% else %}success-box{% endif %} mb-4">
-
-                        {{ message }}
-
+    <!-- FIXED TOAST MESSAGES -->
+    {% if messages %}
+    <div class="message-container" id="messageContainer">
+        {% for message in messages %}
+        <div class="message-item {{ message.tags }}">
+            <div class="message-header">
+                <div class="message-left">
+                    <div class="message-icon">
+                        <i class="ri-{% if message.tags == 'success' %}check-line{% elif message.tags == 'error' %}close-circle-line{% elif message.tags == 'warning' %}alert-line{% else %}information-line{% endif %}"></i>
                     </div>
+                    <div class="message-title">
+                        {% if message.tags == "success" %}Success
+                        {% elif message.tags == "error" %}Error
+                        {% elif message.tags == "warning" %}Warning
+                        {% else %}Information{% endif %}
+                    </div>
+                </div>
+                <button class="message-close" type="button">
+                    <i class="ri-close-line"></i>
+                </button>
+            </div>
+            <div class="message-text">{{ message }}</div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
 
-                {% endfor %}
-
-            {% endif %}
-
+    <!-- MAIN CONTENT -->
+    <main class="ml-[270px] pt-[74px] h-screen overflow-y-auto relative z-10">
+        <div class="px-6 pt-6 pb-24">
             {% block admin_content %}
             {% endblock %}
-
         </div>
-
     </main>
 
-    <!-- GLOBAL JS -->
-
-    <script src="{% static 'accounts/js/auth-global.js' %}"></script>
+    <!-- TOAST MESSAGES JS -->
+    <script src="{% static 'toast-messages.js' %}"></script>
 
 </body>
 

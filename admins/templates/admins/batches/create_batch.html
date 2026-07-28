@@ -6,22 +6,28 @@ Create Batch
 
 {% block admin_content %}
 
-<div class="w-full flex justify-center">
+<div class="w-full flex justify-center px-4 sm:px-6 lg:px-8 py-6">
 
-    <div class="w-full max-w-[460px] rounded-xl border border-slate-600 bg-[#0F172A] shadow-xl">
+    <div class="w-full max-w-5xl rounded-2xl border border-slate-700 bg-[#0F172A] shadow-2xl overflow-hidden">
 
         <!-- Header -->
 
-        <div class="flex items-center justify-between px-6 py-4 border-b border-slate-600">
+        <div class="flex items-center justify-between px-6 py-5 border-b border-slate-700">
 
-            <h2 class="text-xl font-semibold text-white">
+            <div>
 
-                Create Batch
+                <h2 class="text-2xl font-bold text-white">
+                    Create Batch
+                </h2>
 
-            </h2>
+                <p class="text-sm text-slate-400 mt-1">
+                    Create and publish a new learning batch for the marketplace.
+                </p>
+
+            </div>
 
             <a href="{% url 'admin_batches' %}"
-               class="text-gray-400 hover:text-white text-xl transition">
+            class="h-10 w-10 rounded-lg flex items-center justify-center bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition">
 
                 ✕
 
@@ -29,145 +35,361 @@ Create Batch
 
         </div>
 
-        <div class="p-4">
+        <form
+            method="POST"
+            enctype="multipart/form-data"
+            class="space-y-8 p-6">
 
+            {% csrf_token %}
 
-            <form
-                method="POST"
-                enctype="multipart/form-data"
-                class="space-y-3">
+            <!-- ===================================================== -->
+            <!-- Basic Information -->
+            <!-- ===================================================== -->
 
-                {% csrf_token %}
+            <div class="rounded-xl border border-slate-700 bg-slate-900/40">
 
-                <div>
+                <div class="border-b border-slate-700 px-5 py-4">
 
-                    <label class="block text-sm font-medium text-gray-300 mb-2">
+                    <h3 class="text-lg font-semibold text-white">
+                        Basic Information
+                    </h3>
 
-                        Batch Name
-
-                    </label>
-
-                    <input
-                        type="text"
-                        name="batch_name"
-                        value="{{ request.POST.batch_name }}"
-                        placeholder="Enter batch name"
-                        class="w-full rounded-lg border border-slate-700 bg-slate-800 px-4 py-2.5 text-white placeholder-gray-500 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500 outline-none">
+                    <p class="text-sm text-slate-400 mt-1">
+                        Enter the primary details of your batch.
+                    </p>
 
                 </div>
 
-                <div>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 p-5">
 
-                    <label class="block text-sm font-medium text-gray-300 mb-2">
+                    <!-- Batch Name -->
 
-                        Price (₹)
+                    <div class="lg:col-span-2">
 
-                    </label>
+                        <label class="block text-sm font-medium text-slate-300 mb-2">
 
-                    <input
-                        type="number"
-                        name="batch_price"
-                        value="{{ request.POST.batch_price }}"
-                        min="0"
-                        step="0.01"
-                        placeholder="Enter price"
-                        class="w-full rounded-lg border border-slate-700 bg-slate-800 px-4 py-2.5 text-white placeholder-gray-500 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500 outline-none">
-                        </div>
-                                        <!-- Description -->
+                            Batch Name
+                            <span class="text-red-400">*</span>
 
-                <div>
+                        </label>
 
-                    <label class="block text-sm font-medium text-gray-300 mb-2">
+                        <input
+                            type="text"
+                            name="batch_name"
+                            maxlength="200"
+                            value="{{ request.POST.batch_name }}"
+                            placeholder="Example: Python Full Stack Development"
+                            class="w-full rounded-lg border border-slate-700 bg-slate-800 px-4 py-3 text-white placeholder:text-slate-500 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500 outline-none">
 
-                        Description
+                    </div>
 
-                    </label>
+                    <!-- Description -->
 
-                    <textarea
-                        name="batch_description"
-                        rows="3"
-                        placeholder="Enter batch description"
-                        class="w-full rounded-lg border border-slate-700 bg-slate-800 px-4 py-2.5 text-white placeholder-gray-500 resize-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500 outline-none">{{ request.POST.batch_description }}</textarea>
+                    <div class="lg:col-span-2">
 
-                </div>
+                        <label class="block text-sm font-medium text-slate-300 mb-2">
 
-                <!-- Status -->
+                            Batch Description
+                            <span class="text-red-400">*</span>
 
-                <div>
+                        </label>
 
-                    <label class="block text-sm font-medium text-gray-300 mb-2">
+                        <textarea
+                            rows="5"
+                            name="batch_description"
+                            placeholder="Write a short description about this batch..."
+                            class="w-full rounded-lg border border-slate-700 bg-slate-800 px-4 py-3 text-white placeholder:text-slate-500 resize-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500 outline-none">{{ request.POST.batch_description }}</textarea>
 
-                        Status
+                    </div>
 
-                    </label>
+                    <!-- Thumbnail -->
 
-                    <select
-                        name="batch_status"
-                        class="w-full rounded-lg border border-slate-700 bg-slate-800 px-4 py-2.5 text-white focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500 outline-none">
+                    <div class="lg:col-span-2">
 
-                        <option value="draft"
-                            {% if request.POST.batch_status == 'draft' %}selected{% endif %}>
-                            Draft
-                        </option>
+                        <label class="block text-sm font-medium text-slate-300 mb-2">
 
-                        <option value="published"
-                            {% if request.POST.batch_status == 'published' %}selected{% endif %}>
-                            Published
-                        </option>
+                            Batch Thumbnail
+                            <span class="text-red-400">*</span>
 
-                    </select>
+                        </label>
 
-                </div>
+                        <div class="mb-3 flex justify-center">
 
-                <!-- Thumbnail -->
+    <img
+        id="thumbnailPreview"
+        src=""
+        alt="Thumbnail Preview"
+        class="hidden h-32 w-56 rounded-lg border border-slate-700 object-cover">
 
-                <div>
+</div>
 
-                    <label class="block text-sm font-medium text-gray-300 mb-2">
+                        <input
+                            type="file"
+                            name="batch_thumbnail"
+                            accept=".jpg,.jpeg,.png,.webp,image/*"
+                            class="block w-full rounded-lg border border-slate-700 bg-slate-800 text-sm text-slate-300
+                                file:mr-4
+                                file:border-0
+                                file:rounded-lg
+                                file:bg-cyan-500
+                                file:px-5
+                                file:py-2.5
+                                file:font-semibold
+                                file:text-slate-900
+                                hover:file:bg-cyan-400">
 
-                        Batch Thumbnail
+                        <p class="mt-2 text-xs text-slate-500">
+                            Accepted formats: JPG, JPEG, PNG, WEBP (Maximum 5 MB)
+                        </p>
 
-                    </label>
-
-                    <input
-                        type="file"
-                        name="batch_thumbnail"
-                        accept="image/*"
-                        class="block w-full rounded-lg border border-slate-700 bg-slate-800 text-sm text-gray-300
-                        file:mr-3
-                        file:border-0
-                        file:rounded-lg
-                        file:bg-cyan-500
-                        file:px-4
-                        file:py-2
-                        file:font-medium
-                        file:text-slate-900
-                        hover:file:bg-cyan-400">
+                    </div>
 
                 </div>
 
-                <!-- Action Buttons -->
+            </div>
 
-                <div class="flex justify-end gap-3 pt-1">
-                                        <a
-                        href="{% url 'admin_batches' %}"
-                        class="rounded-lg border border-slate-700 bg-slate-800 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-700">
+            <!-- ===================================================== -->
+            <!-- Pricing & Offers Section -->
+            <!-- ===================================================== -->
 
-                        Cancel
+            <!-- Pricing & Offers Card -->
 
-                    </a>
+<div class="rounded-xl border border-slate-700 bg-slate-900/40">
 
-                    <button
-                        type="submit"
-                        class="rounded-lg bg-cyan-500 px-5 py-2.5 text-sm font-semibold text-slate-900 transition hover:bg-cyan-400">
+    <div class="border-b border-slate-700 px-5 py-4">
 
-                        Create Batch
+        <h3 class="text-lg font-semibold text-white">
+            Pricing & Offers
+        </h3>
 
-                    </button>
+        <p class="text-sm text-slate-400 mt-1">
+            Configure pricing, discounts and limited-time offers.
+        </p>
+
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 p-5">
+
+        <!-- Original Price -->
+
+        <div>
+
+            <label class="block text-sm font-medium text-slate-300 mb-2">
+
+                Original Price (₹)
+
+                <span class="text-red-400">*</span>
+
+            </label>
+
+            <input
+                type="number"
+                name="original_price"
+                step="0.01"
+                min="0"
+                value="{{ request.POST.original_price }}"
+                placeholder="4999.00"
+                class="w-full rounded-lg border border-slate-700 bg-slate-800 px-4 py-3 text-white placeholder:text-slate-500 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500 outline-none">
+
+        </div>
+
+        <!-- Discount Type -->
+
+        <div>
+
+            <label class="block text-sm font-medium text-slate-300 mb-2">
+
+                Discount Type
+
+            </label>
+
+            <select
+                id="discount_type"
+                name="discount_type"
+                class="w-full rounded-lg border border-slate-700 bg-slate-800 px-4 py-3 text-white focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500 outline-none">
+
+                <option value="none"
+                    {% if request.POST.discount_type == "none" or not request.POST.discount_type %}selected{% endif %}>
+
+                    No Discount
+
+                </option>
+
+                <option value="percentage"
+                    {% if request.POST.discount_type == "percentage" %}selected{% endif %}>
+
+                    Percentage Discount
+
+                </option>
+
+                <option value="fixed"
+                    {% if request.POST.discount_type == "fixed" %}selected{% endif %}>
+
+                    Fixed Amount Discount
+
+                </option>
+
+            </select>
+
+        </div>
+
+        <!-- Discount Value -->
+
+<div id="discountValueWrapper" class="lg:col-span-2">
+
+    <label class="block text-sm font-medium text-slate-300 mb-2">
+
+        Discount Value
+
+    </label>
+
+    <div class="relative">
+
+        <span
+            id="discountPrefix"
+            class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
+
+            %
+
+        </span>
+
+        <input
+            id="discount_value"
+            type="number"
+            name="discount_value"
+            step="0.01"
+            min="0"
+            value="{{ request.POST.discount_value }}"
+            placeholder="Enter discount value"
+            class="w-full rounded-lg border border-slate-700 bg-slate-800 pl-10 pr-4 py-3 text-white placeholder:text-slate-500 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500 outline-none">
+
+    </div>
+
+    <p
+        id="discountHint"
+        class="mt-2 text-xs text-slate-500">
+
+        Enter the discount value based on the selected discount type.
+
+    </p>
+
+</div>
+
+<!-- Offer Start -->
+
+<div id="offerStartWrapper">
+
+    <label class="block text-sm font-medium text-slate-300 mb-2">
+
+        Offer Start Date & Time
+
+    </label>
+
+    <input
+        type="datetime-local"
+        id="offer_start_date"
+        name="offer_start_date"
+        value="{{ request.POST.offer_start_date }}"
+        class="w-full rounded-lg border border-slate-700 bg-slate-800 px-4 py-3 text-white focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500 outline-none">
+
+    <p class="mt-2 text-xs text-slate-500">
+
+        Optional. Leave empty to start the discount immediately when the batch is published.
+
+    </p>
+
+</div>
+
+<!-- Offer End -->
+
+<div id="offerEndWrapper">
+
+    <label class="block text-sm font-medium text-slate-300 mb-2">
+
+        Offer End Date & Time
+
+    </label>
+
+    <input
+        type="datetime-local"
+        id="offer_end_date"
+        name="offer_end_date"
+        value="{{ request.POST.offer_end_date }}"
+        class="w-full rounded-lg border border-slate-700 bg-slate-800 px-4 py-3 text-white focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500 outline-none">
+
+    <p class="mt-2 text-xs text-slate-500">
+
+        Optional. If provided, the discount automatically ends on the selected date and time.
+
+    </p>
+
+</div>
+
+        <!-- Preview Card -->
+
+        <div class="lg:col-span-2">
+
+            <div class="rounded-xl border border-cyan-700/40 bg-cyan-500/10 p-4">
+
+                <h4 class="text-sm font-semibold text-cyan-300 mb-2">
+
+                    Marketplace Preview
+
+                </h4>
+
+                <div class="space-y-2 text-sm">
+
+                    <div class="flex justify-between">
+
+                        <span class="text-slate-400">
+
+                            Original Price
+
+                        </span>
+
+                        <span class="text-white">
+
+                            ₹0.00
+
+                        </span>
+
+                    </div>
+
+                    <div class="flex justify-between">
+
+                        <span class="text-slate-400">
+
+                            Discount
+
+                        </span>
+
+                        <span class="text-emerald-400">
+
+                            None
+
+                        </span>
+
+                    </div>
+
+                    <div class="border-t border-slate-700 pt-2 flex justify-between">
+
+                        <span class="font-semibold text-white">
+
+                            Final Price
+
+                        </span>
+
+                        <span class="font-bold text-cyan-400">
+
+                            ₹0.00
+
+                        </span>
+
+                    </div>
 
                 </div>
 
-            </form>
+            </div>
 
         </div>
 
@@ -175,4 +397,517 @@ Create Batch
 
 </div>
 
+<!-- ===================================================== -->
+<!-- Publishing Section -->
+<!-- ===================================================== -->
+
+<!-- Publishing Card -->
+
+<div class="rounded-xl border border-slate-700 bg-slate-900/40">
+
+    <div class="border-b border-slate-700 px-5 py-4">
+
+        <h3 class="text-lg font-semibold text-white">
+
+            Publishing
+
+        </h3>
+
+        <p class="text-sm text-slate-400 mt-1">
+
+            Configure when this batch becomes available in the marketplace.
+
+        </p>
+
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 p-5">
+
+        <!-- Batch Status -->
+
+        <div>
+
+            <label class="block text-sm font-medium text-slate-300 mb-2">
+
+                Batch Status
+
+                <span class="text-red-400">*</span>
+
+            </label>
+
+            <select
+                id="batch_status"
+                name="batch_status"
+                class="w-full rounded-lg border border-slate-700 bg-slate-800 px-4 py-3 text-white focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500 outline-none">
+
+                <option value="draft"
+                    {% if request.POST.batch_status == "draft" or not request.POST.batch_status %}selected{% endif %}>
+
+                    Draft
+
+                </option>
+
+                <option value="published"
+                    {% if request.POST.batch_status == "published" %}selected{% endif %}>
+
+                    Published
+
+                </option>
+
+            </select>
+
+            <p class="mt-2 text-xs text-slate-500">
+
+                Draft batches are hidden from students.
+
+            </p>
+
+        </div>
+
+        <!-- Publish Type -->
+
+        <div id="publishTypeWrapper">
+
+            <label class="block text-sm font-medium text-slate-300 mb-3">
+
+                Publish Type
+
+            </label>
+
+            <div class="space-y-3">
+
+                <label class="flex items-center gap-3 rounded-lg border border-slate-700 bg-slate-800 px-4 py-3 cursor-pointer hover:border-cyan-500 transition">
+
+                    <input
+                        type="radio"
+                        id="publish_immediate"
+                        name="publish_type"
+                        value="immediate"
+                        class="h-4 w-4 text-cyan-500"
+                        {% if request.POST.publish_type == "immediate" or not request.POST.publish_type %}checked{% endif %}>
+
+                    <div>
+
+                        <p class="font-medium text-white">
+
+                            Publish Immediately
+
+                        </p>
+
+                        <p class="text-xs text-slate-400">
+
+                            The batch will be available immediately after saving.
+
+                        </p>
+
+                    </div>
+
+                </label>
+
+                <label class="flex items-center gap-3 rounded-lg border border-slate-700 bg-slate-800 px-4 py-3 cursor-pointer hover:border-cyan-500 transition">
+
+                    <input
+                        type="radio"
+                        id="publish_scheduled"
+                        name="publish_type"
+                        value="scheduled"
+                        class="h-4 w-4 text-cyan-500"
+                        {% if request.POST.publish_type == "scheduled" %}checked{% endif %}>
+
+                    <div>
+
+                        <p class="font-medium text-white">
+
+                            Schedule Publish
+
+                        </p>
+
+                        <p class="text-xs text-slate-400">
+
+                            The marketplace will automatically switch from
+                            <span class="text-amber-400">Coming Soon</span>
+                            to
+                            <span class="text-emerald-400">Buy Now</span>.
+
+                        </p>
+
+                    </div>
+
+                </label>
+
+            </div>
+
+        </div>
+
+        <!-- Publish Date -->
+
+        <div
+            id="publishDateWrapper"
+            class="lg:col-span-2">
+
+            <label class="block text-sm font-medium text-slate-300 mb-2">
+
+                Publish Date & Time
+
+            </label>
+
+            <input
+                type="datetime-local"
+                name="publish_datetime"
+                value="{{ request.POST.publish_datetime }}"
+                class="w-full rounded-lg border border-slate-700 bg-slate-800 px-4 py-3 text-white focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500 outline-none">
+
+            <p class="mt-2 text-xs text-slate-500">
+
+                Used only when "Schedule Publish" is selected.
+
+            </p>
+
+        </div>
+
+        <!-- Marketplace Preview -->
+
+        <div class="lg:col-span-2">
+
+            <div class="rounded-xl border border-slate-700 bg-slate-800/60 p-5">
+
+                <h4 class="text-sm font-semibold text-cyan-300 mb-4">
+
+                    Marketplace Flow
+
+                </h4>
+
+                <div class="flex flex-wrap items-center gap-3 text-sm">
+
+                    <span class="rounded-full bg-slate-700 px-4 py-2 text-white">
+
+                        Draft
+
+                    </span>
+
+                    <span class="text-slate-500">
+
+                        →
+
+                    </span>
+
+                    <span class="rounded-full bg-amber-500/20 border border-amber-500/40 px-4 py-2 text-amber-300">
+
+                        Coming Soon
+
+                    </span>
+
+                    <span class="text-slate-500">
+
+                        →
+
+                    </span>
+
+                    <span class="rounded-full bg-emerald-500/20 border border-emerald-500/40 px-4 py-2 text-emerald-300">
+
+                        Buy Now
+
+                    </span>
+
+                    <span class="text-slate-500">
+
+                        →
+
+                    </span>
+
+                    <span class="rounded-full bg-red-500/20 border border-red-500/40 px-4 py-2 text-red-300">
+
+                        Admissions Closed
+
+                    </span>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<!-- ===================================================== -->
+<!-- Admissions Section -->
+<!-- ===================================================== -->
+
+<!-- Admissions & Course Schedule Card -->
+
+<div class="rounded-xl border border-slate-700 bg-slate-900/40">
+
+    <div class="border-b border-slate-700 px-5 py-4">
+
+        <h3 class="text-lg font-semibold text-white">
+
+            Admissions & Course Schedule
+
+        </h3>
+
+        <p class="text-sm text-slate-400 mt-1">
+
+            Control admissions and define the course timeline.
+
+        </p>
+
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 p-5">
+
+        <!-- Admission Close Date -->
+
+        <div id="admissionCloseWrapper">
+
+            <label class="block text-sm font-medium text-slate-300 mb-2">
+
+                Admission Close Date & Time
+
+                <span class="text-red-400">*</span>
+
+            </label>
+
+            <input
+                type="datetime-local"
+                name="admission_close_datetime"
+                value="{{ request.POST.admission_close_datetime }}"
+                class="w-full rounded-lg border border-slate-700 bg-slate-800 px-4 py-3 text-white focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500 outline-none">
+
+            <p class="mt-2 text-xs text-slate-500">
+
+                After this date students cannot purchase the batch.
+
+            </p>
+
+        </div>
+
+        <!-- Course End Date -->
+
+        <div id="courseEndWrapper">
+
+            <label class="block text-sm font-medium text-slate-300 mb-2">
+
+                Course End Date
+
+                <span class="text-red-400">*</span>
+
+            </label>
+
+            <input
+                type="date"
+                name="course_end_date"
+                value="{{ request.POST.course_end_date }}"
+                class="w-full rounded-lg border border-slate-700 bg-slate-800 px-4 py-3 text-white focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500 outline-none">
+
+            <p class="mt-2 text-xs text-slate-500">
+
+                The course officially ends on this date.
+
+            </p>
+
+        </div>
+
+        <!-- Timeline Preview -->
+
+        <div class="lg:col-span-2">
+
+            <div class="rounded-xl border border-cyan-700/30 bg-cyan-500/5 p-5">
+
+                <h4 class="text-sm font-semibold text-cyan-300 mb-4">
+
+                    Batch Lifecycle Preview
+
+                </h4>
+
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+
+                    <div class="rounded-lg bg-slate-800 border border-slate-700 p-4">
+
+                        <div class="text-cyan-400 text-xs font-semibold uppercase">
+
+                            Step 1
+
+                        </div>
+
+                        <h5 class="mt-2 font-semibold text-white">
+
+                            Buy Now
+
+                        </h5>
+
+                        <p class="mt-2 text-xs text-slate-400">
+
+                            Students can purchase and enroll in the batch.
+
+                        </p>
+
+                    </div>
+
+                    <div class="rounded-lg bg-slate-800 border border-slate-700 p-4">
+
+                        <div class="text-amber-400 text-xs font-semibold uppercase">
+
+                            Step 2
+
+                        </div>
+
+                        <h5 class="mt-2 font-semibold text-white">
+
+                            Admissions Closed
+
+                        </h5>
+
+                        <p class="mt-2 text-xs text-slate-400">
+
+                            New admissions stop automatically.
+
+                        </p>
+
+                    </div>
+
+                    <div class="rounded-lg bg-slate-800 border border-slate-700 p-4">
+
+                        <div class="text-purple-400 text-xs font-semibold uppercase">
+
+                            Step 3
+
+                        </div>
+
+                        <h5 class="mt-2 font-semibold text-white">
+
+                            Course Continues
+
+                        </h5>
+
+                        <p class="mt-2 text-xs text-slate-400">
+
+                            Existing students continue learning until completion.
+
+                        </p>
+
+                    </div>
+
+                    <div class="rounded-lg bg-slate-800 border border-slate-700 p-4">
+
+                        <div class="text-red-400 text-xs font-semibold uppercase">
+
+                            Step 4
+
+                        </div>
+
+                        <h5 class="mt-2 font-semibold text-white">
+
+                            Archived
+
+                        </h5>
+
+                        <p class="mt-2 text-xs text-slate-400">
+
+                            Admin archives the batch after the course is completed.
+
+                        </p>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- Important Notes -->
+
+        <div class="lg:col-span-2">
+
+            <div class="rounded-xl border border-yellow-600/30 bg-yellow-500/10 p-5">
+
+                <div class="flex items-start gap-3">
+
+                    <div class="text-xl">
+
+                        ⚠️
+
+                    </div>
+
+                    <div>
+
+                        <h4 class="font-semibold text-yellow-300">
+
+                            Important Notes
+
+                        </h4>
+
+                        <ul class="mt-3 space-y-2 text-sm text-slate-300 list-disc list-inside">
+
+                            <li>
+                                Draft batches never appear in the marketplace.
+                            </li>
+
+                            <li>
+                                Scheduled batches automatically become <strong class="text-amber-300">Coming Soon</strong>.
+                            </li>
+
+                            <li>
+                                Students can purchase only before the admission closing date.
+                            </li>
+
+                            <li>
+                                Existing students continue learning even after admissions are closed.
+                            </li>
+
+                            <li>
+                                You can archive and later republish the batch if admissions need to reopen.
+                            </li>
+
+                        </ul>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- ===================================================== -->
+<!-- Action Buttons -->
+<!-- ===================================================== -->
+
+<div class="flex flex-col sm:flex-row sm:justify-end gap-3">
+
+    <a href="{% url 'admin_batches' %}"
+    class="inline-flex items-center justify-center rounded-lg border border-slate-700 bg-slate-800 px-6 py-3 text-sm font-semibold text-white transition hover:bg-slate-700">
+
+        Cancel
+
+    </a>
+
+    <button
+        type="submit"
+        class="inline-flex items-center justify-center rounded-lg bg-cyan-500 px-6 py-3 text-sm font-semibold text-slate-900 transition hover:bg-cyan-400">
+
+        Create Batch
+
+    </button>
+
+</div>
+
+</form>
+
+</div>
+
+</div>
+
+{% load static %}
+
+<script src="{% static 'admins/js/create_batch.js' %}"></script>
+
 {% endblock %}
+

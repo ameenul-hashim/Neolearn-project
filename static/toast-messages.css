@@ -1,0 +1,383 @@
+/* ==========================================================
+   NeoLearn Shared Toast Notifications
+   Used By:
+   - Student Dashboard
+   - Admin Dashboard
+   - Teacher Dashboard
+========================================================== */
+
+/* ==========================================================
+   Container
+========================================================== */
+
+.message-container{
+
+    position:fixed;
+
+    top:90px;
+
+    right:20px;
+
+    width:380px;
+
+    max-width:calc(100vw - 40px);
+
+    display:flex;
+
+    flex-direction:column;
+
+    gap:12px;
+
+    z-index:9999;
+
+    pointer-events:none;
+
+}
+
+/* ==========================================================
+   Toast Card
+========================================================== */
+
+.message-item{
+
+    position:relative;
+
+    width:100%;
+
+    padding:16px;
+
+    border-radius:16px;
+
+    border:1px solid rgba(255,255,255,.08);
+
+    backdrop-filter:blur(18px);
+
+    -webkit-backdrop-filter:blur(18px);
+
+    box-shadow:
+        0 10px 35px rgba(0,0,0,.45);
+
+    overflow:hidden;
+
+    pointer-events:auto;
+
+    animation:toastSlideIn .35s ease;
+
+    transition:
+        opacity .35s ease,
+        transform .35s ease,
+        max-height .35s ease,
+        margin .35s ease,
+        padding .35s ease;
+
+}
+
+/* ==========================================================
+   Toast Colors
+========================================================== */
+
+.message-item.success{
+
+    background:rgba(16,185,129,.15);
+
+    border-color:rgba(16,185,129,.35);
+
+}
+
+.message-item.error{
+
+    background:rgba(239,68,68,.15);
+
+    border-color:rgba(239,68,68,.35);
+
+}
+
+.message-item.warning{
+
+    background:rgba(251,191,36,.15);
+
+    border-color:rgba(251,191,36,.35);
+
+}
+
+.message-item.info{
+
+    background:rgba(59,130,246,.15);
+
+    border-color:rgba(59,130,246,.35);
+
+}
+
+/* ==========================================================
+   Header
+========================================================== */
+
+.message-header{
+
+    display:flex;
+
+    align-items:center;
+
+    justify-content:space-between;
+
+    margin-bottom:10px;
+
+}
+
+.message-left{
+
+    display:flex;
+
+    align-items:center;
+
+    gap:10px;
+
+    min-width:0;
+
+}
+
+/* ==========================================================
+   Icon
+========================================================== */
+
+.message-icon{
+
+    width:32px;
+
+    height:32px;
+
+    border-radius:50%;
+
+    display:flex;
+
+    align-items:center;
+
+    justify-content:center;
+
+    background:rgba(255,255,255,.08);
+
+    flex-shrink:0;
+
+}
+
+.message-icon i{
+
+    font-size:16px;
+
+}
+
+/* ==========================================================
+   Title
+========================================================== */
+
+.message-title{
+
+    font-size:14px;
+
+    font-weight:700;
+
+    color:#ffffff;
+
+    display:flex;
+
+    align-items:center;
+
+    min-height:32px;
+
+}
+
+/* ==========================================================
+   Message Text
+========================================================== */
+
+.message-text{
+
+    padding-left:42px;
+
+    font-size:13px;
+
+    line-height:1.5;
+
+    color:#E2E8F0;
+
+    overflow-wrap:anywhere;
+
+    word-break:break-word;
+
+}
+
+/* ==========================================================
+   Close Button
+========================================================== */
+
+.message-close{
+
+    width:28px;
+
+    height:28px;
+
+    border:none;
+
+    outline:none;
+
+    background:transparent;
+
+    color:#CBD5E1;
+
+    border-radius:50%;
+
+    display:flex;
+
+    align-items:center;
+
+    justify-content:center;
+
+    cursor:pointer;
+
+    flex-shrink:0;
+
+    transition:all .25s ease;
+
+}
+
+.message-close i{
+
+    font-size:18px;
+
+}
+
+.message-close:hover{
+
+    background:rgba(255,255,255,.08);
+
+    color:#ffffff;
+
+    transform:rotate(90deg);
+
+}
+
+/* ==========================================================
+   Hide Animation
+========================================================== */
+
+.message-item.hide{
+
+    opacity:0;
+
+    transform:translateX(40px);
+
+    max-height:0;
+
+    margin:0;
+
+    padding-top:0;
+
+    padding-bottom:0;
+
+}
+
+/* ==========================================================
+   Animation
+========================================================== */
+
+@keyframes toastSlideIn{
+
+    from{
+
+        opacity:0;
+
+        transform:translateX(40px);
+
+    }
+
+    to{
+
+        opacity:1;
+
+        transform:translateX(0);
+
+    }
+
+}
+
+/* ==========================================================
+   Tablet
+========================================================== */
+
+@media (max-width:768px){
+
+    .message-container{
+
+        top:80px;
+
+        left:15px;
+
+        right:15px;
+
+        width:auto;
+
+        max-width:none;
+
+    }
+
+    .message-item{
+
+        padding:15px;
+
+    }
+
+    .message-title{
+
+        font-size:13px;
+
+    }
+
+    .message-text{
+
+        font-size:12px;
+
+        padding-left:42px;
+
+    }
+
+}
+
+/* ==========================================================
+   Mobile
+========================================================== */
+
+@media (max-width:480px){
+
+    .message-container{
+
+        top:70px;
+
+        left:10px;
+
+        right:10px;
+
+    }
+
+    .message-item{
+
+        padding:14px;
+
+        border-radius:14px;
+
+    }
+
+    .message-title{
+
+        font-size:13px;
+
+    }
+
+    .message-text{
+
+        font-size:12px;
+
+        padding-left:42px;
+
+    }
+
+}

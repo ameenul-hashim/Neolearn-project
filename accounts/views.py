@@ -1018,23 +1018,19 @@ def logout_view(request):
 
     logout(request)
 
-    request.session.flush()
-
-    response = redirect('signin')
-
-    response.delete_cookie('sessionid')
-
-    response.delete_cookie('csrftoken')
-
-    response['Cache-Control'] = (
-        'no-cache, no-store, must-revalidate'
+    messages.success(
+        request,
+        "You have been logged out successfully."
     )
 
-    response['Pragma'] = 'no-cache'
+    response = redirect("signin")
 
-    response['Expires'] = '0'
+    response["Cache-Control"] = (
+        "no-cache, no-store, must-revalidate"
+    )
+
+    response["Pragma"] = "no-cache"
+
+    response["Expires"] = "0"
 
     return response
-
-
-
