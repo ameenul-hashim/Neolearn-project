@@ -8,12 +8,34 @@ from django.core.validators import validate_email
 from django.core.exceptions import ValidationError
 from django.contrib.auth.models import User
 from django.core.paginator import Paginator
-from django.db.models import Count,Q
+from django.db.models import Count, Q, F
+from django.db import transaction
 from .decorators import admin_required
 from decimal import Decimal, InvalidOperation
 from django.shortcuts import get_object_or_404
+from django.urls import reverse
 from django.core.mail import send_mail
-from admins.models import (Teacher,Batch,Subject,TeacherBatch,TeacherSubject)
+from admins.models import (
+    Teacher,
+    Batch,
+    Subject,
+    TeacherBatch,
+    TeacherSubject,
+)
+
+from teachers.models import (
+    CourseChapter,
+    ChapterChangeLog,
+    ChapterVideo,
+    VideoChangeLog,
+    ChapterPDF,
+    PDFChangeLog,
+    ChapterQuiz,
+    QuizQuestion,
+    QuizOption,
+    QuizChangeLog,
+    DeletionAudit,
+)
 from django.http import JsonResponse
 from datetime import datetime
 from django.utils import timezone
@@ -578,11 +600,1650 @@ def admin_subjects_view(request):
     return render(request,"admins/subjects/subjects.html",context)
 
 
-from decimal import Decimal
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib import messages
-from .models import Batch, Subject
+# ==========================================================
+# ADMIN SUBJECT COURSE BUILDER
+# ==========================================================
 
+def _admin_builder_url(
+    subject_id,
+    chapter_id=None,
+    view="overview",
+    extra_params=None,
+):
+    """
+    Build a URL back to the unified Admin Course Builder.
+    """
+    url = reverse(
+        "admin_subject_course_builder",
+        kwargs={"subject_id": subject_id},
+    )
+
+    params = []
+
+    if chapter_id is not None:
+        params.append(f"chapter={int(chapter_id)}")
+
+    if view:
+        params.append(f"view={view}")
+
+    if extra_params:
+        for key, value in extra_params.items():
+            if value is not None:
+                params.append(f"{key}={value}")
+
+    return f"{url}?{'&'.join(params)}" if params else url
+
+
+def _admin_actor_name(user):
+    if not user:
+        return "Admin"
+
+    return (
+        user.get_full_name().strip()
+        or getattr(user, "username", "")
+        or getattr(user, "email", "")
+        or "Admin"
+    )
+
+
+def _teacher_actor_name(teacher):
+    if not teacher:
+        return "Teacher"
+
+    return (
+        getattr(teacher, "full_name", "")
+        or getattr(getattr(teacher, "user", None), "username", "")
+        or getattr(teacher, "email", "")
+        or "Teacher"
+    )
+
+
+def _admin_display_actor(teacher=None, admin_user=None):
+    if admin_user:
+        return _admin_actor_name(admin_user), "admin"
+
+    return _teacher_actor_name(teacher), "teacher"
+
+
+def _get_admin_subject(subject_id):
+    return get_object_or_404(
+        Subject.objects.select_related("batch"),
+        id=subject_id,
+    )
+
+
+def _get_admin_chapter(subject_id, chapter_id, include_deleted=False):
+    subject = _get_admin_subject(subject_id)
+
+    filters = {
+        "id": chapter_id,
+        "batch": subject.batch,
+        "subject": subject,
+    }
+
+    if not include_deleted:
+        filters["is_deleted"] = False
+
+    chapter = get_object_or_404(
+        CourseChapter,
+        **filters,
+    )
+
+    return subject, subject.batch, chapter
+
+
+def _get_admin_video(subject_id, chapter_id, video_id):
+    subject, batch, chapter = _get_admin_chapter(
+        subject_id,
+        chapter_id,
+    )
+
+    video = get_object_or_404(
+        ChapterVideo,
+        id=video_id,
+        chapter=chapter,
+        is_deleted=False,
+    )
+
+    return subject, batch, chapter, video
+
+
+def _get_admin_pdf(subject_id, chapter_id, pdf_id):
+    subject, batch, chapter = _get_admin_chapter(
+        subject_id,
+        chapter_id,
+    )
+
+    pdf = get_object_or_404(
+        ChapterPDF,
+        id=pdf_id,
+        chapter=chapter,
+        is_deleted=False,
+    )
+
+    return subject, batch, chapter, pdf
+
+
+def _get_admin_quiz(subject_id, chapter_id, quiz_id):
+    subject, batch, chapter = _get_admin_chapter(
+        subject_id,
+        chapter_id,
+    )
+
+    quiz = get_object_or_404(
+        ChapterQuiz.objects.prefetch_related("questions__options"),
+        id=quiz_id,
+        chapter=chapter,
+        is_deleted=False,
+    )
+
+    return subject, batch, chapter, quiz
+
+
+def _chapter_edit_state(request, chapter, error="", **overrides):
+    request.session["chapter_edit_open"] = True
+    request.session["chapter_edit_error"] = error
+    request.session["chapter_edit_form"] = {
+        "chapter_id": chapter.id,
+        "chapter_name": overrides.get(
+            "chapter_name",
+            chapter.chapter_name or "",
+        ),
+        "chapter_description": overrides.get(
+            "chapter_description",
+            chapter.chapter_description or "",
+        ),
+        "status": overrides.get(
+            "status",
+            chapter.status or "",
+        ),
+    }
+    request.session.modified = True
+
+
+def _video_edit_state(request, video, error="", **overrides):
+    request.session["video_edit_open"] = True
+    request.session["video_edit_error"] = error
+    request.session["video_edit_form"] = {
+        "video_id": video.id,
+        "video_name": overrides.get(
+            "video_name",
+            video.video_name or "",
+        ),
+        "video_description": overrides.get(
+            "video_description",
+            video.video_description or "",
+        ),
+        "video_order": str(
+            overrides.get(
+                "video_order",
+                video.video_order,
+            )
+        ),
+        "current_file_name": (
+            getattr(video.video_file, "name", "") or ""
+        ),
+    }
+    request.session.modified = True
+
+
+def _pdf_thumbnail_url(pdf):
+    if not pdf.pdf_thumbnail:
+        return ""
+
+    try:
+        return pdf.pdf_thumbnail.url
+    except Exception:
+        return ""
+
+
+def _pdf_edit_state(request, pdf, error="", **overrides):
+    request.session["pdf_edit_open"] = True
+    request.session["pdf_edit_error"] = error
+    request.session["pdf_edit_form"] = {
+        "pdf_id": pdf.id,
+        "pdf_name": overrides.get(
+            "pdf_name",
+            pdf.pdf_name or "",
+        ),
+        "pdf_description": overrides.get(
+            "pdf_description",
+            pdf.pdf_description or "",
+        ),
+        "pdf_order": str(
+            overrides.get(
+                "pdf_order",
+                pdf.pdf_order,
+            )
+        ),
+        "current_file_name": (
+            getattr(pdf.pdf_file, "name", "") or ""
+        ),
+        "current_thumbnail_url": _pdf_thumbnail_url(pdf),
+    }
+    request.session.modified = True
+
+
+def _clear_session_keys(request, *keys):
+    for key in keys:
+        request.session.pop(key, None)
+    request.session.modified = True
+
+
+def _validate_mp4(video_file):
+    if not video_file:
+        return False, "Please select a valid MP4 video file."
+
+    if getattr(video_file, "size", 0) <= 0:
+        return False, "The selected video file is empty."
+
+    filename = (
+        getattr(video_file, "name", "") or ""
+    ).strip().lower()
+
+    if not filename.endswith(".mp4"):
+        return False, "Invalid video format. Only MP4 video files are allowed."
+
+    content_type = (
+        getattr(video_file, "content_type", "") or ""
+    ).strip().lower()
+
+    rejected = {
+        "text/plain",
+        "text/html",
+        "application/pdf",
+        "application/zip",
+        "application/x-zip-compressed",
+        "image/jpeg",
+        "image/png",
+        "image/gif",
+        "audio/mpeg",
+        "audio/mp3",
+        "audio/wav",
+    }
+
+    if content_type in rejected:
+        return False, "The selected file is not a valid MP4 video."
+
+    return True, ""
+
+
+def _validate_pdf_file(pdf_file):
+    if not pdf_file:
+        return False, "Please select a PDF file."
+
+    if getattr(pdf_file, "size", 0) <= 0:
+        return False, "The selected PDF file is empty."
+
+    filename = (
+        getattr(pdf_file, "name", "") or ""
+    ).strip().lower()
+
+    if not filename.endswith(".pdf"):
+        return False, "Invalid PDF format. Only PDF files are allowed."
+
+    content_type = (
+        getattr(pdf_file, "content_type", "") or ""
+    ).strip().lower()
+
+    rejected = {
+        "image/jpeg",
+        "image/png",
+        "image/gif",
+        "image/webp",
+        "video/mp4",
+        "audio/mpeg",
+        "audio/wav",
+        "application/zip",
+        "application/x-zip-compressed",
+        "text/plain",
+        "text/html",
+    }
+
+    if content_type in rejected:
+        return False, "The selected file is not a valid PDF document."
+
+    return True, ""
+
+
+def _validate_pdf_thumbnail(pdf_thumbnail):
+    if not pdf_thumbnail:
+        return True, ""
+
+    filename = (
+        getattr(pdf_thumbnail, "name", "") or ""
+    ).strip().lower()
+
+    extension = (
+        "." + filename.rsplit(".", 1)[1]
+        if "." in filename
+        else ""
+    )
+
+    if extension not in {".png", ".jpg", ".jpeg", ".webp"}:
+        return False, (
+            "Invalid thumbnail format. Only PNG, JPG, JPEG, and WEBP images are allowed."
+        )
+
+    if getattr(pdf_thumbnail, "size", 0) <= 0:
+        return False, "The selected thumbnail image is empty."
+
+    content_type = (
+        getattr(pdf_thumbnail, "content_type", "") or ""
+    ).strip().lower()
+
+    if content_type and content_type not in {
+        "image/png",
+        "image/jpeg",
+        "image/webp",
+    }:
+        return False, (
+            "The selected thumbnail is not a valid image. Use PNG, JPG, JPEG, or WEBP."
+        )
+
+    return True, ""
+
+
+def _record_chapter_admin_log(
+    chapter,
+    action,
+    field_name,
+    old_value,
+    new_value,
+    summary,
+    admin_user,
+):
+    ChapterChangeLog.objects.create(
+        chapter=chapter,
+        changed_by=None,
+        changed_by_admin=admin_user,
+        action=action,
+        field_name=field_name,
+        old_value=str(old_value or ""),
+        new_value=str(new_value or ""),
+        change_summary=summary,
+    )
+
+
+def _record_video_admin_log(
+    video,
+    action,
+    field_name,
+    old_value,
+    new_value,
+    summary,
+    admin_user,
+):
+    VideoChangeLog.objects.create(
+        video=video,
+        changed_by=None,
+        changed_by_admin=admin_user,
+        action=action,
+        field_name=field_name,
+        old_value=str(old_value or ""),
+        new_value=str(new_value or ""),
+        change_summary=summary,
+    )
+
+
+def _record_pdf_admin_log(
+    pdf,
+    action,
+    field_name,
+    old_value,
+    new_value,
+    summary,
+    admin_user,
+):
+    PDFChangeLog.objects.create(
+        pdf=pdf,
+        changed_by=None,
+        changed_by_admin=admin_user,
+        action=action,
+        field_name=field_name,
+        old_value=str(old_value or ""),
+        new_value=str(new_value or ""),
+        change_summary=summary,
+    )
+
+
+def _record_quiz_admin_log(
+    quiz,
+    action,
+    field_name,
+    old_value,
+    new_value,
+    summary,
+    admin_user,
+):
+    QuizChangeLog.objects.create(
+        quiz=quiz,
+        changed_by=None,
+        changed_by_admin=admin_user,
+        action=action,
+        field_name=field_name,
+        old_value=str(old_value or ""),
+        new_value=str(new_value or ""),
+        change_summary=summary,
+    )
+
+# ==========================================================
+# ADMIN COURSE BUILDER — MANAGEMENT ONLY
+# ==========================================================
+#
+# Admin is NOT a content creator in this workspace.
+#
+# Allowed:
+#   - View teacher-created content
+#   - Edit existing content
+#   - View shared timelines
+#   - Directly delete content with a required reason
+#   - Review teacher delete requests
+#   - Approve / reject teacher delete requests
+#   - View the common permanent Deletion Audit
+#
+# Not allowed from this workspace:
+#   - Create chapter
+#   - Upload/create video
+#   - Upload/create PDF
+#   - Create quiz
+#   - Schedule live class
+#
+# ==========================================================
+
+
+def _admin_builder_url(subject_id, chapter_id=None, view="overview", extra_params=None):
+    url = reverse("admin_subject_course_builder", kwargs={"subject_id": subject_id})
+    params = []
+    if chapter_id is not None:
+        params.append(f"chapter={int(chapter_id)}")
+    if view:
+        params.append(f"view={view}")
+    if extra_params:
+        for key, value in extra_params.items():
+            if value is not None and value != "":
+                params.append(f"{key}={value}")
+    return f"{url}?{'&'.join(params)}" if params else url
+
+
+def _admin_actor_name(user):
+    if not user:
+        return "Admin"
+    return user.get_full_name().strip() or getattr(user, "username", "") or getattr(user, "email", "") or "Admin"
+
+
+def _teacher_actor_name(teacher):
+    if not teacher:
+        return "Teacher"
+    return getattr(teacher, "full_name", "") or getattr(getattr(teacher, "user", None), "username", "") or getattr(teacher, "email", "") or "Teacher"
+
+
+def _admin_display_actor(teacher=None, admin_user=None):
+    if admin_user:
+        return _admin_actor_name(admin_user), "admin"
+    return _teacher_actor_name(teacher), "teacher"
+
+
+def _get_admin_subject(subject_id):
+    return get_object_or_404(Subject.objects.select_related("batch"), id=subject_id)
+
+
+def _get_admin_chapter(subject_id, chapter_id, include_deleted=False):
+    subject = _get_admin_subject(subject_id)
+    filters = {"id": chapter_id, "batch": subject.batch, "subject": subject}
+    if not include_deleted:
+        filters["is_deleted"] = False
+    return subject, subject.batch, get_object_or_404(CourseChapter, **filters)
+
+
+def _get_admin_video(subject_id, chapter_id, video_id, include_deleted=False):
+    subject, batch, chapter = _get_admin_chapter(subject_id, chapter_id, include_deleted=False)
+    filters = {"id": video_id, "chapter": chapter}
+    if not include_deleted:
+        filters["is_deleted"] = False
+    return subject, batch, chapter, get_object_or_404(ChapterVideo, **filters)
+
+
+def _get_admin_pdf(subject_id, chapter_id, pdf_id, include_deleted=False):
+    subject, batch, chapter = _get_admin_chapter(subject_id, chapter_id, include_deleted=False)
+    filters = {"id": pdf_id, "chapter": chapter}
+    if not include_deleted:
+        filters["is_deleted"] = False
+    return subject, batch, chapter, get_object_or_404(ChapterPDF, **filters)
+
+
+def _get_admin_quiz(subject_id, chapter_id, quiz_id, include_deleted=False):
+    subject, batch, chapter = _get_admin_chapter(subject_id, chapter_id, include_deleted=False)
+    filters = {"id": quiz_id, "chapter": chapter}
+    if not include_deleted:
+        filters["is_deleted"] = False
+    quiz = get_object_or_404(ChapterQuiz.objects.prefetch_related("questions__options"), **filters)
+    return subject, batch, chapter, quiz
+
+
+def _chapter_edit_state(request, chapter, error="", **overrides):
+    request.session["chapter_edit_open"] = True
+    request.session["chapter_edit_error"] = error
+    request.session["chapter_edit_form"] = {
+        "chapter_id": chapter.id,
+        "chapter_name": overrides.get("chapter_name", chapter.chapter_name or ""),
+        "chapter_description": overrides.get("chapter_description", chapter.chapter_description or ""),
+        "status": overrides.get("status", chapter.status or ""),
+    }
+    request.session.modified = True
+
+
+def _video_edit_state(request, video, error="", **overrides):
+    request.session["video_edit_open"] = True
+    request.session["video_edit_error"] = error
+    request.session["video_edit_form"] = {
+        "video_id": video.id,
+        "video_name": overrides.get("video_name", video.video_name or ""),
+        "video_description": overrides.get("video_description", video.video_description or ""),
+        "video_order": str(overrides.get("video_order", video.video_order)),
+        "current_file_name": getattr(video.video_file, "name", "") or "",
+    }
+    request.session.modified = True
+
+
+def _pdf_thumbnail_url(pdf):
+    if not pdf.pdf_thumbnail:
+        return ""
+    try:
+        return pdf.pdf_thumbnail.url
+    except Exception:
+        return ""
+
+
+def _pdf_edit_state(request, pdf, error="", **overrides):
+    request.session["pdf_edit_open"] = True
+    request.session["pdf_edit_error"] = error
+    request.session["pdf_edit_form"] = {
+        "pdf_id": pdf.id,
+        "pdf_name": overrides.get("pdf_name", pdf.pdf_name or ""),
+        "pdf_description": overrides.get("pdf_description", pdf.pdf_description or ""),
+        "pdf_order": str(overrides.get("pdf_order", pdf.pdf_order)),
+        "current_file_name": getattr(pdf.pdf_file, "name", "") or "",
+        "current_thumbnail_url": _pdf_thumbnail_url(pdf),
+    }
+    request.session.modified = True
+
+
+def _clear_session_keys(request, *keys):
+    for key in keys:
+        request.session.pop(key, None)
+    request.session.modified = True
+
+
+def _validate_mp4(video_file):
+    if not video_file or getattr(video_file, "size", 0) <= 0:
+        return False, "Please select a valid MP4 video file."
+    filename = (getattr(video_file, "name", "") or "").strip().lower()
+    if not filename.endswith(".mp4"):
+        return False, "Invalid video format. Only MP4 video files are allowed."
+    content_type = (getattr(video_file, "content_type", "") or "").strip().lower()
+    if content_type in {"text/plain", "text/html", "application/pdf", "application/zip", "image/jpeg", "image/png", "image/gif", "audio/mpeg", "audio/mp3", "audio/wav"}:
+        return False, "The selected file is not a valid MP4 video."
+    return True, ""
+
+
+def _validate_pdf_file(pdf_file):
+    if not pdf_file or getattr(pdf_file, "size", 0) <= 0:
+        return False, "Please select a PDF file."
+    filename = (getattr(pdf_file, "name", "") or "").strip().lower()
+    if not filename.endswith(".pdf"):
+        return False, "Invalid PDF format. Only PDF files are allowed."
+    content_type = (getattr(pdf_file, "content_type", "") or "").strip().lower()
+    if content_type in {"image/jpeg", "image/png", "image/gif", "image/webp", "video/mp4", "audio/mpeg", "audio/wav", "application/zip", "application/x-zip-compressed", "text/plain", "text/html"}:
+        return False, "The selected file is not a valid PDF document."
+    return True, ""
+
+
+def _validate_pdf_thumbnail(pdf_thumbnail):
+    if not pdf_thumbnail:
+        return True, ""
+    filename = (getattr(pdf_thumbnail, "name", "") or "").strip().lower()
+    extension = "." + filename.rsplit(".", 1)[1] if "." in filename else ""
+    if extension not in {".png", ".jpg", ".jpeg", ".webp"}:
+        return False, "Invalid thumbnail format. Only PNG, JPG, JPEG, and WEBP images are allowed."
+    if getattr(pdf_thumbnail, "size", 0) <= 0:
+        return False, "The selected thumbnail image is empty."
+    return True, ""
+
+
+def _record_chapter_admin_log(chapter, action, field_name, old_value, new_value, summary, admin_user):
+    return ChapterChangeLog.objects.create(
+        chapter=chapter, changed_by=None, changed_by_admin=admin_user,
+        action=action, field_name=field_name,
+        old_value=str(old_value or ""), new_value=str(new_value or ""),
+        change_summary=summary,
+    )
+
+
+def _record_video_admin_log(video, action, field_name, old_value, new_value, summary, admin_user):
+    return VideoChangeLog.objects.create(
+        video=video, changed_by=None, changed_by_admin=admin_user,
+        action=action, field_name=field_name,
+        old_value=str(old_value or ""), new_value=str(new_value or ""),
+        change_summary=summary,
+    )
+
+
+def _record_pdf_admin_log(pdf, action, field_name, old_value, new_value, summary, admin_user):
+    return PDFChangeLog.objects.create(
+        pdf=pdf, changed_by=None, changed_by_admin=admin_user,
+        action=action, field_name=field_name,
+        old_value=str(old_value or ""), new_value=str(new_value or ""),
+        change_summary=summary,
+    )
+
+
+def _record_quiz_admin_log(quiz, action, field_name, old_value, new_value, summary, admin_user):
+    return QuizChangeLog.objects.create(
+        quiz=quiz, changed_by=None, changed_by_admin=admin_user,
+        action=action, field_name=field_name,
+        old_value=str(old_value or ""), new_value=str(new_value or ""),
+        change_summary=summary,
+    )
+
+
+# ==========================================================
+# DELETION AUDIT HELPERS
+# ==========================================================
+
+def _content_snapshot(content_type, obj):
+    if content_type == "chapter":
+        return {
+            "id": obj.id,
+            "name": obj.chapter_name,
+            "description": obj.chapter_description,
+            "order": obj.chapter_order,
+            "status": obj.status,
+            "created_at": obj.created_at.isoformat() if obj.created_at else None,
+            "created_by": _teacher_actor_name(obj.created_by) if obj.created_by else (_admin_actor_name(obj.created_by_admin) if obj.created_by_admin else "Unknown"),
+        }
+    if content_type == "video":
+        return {
+            "id": obj.id,
+            "name": obj.video_name,
+            "description": obj.video_description,
+            "order": obj.video_order,
+            "file_name": getattr(obj.video_file, "name", "") or "",
+            "created_at": obj.created_at.isoformat() if obj.created_at else None,
+            "created_by": _teacher_actor_name(obj.created_by) if obj.created_by else (_admin_actor_name(obj.created_by_admin) if obj.created_by_admin else "Unknown"),
+        }
+    if content_type == "pdf":
+        return {
+            "id": obj.id,
+            "name": obj.pdf_name,
+            "description": obj.pdf_description,
+            "order": obj.pdf_order,
+            "file_name": getattr(obj.pdf_file, "name", "") or "",
+            "thumbnail_name": getattr(obj.pdf_thumbnail, "name", "") or "",
+            "created_at": obj.created_at.isoformat() if obj.created_at else None,
+            "created_by": _teacher_actor_name(obj.created_by) if obj.created_by else (_admin_actor_name(obj.created_by_admin) if obj.created_by_admin else "Unknown"),
+        }
+    if content_type == "quiz":
+        questions = []
+        for question in obj.questions.all():
+            questions.append({
+                "id": question.id,
+                "text": question.question_text,
+                "marks": question.marks,
+                "options": [
+                    {
+                        "label": option.option_label,
+                        "text": option.option_text,
+                        "is_correct": option.is_correct,
+                    }
+                    for option in question.options.all()
+                ],
+            })
+        return {
+            "id": obj.id,
+            "name": obj.quiz_name,
+            "description": obj.quiz_description,
+            "attempt_limit": obj.attempt_limit,
+            "questions": questions,
+            "created_at": obj.created_at.isoformat() if obj.created_at else None,
+            "created_by": _teacher_actor_name(obj.created_by) if obj.created_by else (_admin_actor_name(obj.created_by_admin) if obj.created_by_admin else "Unknown"),
+        }
+    return {}
+
+
+def _audit_base(content_type, obj, subject, batch):
+    creator_teacher = getattr(obj, "created_by", None)
+    creator_admin = getattr(obj, "created_by_admin", None)
+    return {
+        "content_type": content_type,
+        "object_id": obj.id,
+        "content_name": (
+            getattr(obj, "chapter_name", None)
+            or getattr(obj, "video_name", None)
+            or getattr(obj, "pdf_name", None)
+            or getattr(obj, "quiz_name", None)
+            or f"{content_type.title()} #{obj.id}"
+        ),
+        "batch_name": getattr(batch, "batch_name", "") or "",
+        "subject_name": getattr(subject, "subject_name", "") or "",
+        "chapter_name": getattr(getattr(obj, "chapter", None), "chapter_name", "") or (
+            obj.chapter_name if content_type == "chapter" else ""
+        ),
+        "created_by_teacher": creator_teacher,
+        "created_by_admin": creator_admin,
+        "created_at_original": getattr(obj, "created_at", None),
+        "snapshot": _content_snapshot(content_type, obj),
+    }
+
+
+def _make_pending_audit(content_type, obj, subject, batch):
+    requested_by = getattr(obj, "delete_requested_by", None)
+    reason = getattr(obj, "delete_reason", "") or ""
+    if not requested_by or not getattr(obj, "delete_requested", False) or getattr(obj, "delete_status", "") != "pending":
+        return None
+
+    audit = DeletionAudit.objects.filter(
+        content_type=content_type,
+        object_id=obj.id,
+        status="pending",
+    ).order_by("-id").first()
+
+    defaults = _audit_base(content_type, obj, subject, batch)
+    defaults.update({
+        "delete_requested_by_teacher": requested_by,
+        "delete_requested_at": getattr(obj, "delete_requested_at", None),
+        "delete_request_reason": reason,
+        "status": "pending",
+    })
+
+    if audit:
+        changed = False
+        for key, value in defaults.items():
+            if key not in {"content_type", "object_id"} and getattr(audit, key) != value:
+                setattr(audit, key, value)
+                changed = True
+        if changed:
+            audit.save()
+        return audit
+
+    return DeletionAudit.objects.create(**defaults)
+
+
+def _sync_pending_deletion_audits(subject):
+    batch = subject.batch
+    audits = []
+
+    chapters = CourseChapter.objects.filter(
+        batch=batch, subject=subject, is_deleted=False,
+        delete_requested=True, delete_status="pending",
+    ).select_related("created_by", "created_by_admin", "delete_requested_by")
+    for obj in chapters:
+        audit = _make_pending_audit("chapter", obj, subject, batch)
+        if audit:
+            audits.append(audit)
+
+        videos = obj.videos.filter(is_deleted=False, delete_requested=True, delete_status="pending").select_related("created_by", "created_by_admin", "delete_requested_by")
+        for child in videos:
+            audit = _make_pending_audit("video", child, subject, batch)
+            if audit:
+                audits.append(audit)
+
+        pdfs = obj.pdfs.filter(is_deleted=False, delete_requested=True, delete_status="pending").select_related("created_by", "created_by_admin", "delete_requested_by")
+        for child in pdfs:
+            audit = _make_pending_audit("pdf", child, subject, batch)
+            if audit:
+                audits.append(audit)
+
+        quizzes = obj.quizzes.filter(is_deleted=False, delete_requested=True, delete_status="pending").select_related("created_by", "created_by_admin", "delete_requested_by").prefetch_related("questions__options")
+        for child in quizzes:
+            audit = _make_pending_audit("quiz", child, subject, batch)
+            if audit:
+                audits.append(audit)
+
+    return audits
+
+
+def _delete_storage_file(field):
+    try:
+        if field:
+            field.delete(save=False)
+    except Exception as exc:
+        print("Storage cleanup warning:", exc)
+
+
+def _finalize_audit(audit, admin_user, method, admin_reason="", admin_response="", decision=""):
+    audit.deleted_by_admin = admin_user
+    audit.decision_by_admin = admin_user
+    audit.decision_at = timezone.now()
+    audit.deletion_method = method
+    audit.admin_delete_reason = admin_reason or ""
+    audit.admin_response = admin_response or ""
+    if decision:
+        audit.admin_decision = decision
+    audit.status = "deleted"
+    audit.deleted_at = timezone.now()
+    audit.save()
+
+
+def _delete_one_content(content_type, obj, subject, batch, admin_user, reason, method="admin_direct", audit=None, admin_response=""):
+    if audit is None:
+        audit_data = _audit_base(content_type, obj, subject, batch)
+        audit = DeletionAudit.objects.create(
+            **audit_data,
+            deleted_by_admin=admin_user,
+            decision_by_admin=admin_user,
+            deletion_method=method,
+            admin_delete_reason=reason,
+            admin_response=admin_response,
+            status="deleted",
+            deleted_at=timezone.now(),
+        )
+    else:
+        _finalize_audit(audit, admin_user, method, reason, admin_response, "approved" if method == "teacher_request_approved" else "")
+
+    # Save the audit before the actual delete because change logs are
+    # CASCADE-linked to the content and must not be the source of history.
+    if content_type == "video":
+        _delete_storage_file(obj.video_file)
+    elif content_type == "pdf":
+        _delete_storage_file(obj.pdf_file)
+        _delete_storage_file(obj.pdf_thumbnail)
+
+    obj.delete()
+    return audit
+
+
+def _approve_audit(audit, admin_user):
+    content_type = audit.content_type
+    try:
+        if content_type == "chapter":
+            obj = CourseChapter.objects.get(id=audit.object_id, is_deleted=False)
+        elif content_type == "video":
+            obj = ChapterVideo.objects.select_related("chapter").get(id=audit.object_id, is_deleted=False)
+        elif content_type == "pdf":
+            obj = ChapterPDF.objects.select_related("chapter").get(id=audit.object_id, is_deleted=False)
+        elif content_type == "quiz":
+            obj = ChapterQuiz.objects.prefetch_related("questions__options").get(id=audit.object_id, is_deleted=False)
+        else:
+            return False, "Unknown content type."
+    except Exception:
+        audit.status = "approved"
+        audit.admin_decision = "approved"
+        audit.decision_by_admin = admin_user
+        audit.decision_at = timezone.now()
+        audit.admin_response = "The requested content was already removed or is no longer available."
+        audit.deleted_at = timezone.now()
+        audit.deletion_method = "teacher_request_approved"
+        audit.save()
+        return False, "The requested content no longer exists."
+
+    subject = _get_admin_subject_by_names(audit.subject_name, audit.batch_name)
+    if subject is None:
+        subject = _get_admin_subject_from_object(obj, content_type)
+    batch = subject.batch
+
+    reason = audit.delete_request_reason or "Teacher requested deletion."
+
+    # If a chapter is approved, preserve separate audits for every child
+    # because the common audit page must be able to filter Chapter/Video/PDF/Quiz.
+    if content_type == "chapter":
+        children = list(obj.videos.filter(is_deleted=False).select_related("created_by", "created_by_admin"))
+        children += list(obj.pdfs.filter(is_deleted=False).select_related("created_by", "created_by_admin"))
+        children += list(obj.quizzes.filter(is_deleted=False).select_related("created_by", "created_by_admin").prefetch_related("questions__options"))
+        for child in children:
+            child_type = "video" if isinstance(child, ChapterVideo) else "pdf" if isinstance(child, ChapterPDF) else "quiz"
+            child_audit = DeletionAudit.objects.filter(content_type=child_type, object_id=child.id, status="pending").order_by("-id").first()
+            _delete_one_content(child_type, child, subject, batch, admin_user, reason, "teacher_request_approved", child_audit, "Teacher deletion request approved by Admin.")
+
+    _delete_one_content(content_type, obj, subject, batch, admin_user, reason, "teacher_request_approved", audit, "Teacher deletion request approved by Admin.")
+    return True, "Deletion request approved and content deleted successfully."
+
+
+def _get_admin_subject_by_names(subject_name, batch_name):
+    if not subject_name:
+        return None
+    return Subject.objects.select_related("batch").filter(subject_name=subject_name, batch__batch_name=batch_name).first()
+
+
+def _get_admin_subject_from_object(obj, content_type):
+    chapter = obj if content_type == "chapter" else getattr(obj, "chapter", None)
+    if chapter:
+        return Subject.objects.select_related("batch").get(id=chapter.subject_id)
+    return None
+
+
+def _timeline_entry(log, teacher_attr="changed_by", admin_attr="changed_by_admin"):
+    teacher = getattr(log, teacher_attr, None)
+    admin_user = getattr(log, admin_attr, None)
+    actor_name, actor_type = _admin_display_actor(teacher, admin_user)
+    return {
+        "id": log.id,
+        "actor_name": actor_name,
+        "actor_type": actor_type,
+        "action": log.get_action_display(),
+        "action_key": log.action,
+        "field_name": log.field_name,
+        "old_value": log.old_value,
+        "new_value": log.new_value,
+        "summary": log.change_summary,
+        "changed_at": log.changed_at,
+    }
+
+
+# ==========================================================
+# ADMIN SUBJECT COURSE BUILDER
+# ==========================================================
+
+@cache_control(no_cache=True, must_revalidate=True, no_store=True)
+@admin_required
+def admin_subject_course_builder_view(request, subject_id):
+    subject = _get_admin_subject(subject_id)
+    batch = subject.batch
+
+    allowed_views = {
+        "overview", "videos", "pdfs", "quizzes", "live",
+        "delete_requests", "audit", "chapter_timeline",
+        "video_timeline", "pdf_timeline", "quiz_timeline",
+    }
+    selected_content = (request.GET.get("view") or request.GET.get("content") or "overview").strip().lower()
+    if selected_content not in allowed_views:
+        selected_content = "overview"
+
+    chapters = CourseChapter.objects.filter(batch=batch, subject=subject, is_deleted=False).select_related("created_by", "created_by_admin", "updated_by", "updated_by_admin").order_by("chapter_order", "id")
+    selected_chapter = None
+    raw_chapter = (request.GET.get("chapter") or "").strip()
+    if raw_chapter.isdigit():
+        selected_chapter = chapters.filter(id=int(raw_chapter)).first()
+    if selected_chapter is None:
+        selected_chapter = chapters.first()
+
+    videos = ChapterVideo.objects.none()
+    pdfs = ChapterPDF.objects.none()
+    quizzes = ChapterQuiz.objects.none()
+    if selected_chapter:
+        videos = ChapterVideo.objects.filter(chapter=selected_chapter, is_deleted=False).select_related("created_by", "created_by_admin", "updated_by", "updated_by_admin").order_by("video_order", "id")
+        pdfs = ChapterPDF.objects.filter(chapter=selected_chapter, is_deleted=False).select_related("created_by", "created_by_admin", "updated_by", "updated_by_admin").order_by("pdf_order", "id")
+        quizzes = ChapterQuiz.objects.filter(chapter=selected_chapter, is_deleted=False).select_related("created_by", "created_by_admin", "updated_by", "updated_by_admin").prefetch_related("questions__options").order_by("created_at", "id")
+
+    raw_video = (request.GET.get("video") or "").strip()
+    raw_pdf = (request.GET.get("pdf") or "").strip()
+    raw_quiz = (request.GET.get("quiz") or "").strip()
+    selected_video = videos.filter(id=int(raw_video)).first() if raw_video.isdigit() else None
+    selected_pdf = pdfs.filter(id=int(raw_pdf)).first() if raw_pdf.isdigit() else None
+    selected_quiz = quizzes.filter(id=int(raw_quiz)).first() if raw_quiz.isdigit() else None
+
+    chapter_timeline_entries = []
+    video_timeline_entries = []
+    pdf_timeline_entries = []
+    quiz_timeline_entries = []
+    if selected_chapter and selected_content == "chapter_timeline":
+        chapter_timeline_entries = [_timeline_entry(x) for x in ChapterChangeLog.objects.filter(chapter=selected_chapter).select_related("changed_by", "changed_by_admin").order_by("-changed_at", "-id")]
+    if selected_video and selected_content == "video_timeline":
+        video_timeline_entries = [_timeline_entry(x) for x in VideoChangeLog.objects.filter(video=selected_video).select_related("changed_by", "changed_by_admin").order_by("-changed_at", "-id")]
+    if selected_pdf and selected_content == "pdf_timeline":
+        pdf_timeline_entries = [_timeline_entry(x) for x in PDFChangeLog.objects.filter(pdf=selected_pdf).select_related("changed_by", "changed_by_admin").order_by("-changed_at", "-id")]
+    if selected_quiz and selected_content == "quiz_timeline":
+        quiz_timeline_entries = [_timeline_entry(x) for x in QuizChangeLog.objects.filter(quiz=selected_quiz).select_related("changed_by", "changed_by_admin").order_by("-changed_at", "-id")]
+
+    _sync_pending_deletion_audits(subject)
+    audit_qs = DeletionAudit.objects.filter(batch_name=batch.batch_name, subject_name=subject.subject_name).select_related("created_by_teacher", "created_by_admin", "delete_requested_by_teacher", "decision_by_admin", "deleted_by_admin").order_by("-created_at", "-id")
+
+    audit_type = (request.GET.get("audit_type") or "all").strip().lower()
+    audit_status = (request.GET.get("audit_status") or "all").strip().lower()
+    audit_search = (request.GET.get("audit_search") or "").strip()
+    if audit_type in {"chapter", "video", "pdf", "quiz"}:
+        audit_qs = audit_qs.filter(content_type=audit_type)
+    if audit_status in {"pending", "approved", "rejected", "deleted"}:
+        audit_qs = audit_qs.filter(status=audit_status)
+    if audit_search:
+        audit_qs = audit_qs.filter(Q(content_name__icontains=audit_search) | Q(chapter_name__icontains=audit_search))
+
+    delete_requests = list(audit_qs.filter(status="pending"))
+    all_audits = list(audit_qs)
+
+    assigned_teachers = TeacherSubject.objects.filter(batch=batch, subject=subject, is_active=True).select_related("teacher").order_by("teacher__full_name", "teacher__id")
+
+    context = {
+        "subject": subject, "batch": batch,
+        "chapters": chapters, "selected_chapter": selected_chapter,
+        "videos": videos, "pdfs": pdfs, "quizzes": quizzes,
+        "selected_video": selected_video, "selected_pdf": selected_pdf, "selected_quiz": selected_quiz,
+        "assigned_teachers": assigned_teachers,
+        "selected_content": selected_content,
+        "selected_content_title": selected_content.replace("_", " ").title(),
+        "chapter_count": chapters.count(), "video_count": videos.count(), "pdf_count": pdfs.count(), "quiz_count": quizzes.count(),
+        "subject_chapter_count": chapters.count(),
+        "subject_video_count": ChapterVideo.objects.filter(chapter__batch=batch, chapter__subject=subject, chapter__is_deleted=False, is_deleted=False).count(),
+        "subject_pdf_count": ChapterPDF.objects.filter(chapter__batch=batch, chapter__subject=subject, chapter__is_deleted=False, is_deleted=False).count(),
+        "subject_quiz_count": ChapterQuiz.objects.filter(chapter__batch=batch, chapter__subject=subject, chapter__is_deleted=False, is_deleted=False).count(),
+        "quiz_question_count": QuizQuestion.objects.filter(quiz__chapter=selected_chapter, quiz__is_deleted=False).count() if selected_chapter else 0,
+        "chapter_creator_name": _admin_display_actor(selected_chapter.created_by, selected_chapter.created_by_admin)[0] if selected_chapter else "",
+        "chapter_updater_name": _admin_display_actor(selected_chapter.updated_by, selected_chapter.updated_by_admin)[0] if selected_chapter else "",
+        "video_creator_names": {x.id: _admin_display_actor(x.created_by, x.created_by_admin)[0] for x in videos},
+        "video_updater_names": {x.id: _admin_display_actor(x.updated_by, x.updated_by_admin)[0] for x in videos},
+        "pdf_creator_names": {x.id: _admin_display_actor(x.created_by, x.created_by_admin)[0] for x in pdfs},
+        "pdf_updater_names": {x.id: _admin_display_actor(x.updated_by, x.updated_by_admin)[0] for x in pdfs},
+        "quiz_creator_names": {x.id: _admin_display_actor(x.created_by, x.created_by_admin)[0] for x in quizzes},
+        "quiz_updater_names": {x.id: _admin_display_actor(x.updated_by, x.updated_by_admin)[0] for x in quizzes},
+        "chapter_timeline_entries": chapter_timeline_entries,
+        "video_timeline_entries": video_timeline_entries,
+        "pdf_timeline_entries": pdf_timeline_entries,
+        "quiz_timeline_entries": quiz_timeline_entries,
+        "timeline_entries": chapter_timeline_entries or video_timeline_entries or pdf_timeline_entries or quiz_timeline_entries,
+        "timeline_count": len(chapter_timeline_entries or video_timeline_entries or pdf_timeline_entries or quiz_timeline_entries),
+        "delete_requests": delete_requests,
+        "pending_delete_count": len(delete_requests),
+        "audit_entries": all_audits,
+        "audit_count": len(all_audits),
+        "audit_type": audit_type,
+        "audit_status": audit_status,
+        "audit_search": audit_search,
+        "admin_user": request.user,
+        # Existing edit UI state remains compatible with the current template.
+        "chapter_edit_open": request.session.pop("chapter_edit_open", False),
+        "chapter_edit_error": request.session.pop("chapter_edit_error", ""),
+        "chapter_edit_form": request.session.pop("chapter_edit_form", {}),
+        "video_edit_open": request.session.pop("video_edit_open", False),
+        "video_edit_error": request.session.pop("video_edit_error", ""),
+        "video_edit_form": request.session.pop("video_edit_form", {}),
+        "pdf_edit_open": request.session.pop("pdf_edit_open", False),
+        "pdf_edit_error": request.session.pop("pdf_edit_error", ""),
+        "pdf_edit_form": request.session.pop("pdf_edit_form", {}),
+        # Creation state is intentionally disabled.
+        "video_upload_open": False, "video_upload_error": "", "video_upload_form": {},
+        "pdf_upload_open": False, "pdf_upload_error": "", "pdf_upload_form": {},
+        "quiz_create_open": False, "quiz_create_error": "", "quiz_create_form": {},
+        "quiz_question_open": False, "quiz_question_error": "", "quiz_question_form": {}, "quiz_question_quiz_id": "",
+    }
+    request.session.modified = True
+    return render(request, "admins/course_builder/admin_course_builder.html", context)
+
+
+# ==========================================================
+# ADMIN CREATION ENDPOINTS — HARD DISABLED
+# ==========================================================
+# Kept temporarily so old URLs cannot accidentally create content.
+# They will be removed from admin/urls.py in the next stage.
+
+@login_required(login_url="admin_signin")
+@admin_required
+@require_POST
+def admin_create_chapter_view(request, subject_id):
+    messages.error(request, "Admin chapter creation is disabled. Chapters are created by teachers.")
+    return redirect(_admin_builder_url(subject_id, view="overview"))
+
+
+@login_required(login_url="admin_signin")
+@admin_required
+@require_POST
+def admin_upload_video_view(request, subject_id, chapter_id):
+    messages.error(request, "Admin video upload is disabled. Videos are added by teachers.")
+    return redirect(_admin_builder_url(subject_id, chapter_id, view="videos"))
+
+
+@login_required(login_url="admin_signin")
+@admin_required
+@require_POST
+def admin_upload_pdf_view(request, subject_id, chapter_id):
+    messages.error(request, "Admin PDF upload is disabled. PDFs are added by teachers.")
+    return redirect(_admin_builder_url(subject_id, chapter_id, view="pdfs"))
+
+
+@login_required(login_url="admin_signin")
+@admin_required
+@require_POST
+def admin_create_quiz_view(request, subject_id, chapter_id):
+    messages.error(request, "Admin quiz creation is disabled. Quizzes are created by teachers.")
+    return redirect(_admin_builder_url(subject_id, chapter_id, view="quizzes"))
+
+
+# ==========================================================
+# ADMIN CHAPTER — EDIT
+# ==========================================================
+
+@login_required(login_url="admin_signin")
+@admin_required
+@cache_control(no_cache=True, must_revalidate=True, no_store=True)
+def admin_edit_chapter_view(request, subject_id, chapter_id):
+    subject, batch, chapter = _get_admin_chapter(subject_id, chapter_id)
+    if request.method == "GET":
+        _chapter_edit_state(request, chapter)
+        return redirect(_admin_builder_url(subject.id, chapter.id, view="overview"))
+    if request.method != "POST":
+        messages.error(request, "Invalid chapter edit request.")
+        return redirect(_admin_builder_url(subject.id, chapter.id, view="overview"))
+
+    new_name = (request.POST.get("chapter_name") or "").strip()
+    new_description = (request.POST.get("chapter_description") or "").strip()
+    new_status = (request.POST.get("status") or "").strip().lower()
+    if not new_name or len(new_name) > 255:
+        _chapter_edit_state(request, chapter, "Chapter name is required and must be 255 characters or fewer.", chapter_name=new_name, chapter_description=new_description, status=new_status)
+        return redirect(_admin_builder_url(subject.id, chapter.id, view="overview"))
+    if not new_description or len(new_description) > 255:
+        _chapter_edit_state(request, chapter, "Chapter description is required and must be 255 characters or fewer.", chapter_name=new_name, chapter_description=new_description, status=new_status)
+        return redirect(_admin_builder_url(subject.id, chapter.id, view="overview"))
+    if new_status not in {value for value, _ in CourseChapter.STATUS_CHOICES}:
+        _chapter_edit_state(request, chapter, "Invalid chapter status selected.", chapter_name=new_name, chapter_description=new_description, status=new_status)
+        return redirect(_admin_builder_url(subject.id, chapter.id, view="overview"))
+    if CourseChapter.objects.filter(batch=batch, subject=subject, chapter_name__iexact=new_name, is_deleted=False).exclude(id=chapter.id).exists():
+        _chapter_edit_state(request, chapter, "A chapter with this name already exists in this subject.", chapter_name=new_name, chapter_description=new_description, status=new_status)
+        return redirect(_admin_builder_url(subject.id, chapter.id, view="overview"))
+
+    old_name, old_description, old_status = chapter.chapter_name or "", chapter.chapter_description or "", chapter.status or ""
+    with transaction.atomic():
+        chapter.chapter_name = new_name
+        chapter.chapter_description = new_description
+        chapter.status = new_status
+        chapter.updated_by = None
+        chapter.updated_by_admin = request.user
+        chapter.save()
+        if old_name != new_name:
+            _record_chapter_admin_log(chapter, "name_changed", "chapter_name", old_name, new_name, "Chapter name was updated by Admin.", request.user)
+        if old_description != new_description:
+            _record_chapter_admin_log(chapter, "updated", "chapter_description", old_description, new_description, "Chapter description was updated by Admin.", request.user)
+        if old_status != new_status:
+            _record_chapter_admin_log(chapter, "status_changed", "status", old_status, new_status, "Chapter status was updated by Admin.", request.user)
+    _clear_session_keys(request, "chapter_edit_open", "chapter_edit_error", "chapter_edit_form")
+    messages.success(request, f'Chapter "{chapter.chapter_name}" updated successfully.')
+    return redirect(_admin_builder_url(subject.id, chapter.id, view="overview"))
+
+
+# ==========================================================
+# ADMIN VIDEO — VIEW / PLAY
+# ==========================================================
+
+@login_required(login_url="admin_signin")
+@admin_required
+def admin_play_video_view(request, subject_id, chapter_id, video_id):
+    subject, batch, chapter, video = _get_admin_video(subject_id, chapter_id, video_id)
+    return redirect(_admin_builder_url(subject.id, chapter.id, view="videos", extra_params={"video": video.id}))
+
+
+# ==========================================================
+# ADMIN VIDEO — EDIT
+# ==========================================================
+
+@login_required(login_url="admin_signin")
+@admin_required
+@cache_control(no_cache=True, must_revalidate=True, no_store=True)
+def admin_edit_video_view(request, subject_id, chapter_id, video_id):
+    subject, batch, chapter, video = _get_admin_video(subject_id, chapter_id, video_id)
+    if request.method == "GET":
+        _video_edit_state(request, video)
+        return redirect(_admin_builder_url(subject.id, chapter.id, view="videos", extra_params={"video": video.id}))
+    if request.method != "POST":
+        messages.error(request, "Invalid video edit request.")
+        return redirect(_admin_builder_url(subject.id, chapter.id, view="videos"))
+
+    old_name, old_description, old_order = video.video_name or "", video.video_description or "", video.video_order
+    old_file_name = getattr(video.video_file, "name", "") or ""
+    new_name = (request.POST.get("video_name") or "").strip()
+    new_description = (request.POST.get("video_description") or "").strip()
+    order_raw = (request.POST.get("video_order") or "").strip()
+    replacement_file = request.FILES.get("video_file")
+    def error(message):
+        _video_edit_state(request, video, message, video_name=new_name, video_description=new_description, video_order=order_raw or old_order)
+        return redirect(_admin_builder_url(subject.id, chapter.id, view="videos", extra_params={"video": video.id}))
+    if not new_name or len(new_name) > 255:
+        return error("Video name is required and must be 255 characters or fewer.")
+    if ChapterVideo.objects.filter(chapter=chapter, video_name__iexact=new_name, is_deleted=False).exclude(id=video.id).exists():
+        return error("A video with this name already exists in this chapter.")
+    if not new_description or len(new_description) > 5000:
+        return error("Video description is required and must be 5000 characters or fewer.")
+    if not order_raw.isdigit() or int(order_raw) <= 0:
+        return error("Video order must be a positive whole number.")
+    new_order = int(order_raw)
+    current_count = ChapterVideo.objects.filter(chapter=chapter, is_deleted=False).count()
+    if new_order > current_count:
+        return error(f"Video order must be between 1 and {current_count}.")
+    if replacement_file:
+        valid, msg = _validate_mp4(replacement_file)
+        if not valid:
+            return error(msg)
+
+    with transaction.atomic():
+        video.video_name = new_name
+        video.video_description = new_description
+        video.video_order = new_order
+        video.updated_by = None
+        video.updated_by_admin = request.user
+        if replacement_file:
+            video.video_file = replacement_file
+        video.save()
+        if old_name != new_name:
+            _record_video_admin_log(video, "name_changed", "video_name", old_name, new_name, "Video name was updated by Admin.", request.user)
+        if old_description != new_description:
+            _record_video_admin_log(video, "description_changed", "video_description", old_description, new_description, "Video description was updated by Admin.", request.user)
+        if old_order != new_order:
+            _record_video_admin_log(video, "order_changed", "video_order", old_order, new_order, "Video order was updated by Admin.", request.user)
+        if replacement_file:
+            _record_video_admin_log(video, "file_changed", "video_file", old_file_name, getattr(video.video_file, "name", ""), "Video file was replaced by Admin.", request.user)
+    _clear_session_keys(request, "video_edit_open", "video_edit_error", "video_edit_form")
+    messages.success(request, f'Video "{video.video_name}" updated successfully.')
+    return redirect(_admin_builder_url(subject.id, chapter.id, view="videos", extra_params={"video": video.id}))
+
+
+# ==========================================================
+# ADMIN PDF — VIEW / OPEN
+# ==========================================================
+
+@login_required(login_url="admin_signin")
+@admin_required
+def admin_open_pdf_view(request, subject_id, chapter_id, pdf_id):
+    subject, batch, chapter, pdf = _get_admin_pdf(subject_id, chapter_id, pdf_id)
+    return redirect(_admin_builder_url(subject.id, chapter.id, view="pdfs", extra_params={"pdf": pdf.id}))
+
+
+# ==========================================================
+# ADMIN PDF — EDIT
+# ==========================================================
+
+@login_required(login_url="admin_signin")
+@admin_required
+@cache_control(no_cache=True, must_revalidate=True, no_store=True)
+def admin_edit_pdf_view(request, subject_id, chapter_id, pdf_id):
+    subject, batch, chapter, pdf = _get_admin_pdf(subject_id, chapter_id, pdf_id)
+    if request.method == "GET":
+        _pdf_edit_state(request, pdf)
+        return redirect(_admin_builder_url(subject.id, chapter.id, view="pdfs", extra_params={"pdf": pdf.id}))
+    if request.method != "POST":
+        messages.error(request, "Invalid PDF edit request.")
+        return redirect(_admin_builder_url(subject.id, chapter.id, view="pdfs"))
+
+    old_name, old_description, old_order = pdf.pdf_name or "", pdf.pdf_description or "", pdf.pdf_order
+    old_file_name = getattr(pdf.pdf_file, "name", "") or ""
+    old_thumbnail_name = getattr(pdf.pdf_thumbnail, "name", "") or ""
+    new_name = (request.POST.get("pdf_name") or "").strip()
+    new_description = (request.POST.get("pdf_description") or "").strip()
+    order_raw = (request.POST.get("pdf_order") or "").strip()
+    replacement_file = request.FILES.get("pdf_file")
+    replacement_thumbnail = request.FILES.get("pdf_thumbnail")
+    def error(message):
+        _pdf_edit_state(request, pdf, message, pdf_name=new_name, pdf_description=new_description, pdf_order=order_raw or old_order)
+        return redirect(_admin_builder_url(subject.id, chapter.id, view="pdfs", extra_params={"pdf": pdf.id}))
+    if not new_name or len(new_name) > 255:
+        return error("PDF name is required and must be 255 characters or fewer.")
+    if ChapterPDF.objects.filter(chapter=chapter, pdf_name__iexact=new_name, is_deleted=False).exclude(id=pdf.id).exists():
+        return error("A PDF with this name already exists in this chapter.")
+    if not new_description or len(new_description) > 5000:
+        return error("PDF description is required and must be 5000 characters or fewer.")
+    if not order_raw.isdigit() or int(order_raw) <= 0:
+        return error("PDF order must be a positive whole number.")
+    new_order = int(order_raw)
+    current_count = ChapterPDF.objects.filter(chapter=chapter, is_deleted=False).count()
+    if new_order > current_count:
+        return error(f"PDF order must be between 1 and {current_count}.")
+    if replacement_file:
+        valid, msg = _validate_pdf_file(replacement_file)
+        if not valid:
+            return error(msg)
+    if replacement_thumbnail:
+        valid, msg = _validate_pdf_thumbnail(replacement_thumbnail)
+        if not valid:
+            return error(msg)
+
+    with transaction.atomic():
+        pdf.pdf_name = new_name
+        pdf.pdf_description = new_description
+        pdf.pdf_order = new_order
+        pdf.updated_by = None
+        pdf.updated_by_admin = request.user
+        if replacement_file:
+            pdf.pdf_file = replacement_file
+        if replacement_thumbnail:
+            pdf.pdf_thumbnail = replacement_thumbnail
+        pdf.save()
+        if old_name != new_name:
+            _record_pdf_admin_log(pdf, "name_changed", "pdf_name", old_name, new_name, "PDF name was updated by Admin.", request.user)
+        if old_description != new_description:
+            _record_pdf_admin_log(pdf, "description_changed", "pdf_description", old_description, new_description, "PDF description was updated by Admin.", request.user)
+        if old_order != new_order:
+            _record_pdf_admin_log(pdf, "order_changed", "pdf_order", old_order, new_order, "PDF order was updated by Admin.", request.user)
+        if replacement_file:
+            _record_pdf_admin_log(pdf, "file_changed", "pdf_file", old_file_name, getattr(pdf.pdf_file, "name", ""), "PDF file was replaced by Admin.", request.user)
+        if replacement_thumbnail:
+            _record_pdf_admin_log(pdf, "thumbnail_changed", "pdf_thumbnail", old_thumbnail_name, getattr(pdf.pdf_thumbnail, "name", ""), "PDF thumbnail was replaced by Admin.", request.user)
+    _clear_session_keys(request, "pdf_edit_open", "pdf_edit_error", "pdf_edit_form")
+    messages.success(request, f'PDF "{pdf.pdf_name}" updated successfully.')
+    return redirect(_admin_builder_url(subject.id, chapter.id, view="pdfs", extra_params={"pdf": pdf.id}))
+
+
+# ==========================================================
+# ADMIN QUIZ — VIEW
+# ==========================================================
+
+@login_required(login_url="admin_signin")
+@admin_required
+def admin_view_quiz_view(request, subject_id, chapter_id, quiz_id):
+    subject, batch, chapter, quiz = _get_admin_quiz(subject_id, chapter_id, quiz_id)
+    return redirect(_admin_builder_url(subject.id, chapter.id, view="quizzes", extra_params={"quiz": quiz.id}))
+
+
+# ==========================================================
+# ADMIN QUIZ — EDIT EXISTING QUIZ
+# ==========================================================
+
+@login_required(login_url="admin_signin")
+@admin_required
+@cache_control(no_cache=True, must_revalidate=True, no_store=True)
+def admin_edit_quiz_view(request, subject_id, chapter_id, quiz_id):
+    subject, batch, chapter, quiz = _get_admin_quiz(subject_id, chapter_id, quiz_id)
+    base = {"chapter": chapter.id, "view": "quizzes", "quiz": quiz.id, "quiz_mode": "edit"}
+    if request.method == "GET":
+        return redirect(_admin_builder_url(subject.id, extra_params=base))
+    if request.method != "POST":
+        messages.error(request, "Invalid quiz edit request.")
+        return redirect(_admin_builder_url(subject.id, extra_params=base))
+
+    action = (request.POST.get("action") or "update_quiz").strip().lower()
+    if action == "update_quiz":
+        new_name = (request.POST.get("quiz_name") or "").strip()
+        new_description = (request.POST.get("quiz_description") or "").strip()
+        attempt_raw = (request.POST.get("attempt_limit") or "").strip()
+        if not new_name or len(new_name) > 255:
+            messages.error(request, "Quiz name is required and must be 255 characters or fewer.")
+            return redirect(_admin_builder_url(subject.id, extra_params=base))
+        if not new_description or len(new_description) > 5000:
+            messages.error(request, "Quiz description is required and must be 5000 characters or fewer.")
+            return redirect(_admin_builder_url(subject.id, extra_params=base))
+        if not attempt_raw.isdigit() or not (1 <= int(attempt_raw) <= 100):
+            messages.error(request, "Attempt limit must be between 1 and 100.")
+            return redirect(_admin_builder_url(subject.id, extra_params=base))
+        if ChapterQuiz.objects.filter(chapter=chapter, quiz_name__iexact=new_name, is_deleted=False).exclude(id=quiz.id).exists():
+            messages.error(request, "Another quiz with this name already exists.")
+            return redirect(_admin_builder_url(subject.id, extra_params=base))
+        new_attempt = int(attempt_raw)
+        old_name, old_description, old_attempt = quiz.quiz_name, quiz.quiz_description, quiz.attempt_limit
+        with transaction.atomic():
+            quiz.quiz_name = new_name
+            quiz.quiz_description = new_description
+            quiz.attempt_limit = new_attempt
+            quiz.updated_by = None
+            quiz.updated_by_admin = request.user
+            quiz.save()
+            if old_name != new_name:
+                _record_quiz_admin_log(quiz, "name_changed", "quiz_name", old_name, new_name, "Quiz name was updated by Admin.", request.user)
+            if old_description != new_description:
+                _record_quiz_admin_log(quiz, "description_changed", "quiz_description", old_description, new_description, "Quiz description was updated by Admin.", request.user)
+            if old_attempt != new_attempt:
+                _record_quiz_admin_log(quiz, "attempt_limit_changed", "attempt_limit", old_attempt, new_attempt, "Quiz attempt limit was updated by Admin.", request.user)
+        messages.success(request, f'Quiz "{quiz.quiz_name}" updated successfully.')
+        return redirect(_admin_builder_url(subject.id, extra_params=base))
+
+    if action == "update_question":
+        qid = (request.POST.get("question_id") or "").strip()
+        if not qid.isdigit():
+            messages.error(request, "Invalid question selected.")
+            return redirect(_admin_builder_url(subject.id, extra_params=base))
+        question = get_object_or_404(QuizQuestion, id=int(qid), quiz=quiz)
+        text_value = (request.POST.get("question_text") or "").strip()
+        marks_raw = (request.POST.get("marks") or "").strip()
+        options = {label: (request.POST.get(f"option_{label.lower()}") or "").strip() for label in "ABCD"}
+        correct = (request.POST.get("correct_option") or "").strip().upper()
+        if not text_value or not marks_raw.isdigit() or int(marks_raw) <= 0 or any(not options[x] for x in "ABCD") or len({options[x].casefold() for x in "ABCD"}) != 4 or correct not in set("ABCD"):
+            messages.error(request, "Question, four different options, marks and exactly one correct answer are required.")
+            return redirect(_admin_builder_url(subject.id, extra_params=base))
+        old_text, old_marks = question.question_text, question.marks
+        old_options = {x.option_label: x for x in question.options.all()}
+        with transaction.atomic():
+            question.question_text = text_value
+            question.marks = int(marks_raw)
+            question.save()
+            for label, value in options.items():
+                option = old_options.get(label)
+                if option:
+                    old_text_value, old_correct = option.option_text, option.is_correct
+                    option.option_text = value
+                    option.is_correct = label == correct
+                    option.save()
+                    if old_text_value != value:
+                        _record_quiz_admin_log(quiz, "option_changed", f"option_{label}", old_text_value, value, f"Option {label} was updated by Admin.", request.user)
+                    if old_correct != option.is_correct:
+                        _record_quiz_admin_log(quiz, "correct_answer_changed", f"option_{label}_correct", old_correct, option.is_correct, f"Correct answer for option {label} was changed by Admin.", request.user)
+                else:
+                    QuizOption.objects.create(question=question, option_label=label, option_text=value, is_correct=(label == correct))
+            quiz.updated_by = None
+            quiz.updated_by_admin = request.user
+            quiz.save(update_fields=["updated_by", "updated_by_admin", "updated_at"])
+            if old_text != question.question_text:
+                _record_quiz_admin_log(quiz, "question_updated", "question", old_text, question.question_text, "Quiz question was updated by Admin.", request.user)
+            if old_marks != question.marks:
+                _record_quiz_admin_log(quiz, "question_updated", "marks", old_marks, question.marks, "Question marks were updated by Admin.", request.user)
+        messages.success(request, "Quiz question updated successfully.")
+        return redirect(_admin_builder_url(subject.id, extra_params=base))
+
+    if action == "delete_question":
+        qid = (request.POST.get("question_id") or "").strip()
+        if not qid.isdigit():
+            messages.error(request, "Invalid question selected.")
+            return redirect(_admin_builder_url(subject.id, extra_params=base))
+        question = get_object_or_404(QuizQuestion, id=int(qid), quiz=quiz)
+        old_text = question.question_text
+        with transaction.atomic():
+            question.delete()
+            quiz.updated_by = None
+            quiz.updated_by_admin = request.user
+            quiz.save(update_fields=["updated_by", "updated_by_admin", "updated_at"])
+            _record_quiz_admin_log(quiz, "question_deleted", "question", old_text, "", "Quiz question was deleted by Admin.", request.user)
+        messages.success(request, "Quiz question deleted successfully.")
+        return redirect(_admin_builder_url(subject.id, extra_params=base))
+
+    messages.error(request, "Invalid quiz edit action.")
+    return redirect(_admin_builder_url(subject.id, extra_params=base))
+
+
+# ==========================================================
+# ADMIN TIMELINE ROUTES
+# ==========================================================
+
+@login_required(login_url="admin_signin")
+@admin_required
+def admin_chapter_timeline_view(request, subject_id, chapter_id):
+    subject, batch, chapter = _get_admin_chapter(subject_id, chapter_id)
+    return redirect(_admin_builder_url(subject.id, chapter.id, view="chapter_timeline"))
+
+
+@login_required(login_url="admin_signin")
+@admin_required
+def admin_video_timeline_view(request, subject_id, chapter_id, video_id):
+    subject, batch, chapter, video = _get_admin_video(subject_id, chapter_id, video_id)
+    return redirect(_admin_builder_url(subject.id, chapter.id, view="video_timeline", extra_params={"video": video.id}))
+
+
+@login_required(login_url="admin_signin")
+@admin_required
+def admin_pdf_timeline_view(request, subject_id, chapter_id, pdf_id):
+    subject, batch, chapter, pdf = _get_admin_pdf(subject_id, chapter_id, pdf_id)
+    return redirect(_admin_builder_url(subject.id, chapter.id, view="pdf_timeline", extra_params={"pdf": pdf.id}))
+
+
+@login_required(login_url="admin_signin")
+@admin_required
+def admin_quiz_timeline_view(request, subject_id, chapter_id, quiz_id):
+    subject, batch, chapter, quiz = _get_admin_quiz(subject_id, chapter_id, quiz_id)
+    return redirect(_admin_builder_url(subject.id, chapter.id, view="quiz_timeline", extra_params={"quiz": quiz.id}))
+
+
+# ==========================================================
+# ADMIN DIRECT DELETE — COMMON AUDIT
+# ==========================================================
+
+def _require_delete_reason(request):
+    reason = (request.POST.get("reason") or request.POST.get("delete_reason") or request.POST.get("admin_delete_reason") or "").strip()
+    if not reason:
+        return None, "Deletion reason is required."
+    if len(reason) < 3:
+        return None, "Deletion reason must contain at least 3 characters."
+    if len(reason) > 5000:
+        return None, "Deletion reason cannot exceed 5000 characters."
+    return reason, ""
+
+
+@login_required(login_url="admin_signin")
+@admin_required
+@require_POST
+def admin_delete_chapter_view(request, subject_id, chapter_id):
+    subject, batch, chapter = _get_admin_chapter(subject_id, chapter_id)
+    reason, error = _require_delete_reason(request)
+    if error:
+        messages.error(request, error)
+        return redirect(_admin_builder_url(subject.id, chapter.id, view="overview"))
+    with transaction.atomic():
+        # Preserve individual child audits before chapter cascade deletion.
+        children = list(chapter.videos.filter(is_deleted=False).select_related("created_by", "created_by_admin"))
+        children += list(chapter.pdfs.filter(is_deleted=False).select_related("created_by", "created_by_admin"))
+        children += list(chapter.quizzes.filter(is_deleted=False).select_related("created_by", "created_by_admin").prefetch_related("questions__options"))
+        for child in children:
+            child_type = "video" if isinstance(child, ChapterVideo) else "pdf" if isinstance(child, ChapterPDF) else "quiz"
+            _delete_one_content(child_type, child, subject, batch, request.user, reason, "admin_direct")
+        _delete_one_content("chapter", chapter, subject, batch, request.user, reason, "admin_direct")
+    messages.success(request, "Chapter and its child content were deleted and recorded in the Content Deletion Audit.")
+    return redirect(_admin_builder_url(subject.id, view="overview"))
+
+
+@login_required(login_url="admin_signin")
+@admin_required
+@require_POST
+def admin_delete_video_view(request, subject_id, chapter_id, video_id):
+    subject, batch, chapter, video = _get_admin_video(subject_id, chapter_id, video_id)
+    reason, error = _require_delete_reason(request)
+    if error:
+        messages.error(request, error)
+        return redirect(_admin_builder_url(subject.id, chapter.id, view="videos", extra_params={"video": video.id}))
+    with transaction.atomic():
+        _delete_one_content("video", video, subject, batch, request.user, reason, "admin_direct")
+    messages.success(request, "Video deleted and recorded in the Content Deletion Audit.")
+    return redirect(_admin_builder_url(subject.id, chapter.id, view="videos"))
+
+
+@login_required(login_url="admin_signin")
+@admin_required
+@require_POST
+def admin_delete_pdf_view(request, subject_id, chapter_id, pdf_id):
+    subject, batch, chapter, pdf = _get_admin_pdf(subject_id, chapter_id, pdf_id)
+    reason, error = _require_delete_reason(request)
+    if error:
+        messages.error(request, error)
+        return redirect(_admin_builder_url(subject.id, chapter.id, view="pdfs", extra_params={"pdf": pdf.id}))
+    with transaction.atomic():
+        _delete_one_content("pdf", pdf, subject, batch, request.user, reason, "admin_direct")
+    messages.success(request, "PDF deleted and recorded in the Content Deletion Audit.")
+    return redirect(_admin_builder_url(subject.id, chapter.id, view="pdfs"))
+
+
+@login_required(login_url="admin_signin")
+@admin_required
+@require_POST
+def admin_delete_quiz_view(request, subject_id, chapter_id, quiz_id):
+    subject, batch, chapter, quiz = _get_admin_quiz(subject_id, chapter_id, quiz_id)
+    reason, error = _require_delete_reason(request)
+    if error:
+        messages.error(request, error)
+        return redirect(_admin_builder_url(subject.id, chapter.id, view="quizzes", extra_params={"quiz": quiz.id}))
+    with transaction.atomic():
+        _delete_one_content("quiz", quiz, subject, batch, request.user, reason, "admin_direct")
+    messages.success(request, "Quiz deleted and recorded in the Content Deletion Audit.")
+    return redirect(_admin_builder_url(subject.id, chapter.id, view="quizzes"))
+
+
+# ==========================================================
+# ADMIN DELETE REQUESTS
+# ==========================================================
+
+@login_required(login_url="admin_signin")
+@admin_required
+@cache_control(no_cache=True, must_revalidate=True, no_store=True)
+def admin_delete_requests_view(request, subject_id):
+    subject = _get_admin_subject(subject_id)
+    _sync_pending_deletion_audits(subject)
+    return redirect(_admin_builder_url(subject.id, view="delete_requests"))
+
+
+@login_required(login_url="admin_signin")
+@admin_required
+@require_POST
+def admin_approve_delete_request_view(request, subject_id, request_id):
+    subject = _get_admin_subject(subject_id)
+    audit = get_object_or_404(DeletionAudit, id=request_id, batch_name=subject.batch.batch_name, subject_name=subject.subject_name, status="pending")
+    response = (request.POST.get("admin_response") or request.POST.get("response") or "").strip()
+    if len(response) > 5000:
+        messages.error(request, "Admin response cannot exceed 5000 characters.")
+        return redirect(_admin_builder_url(subject.id, view="delete_requests"))
+    ok, message = _approve_audit(audit, request.user)
+    if response:
+        # The audit survives even if the content was deleted.
+        DeletionAudit.objects.filter(id=audit.id).update(admin_response=response)
+    messages.success(request, message) if ok else messages.warning(request, message)
+    return redirect(_admin_builder_url(subject.id, view="delete_requests"))
+
+
+@login_required(login_url="admin_signin")
+@admin_required
+@require_POST
+def admin_reject_delete_request_view(request, subject_id, request_id):
+    subject = _get_admin_subject(subject_id)
+    audit = get_object_or_404(DeletionAudit, id=request_id, batch_name=subject.batch.batch_name, subject_name=subject.subject_name, status="pending")
+    response = (request.POST.get("admin_response") or request.POST.get("response") or request.POST.get("reason") or "").strip()
+    if not response:
+        messages.error(request, "Admin response/reason is required when rejecting a deletion request.")
+        return redirect(_admin_builder_url(subject.id, view="delete_requests"))
+    if len(response) > 5000:
+        messages.error(request, "Admin response cannot exceed 5000 characters.")
+        return redirect(_admin_builder_url(subject.id, view="delete_requests"))
+
+    content_type = audit.content_type
+    obj = None
+    try:
+        if content_type == "chapter":
+            obj = CourseChapter.objects.get(id=audit.object_id, is_deleted=False)
+        elif content_type == "video":
+            obj = ChapterVideo.objects.get(id=audit.object_id, is_deleted=False)
+        elif content_type == "pdf":
+            obj = ChapterPDF.objects.get(id=audit.object_id, is_deleted=False)
+        elif content_type == "quiz":
+            obj = ChapterQuiz.objects.get(id=audit.object_id, is_deleted=False)
+    except Exception:
+        obj = None
+
+    with transaction.atomic():
+        if obj is not None:
+            obj.delete_requested = False
+            obj.delete_status = "rejected"
+            obj.delete_reason = audit.delete_request_reason
+            obj.save(update_fields=["delete_requested", "delete_status", "delete_reason"])
+            if content_type == "chapter":
+                _record_chapter_admin_log(obj, "delete_rejected", "delete_reason", audit.delete_request_reason, response, "Teacher deletion request was rejected by Admin.", request.user)
+            elif content_type == "video":
+                _record_video_admin_log(obj, "delete_rejected", "delete_reason", audit.delete_request_reason, response, "Teacher deletion request was rejected by Admin.", request.user)
+            elif content_type == "pdf":
+                _record_pdf_admin_log(obj, "delete_rejected", "delete_reason", audit.delete_request_reason, response, "Teacher deletion request was rejected by Admin.", request.user)
+            elif content_type == "quiz":
+                _record_quiz_admin_log(obj, "delete_rejected", "delete_reason", audit.delete_request_reason, response, "Teacher deletion request was rejected by Admin.", request.user)
+        audit.admin_decision = "rejected"
+        audit.decision_by_admin = request.user
+        audit.decision_at = timezone.now()
+        audit.admin_response = response
+        audit.status = "rejected"
+        audit.save()
+    messages.success(request, "Delete request rejected. The content remains available and the decision is recorded in the shared audit.")
+    return redirect(_admin_builder_url(subject.id, view="delete_requests"))
+
+
+# ==========================================================
+# COMMON CONTENT DELETION AUDIT
+# ==========================================================
+
+@login_required(login_url="admin_signin")
+@admin_required
+@cache_control(no_cache=True, must_revalidate=True, no_store=True)
+def admin_course_audit_view(request, subject_id):
+    subject = _get_admin_subject(subject_id)
+    _sync_pending_deletion_audits(subject)
+    return redirect(_admin_builder_url(subject.id, view="audit", extra_params={
+        "audit_type": request.GET.get("audit_type", "all"),
+        "audit_status": request.GET.get("audit_status", "all"),
+        "audit_search": request.GET.get("audit_search", ""),
+    }))
 
 @cache_control(no_cache=True, must_revalidate=True, no_store=True)
 @admin_required

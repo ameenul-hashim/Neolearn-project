@@ -876,6 +876,38 @@ def teacher_course_builder_view(
                     }
                 )
 
+    # ========================================================
+    # SELECTED QUIZ FOR QUIZ WORKSPACE / EDIT / QUESTIONS
+    # ========================================================
+    # The unified Course Builder uses the same page for the
+    # quiz list, question manager and quiz edit workspace.
+    # Therefore selected_quiz must be resolved not only for the
+    # dedicated timeline view, but also when ?view=quizzes is
+    # combined with ?quiz=<id>.
+    # ========================================================
+
+    if (
+        selected_chapter
+        and selected_content == "quizzes"
+        and quiz_query.isdigit()
+    ):
+        selected_quiz = (
+            ChapterQuiz.objects
+            .filter(
+                id=int(quiz_query),
+                chapter=selected_chapter,
+                is_deleted=False,
+            )
+            .select_related(
+                "created_by",
+                "updated_by",
+            )
+            .prefetch_related(
+                "questions__options",
+            )
+            .first()
+        )
+
     if (
         selected_chapter
         and selected_content == "quiz_timeline"
@@ -4929,44 +4961,24 @@ def teacher_chapter_quizzes_view(
     chapter_id,
 ):
     """
-    Quiz workspace.
+    Quiz workspace handler.
 
-    Create flow:
-        Quiz basics + all questions are submitted together.
-        Questions are dynamically added in the same creation popup.
+    Handles complete quiz creation. An existing quiz's Add Question form
+    is routed to teacher_edit_quiz_view so question persistence has one
+    source of truth.
 
-    Basic quiz fields:
-        - quiz_name
-        - quiz_description
-        - attempt_limit
-
-    Question fields:
-        - question_text
-        - option_a
-        - option_b
-        - option_c
-        - option_d
-        - correct_option
-        - marks
-
-    The complete Quiz + Questions + Options are saved atomically.
-
-    Edit, Timeline and Delete Request are handled by their
-    dedicated views.
+    IMPORTANT: this uses the current teacher models:
+      ChapterQuiz: quiz_name, quiz_description, attempt_limit
+      QuizQuestion: question_text, marks
+      QuizOption: option_label (A-D), option_text, is_correct
     """
-
-    teacher, assignment = (
-        _get_teacher_subject_assignment(
-            request,
-            subject_id,
-        )
+    teacher, assignment = _get_teacher_subject_assignment(
+        request,
+        subject_id,
     )
 
     if teacher is None or assignment is None:
-        messages.error(
-            request,
-            "Access denied.",
-        )
+        messages.error(request, "Access denied.")
         return redirect("teacher_login")
 
     chapter = get_object_or_404(
@@ -4984,180 +4996,100 @@ def teacher_chapter_quizzes_view(
 
     def redirect_to_quizzes():
         return redirect(
-            f"{builder_url}"
-            f"?chapter={chapter.id}"
-            f"&view=quizzes"
+            f"{builder_url}?chapter={chapter.id}&view=quizzes"
         )
 
-    def save_create_error(
-        error_message,
-        form_data,
-    ):
+    def save_create_error(message_text, form_data):
         request.session["quiz_create_open"] = True
-        request.session["quiz_create_error"] = error_message
+        request.session["quiz_create_error"] = message_text
         request.session["quiz_create_form"] = form_data
         request.session.modified = True
-
-        messages.error(
-            request,
-            error_message,
-        )
-
+        messages.error(request, message_text)
         return redirect_to_quizzes()
 
     if request.method == "GET":
         return redirect_to_quizzes()
 
     if request.method != "POST":
-        messages.error(
-            request,
-            "Invalid quiz request.",
-        )
+        messages.error(request, "Invalid quiz request.")
         return redirect_to_quizzes()
 
-    action = (
-        request.POST.get(
-            "action",
-            "",
+    action = (request.POST.get("action", "") or "").strip().lower()
+
+    # --------------------------------------------------------
+    # ADD QUESTION TO AN EXISTING QUIZ
+    # --------------------------------------------------------
+    if action == "add_question":
+        quiz_id_raw = (request.POST.get("quiz_id", "") or "").strip()
+
+        if not quiz_id_raw.isdigit():
+            messages.error(request, "Invalid quiz selected.")
+            return redirect_to_quizzes()
+
+        quiz = get_object_or_404(
+            ChapterQuiz,
+            id=int(quiz_id_raw),
+            chapter=chapter,
+            is_deleted=False,
         )
-        or ""
-    ).strip().lower()
 
-    # ========================================================
-    # CREATE COMPLETE QUIZ
-    # ========================================================
+        return teacher_edit_quiz_view(
+            request,
+            subject_id,
+            chapter_id,
+            quiz.id,
+        )
 
+    # --------------------------------------------------------
+    # COMPLETE QUIZ CREATION
+    # --------------------------------------------------------
     if action == "create_quiz":
-
-        quiz_name = (
-            request.POST.get(
-                "quiz_name",
-                "",
-            )
-            or ""
-        ).strip()
-
+        quiz_name = (request.POST.get("quiz_name", "") or "").strip()
         quiz_description = (
-            request.POST.get(
-                "quiz_description",
-                "",
-            )
-            or ""
+            request.POST.get("quiz_description", "") or ""
         ).strip()
-
         attempt_limit_raw = (
-            request.POST.get(
-                "attempt_limit",
-                "",
-            )
-            or ""
+            request.POST.get("attempt_limit", "") or ""
         ).strip()
-
         question_count_raw = (
-            request.POST.get(
-                "question_count",
-                "",
-            )
-            or ""
+            request.POST.get("question_count", "") or ""
         ).strip()
 
-        # ----------------------------------------------------
-        # Read every dynamically generated question.
-        # The HTML uses:
-        # question_0_text, question_0_option_a, ...
-        # ----------------------------------------------------
+        requested_question_count = (
+            int(question_count_raw)
+            if question_count_raw.isdigit()
+            else 0
+        )
+        requested_question_count = min(
+            max(requested_question_count, 0),
+            100,
+        )
 
         questions = []
-
-        if question_count_raw.isdigit():
-
-            requested_question_count = int(
-                question_count_raw
-            )
-
-        else:
-
-            requested_question_count = 0
-
-        # Keep the posted question cards bounded.
-        if requested_question_count > 100:
-            requested_question_count = 100
-
-        for index in range(
-            requested_question_count
-        ):
-
-            question_text = (
-                request.POST.get(
-                    f"question_{index}_text",
-                    "",
-                )
-                or ""
-            ).strip()
-
-            option_a = (
-                request.POST.get(
-                    f"question_{index}_option_a",
-                    "",
-                )
-                or ""
-            ).strip()
-
-            option_b = (
-                request.POST.get(
-                    f"question_{index}_option_b",
-                    "",
-                )
-                or ""
-            ).strip()
-
-            option_c = (
-                request.POST.get(
-                    f"question_{index}_option_c",
-                    "",
-                )
-                or ""
-            ).strip()
-
-            option_d = (
-                request.POST.get(
-                    f"question_{index}_option_d",
-                    "",
-                )
-                or ""
-            ).strip()
-
-            correct_option = (
-                request.POST.get(
-                    f"question_{index}_correct",
-                    "",
-                )
-                or ""
-            ).strip().upper()
-
-            marks_raw = (
-                request.POST.get(
-                    f"question_{index}_marks",
-                    "",
-                )
-                or ""
-            ).strip()
-
-            questions.append(
-                {
-                    "question_text": question_text,
-                    "option_a": option_a,
-                    "option_b": option_b,
-                    "option_c": option_c,
-                    "option_d": option_d,
-                    "correct_option": correct_option,
-                    "marks": marks_raw,
-                }
-            )
-
-        # ----------------------------------------------------
-        # Preserve the exact submitted form.
-        # ----------------------------------------------------
+        for index in range(requested_question_count):
+            questions.append({
+                "question_text": (
+                    request.POST.get(f"question_{index}_text", "") or ""
+                ).strip(),
+                "option_a": (
+                    request.POST.get(f"question_{index}_option_a", "") or ""
+                ).strip(),
+                "option_b": (
+                    request.POST.get(f"question_{index}_option_b", "") or ""
+                ).strip(),
+                "option_c": (
+                    request.POST.get(f"question_{index}_option_c", "") or ""
+                ).strip(),
+                "option_d": (
+                    request.POST.get(f"question_{index}_option_d", "") or ""
+                ).strip(),
+                "correct_option": (
+                    request.POST.get(f"question_{index}_correct", "") or ""
+                ).strip().upper(),
+                "marks": (
+                    request.POST.get(f"question_{index}_marks", "") or ""
+                ).strip(),
+            })
 
         form_data = {
             "quiz_name": quiz_name,
@@ -5166,85 +5098,51 @@ def teacher_chapter_quizzes_view(
             "questions": questions,
         }
 
-        # ----------------------------------------------------
-        # QUIZ NAME
-        # ----------------------------------------------------
-
         if not quiz_name:
-            return save_create_error(
-                "Quiz name is required.",
-                form_data,
-            )
-
+            return save_create_error("Quiz name is required.", form_data)
         if len(quiz_name) < 2:
             return save_create_error(
-                "Quiz name must contain at least 2 characters.",
-                form_data,
+                "Quiz name must contain at least 2 characters.", form_data
             )
-
         if len(quiz_name) > 255:
             return save_create_error(
-                "Quiz name cannot exceed 255 characters.",
-                form_data,
+                "Quiz name cannot exceed 255 characters.", form_data
             )
-
-        # ----------------------------------------------------
-        # DESCRIPTION
-        # ----------------------------------------------------
 
         if not quiz_description:
             return save_create_error(
-                "Quiz description is required.",
-                form_data,
+                "Quiz description is required.", form_data
             )
-
         if len(quiz_description) < 5:
             return save_create_error(
                 "Quiz description must contain at least 5 characters.",
                 form_data,
             )
-
         if len(quiz_description) > 5000:
             return save_create_error(
                 "Quiz description cannot exceed 5000 characters.",
                 form_data,
             )
 
-        # ----------------------------------------------------
-        # MAXIMUM ATTEMPTS
-        # ----------------------------------------------------
-
         if not attempt_limit_raw:
             return save_create_error(
-                "Maximum attempts is required.",
-                form_data,
+                "Maximum attempts is required.", form_data
             )
-
         if not attempt_limit_raw.isdigit():
             return save_create_error(
                 "Maximum attempts must be a positive whole number.",
                 form_data,
             )
 
-        attempt_limit = int(
-            attempt_limit_raw
-        )
-
-        if attempt_limit <= 0:
+        attempt_limit = int(attempt_limit_raw)
+        if attempt_limit < 1:
             return save_create_error(
-                "Maximum attempts must be greater than 0.",
-                form_data,
+                "Maximum attempts must be greater than 0.", form_data
             )
-
         if attempt_limit > 100:
             return save_create_error(
-                "Maximum attempts cannot be greater than 100.",
-                form_data,
+                "Maximum attempts cannot be greater than 100.", form_data
             )
-
-        # ----------------------------------------------------
-        # AT LEAST ONE QUESTION
-        # ----------------------------------------------------
 
         if not questions:
             return save_create_error(
@@ -5252,163 +5150,81 @@ def teacher_chapter_quizzes_view(
                 form_data,
             )
 
-        if len(questions) > 100:
-            return save_create_error(
-                "A quiz cannot contain more than 100 questions.",
-                form_data,
-            )
-
-        # ----------------------------------------------------
-        # VALIDATE EVERY QUESTION BEFORE DATABASE WRITES
-        # ----------------------------------------------------
-
         validated_questions = []
-
-        for index, question_data in enumerate(
-            questions,
-            start=1,
-        ):
-
-            question_text = (
-                question_data["question_text"]
-            )
-
-            option_a = question_data["option_a"]
-            option_b = question_data["option_b"]
-            option_c = question_data["option_c"]
-            option_d = question_data["option_d"]
-
-            correct_option = (
-                question_data["correct_option"]
-            )
-
+        for index, question_data in enumerate(questions, start=1):
+            qtext = question_data["question_text"]
+            options = {
+                "A": question_data["option_a"],
+                "B": question_data["option_b"],
+                "C": question_data["option_c"],
+                "D": question_data["option_d"],
+            }
+            correct = question_data["correct_option"]
             marks_raw = question_data["marks"]
 
-            # -----------------------------------------------
-            # QUESTION
-            # -----------------------------------------------
-
-            if not question_text:
+            if not qtext:
                 return save_create_error(
-                    f"Question {index}: question text is required.",
-                    form_data,
+                    f"Question {index}: question text is required.", form_data
                 )
-
-            if len(question_text) < 3:
+            if len(qtext) < 3:
                 return save_create_error(
                     f"Question {index}: question must contain at least 3 characters.",
                     form_data,
                 )
-
-            if len(question_text) > 10000:
+            if len(qtext) > 10000:
                 return save_create_error(
                     f"Question {index}: question cannot exceed 10000 characters.",
                     form_data,
                 )
 
-            # -----------------------------------------------
-            # OPTIONS
-            # -----------------------------------------------
-
-            option_values = {
-                "A": option_a,
-                "B": option_b,
-                "C": option_c,
-                "D": option_d,
-            }
-
-            for label, option_text in option_values.items():
-
-                if not option_text:
+            for label, value in options.items():
+                if not value:
                     return save_create_error(
                         f"Question {index}: Option {label} is required.",
                         form_data,
                     )
-
-                if len(option_text) > 500:
+                if len(value) > 500:
                     return save_create_error(
                         f"Question {index}: Option {label} cannot exceed 500 characters.",
                         form_data,
                     )
 
-            # -----------------------------------------------
-            # OPTIONS MUST DIFFER
-            # -----------------------------------------------
-
-            normalized_options = [
-                option_values[label].casefold()
-                for label in ("A", "B", "C", "D")
-            ]
-
-            if len(
-                set(normalized_options)
-            ) != 4:
-
+            if len({options[label].casefold() for label in options}) != 4:
                 return save_create_error(
                     f"Question {index}: all four answer options must be different.",
                     form_data,
                 )
 
-            # -----------------------------------------------
-            # CORRECT ANSWER
-            # -----------------------------------------------
-
-            if correct_option not in {
-                "A",
-                "B",
-                "C",
-                "D",
-            }:
-
+            if correct not in {"A", "B", "C", "D"}:
                 return save_create_error(
                     f"Question {index}: select exactly one correct answer.",
                     form_data,
                 )
 
-            # -----------------------------------------------
-            # MARKS
-            # -----------------------------------------------
-
-            if not marks_raw:
-                return save_create_error(
-                    f"Question {index}: marks are required.",
-                    form_data,
-                )
-
-            if not marks_raw.isdigit():
+            if not marks_raw or not marks_raw.isdigit():
                 return save_create_error(
                     f"Question {index}: marks must be a positive whole number.",
                     form_data,
                 )
-
-            marks = int(
-                marks_raw
-            )
-
-            if marks <= 0:
+            marks = int(marks_raw)
+            if marks < 1 or marks > 1000:
                 return save_create_error(
-                    f"Question {index}: marks must be greater than 0.",
+                    f"Question {index}: marks must be between 1 and 1000.",
                     form_data,
                 )
 
-            if marks > 1000:
-                return save_create_error(
-                    f"Question {index}: marks cannot be greater than 1000.",
-                    form_data,
-                )
+            validated_questions.append({
+                "question_text": qtext,
+                "marks": marks,
+                "options": options,
+                "correct_option": correct,
+            })
 
-            validated_questions.append(
-                {
-                    "question_text": question_text,
-                    "marks": marks,
-                    "options": option_values,
-                    "correct_option": correct_option,
-                }
+        if len(validated_questions) > 100:
+            return save_create_error(
+                "A quiz cannot contain more than 100 questions.",
+                form_data,
             )
-
-        # ----------------------------------------------------
-        # DUPLICATE QUIZ NAME
-        # ----------------------------------------------------
 
         duplicate_quiz = (
             ChapterQuiz.objects
@@ -5419,24 +5235,14 @@ def teacher_chapter_quizzes_view(
             )
             .exists()
         )
-
         if duplicate_quiz:
             return save_create_error(
                 "A quiz with this name already exists in this chapter.",
                 form_data,
             )
 
-        # ----------------------------------------------------
-        # ATOMIC SAVE
-        #
-        # If anything fails, Quiz + Questions + Options are
-        # rolled back together.
-        # ----------------------------------------------------
-
         try:
-
             with transaction.atomic():
-
                 quiz = ChapterQuiz.objects.create(
                     chapter=chapter,
                     quiz_name=quiz_name,
@@ -5453,45 +5259,21 @@ def teacher_chapter_quizzes_view(
                 )
 
                 total_marks = 0
-
                 for question_data in validated_questions:
-
                     question = QuizQuestion.objects.create(
                         quiz=quiz,
-                        question_text=(
-                            question_data[
-                                "question_text"
-                            ]
-                        ),
-                        marks=(
-                            question_data[
-                                "marks"
-                            ]
-                        ),
+                        question_text=question_data["question_text"],
+                        marks=question_data["marks"],
                     )
-
                     total_marks += question.marks
 
-                    options = (
-                        question_data["options"]
-                    )
-
-                    correct_option = (
-                        question_data[
-                            "correct_option"
-                        ]
-                    )
-
-                    for label, option_text in (
-                        options.items()
-                    ):
-
+                    for label, option_text in question_data["options"].items():
                         QuizOption.objects.create(
                             question=question,
                             option_label=label,
                             option_text=option_text,
                             is_correct=(
-                                label == correct_option
+                                label == question_data["correct_option"]
                             ),
                         )
 
@@ -5509,28 +5291,17 @@ def teacher_chapter_quizzes_view(
                         f"Total Marks: {total_marks}"
                     ),
                     change_summary=(
-                        f'Quiz "{quiz.quiz_name}" was created '
-                        f'with {len(validated_questions)} '
-                        f'question'
+                        f'Quiz "{quiz.quiz_name}" was created with '
+                        f"{len(validated_questions)} question"
                         f'{"s" if len(validated_questions) != 1 else ""}.'
                     ),
                 )
-
         except Exception as exc:
-
-            print(
-                "Complete quiz creation error:",
-                exc,
-            )
-
+            print("Complete quiz creation error:", repr(exc))
             return save_create_error(
                 "The quiz could not be saved. Your entered data is still preserved. Please try again.",
                 form_data,
             )
-
-        # ----------------------------------------------------
-        # CLEAR CREATE STATE
-        # ----------------------------------------------------
 
         for session_key in (
             "quiz_create_open",
@@ -5541,53 +5312,19 @@ def teacher_chapter_quizzes_view(
             "quiz_question_form",
             "quiz_question_quiz_id",
         ):
-
-            request.session.pop(
-                session_key,
-                None,
-            )
-
+            request.session.pop(session_key, None)
         request.session.modified = True
 
         messages.success(
             request,
-            (
-                f'Quiz "{quiz.quiz_name}" created successfully '
-                f'with {len(validated_questions)} question'
-                f'{"s" if len(validated_questions) != 1 else ""}.'
-            ),
-        )
-
-        return redirect_to_quizzes()
-
-    # ========================================================
-    # LEGACY ACTION GUARD
-    #
-    # A question is no longer created through a separate POST.
-    # The single Quiz submission above creates everything.
-    # ========================================================
-
-    if action == "add_question":
-        messages.error(
-            request,
-            "Questions are added inside the Create Quiz workspace.",
+            f'Quiz "{quiz.quiz_name}" created successfully with '
+            f"{len(validated_questions)} question"
+            f'{"s" if len(validated_questions) != 1 else ""}.',
         )
         return redirect_to_quizzes()
 
-    if action == "finish_quiz":
-        messages.error(
-            request,
-            "Please save the complete quiz from the Create Quiz workspace.",
-        )
-        return redirect_to_quizzes()
-
-    messages.error(
-        request,
-        "Invalid quiz action.",
-    )
-
+    messages.error(request, "Invalid quiz action.")
     return redirect_to_quizzes()
-
 
 # ============================================================
 # QUIZ EDIT
@@ -5599,6 +5336,7 @@ def teacher_chapter_quizzes_view(
     must_revalidate=True,
     no_store=True,
 )
+
 def teacher_edit_quiz_view(
     request,
     subject_id,
@@ -5606,34 +5344,41 @@ def teacher_edit_quiz_view(
     quiz_id,
 ):
     """
-    Edit quiz details and manage its MCQ questions.
+    Unified Teacher Quiz Edit handler.
 
-    Current editable fields:
-        - quiz name
-        - description
-        - attempt limit
-        - add question
-        - edit question
-        - delete question
+    ONE SAVE workflow:
+        - Quiz name
+        - Quiz description
+        - Maximum attempts
+        - Existing question edits
+        - New question creation
+        - Existing question removal
+        - Options A-D
+        - Correct answer
+        - Marks
+        - Timeline entries
 
-    No quiz/question ordering is handled here.
-    Student attempt/result logic is intentionally deferred.
+    The current database schema is used exactly:
+        QuizQuestion:
+            quiz, question_text, marks, created_at, updated_at
+
+        QuizOption:
+            question, option_label, option_text, is_correct,
+            created_at, updated_at
+
+    There is intentionally no question_order / option_order field.
     """
 
-    teacher, assignment = (
-        _get_teacher_subject_assignment(
-            request,
-            subject_id,
-        )
+    teacher, assignment = _get_teacher_subject_assignment(
+        request,
+        subject_id,
     )
 
     if teacher is None or assignment is None:
-
         messages.error(
             request,
             "Access denied.",
         )
-
         return redirect("teacher_login")
 
     chapter = get_object_or_404(
@@ -5665,22 +5410,18 @@ def teacher_edit_quiz_view(
         },
     )
 
-    def redirect_to_builder(
-        mode="edit",
-    ):
-
+    def redirect_to_builder():
         return redirect(
             (
                 f"{builder_url}"
                 f"?chapter={chapter.id}"
                 f"&view=quizzes"
                 f"&quiz={quiz.id}"
-                f"&quiz_mode={mode}"
+                f"&quiz_mode=edit"
             )
         )
 
     if request.method != "POST":
-
         return redirect_to_builder()
 
     action = (
@@ -5692,121 +5433,112 @@ def teacher_edit_quiz_view(
     ).strip().lower()
 
     # ========================================================
-    # UPDATE QUIZ BASIC INFORMATION
+    # ONLY THE MASTER EDIT SAVE IS USED HERE
     # ========================================================
 
-    if action == "update_quiz":
+    if action != "update_complete_quiz":
+        messages.error(
+            request,
+            "Invalid quiz edit request.",
+        )
+        return redirect_to_builder()
 
-        new_name = (
-            request.POST.get(
-                "quiz_name",
-                "",
-            )
-            or ""
-        ).strip()
+    # ========================================================
+    # BASIC QUIZ DATA
+    # ========================================================
 
-        new_description = (
-            request.POST.get(
-                "quiz_description",
-                "",
-            )
-            or ""
-        ).strip()
+    quiz_name = (
+        request.POST.get(
+            "quiz_name",
+            "",
+        )
+        or ""
+    ).strip()
 
-        new_attempt_limit_raw = (
-            request.POST.get(
-                "attempt_limit",
-                "",
-            )
-            or ""
-        ).strip()
+    quiz_description = (
+        request.POST.get(
+            "quiz_description",
+            "",
+        )
+        or ""
+    ).strip()
 
-        if not new_name:
+    attempt_limit_raw = (
+        request.POST.get(
+            "attempt_limit",
+            "",
+        )
+        or ""
+    ).strip()
 
-            messages.error(
-                request,
-                "Quiz name is required.",
-            )
+    # ========================================================
+    # VALIDATE BASIC FIELDS
+    # ========================================================
 
-            return redirect_to_builder()
+    validation_errors = []
 
-        if len(new_name) > 255:
+    if not quiz_name:
+        validation_errors.append(
+            "Quiz name is required."
+        )
+    elif len(quiz_name) < 2:
+        validation_errors.append(
+            "Quiz name must contain at least 2 characters."
+        )
+    elif len(quiz_name) > 255:
+        validation_errors.append(
+            "Quiz name cannot exceed 255 characters."
+        )
 
-            messages.error(
-                request,
-                "Quiz name cannot exceed 255 characters.",
-            )
+    if not quiz_description:
+        validation_errors.append(
+            "Quiz description is required."
+        )
+    elif len(quiz_description) < 5:
+        validation_errors.append(
+            "Quiz description must contain at least 5 characters."
+        )
+    elif len(quiz_description) > 5000:
+        validation_errors.append(
+            "Quiz description cannot exceed 5000 characters."
+        )
 
-            return redirect_to_builder()
+    if not attempt_limit_raw:
+        validation_errors.append(
+            "Maximum attempts is required."
+        )
+        attempt_limit = None
+    elif not attempt_limit_raw.isdigit():
+        validation_errors.append(
+            "Maximum attempts must be a positive whole number."
+        )
+        attempt_limit = None
+    else:
+        attempt_limit = int(attempt_limit_raw)
 
-        if not new_description:
-
-            messages.error(
-                request,
-                "Quiz description is required.",
-            )
-
-            return redirect_to_builder()
-
-        if len(new_description) > 5000:
-
-            messages.error(
-                request,
-                "Quiz description cannot exceed 5000 characters.",
-            )
-
-            return redirect_to_builder()
-
-        if not new_attempt_limit_raw:
-
-            messages.error(
-                request,
-                "Attempt limit is required.",
-            )
-
-            return redirect_to_builder()
-
-        try:
-
-            new_attempt_limit = int(
-                new_attempt_limit_raw
-            )
-
-        except (
-            TypeError,
-            ValueError,
-        ):
-
-            messages.error(
-                request,
-                "Attempt limit must be a whole number.",
+        if attempt_limit < 1:
+            validation_errors.append(
+                "Maximum attempts must be greater than zero."
             )
 
-            return redirect_to_builder()
-
-        if new_attempt_limit <= 0:
-
-            messages.error(
-                request,
-                "Attempt limit must be greater than zero.",
+        if attempt_limit > 100:
+            validation_errors.append(
+                "Maximum attempts cannot be greater than 100."
             )
 
-            return redirect_to_builder()
+    # ========================================================
+    # QUIZ NAME DUPLICATE CHECK
+    # ========================================================
 
-        if new_attempt_limit > 100:
-
-            messages.error(
-                request,
-                "Attempt limit cannot be greater than 100.",
-            )
-
-            return redirect_to_builder()
-
+    if not any(
+        error.startswith("Quiz name")
+        for error in validation_errors
+    ):
         duplicate_quiz = (
             ChapterQuiz.objects
             .filter(
                 chapter=chapter,
-                quiz_name__iexact=new_name,
+                quiz_name__iexact=quiz_name,
                 is_deleted=False,
             )
             .exclude(
@@ -5816,247 +5548,210 @@ def teacher_edit_quiz_view(
         )
 
         if duplicate_quiz:
-
-            messages.error(
-                request,
-                "Another quiz with this name already exists.",
+            validation_errors.append(
+                "Another quiz with this name already exists."
             )
 
-            return redirect_to_builder()
+    # ========================================================
+    # READ ALL QUESTION CARDS
+    #
+    # The HTML sends:
+    #
+    # question_count
+    # question_0_id
+    # question_0_text
+    # question_0_option_a
+    # question_0_option_b
+    # question_0_option_c
+    # question_0_option_d
+    # question_0_correct
+    # question_0_marks
+    #
+    # and so on.
+    # ========================================================
 
-        old_name = quiz.quiz_name
-        old_description = quiz.quiz_description
-        old_attempt_limit = quiz.attempt_limit
+    question_count_raw = (
+        request.POST.get(
+            "question_count",
+            "",
+        )
+        or ""
+    ).strip()
 
-        with transaction.atomic():
-
-            quiz.quiz_name = new_name
-            quiz.quiz_description = new_description
-            quiz.attempt_limit = new_attempt_limit
-            quiz.updated_by = teacher
-
-            quiz.save()
-
-            if old_name != new_name:
-
-                QuizChangeLog.objects.create(
-                    quiz=quiz,
-                    changed_by=teacher,
-                    action="name_changed",
-                    field_name="quiz_name",
-                    old_value=old_name,
-                    new_value=new_name,
-                    change_summary="Quiz name was updated.",
-                )
-
-            if old_description != new_description:
-
-                QuizChangeLog.objects.create(
-                    quiz=quiz,
-                    changed_by=teacher,
-                    action="description_changed",
-                    field_name="quiz_description",
-                    old_value=old_description,
-                    new_value=new_description,
-                    change_summary=(
-                        "Quiz description was updated."
-                    ),
-                )
-
-            if old_attempt_limit != new_attempt_limit:
-
-                QuizChangeLog.objects.create(
-                    quiz=quiz,
-                    changed_by=teacher,
-                    action="attempt_limit_changed",
-                    field_name="attempt_limit",
-                    old_value=str(old_attempt_limit),
-                    new_value=str(new_attempt_limit),
-                    change_summary=(
-                        f"Attempt limit changed from "
-                        f"{old_attempt_limit} to "
-                        f"{new_attempt_limit}."
-                    ),
-                )
-
-        messages.success(
-            request,
-            f'Quiz "{quiz.quiz_name}" updated successfully.',
+    if not question_count_raw.isdigit():
+        question_count = 0
+        validation_errors.append(
+            "The question list is invalid."
+        )
+    else:
+        question_count = int(
+            question_count_raw
         )
 
-        return redirect_to_builder(
-            mode="edit",
+    if question_count > 100:
+        validation_errors.append(
+            "A quiz cannot contain more than 100 questions."
         )
+        question_count = 100
 
-    # ========================================================
-    # ADD QUESTION WHILE EDITING
-    # ========================================================
+    submitted_questions = []
+    submitted_existing_ids = set()
 
-    if action == "add_question":
+    option_labels = (
+        ("A", "option_a"),
+        ("B", "option_b"),
+        ("C", "option_c"),
+        ("D", "option_d"),
+    )
 
-        return teacher_chapter_quizzes_view(
-            request,
-            subject_id,
-            chapter_id,
-        )
+    for index in range(question_count):
 
-    # ========================================================
-    # EDIT EXISTING QUESTION
-    # ========================================================
-
-    if action == "update_question":
-
-        question_id_raw = (
+        question_id = (
             request.POST.get(
-                "question_id",
+                f"question_{index}_id",
                 "",
             )
             or ""
         ).strip()
-
-        if not question_id_raw.isdigit():
-
-            messages.error(
-                request,
-                "Invalid question selected.",
-            )
-
-            return redirect_to_builder()
-
-        question = get_object_or_404(
-            QuizQuestion,
-            id=int(question_id_raw),
-            quiz=quiz,
-        )
 
         question_text = (
             request.POST.get(
-                "question_text",
+                f"question_{index}_text",
                 "",
             )
             or ""
         ).strip()
 
-        marks_raw = (
+        option_a = (
             request.POST.get(
-                "marks",
+                f"question_{index}_option_a",
                 "",
             )
             or ""
         ).strip()
 
-        option_values = {
-            "A": (
-                request.POST.get(
-                    "option_a",
-                    "",
-                )
-                or ""
-            ).strip(),
-            "B": (
-                request.POST.get(
-                    "option_b",
-                    "",
-                )
-                or ""
-            ).strip(),
-            "C": (
-                request.POST.get(
-                    "option_c",
-                    "",
-                )
-                or ""
-            ).strip(),
-            "D": (
-                request.POST.get(
-                    "option_d",
-                    "",
-                )
-                or ""
-            ).strip(),
-        }
+        option_b = (
+            request.POST.get(
+                f"question_{index}_option_b",
+                "",
+            )
+            or ""
+        ).strip()
+
+        option_c = (
+            request.POST.get(
+                f"question_{index}_option_c",
+                "",
+            )
+            or ""
+        ).strip()
+
+        option_d = (
+            request.POST.get(
+                f"question_{index}_option_d",
+                "",
+            )
+            or ""
+        ).strip()
 
         correct_option = (
             request.POST.get(
-                "correct_option",
+                f"question_{index}_correct",
                 "",
             )
             or ""
         ).strip().upper()
 
+        marks_raw = (
+            request.POST.get(
+                f"question_{index}_marks",
+                "",
+            )
+            or ""
+        ).strip()
+
+        question_number = index + 1
+
+        # ----------------------------------------------------
+        # QUESTION ID
+        # ----------------------------------------------------
+
+        if question_id:
+            if not question_id.isdigit():
+                validation_errors.append(
+                    f"Question {question_number}: invalid question ID."
+                )
+                parsed_question_id = None
+            else:
+                parsed_question_id = int(question_id)
+
+                if parsed_question_id in submitted_existing_ids:
+                    validation_errors.append(
+                        f"Question {question_number}: duplicate question submitted."
+                    )
+
+                submitted_existing_ids.add(
+                    parsed_question_id
+                )
+        else:
+            parsed_question_id = None
+
+        # ----------------------------------------------------
+        # QUESTION TEXT
+        # ----------------------------------------------------
+
         if not question_text:
-
-            messages.error(
-                request,
-                "Question is required.",
+            validation_errors.append(
+                f"Question {question_number}: question is required."
+            )
+        elif len(question_text) < 3:
+            validation_errors.append(
+                f"Question {question_number}: question must contain at least 3 characters."
+            )
+        elif len(question_text) > 10000:
+            validation_errors.append(
+                f"Question {question_number}: question cannot exceed 10000 characters."
             )
 
-            return redirect_to_builder()
+        # ----------------------------------------------------
+        # OPTIONS
+        # ----------------------------------------------------
 
-        if len(question_text) > 10000:
-
-            messages.error(
-                request,
-                "Question cannot exceed 10000 characters.",
-            )
-
-            return redirect_to_builder()
-
-        if not marks_raw:
-
-            messages.error(
-                request,
-                "Question marks are required.",
-            )
-
-            return redirect_to_builder()
-
-        try:
-
-            marks = int(
-                marks_raw
-            )
-
-        except (
-            TypeError,
-            ValueError,
-        ):
-
-            messages.error(
-                request,
-                "Question marks must be a whole number.",
-            )
-
-            return redirect_to_builder()
-
-        if marks <= 0:
-
-            messages.error(
-                request,
-                "Question marks must be greater than zero.",
-            )
-
-            return redirect_to_builder()
+        option_values = {
+            "A": option_a,
+            "B": option_b,
+            "C": option_c,
+            "D": option_d,
+        }
 
         for label, value in option_values.items():
 
             if not value:
-
-                messages.error(
-                    request,
-                    f"Option {label} is required.",
+                validation_errors.append(
+                    f"Question {question_number}: Option {label} is required."
+                )
+            elif len(value) > 500:
+                validation_errors.append(
+                    f"Question {question_number}: Option {label} cannot exceed 500 characters."
                 )
 
-                return redirect_to_builder()
+        normalized_options = [
+            value.casefold()
+            for value in option_values.values()
+            if value
+        ]
 
-            if len(value) > 500:
+        if (
+            len(normalized_options) == 4
+            and len(set(normalized_options)) != 4
+        ):
+            validation_errors.append(
+                f"Question {question_number}: all four answer options must be different."
+            )
 
-                messages.error(
-                    request,
-                    f"Option {label} cannot exceed 500 characters.",
-                )
-
-                return redirect_to_builder()
+        # ----------------------------------------------------
+        # CORRECT ANSWER
+        # ----------------------------------------------------
 
         if correct_option not in {
             "A",
@@ -6064,213 +5759,510 @@ def teacher_edit_quiz_view(
             "C",
             "D",
         }:
-
-            messages.error(
-                request,
-                "Select exactly one correct answer.",
+            validation_errors.append(
+                f"Question {question_number}: select exactly one correct answer."
             )
 
-            return redirect_to_builder()
+        # ----------------------------------------------------
+        # MARKS
+        # ----------------------------------------------------
 
-        old_question_text = question.question_text
-        old_marks = question.marks
-
-        old_options = {
-            option.option_label: (
-                option.option_text,
-                option.is_correct,
+        if not marks_raw:
+            validation_errors.append(
+                f"Question {question_number}: marks are required."
             )
-            for option in question.options.all()
-        }
+            parsed_marks = None
 
-        with transaction.atomic():
+        elif not marks_raw.isdigit():
+            validation_errors.append(
+                f"Question {question_number}: marks must be a positive whole number."
+            )
+            parsed_marks = None
 
-            question.question_text = question_text
-            question.marks = marks
-            question.save()
+        else:
+            parsed_marks = int(marks_raw)
 
-            current_options = {
-                option.option_label: option
-                for option in question.options.all()
+            if parsed_marks < 1:
+                validation_errors.append(
+                    f"Question {question_number}: marks must be greater than zero."
+                )
+
+            if parsed_marks > 1000:
+                validation_errors.append(
+                    f"Question {question_number}: marks cannot exceed 1000."
+                )
+
+        submitted_questions.append(
+            {
+                "index": index,
+                "question_id": parsed_question_id,
+                "question_text": question_text,
+                "option_a": option_a,
+                "option_b": option_b,
+                "option_c": option_c,
+                "option_d": option_d,
+                "correct_option": correct_option,
+                "marks": parsed_marks,
             }
-
-            for label, value in option_values.items():
-
-                option = current_options.get(label)
-
-                if option is None:
-
-                    option = QuizOption.objects.create(
-                        question=question,
-                        option_label=label,
-                        option_text=value,
-                        is_correct=(
-                            label == correct_option
-                        ),
-                    )
-
-                else:
-
-                    option.option_text = value
-                    option.is_correct = (
-                        label == correct_option
-                    )
-
-                    option.save()
-
-            quiz.updated_by = teacher
-            quiz.save(
-                update_fields=[
-                    "updated_by",
-                    "updated_at",
-                ]
-            )
-
-            if old_question_text != question_text:
-
-                QuizChangeLog.objects.create(
-                    quiz=quiz,
-                    changed_by=teacher,
-                    action="question_updated",
-                    field_name="question_text",
-                    old_value=old_question_text,
-                    new_value=question_text,
-                    change_summary=(
-                        f"Question {question.id} text was updated."
-                    ),
-                )
-
-            if old_marks != marks:
-
-                QuizChangeLog.objects.create(
-                    quiz=quiz,
-                    changed_by=teacher,
-                    action="question_updated",
-                    field_name="marks",
-                    old_value=str(old_marks),
-                    new_value=str(marks),
-                    change_summary=(
-                        f"Question {question.id} marks were updated."
-                    ),
-                )
-
-            for label, new_value in option_values.items():
-
-                old_value, old_correct = old_options.get(
-                    label,
-                    ("", False),
-                )
-
-                new_correct = (
-                    label == correct_option
-                )
-
-                if old_value != new_value:
-
-                    QuizChangeLog.objects.create(
-                        quiz=quiz,
-                        changed_by=teacher,
-                        action="option_changed",
-                        field_name=f"option_{label}",
-                        old_value=old_value,
-                        new_value=new_value,
-                        change_summary=(
-                            f"Option {label} of question "
-                            f"{question.id} was updated."
-                        ),
-                    )
-
-                if old_correct != new_correct:
-
-                    QuizChangeLog.objects.create(
-                        quiz=quiz,
-                        changed_by=teacher,
-                        action="correct_answer_changed",
-                        field_name=f"option_{label}_correct",
-                        old_value=str(old_correct),
-                        new_value=str(new_correct),
-                        change_summary=(
-                            f"Correct-answer selection for option "
-                            f"{label} of question {question.id} changed."
-                        ),
-                    )
-
-        messages.success(
-            request,
-            f"Question {question.id} updated successfully.",
-        )
-
-        return redirect_to_builder(
-            mode="edit",
         )
 
     # ========================================================
-    # DELETE QUESTION
+    # DELETED EXISTING QUESTION IDS
+    #
+    # JavaScript places removed database question IDs here.
+    # New unsaved cards have no ID and therefore need no entry.
     # ========================================================
 
-    if action == "delete_question":
+    deleted_ids_raw = (
+        request.POST.getlist(
+            "deleted_question_ids"
+        )
+    )
 
-        question_id_raw = (
-            request.POST.get(
-                "question_id",
-                "",
-            )
+    deleted_ids = set()
+
+    for raw_id in deleted_ids_raw:
+
+        raw_id = (
+            raw_id
             or ""
         ).strip()
 
-        if not question_id_raw.isdigit():
+        if not raw_id:
+            continue
 
-            messages.error(
-                request,
-                "Invalid question selected.",
+        if not raw_id.isdigit():
+            validation_errors.append(
+                "One or more deleted question references are invalid."
             )
+            continue
 
-            return redirect_to_builder()
-
-        question = get_object_or_404(
-            QuizQuestion,
-            id=int(question_id_raw),
-            quiz=quiz,
+        deleted_ids.add(
+            int(raw_id)
         )
 
-        question_snapshot = question.question_text
+    # A question cannot be both submitted and deleted.
+    overlap = (
+        submitted_existing_ids
+        & deleted_ids
+    )
+
+    if overlap:
+        validation_errors.append(
+            "The same question cannot be updated and deleted in one save."
+        )
+
+    # ========================================================
+    # FETCH EXISTING QUESTIONS
+    # ========================================================
+
+    existing_questions = {
+        question.id: question
+        for question in (
+            QuizQuestion.objects
+            .filter(
+                quiz=quiz,
+                id__in=submitted_existing_ids | deleted_ids,
+            )
+            .prefetch_related("options")
+        )
+    }
+
+    unknown_ids = (
+        submitted_existing_ids | deleted_ids
+    ) - set(existing_questions.keys())
+
+    if unknown_ids:
+        validation_errors.append(
+            "One or more questions no longer belong to this quiz."
+        )
+
+    # ========================================================
+    # ENSURE THERE IS AT LEAST ONE QUESTION AFTER REMOVALS
+    # ========================================================
+
+    saved_question_ids = set(
+        QuizQuestion.objects
+        .filter(
+            quiz=quiz,
+        )
+        .values_list(
+            "id",
+            flat=True,
+        )
+    )
+
+    final_existing_ids = (
+        saved_question_ids
+        - deleted_ids
+    )
+
+    final_existing_ids &= submitted_existing_ids
+
+    new_question_count = sum(
+        1
+        for item in submitted_questions
+        if item["question_id"] is None
+    )
+
+    # Any existing question not included in the submitted form is
+    # considered invalid rather than silently deleting it.
+    missing_existing_ids = (
+        saved_question_ids
+        - deleted_ids
+        - submitted_existing_ids
+    )
+
+    if missing_existing_ids:
+        validation_errors.append(
+            "The edit form is missing one or more existing questions. Please reload the quiz and try again."
+        )
+
+    final_question_count = (
+        len(final_existing_ids)
+        + new_question_count
+    )
+
+    if final_question_count < 1:
+        validation_errors.append(
+            "A quiz must contain at least one question."
+        )
+
+    if final_question_count > 100:
+        validation_errors.append(
+            "A quiz cannot contain more than 100 questions."
+        )
+
+    # ========================================================
+    # STOP BEFORE ANY DATABASE WRITE
+    # ========================================================
+
+    if validation_errors:
+
+        # Keep a compact server-side copy for debugging/reload
+        # and show every validation result through Django messages.
+        request.session["quiz_edit_validation_errors"] = (
+            validation_errors[:30]
+        )
+        request.session.modified = True
+
+        for error in validation_errors[:30]:
+            messages.error(
+                request,
+                error,
+            )
+
+        return redirect_to_builder()
+
+    # ========================================================
+    # SAVE EVERYTHING IN ONE TRANSACTION
+    # ========================================================
+
+    old_quiz_name = quiz.quiz_name
+    old_quiz_description = quiz.quiz_description
+    old_attempt_limit = quiz.attempt_limit
+
+    try:
 
         with transaction.atomic():
 
-            question.delete()
+            # ------------------------------------------------
+            # BASIC QUIZ UPDATE
+            # ------------------------------------------------
 
+            quiz.quiz_name = quiz_name
+            quiz.quiz_description = quiz_description
+            quiz.attempt_limit = attempt_limit
             quiz.updated_by = teacher
-            quiz.save(
-                update_fields=[
-                    "updated_by",
-                    "updated_at",
-                ]
-            )
+            quiz.save()
 
-            QuizChangeLog.objects.create(
-                quiz=quiz,
-                changed_by=teacher,
-                action="question_deleted",
-                field_name="question",
-                old_value=question_snapshot,
-                new_value="",
-                change_summary=(
-                    f"Question {question_id_raw} was deleted."
-                ),
-            )
+            if old_quiz_name != quiz_name:
+                QuizChangeLog.objects.create(
+                    quiz=quiz,
+                    changed_by=teacher,
+                    action="name_changed",
+                    field_name="quiz_name",
+                    old_value=old_quiz_name,
+                    new_value=quiz_name,
+                    change_summary=(
+                        "Quiz name was updated."
+                    ),
+                )
 
-        messages.success(
+            if old_quiz_description != quiz_description:
+                QuizChangeLog.objects.create(
+                    quiz=quiz,
+                    changed_by=teacher,
+                    action="description_changed",
+                    field_name="quiz_description",
+                    old_value=old_quiz_description,
+                    new_value=quiz_description,
+                    change_summary=(
+                        "Quiz description was updated."
+                    ),
+                )
+
+            if old_attempt_limit != attempt_limit:
+                QuizChangeLog.objects.create(
+                    quiz=quiz,
+                    changed_by=teacher,
+                    action="attempt_limit_changed",
+                    field_name="attempt_limit",
+                    old_value=str(old_attempt_limit),
+                    new_value=str(attempt_limit),
+                    change_summary=(
+                        f"Attempt limit changed from "
+                        f"{old_attempt_limit} to "
+                        f"{attempt_limit}."
+                    ),
+                )
+
+            # ------------------------------------------------
+            # DELETE REMOVED EXISTING QUESTIONS
+            # ------------------------------------------------
+
+            for question_id in deleted_ids:
+
+                question = existing_questions.get(
+                    question_id
+                )
+
+                if question is None:
+                    continue
+
+                question_snapshot = (
+                    question.question_text
+                )
+
+                question.delete()
+
+                QuizChangeLog.objects.create(
+                    quiz=quiz,
+                    changed_by=teacher,
+                    action="question_deleted",
+                    field_name="question",
+                    old_value=(
+                        f"Question {question_id}: "
+                        f"{question_snapshot}"
+                    ),
+                    new_value="",
+                    change_summary=(
+                        f"Question {question_id} was deleted."
+                    ),
+                )
+
+            # ------------------------------------------------
+            # UPDATE EXISTING + CREATE NEW QUESTIONS
+            # ------------------------------------------------
+
+            for item in submitted_questions:
+
+                question_id = item["question_id"]
+
+                if question_id is None:
+
+                    question = QuizQuestion.objects.create(
+                        quiz=quiz,
+                        question_text=item["question_text"],
+                        marks=item["marks"],
+                    )
+
+                    for label, field_name in option_labels:
+
+                        QuizOption.objects.create(
+                            question=question,
+                            option_label=label,
+                            option_text=item[field_name],
+                            is_correct=(
+                                label == item["correct_option"]
+                            ),
+                        )
+
+                    QuizChangeLog.objects.create(
+                        quiz=quiz,
+                        changed_by=teacher,
+                        action="question_added",
+                        field_name="question",
+                        old_value="",
+                        new_value=item["question_text"],
+                        change_summary=(
+                            f"Question {question.id} was added."
+                        ),
+                    )
+
+                    continue
+
+                question = existing_questions.get(
+                    question_id
+                )
+
+                if question is None:
+                    raise ValueError(
+                        "An existing question could not be found during save."
+                    )
+
+                old_question_text = (
+                    question.question_text
+                )
+
+                old_marks = question.marks
+
+                old_options = {
+                    option.option_label: (
+                        option.option_text,
+                        option.is_correct,
+                    )
+                    for option in question.options.all()
+                }
+
+                question.question_text = (
+                    item["question_text"]
+                )
+                question.marks = item["marks"]
+
+                question.save(
+                    update_fields=[
+                        "question_text",
+                        "marks",
+                        "updated_at",
+                    ]
+                )
+
+                if (
+                    old_question_text
+                    != item["question_text"]
+                ):
+                    QuizChangeLog.objects.create(
+                        quiz=quiz,
+                        changed_by=teacher,
+                        action="question_updated",
+                        field_name="question_text",
+                        old_value=old_question_text,
+                        new_value=item["question_text"],
+                        change_summary=(
+                            f"Question {question.id} text "
+                            "was updated."
+                        ),
+                    )
+
+                if old_marks != item["marks"]:
+                    QuizChangeLog.objects.create(
+                        quiz=quiz,
+                        changed_by=teacher,
+                        action="question_updated",
+                        field_name="marks",
+                        old_value=str(old_marks),
+                        new_value=str(item["marks"]),
+                        change_summary=(
+                            f"Question {question.id} marks "
+                            "were updated."
+                        ),
+                    )
+
+                for label, field_name in option_labels:
+
+                    option, created = (
+                        question.options
+                        .get_or_create(
+                            option_label=label,
+                            defaults={
+                                "option_text": (
+                                    item[field_name]
+                                ),
+                                "is_correct": (
+                                    label
+                                    == item["correct_option"]
+                                ),
+                            },
+                        )
+                    )
+
+                    if created:
+                        old_value = ""
+                        old_correct = False
+                    else:
+                        old_value = option.option_text
+                        old_correct = option.is_correct
+
+                        option.option_text = (
+                            item[field_name]
+                        )
+                        option.is_correct = (
+                            label
+                            == item["correct_option"]
+                        )
+
+                        option.save(
+                            update_fields=[
+                                "option_text",
+                                "is_correct",
+                                "updated_at",
+                            ]
+                        )
+
+                    new_value = item[field_name]
+                    new_correct = (
+                        label
+                        == item["correct_option"]
+                    )
+
+                    if old_value != new_value:
+                        QuizChangeLog.objects.create(
+                            quiz=quiz,
+                            changed_by=teacher,
+                            action="option_changed",
+                            field_name=f"option_{label}",
+                            old_value=old_value,
+                            new_value=new_value,
+                            change_summary=(
+                                f"Option {label} of question "
+                                f"{question.id} was updated."
+                            ),
+                        )
+
+                    if old_correct != new_correct:
+                        QuizChangeLog.objects.create(
+                            quiz=quiz,
+                            changed_by=teacher,
+                            action="correct_answer_changed",
+                            field_name=(
+                                f"option_{label}_correct"
+                            ),
+                            old_value=str(old_correct),
+                            new_value=str(new_correct),
+                            change_summary=(
+                                f"Correct answer for option "
+                                f"{label} of question "
+                                f"{question.id} was updated."
+                            ),
+                        )
+
+    except Exception as exc:
+
+        print(
+            "Complete quiz edit save error:",
+            repr(exc),
+        )
+
+        messages.error(
             request,
-            "Quiz question deleted successfully.",
+            "Quiz could not be saved. No changes were saved.",
         )
 
-        return redirect_to_builder(
-            mode="edit",
-        )
+        return redirect_to_builder()
 
-    messages.error(
+    request.session.pop(
+        "quiz_edit_validation_errors",
+        None,
+    )
+    request.session.modified = True
+
+    messages.success(
         request,
-        "Invalid quiz edit action.",
+        (
+            f'Quiz "{quiz.quiz_name}" and all question changes '
+            "were saved successfully."
+        ),
     )
 
     return redirect_to_builder()
