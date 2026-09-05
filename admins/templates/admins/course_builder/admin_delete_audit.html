@@ -1,0 +1,294 @@
+{% extends "admins/admin_base.html" %}
+{% load static %}
+
+{% block title %}{{ subject.subject_name }} — Delete Audit{% endblock %}
+
+{% block admin_content %}
+
+<div class="space-y-8">
+
+    <!-- ================= HEADER ================= -->
+
+    <div class="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+
+        <div class="flex items-start gap-4">
+
+            <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-cyan-500/30 bg-cyan-500/10">
+                <i class="ri-history-line text-2xl text-cyan-300"></i>
+            </div>
+
+            <div>
+
+                <div class="flex flex-wrap items-center gap-2">
+
+                    <h1 class="text-2xl font-bold text-white">
+                        Delete Audit
+                    </h1>
+
+                    <span class="rounded-full border border-cyan-500/30 bg-cyan-500/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-cyan-300">
+                        {{ audit_count }} records
+                    </span>
+
+                </div>
+
+                <p class="mt-1 text-sm text-gray-400">
+                    {{ subject.subject_name }} · {{ batch.batch_name }}
+                </p>
+
+            </div>
+
+        </div>
+
+        <div class="flex flex-wrap items-center gap-3">
+
+            <a
+                href="{% url 'admin_delete_requests' subject.id %}"
+                class="inline-flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-900 px-4 py-2.5 text-sm font-semibold text-gray-300 transition hover:border-slate-500 hover:text-white">
+                <i class="ri-delete-bin-7-line"></i>
+                Delete Management
+            </a>
+
+            <a
+                href="{% url 'admin_subject_course_builder' subject.id %}"
+                class="inline-flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-900 px-4 py-2.5 text-sm font-semibold text-gray-300 transition hover:border-slate-500 hover:text-white">
+                <i class="ri-arrow-left-line"></i>
+                Back to Builder
+            </a>
+
+        </div>
+
+    </div>
+
+
+    <!-- ================= FILTERS ================= -->
+
+    <form method="GET" class="rounded-2xl border border-slate-700 bg-[#0F172A] p-5">
+
+        <div class="flex flex-col gap-4 xl:flex-row">
+
+            <div class="relative flex-1">
+
+                <input
+                    type="text"
+                    name="audit_search"
+                    value="{{ audit_search }}"
+                    placeholder="Search by content or chapter name..."
+                    class="w-full rounded-xl border border-slate-700 bg-slate-900 py-3 pl-11 pr-4 text-white placeholder-gray-500 outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500"
+                >
+
+                <i class="ri-search-line absolute left-4 top-3.5 text-gray-500"></i>
+
+            </div>
+
+            <select
+                name="audit_type"
+                class="rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-sm text-white outline-none transition focus:border-cyan-500"
+            >
+                <option value="all" {% if audit_type == "all" %}selected{% endif %}>All Types</option>
+                <option value="chapter" {% if audit_type == "chapter" %}selected{% endif %}>Chapters</option>
+                <option value="video" {% if audit_type == "video" %}selected{% endif %}>Videos</option>
+                <option value="pdf" {% if audit_type == "pdf" %}selected{% endif %}>PDFs</option>
+                <option value="quiz" {% if audit_type == "quiz" %}selected{% endif %}>Quizzes</option>
+            </select>
+
+            <select
+                name="audit_status"
+                class="rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-sm text-white outline-none transition focus:border-cyan-500"
+            >
+                <option value="all" {% if audit_status == "all" %}selected{% endif %}>All Statuses</option>
+                <option value="pending" {% if audit_status == "pending" %}selected{% endif %}>Pending</option>
+                <option value="deleted" {% if audit_status == "deleted" %}selected{% endif %}>Deleted</option>
+                <option value="rejected" {% if audit_status == "rejected" %}selected{% endif %}>Rejected</option>
+            </select>
+
+            <button
+                type="submit"
+                class="inline-flex items-center justify-center gap-2 rounded-xl bg-cyan-500 px-6 py-3 text-sm font-bold text-slate-900 transition hover:bg-cyan-400">
+                <i class="ri-filter-3-line"></i>
+                Filter
+            </button>
+
+        </div>
+
+    </form>
+
+
+    <!-- ================= AUDIT LIST ================= -->
+
+    {% if audit_entries %}
+
+        <div class="space-y-4">
+
+            {% for audit in audit_entries %}
+
+                <article class="rounded-2xl border border-slate-700 bg-[#0F172A] p-5">
+
+                    <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+
+                        <div class="flex min-w-0 items-start gap-4">
+
+                            <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-slate-700 bg-slate-950">
+                                {% if audit.content_type == "chapter" %}
+                                    <i class="ri-book-2-line text-xl text-violet-300"></i>
+                                {% elif audit.content_type == "video" %}
+                                    <i class="ri-video-line text-xl text-red-300"></i>
+                                {% elif audit.content_type == "pdf" %}
+                                    <i class="ri-file-pdf-2-line text-xl text-sky-300"></i>
+                                {% elif audit.content_type == "quiz" %}
+                                    <i class="ri-question-answer-line text-xl text-amber-300"></i>
+                                {% endif %}
+                            </div>
+
+                            <div class="min-w-0">
+
+                                <div class="flex flex-wrap items-center gap-2">
+
+                                    <h3 class="truncate text-base font-bold text-white" title="{{ audit.content_name }}">
+                                        {{ audit.content_name }}
+                                    </h3>
+
+                                    <span class="rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider
+                                        {% if audit.status == 'pending' %}border-amber-500/30 bg-amber-500/10 text-amber-300
+                                        {% elif audit.status == 'deleted' %}border-emerald-500/30 bg-emerald-500/10 text-emerald-300
+                                        {% elif audit.status == 'rejected' %}border-red-500/30 bg-red-500/10 text-red-300
+                                        {% else %}border-slate-600 bg-slate-800 text-gray-300{% endif %}">
+                                        {{ audit.get_status_display }}
+                                    </span>
+
+                                </div>
+
+                                <p class="mt-0.5 text-xs text-gray-500">
+                                    {{ audit.get_content_type_display }} · {{ audit.chapter_name }}
+                                </p>
+
+                                <p class="mt-0.5 text-[10px] text-gray-600">
+                                    Recorded {{ audit.created_at|date:"M d, Y H:i" }}
+                                </p>
+
+                            </div>
+
+                        </div>
+
+                        <div class="flex flex-wrap items-center gap-2">
+
+                            {% if audit.deletion_method %}
+                                <span class="rounded-full border border-slate-700 bg-slate-900 px-2.5 py-1 text-[9px] font-bold uppercase tracking-wider text-gray-400">
+                                    {{ audit.get_deletion_method_display }}
+                                </span>
+                            {% endif %}
+
+                            {% if audit.deleted_by_admin %}
+                                <span class="rounded-full border border-emerald-500/25 bg-emerald-500/5 px-2.5 py-1 text-[9px] font-bold uppercase tracking-wider text-emerald-300">
+                                    Deleted by {{ audit.deleted_by_admin.username }}
+                                </span>
+                            {% endif %}
+
+                        </div>
+
+                    </div>
+
+                    <div class="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+
+                        <div class="rounded-xl border border-slate-800 bg-slate-900/50 p-3">
+
+                            <p class="text-[9px] font-bold uppercase tracking-[0.18em] text-gray-500">
+                                Created by
+                            </p>
+
+                            <p class="mt-1 text-sm font-semibold text-gray-200">
+                                {% if audit.created_by_teacher %}
+                                    {{ audit.created_by_teacher.full_name }}
+                                {% elif audit.created_by_admin %}
+                                    {{ audit.created_by_admin.username }}
+                                {% else %}
+                                    Unknown
+                                {% endif %}
+                            </p>
+
+                            <p class="text-[10px] text-gray-500">
+                                {{ audit.created_at_original|date:"M d, Y H:i" }}
+                            </p>
+
+                        </div>
+
+                        <div class="rounded-xl border border-slate-800 bg-slate-900/50 p-3">
+
+                            <p class="text-[9px] font-bold uppercase tracking-[0.18em] text-gray-500">
+                                Delete requested by
+                            </p>
+
+                            <p class="mt-1 text-sm font-semibold text-gray-200">
+                                {% if audit.delete_requested_by_teacher %}
+                                    {{ audit.delete_requested_by_teacher.full_name }}
+                                {% else %}
+                                    —
+                                {% endif %}
+                            </p>
+
+                            <p class="text-[10px] text-gray-500">
+                                {{ audit.delete_requested_at|date:"M d, Y H:i" }}
+                            </p>
+
+                        </div>
+
+                        <div class="rounded-xl border border-slate-800 bg-slate-900/50 p-3">
+
+                            <p class="text-[9px] font-bold uppercase tracking-[0.18em] text-gray-500">
+                                Reason
+                            </p>
+
+                            <p class="mt-1 text-sm leading-5 text-gray-300">
+                                {{ audit.delete_request_reason|default:"—" }}
+                            </p>
+
+                        </div>
+
+                        <div class="rounded-xl border border-slate-800 bg-slate-900/50 p-3">
+
+                            <p class="text-[9px] font-bold uppercase tracking-[0.18em] text-gray-500">
+                                Admin response
+                            </p>
+
+                            <p class="mt-1 text-sm leading-5 text-gray-300">
+                                {{ audit.admin_response|default:"—" }}
+                            </p>
+
+                            {% if audit.decision_by_admin %}
+                                <p class="mt-1 text-[10px] text-gray-500">
+                                    by {{ audit.decision_by_admin.username }}
+                                </p>
+                            {% endif %}
+
+                        </div>
+
+                    </div>
+
+                </article>
+
+            {% endfor %}
+
+        </div>
+
+    {% else %}
+
+        <div class="rounded-2xl border border-dashed border-slate-700 bg-[#0F172A] px-6 py-16 text-center">
+
+            <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-slate-700 bg-slate-900">
+                <i class="ri-file-list-3-line text-3xl text-cyan-400"></i>
+            </div>
+
+            <h2 class="mt-5 text-lg font-bold text-white">
+                No audit records found
+            </h2>
+
+            <p class="mx-auto mt-2 max-w-md text-sm text-gray-400">
+                Deletion requests and completed deletions will appear here with their full history.
+            </p>
+
+        </div>
+
+    {% endif %}
+
+</div>
+
+{% endblock %}

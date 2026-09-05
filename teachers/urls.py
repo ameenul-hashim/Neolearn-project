@@ -85,6 +85,18 @@ urlpatterns = [
         name="teacher_request_chapter_delete",
     ),
 
+    path(
+        "subjects/<int:subject_id>/builder/chapter/<int:chapter_id>/delete-request/<str:content_type>/<int:content_id>/withdraw/",
+        teacher_withdraw_delete_request_view,
+        name="teacher_withdraw_delete_request",
+    ),
+
+    path(
+        "subjects/<int:subject_id>/builder/chapter/<int:chapter_id>/delete-request/<str:content_type>/<int:content_id>/edit/",
+        teacher_edit_delete_request_view,
+        name="teacher_edit_delete_request",
+    ),
+
     # ========================================================
     # VIDEO
     # ========================================================
@@ -121,6 +133,12 @@ urlpatterns = [
         "subjects/<int:subject_id>/builder/chapter/<int:chapter_id>/pdf/<int:pdf_id>/delete-request/",
         teacher_request_pdf_delete_view,
         name="teacher_request_pdf_delete_view",
+    ),
+
+    path(
+        "subjects/<int:subject_id>/builder/chapter/<int:chapter_id>/video/<int:video_id>/delete-request/",
+        teacher_request_video_delete_view,
+        name="teacher_request_video_delete",
     ),
 
     # ========================================================

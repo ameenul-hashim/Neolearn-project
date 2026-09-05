@@ -1451,8 +1451,37 @@ def admin_delete_quiz_view(request, subject_id, chapter_id, quiz_id):
 @cache_control(no_cache=True, must_revalidate=True, no_store=True)
 def admin_delete_requests_view(request, subject_id):
     subject = _get_admin_subject(subject_id)
+    batch = subject.batch
     course_services.sync_pending_deletion_audits(subject)
-    return redirect(_admin_builder_url(subject.id, view="delete_requests"))
+
+    audit_qs = DeletionAudit.objects.filter(
+        batch_name=batch.batch_name,
+        subject_name=subject.subject_name,
+    ).select_related(
+        "created_by_teacher", "created_by_admin",
+        "delete_requested_by_teacher", "decision_by_admin", "deleted_by_admin",
+    ).order_by("-created_at", "-id")
+
+    pending_audits = list(audit_qs.filter(status="pending"))
+    all_audits = list(audit_qs)
+
+    # Group pending requests by chapter for the management cards.
+    requests_by_chapter = {}
+    for audit in pending_audits:
+        chapter_key = audit.chapter_name or "General"
+        requests_by_chapter.setdefault(chapter_key, []).append(audit)
+
+    context = {
+        "subject": subject,
+        "batch": batch,
+        "pending_audits": pending_audits,
+        "pending_count": len(pending_audits),
+        "requests_by_chapter": requests_by_chapter,
+        "audit_entries": all_audits,
+        "audit_count": len(all_audits),
+        "admin_user": request.user,
+    }
+    return render(request, "admins/course_builder/admin_delete_management.html", context)
 
 
 @login_required(login_url="admin_signin")
@@ -1464,10 +1493,26 @@ def admin_approve_delete_request_view(request, subject_id, request_id):
     response = (request.POST.get("admin_response") or request.POST.get("response") or "").strip()
     if len(response) > 5000:
         messages.error(request, "Admin response cannot exceed 5000 characters.")
-        return redirect(_admin_builder_url(subject.id, view="delete_requests"))
+        return redirect(reverse("admin_delete_requests", kwargs={"subject_id": subject.id}))
+
+    # ========================================================
+    # ADMIN VERIFICATION — username + password required
+    # ========================================================
+
+    verify_username = (request.POST.get("verify_username") or "").strip()
+    verify_password = request.POST.get("verify_password") or ""
+    if not verify_username or not verify_password:
+        messages.error(request, "Enter your admin username and password to approve this deletion.")
+        return redirect(reverse("admin_delete_requests", kwargs={"subject_id": subject.id}))
+
+    verified = authenticate(request, username=verify_username, password=verify_password)
+    if verified is None or not verified.is_staff or verified.id != request.user.id:
+        messages.error(request, "Admin verification failed. Check your username and password.")
+        return redirect(reverse("admin_delete_requests", kwargs={"subject_id": subject.id}))
+
     ok, message = course_services.approve_delete_request(audit, request.user, response)
     messages.success(request, message) if ok else messages.warning(request, message)
-    return redirect(_admin_builder_url(subject.id, view="delete_requests"))
+    return redirect(reverse("admin_delete_requests", kwargs={"subject_id": subject.id}))
 
 
 @login_required(login_url="admin_signin")
@@ -1479,13 +1524,13 @@ def admin_reject_delete_request_view(request, subject_id, request_id):
     response = (request.POST.get("admin_response") or request.POST.get("response") or request.POST.get("reason") or "").strip()
     if not response:
         messages.error(request, "Admin response/reason is required when rejecting a deletion request.")
-        return redirect(_admin_builder_url(subject.id, view="delete_requests"))
+        return redirect(reverse("admin_delete_requests", kwargs={"subject_id": subject.id}))
     if len(response) > 5000:
         messages.error(request, "Admin response cannot exceed 5000 characters.")
-        return redirect(_admin_builder_url(subject.id, view="delete_requests"))
+        return redirect(reverse("admin_delete_requests", kwargs={"subject_id": subject.id}))
     ok, message = course_services.reject_delete_request(audit, request.user, response)
     messages.success(request, message) if ok else messages.warning(request, message)
-    return redirect(_admin_builder_url(subject.id, view="delete_requests"))
+    return redirect(reverse("admin_delete_requests", kwargs={"subject_id": subject.id}))
 
 
 # ==========================================================
@@ -1497,12 +1542,41 @@ def admin_reject_delete_request_view(request, subject_id, request_id):
 @cache_control(no_cache=True, must_revalidate=True, no_store=True)
 def admin_course_audit_view(request, subject_id):
     subject = _get_admin_subject(subject_id)
+    batch = subject.batch
     course_services.sync_pending_deletion_audits(subject)
-    return redirect(_admin_builder_url(subject.id, view="audit", extra_params={
-        "audit_type": request.GET.get("audit_type", "all"),
-        "audit_status": request.GET.get("audit_status", "all"),
-        "audit_search": request.GET.get("audit_search", ""),
-    }))
+
+    audit_qs = DeletionAudit.objects.filter(
+        batch_name=batch.batch_name,
+        subject_name=subject.subject_name,
+    ).select_related(
+        "created_by_teacher", "created_by_admin",
+        "delete_requested_by_teacher", "decision_by_admin", "deleted_by_admin",
+    ).order_by("-created_at", "-id")
+
+    audit_type = (request.GET.get("audit_type") or "all").strip().lower()
+    audit_status = (request.GET.get("audit_status") or "all").strip().lower()
+    audit_search = (request.GET.get("audit_search") or "").strip()
+    if audit_type in {"chapter", "video", "pdf", "quiz"}:
+        audit_qs = audit_qs.filter(content_type=audit_type)
+    if audit_status in {"pending", "approved", "rejected", "deleted"}:
+        audit_qs = audit_qs.filter(status=audit_status)
+    if audit_search:
+        audit_qs = audit_qs.filter(Q(content_name__icontains=audit_search) | Q(chapter_name__icontains=audit_search))
+
+    all_audits = list(audit_qs)
+
+    context = {
+        "subject": subject,
+        "batch": batch,
+        "audit_entries": all_audits,
+        "audit_count": len(all_audits),
+        "audit_type": audit_type,
+        "audit_status": audit_status,
+        "audit_search": audit_search,
+        "pending_count": DeletionAudit.objects.filter(batch_name=batch.batch_name, subject_name=subject.subject_name, status="pending").count(),
+        "admin_user": request.user,
+    }
+    return render(request, "admins/course_builder/admin_delete_audit.html", context)
 
 @cache_control(no_cache=True, must_revalidate=True, no_store=True)
 @admin_required

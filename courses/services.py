@@ -3411,12 +3411,12 @@ def sync_pending_deletion_audits(subject):
 
     chapters = CourseChapter.objects.filter(
         batch=batch, subject=subject, is_deleted=False,
-        delete_requested=True, delete_status="pending",
     ).select_related("created_by", "created_by_admin", "delete_requested_by")
     for obj in chapters:
-        audit = _make_pending_audit("chapter", obj, subject, batch)
-        if audit:
-            audits.append(audit)
+        if obj.delete_requested and obj.delete_status == "pending":
+            audit = _make_pending_audit("chapter", obj, subject, batch)
+            if audit:
+                audits.append(audit)
 
         videos = obj.videos.filter(is_deleted=False, delete_requested=True, delete_status="pending").select_related("created_by", "created_by_admin", "delete_requested_by")
         for child in videos:
@@ -3602,6 +3602,146 @@ def request_delete(content_type, obj, actor, delete_reason):
         )
 
     return obj
+
+
+def withdraw_delete_request(content_type, obj, actor):
+    """
+    Teacher withdraws a pending deletion request before Admin decides.
+
+    Clears the pending flags on the content object, removes the pending
+    DeletionAudit, and records the withdrawal in the content timeline.
+    """
+
+    if not getattr(obj, "delete_requested", False) or getattr(obj, "delete_status", "") != "pending":
+        return False, "There is no pending deletion request to withdraw."
+
+    with transaction.atomic():
+        obj.delete_requested = False
+        obj.delete_requested_by = None
+        obj.delete_requested_at = None
+        obj.delete_reason = ""
+        obj.delete_status = "pending"
+        obj.updated_by = actor
+        obj.updated_by_admin = None
+        obj.save()
+
+        DeletionAudit.objects.filter(
+            content_type=content_type,
+            object_id=obj.id,
+            status="pending",
+        ).delete()
+
+        if content_type == "chapter":
+            ChapterChangeLog.objects.create(
+                chapter=obj,
+                changed_by=actor,
+                action="delete_request_withdrawn",
+                field_name="chapter",
+                old_value="pending",
+                new_value="",
+                change_summary=f'Deletion request withdrawn for chapter "{obj.chapter_name}".',
+            )
+        elif content_type == "video":
+            VideoChangeLog.objects.create(
+                video=obj,
+                changed_by=actor,
+                action="delete_request_withdrawn",
+                field_name="video",
+                old_value="pending",
+                new_value="",
+                change_summary=f'Deletion request withdrawn for video "{obj.video_name}".',
+            )
+        elif content_type == "pdf":
+            PDFChangeLog.objects.create(
+                pdf=obj,
+                changed_by=actor,
+                action="delete_request_withdrawn",
+                field_name="pdf",
+                old_value="pending",
+                new_value="",
+                change_summary=f'Deletion request withdrawn for PDF "{obj.pdf_name}".',
+            )
+        elif content_type == "quiz":
+            QuizChangeLog.objects.create(
+                quiz=obj,
+                changed_by=actor,
+                action="delete_request_withdrawn",
+                field_name="quiz",
+                old_value="pending",
+                new_value="",
+                change_summary=f'Deletion request withdrawn for quiz "{obj.quiz_name}".',
+            )
+
+    return True, "Deletion request withdrawn successfully."
+
+
+def edit_delete_request(content_type, obj, actor, new_reason):
+    """
+    Teacher edits the reason of a pending deletion request.
+
+    Updates the pending flags, the pending DeletionAudit reason, and
+    records the edit in the content timeline.
+    """
+
+    if not getattr(obj, "delete_requested", False) or getattr(obj, "delete_status", "") != "pending":
+        return False, "There is no pending deletion request to edit."
+
+    new_reason = (new_reason or "").strip()
+
+    with transaction.atomic():
+        obj.delete_reason = new_reason
+        obj.updated_by = actor
+        obj.updated_by_admin = None
+        obj.save()
+
+        DeletionAudit.objects.filter(
+            content_type=content_type,
+            object_id=obj.id,
+            status="pending",
+        ).update(delete_request_reason=new_reason)
+
+        if content_type == "chapter":
+            ChapterChangeLog.objects.create(
+                chapter=obj,
+                changed_by=actor,
+                action="delete_request_edited",
+                field_name="chapter",
+                old_value="",
+                new_value=new_reason,
+                change_summary=f'Deletion request reason updated for chapter "{obj.chapter_name}".',
+            )
+        elif content_type == "video":
+            VideoChangeLog.objects.create(
+                video=obj,
+                changed_by=actor,
+                action="delete_request_edited",
+                field_name="video",
+                old_value="",
+                new_value=new_reason,
+                change_summary=f'Deletion request reason updated for video "{obj.video_name}".',
+            )
+        elif content_type == "pdf":
+            PDFChangeLog.objects.create(
+                pdf=obj,
+                changed_by=actor,
+                action="delete_request_edited",
+                field_name="pdf",
+                old_value="",
+                new_value=new_reason,
+                change_summary=f'Deletion request reason updated for PDF "{obj.pdf_name}".',
+            )
+        elif content_type == "quiz":
+            QuizChangeLog.objects.create(
+                quiz=obj,
+                changed_by=actor,
+                action="delete_request_edited",
+                field_name="quiz",
+                old_value="",
+                new_value=new_reason,
+                change_summary=f'Deletion request reason updated for quiz "{obj.quiz_name}".',
+            )
+
+    return True, "Deletion request reason updated successfully."
 
 
 def direct_delete(content_type, obj, subject, batch, admin_user, reason):

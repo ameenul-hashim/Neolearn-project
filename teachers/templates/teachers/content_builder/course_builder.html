@@ -648,13 +648,40 @@
 
                                                 <!-- DELETE REQUEST -->
 
+                                                {% if chapter.delete_requested and chapter.delete_status == "pending" %}
+
+                                                <button
+                                                    type="button"
+                                                    class="delete-request-edit-open flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-amber-500/20 bg-amber-500/10 text-amber-300 transition hover:bg-amber-500/20 hover:text-amber-200"
+                                                    data-edit-url="{% url 'teacher_edit_delete_request' subject.id chapter.id 'chapter' chapter.id %}"
+                                                    data-content-name="{{ chapter.chapter_name|escape }}"
+                                                    data-content-type="Chapter"
+                                                    title="Edit delete request"
+                                                >
+                                                    <i class="ri-edit-line text-sm"></i>
+                                                </button>
+
                                                 <a
-                                                    href="{% url 'teacher_request_chapter_delete' subject.id chapter.id %}"
-                                                    class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-red-500/20 bg-red-500/10 text-red-300 transition hover:bg-red-500/20 hover:text-red-200"
+                                                    href="{% url 'teacher_withdraw_delete_request' subject.id chapter.id 'chapter' chapter.id %}"
+                                                    class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-slate-600/40 bg-slate-800/60 text-slate-300 transition hover:bg-slate-700 hover:text-white"
+                                                    title="Withdraw delete request"
+                                                >
+                                                    <i class="ri-arrow-go-back-line text-sm"></i>
+                                                </a>
+
+                                                {% else %}
+
+                                                <button
+                                                    type="button"
+                                                    class="chapter-delete-open flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-red-500/20 bg-red-500/10 text-red-300 transition hover:bg-red-500/20 hover:text-red-200"
+                                                    data-delete-url="{% url 'teacher_request_chapter_delete' subject.id chapter.id %}"
+                                                    data-chapter-name="{{ chapter.chapter_name|escape }}"
                                                     title="Request chapter deletion"
                                                 >
                                                     <i class="ri-delete-bin-6-line text-sm"></i>
-                                                </a>
+                                                </button>
+
+                                                {% endif %}
 
 
 
@@ -2347,15 +2374,44 @@
                                                                             <i class="ri-pencil-line text-sm"></i>
                                                                         </button>
 
-                                                                        <!-- DELETE REQUEST — NEXT STEP -->
+                                                                        <!-- DELETE REQUEST -->
+                                                                        {% if video.delete_requested and video.delete_status == "pending" %}
+
                                                                         <button
                                                                             type="button"
-                                                                            class="flex h-8 w-8 items-center justify-center rounded-lg border border-red-500/25 bg-red-500/10 text-red-300 transition hover:border-red-400/60 hover:bg-red-500/20 hover:text-red-200"
+                                                                            class="delete-request-edit-open flex h-8 w-8 items-center justify-center rounded-lg border border-amber-500/25 bg-amber-500/10 text-amber-300 transition hover:border-amber-400/60 hover:bg-amber-500/20 hover:text-amber-200"
+                                                                            data-edit-url="{% url 'teacher_edit_delete_request' subject.id 'video' video.id %}"
+                                                                            data-content-name="{{ video.video_name|escape }}"
+                                                                            data-content-type="Video"
+                                                                            title="Edit delete request"
+                                                                            aria-label="Edit delete request"
+                                                                        >
+                                                                            <i class="ri-edit-line text-sm"></i>
+                                                                        </button>
+
+                                                                        <a
+                                                                            href="{% url 'teacher_withdraw_delete_request' subject.id 'video' video.id %}"
+                                                                            class="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-600/40 bg-slate-800/60 text-slate-300 transition hover:border-slate-500/60 hover:text-white"
+                                                                            title="Withdraw delete request"
+                                                                            aria-label="Withdraw delete request"
+                                                                        >
+                                                                            <i class="ri-arrow-go-back-line text-sm"></i>
+                                                                        </a>
+
+                                                                        {% else %}
+
+                                                                        <button
+                                                                            type="button"
+                                                                            class="video-delete-open flex h-8 w-8 items-center justify-center rounded-lg border border-red-500/25 bg-red-500/10 text-red-300 transition hover:border-red-400/60 hover:bg-red-500/20 hover:text-red-200"
+                                                                            data-delete-url="{% url 'teacher_request_video_delete' subject.id selected_chapter.id video.id %}"
+                                                                            data-video-name="{{ video.video_name|escape }}"
                                                                             title="Request Video Deletion"
                                                                             aria-label="Request Video Deletion"
                                                                         >
                                                                             <i class="ri-delete-bin-line text-sm"></i>
                                                                         </button>
+
+                                                                        {% endif %}
 
                                                                     </div>
                                                                 </div>
@@ -2574,14 +2630,43 @@
 
 
                                                                     <!-- DELETE REQUEST -->
+                                                                    {% if pdf.delete_requested and pdf.delete_status == "pending" %}
+
+                                                                    <button
+                                                                        type="button"
+                                                                        class="delete-request-edit-open flex h-8 w-8 items-center justify-center rounded-lg border border-amber-500/25 bg-amber-500/10 text-amber-300 transition hover:border-amber-400/60 hover:bg-amber-500/20 hover:text-amber-200"
+                                                                        data-edit-url="{% url 'teacher_edit_delete_request' subject.id selected_chapter.id 'pdf' pdf.id %}"
+                                                                        data-content-name="{{ pdf.pdf_name|escape }}"
+                                                                        data-content-type="PDF"
+                                                                        title="Edit delete request"
+                                                                        aria-label="Edit delete request"
+                                                                    >
+                                                                        <i class="ri-edit-line text-sm"></i>
+                                                                    </button>
+
                                                                     <a
-                                                                        href="{% url 'teacher_request_pdf_delete_view' subject.id selected_chapter.id pdf.id %}"
-                                                                        class="flex h-8 w-8 items-center justify-center rounded-lg border border-red-500/25 bg-red-500/10 text-red-300 transition hover:border-red-400/60 hover:bg-red-500/20 hover:text-red-200"
+                                                                        href="{% url 'teacher_withdraw_delete_request' subject.id selected_chapter.id 'pdf' pdf.id %}"
+                                                                        class="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-600/40 bg-slate-800/60 text-slate-300 transition hover:border-slate-500/60 hover:text-white"
+                                                                        title="Withdraw delete request"
+                                                                        aria-label="Withdraw delete request"
+                                                                    >
+                                                                        <i class="ri-arrow-go-back-line text-sm"></i>
+                                                                    </a>
+
+                                                                    {% else %}
+
+                                                                    <button
+                                                                        type="button"
+                                                                        class="pdf-delete-open flex h-8 w-8 items-center justify-center rounded-lg border border-red-500/25 bg-red-500/10 text-red-300 transition hover:border-red-400/60 hover:bg-red-500/20 hover:text-red-200"
+                                                                        data-delete-url="{% url 'teacher_request_pdf_delete_view' subject.id selected_chapter.id pdf.id %}"
+                                                                        data-pdf-name="{{ pdf.pdf_name|escape }}"
                                                                         title="Request PDF deletion"
                                                                         aria-label="Request PDF deletion"
                                                                     >
                                                                         <i class="ri-delete-bin-line text-sm"></i>
-                                                                    </a>
+                                                                    </button>
+
+                                                                    {% endif %}
 
                                                                 </div>
 
@@ -3385,6 +3470,29 @@
                                                                             <i class="ri-history-line text-sm"></i>
                                                                         </a>
 
+                                                                        {% if quiz.delete_requested and quiz.delete_status == "pending" %}
+
+                                                                        <button
+                                                                            type="button"
+                                                                            class="delete-request-edit-open flex h-8 w-8 items-center justify-center rounded-lg border border-amber-500/25 bg-amber-500/10 text-amber-300 hover:border-amber-400/60"
+                                                                            data-edit-url="{% url 'teacher_edit_delete_request' subject.id selected_chapter.id 'quiz' quiz.id %}"
+                                                                            data-content-name="{{ quiz.quiz_name|escape }}"
+                                                                            data-content-type="Quiz"
+                                                                            title="Edit delete request"
+                                                                        >
+                                                                            <i class="ri-edit-line text-sm"></i>
+                                                                        </button>
+
+                                                                        <a
+                                                                            href="{% url 'teacher_withdraw_delete_request' subject.id selected_chapter.id 'quiz' quiz.id %}"
+                                                                            class="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-600/40 bg-slate-800/60 text-slate-300 transition hover:border-slate-500/60 hover:text-white"
+                                                                            title="Withdraw delete request"
+                                                                        >
+                                                                            <i class="ri-arrow-go-back-line text-sm"></i>
+                                                                        </a>
+
+                                                                        {% else %}
+
                                                                         <button
                                                                             type="button"
                                                                             class="quiz-delete-open flex h-8 w-8 items-center justify-center rounded-lg border border-red-500/25 bg-red-500/10 text-red-300 hover:border-red-400/60"
@@ -3394,6 +3502,8 @@
                                                                         >
                                                                             <i class="ri-delete-bin-line text-sm"></i>
                                                                         </button>
+
+                                                                        {% endif %}
 
                                                                     </div>
 
@@ -5919,6 +6029,202 @@ action="{% if selected_chapter %}{% url 'teacher_chapter_quizzes' subject.id sel
 
 
     <!-- =========================================================
+         EDIT DELETE REQUEST MODAL
+    ========================================================== -->
+
+    <div id="editDeleteRequestModal" class="fixed inset-0 z-[100] hidden items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm" aria-hidden="true">
+        <div class="w-full max-w-lg overflow-hidden rounded-2xl border border-amber-500/20 bg-[#0E1626] shadow-2xl">
+
+            <div class="flex items-start justify-between gap-4 border-b border-slate-800 px-5 py-4">
+                <div class="flex items-start gap-3">
+                    <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 text-amber-300">
+                        <i class="ri-edit-line text-lg"></i>
+                    </div>
+                    <div>
+                        <p class="text-[9px] font-bold uppercase tracking-[0.2em] text-amber-400">Edit Delete Request</p>
+                        <h3 class="mt-1 text-base font-bold text-white">Update Deletion Reason</h3>
+                    </div>
+                </div>
+
+                <button type="button" id="closeEditDeleteRequestModal" class="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-700 bg-slate-900 text-slate-400 hover:text-white">
+                    <i class="ri-close-line"></i>
+                </button>
+            </div>
+
+            <form id="editDeleteRequestForm" method="post" action="" class="p-5 sm:p-6">
+                {% csrf_token %}
+
+                <div class="rounded-xl border border-amber-500/15 bg-amber-500/[0.04] px-3.5 py-3">
+                    <p id="editDeleteRequestType" class="text-[9px] uppercase tracking-[0.15em] text-amber-400"></p>
+                    <p id="editDeleteRequestName" class="mt-1 break-words text-xs font-bold text-white"></p>
+                </div>
+
+                <div class="mt-4">
+                    <label class="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500">Reason *</label>
+                    <textarea name="delete_reason" rows="4" maxlength="2000" placeholder="Update the reason for this deletion request" class="mt-2 w-full resize-y rounded-xl border border-slate-700 bg-slate-950/60 px-3.5 py-3 text-xs text-white outline-none placeholder:text-slate-700 focus:border-amber-400/60"></textarea>
+                </div>
+
+                <div class="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                    <button type="button" id="cancelEditDeleteRequestModal" class="inline-flex items-center justify-center rounded-lg border border-slate-700 bg-slate-900 px-4 py-2.5 text-[10px] font-bold text-slate-300">Cancel</button>
+                    <button type="submit" class="inline-flex items-center justify-center gap-2 rounded-lg bg-amber-500 px-4 py-2.5 text-[10px] font-extrabold text-white hover:bg-amber-400">
+                        <i class="ri-check-line"></i>
+                        Update Request
+                    </button>
+                </div>
+            </form>
+
+        </div>
+    </div>
+
+
+    <!-- =========================================================
+         CHAPTER DELETE REQUEST MODAL
+    ========================================================== -->
+
+    <div id="chapterDeleteModal" class="fixed inset-0 z-[100] hidden items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm" aria-hidden="true">
+        <div class="w-full max-w-lg overflow-hidden rounded-2xl border border-red-500/20 bg-[#0E1626] shadow-2xl">
+
+            <div class="flex items-start justify-between gap-4 border-b border-slate-800 px-5 py-4">
+                <div class="flex items-start gap-3">
+                    <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-red-500/10 text-red-300">
+                        <i class="ri-delete-bin-line text-lg"></i>
+                    </div>
+                    <div>
+                        <p class="text-[9px] font-bold uppercase tracking-[0.2em] text-red-400">Delete Request</p>
+                        <h3 class="mt-1 text-base font-bold text-white">Request Chapter Deletion</h3>
+                    </div>
+                </div>
+
+                <button type="button" id="closeChapterDeleteModal" class="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-700 bg-slate-900 text-slate-400 hover:text-white">
+                    <i class="ri-close-line"></i>
+                </button>
+            </div>
+
+            <form id="chapterDeleteForm" method="post" action="" class="p-5 sm:p-6">
+                {% csrf_token %}
+
+                <div class="rounded-xl border border-red-500/15 bg-red-500/[0.04] px-3.5 py-3">
+                    <p class="text-[9px] uppercase tracking-[0.15em] text-red-400">Chapter</p>
+                    <p id="chapterDeleteName" class="mt-1 break-words text-xs font-bold text-white"></p>
+                </div>
+
+                <div class="mt-4">
+                    <label class="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500">Reason *</label>
+                    <textarea name="delete_reason" rows="4" maxlength="2000" placeholder="Explain why this chapter should be deleted" class="mt-2 w-full resize-y rounded-xl border border-slate-700 bg-slate-950/60 px-3.5 py-3 text-xs text-white outline-none placeholder:text-slate-700 focus:border-red-400/60"></textarea>
+                </div>
+
+                <div class="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                    <button type="button" id="cancelChapterDeleteModal" class="inline-flex items-center justify-center rounded-lg border border-slate-700 bg-slate-900 px-4 py-2.5 text-[10px] font-bold text-slate-300">Cancel</button>
+                    <button type="submit" class="inline-flex items-center justify-center gap-2 rounded-lg bg-red-500 px-4 py-2.5 text-[10px] font-extrabold text-white hover:bg-red-400">
+                        <i class="ri-delete-bin-line"></i>
+                        Submit Delete Request
+                    </button>
+                </div>
+            </form>
+
+        </div>
+    </div>
+
+
+    <!-- =========================================================
+         PDF DELETE REQUEST MODAL
+    ========================================================== -->
+
+    <div id="pdfDeleteModal" class="fixed inset-0 z-[100] hidden items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm" aria-hidden="true">
+        <div class="w-full max-w-lg overflow-hidden rounded-2xl border border-red-500/20 bg-[#0E1626] shadow-2xl">
+
+            <div class="flex items-start justify-between gap-4 border-b border-slate-800 px-5 py-4">
+                <div class="flex items-start gap-3">
+                    <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-red-500/10 text-red-300">
+                        <i class="ri-delete-bin-line text-lg"></i>
+                    </div>
+                    <div>
+                        <p class="text-[9px] font-bold uppercase tracking-[0.2em] text-red-400">Delete Request</p>
+                        <h3 class="mt-1 text-base font-bold text-white">Request PDF Deletion</h3>
+                    </div>
+                </div>
+
+                <button type="button" id="closePdfDeleteModal" class="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-700 bg-slate-900 text-slate-400 hover:text-white">
+                    <i class="ri-close-line"></i>
+                </button>
+            </div>
+
+            <form id="pdfDeleteForm" method="post" action="" class="p-5 sm:p-6">
+                {% csrf_token %}
+
+                <div class="rounded-xl border border-red-500/15 bg-red-500/[0.04] px-3.5 py-3">
+                    <p class="text-[9px] uppercase tracking-[0.15em] text-red-400">PDF</p>
+                    <p id="pdfDeleteName" class="mt-1 break-words text-xs font-bold text-white"></p>
+                </div>
+
+                <div class="mt-4">
+                    <label class="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500">Reason *</label>
+                    <textarea name="delete_reason" rows="4" maxlength="2000" placeholder="Explain why this PDF should be deleted" class="mt-2 w-full resize-y rounded-xl border border-slate-700 bg-slate-950/60 px-3.5 py-3 text-xs text-white outline-none placeholder:text-slate-700 focus:border-red-400/60"></textarea>
+                </div>
+
+                <div class="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                    <button type="button" id="cancelPdfDeleteModal" class="inline-flex items-center justify-center rounded-lg border border-slate-700 bg-slate-900 px-4 py-2.5 text-[10px] font-bold text-slate-300">Cancel</button>
+                    <button type="submit" class="inline-flex items-center justify-center gap-2 rounded-lg bg-red-500 px-4 py-2.5 text-[10px] font-extrabold text-white hover:bg-red-400">
+                        <i class="ri-delete-bin-line"></i>
+                        Submit Delete Request
+                    </button>
+                </div>
+            </form>
+
+        </div>
+    </div>
+
+
+    <!-- =========================================================
+         VIDEO DELETE REQUEST MODAL
+    ========================================================== -->
+
+    <div id="videoDeleteModal" class="fixed inset-0 z-[100] hidden items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm" aria-hidden="true">
+        <div class="w-full max-w-lg overflow-hidden rounded-2xl border border-red-500/20 bg-[#0E1626] shadow-2xl">
+
+            <div class="flex items-start justify-between gap-4 border-b border-slate-800 px-5 py-4">
+                <div class="flex items-start gap-3">
+                    <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-red-500/10 text-red-300">
+                        <i class="ri-delete-bin-line text-lg"></i>
+                    </div>
+                    <div>
+                        <p class="text-[9px] font-bold uppercase tracking-[0.2em] text-red-400">Delete Request</p>
+                        <h3 class="mt-1 text-base font-bold text-white">Request Video Deletion</h3>
+                    </div>
+                </div>
+
+                <button type="button" id="closeVideoDeleteModal" class="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-700 bg-slate-900 text-slate-400 hover:text-white">
+                    <i class="ri-close-line"></i>
+                </button>
+            </div>
+
+            <form id="videoDeleteForm" method="post" action="" class="p-5 sm:p-6">
+                {% csrf_token %}
+
+                <div class="rounded-xl border border-red-500/15 bg-red-500/[0.04] px-3.5 py-3">
+                    <p class="text-[9px] uppercase tracking-[0.15em] text-red-400">Video</p>
+                    <p id="videoDeleteName" class="mt-1 break-words text-xs font-bold text-white"></p>
+                </div>
+
+                <div class="mt-4">
+                    <label class="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500">Reason *</label>
+                    <textarea name="delete_reason" rows="4" maxlength="2000" placeholder="Explain why this video should be deleted" class="mt-2 w-full resize-y rounded-xl border border-slate-700 bg-slate-950/60 px-3.5 py-3 text-xs text-white outline-none placeholder:text-slate-700 focus:border-red-400/60"></textarea>
+                </div>
+
+                <div class="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                    <button type="button" id="cancelVideoDeleteModal" class="inline-flex items-center justify-center rounded-lg border border-slate-700 bg-slate-900 px-4 py-2.5 text-[10px] font-bold text-slate-300">Cancel</button>
+                    <button type="submit" class="inline-flex items-center justify-center gap-2 rounded-lg bg-red-500 px-4 py-2.5 text-[10px] font-extrabold text-white hover:bg-red-400">
+                        <i class="ri-delete-bin-line"></i>
+                        Submit Delete Request
+                    </button>
+                </div>
+            </form>
+
+        </div>
+    </div>
+
+
+    <!-- =========================================================
          QUIZ DELETE REQUEST MODAL
     ========================================================== -->
 
@@ -7702,6 +8008,518 @@ action="{% if selected_chapter %}{% url 'teacher_chapter_quizzes' subject.id sel
             }
 
 // =================================================
+            // EDIT DELETE REQUEST MODAL
+            // =================================================
+
+            const editDeleteRequestModal =
+                document.getElementById(
+                    "editDeleteRequestModal"
+                );
+
+            const editDeleteRequestForm =
+                document.getElementById(
+                    "editDeleteRequestForm"
+                );
+
+            const editDeleteRequestType =
+                document.getElementById(
+                    "editDeleteRequestType"
+                );
+
+            const editDeleteRequestName =
+                document.getElementById(
+                    "editDeleteRequestName"
+                );
+
+            function openEditDeleteRequestModal(
+                editUrl,
+                contentType,
+                contentName
+            ) {
+
+                if (
+                    !editDeleteRequestModal ||
+                    !editDeleteRequestForm
+                ) {
+                    return;
+                }
+
+                editDeleteRequestForm.action =
+                    editUrl;
+
+                if (editDeleteRequestType) {
+                    editDeleteRequestType.textContent =
+                        contentType || "Content";
+                }
+
+                if (editDeleteRequestName) {
+                    editDeleteRequestName.textContent =
+                        contentName || "Selected Content";
+                }
+
+                editDeleteRequestModal.classList.remove(
+                    "hidden"
+                );
+
+                editDeleteRequestModal.classList.add(
+                    "flex"
+                );
+
+                editDeleteRequestModal.setAttribute(
+                    "aria-hidden",
+                    "false"
+                );
+
+                document.body.classList.add(
+                    "overflow-hidden"
+                );
+
+            }
+
+            function closeEditDeleteRequestModal() {
+
+                if (!editDeleteRequestModal) {
+                    return;
+                }
+
+                editDeleteRequestModal.classList.add(
+                    "hidden"
+                );
+
+                editDeleteRequestModal.classList.remove(
+                    "flex"
+                );
+
+                editDeleteRequestModal.setAttribute(
+                    "aria-hidden",
+                    "true"
+                );
+
+                document.body.classList.remove(
+                    "overflow-hidden"
+                );
+
+            }
+
+            document.querySelectorAll(
+                ".delete-request-edit-open"
+            ).forEach(
+                function (button) {
+
+                    button.addEventListener(
+                        "click",
+                        function () {
+                            openEditDeleteRequestModal(
+                                button.dataset.editUrl,
+                                button.dataset.contentType,
+                                button.dataset.contentName
+                            );
+                        }
+                    );
+
+                }
+            );
+
+            const closeEditDeleteRequestModalButton =
+                document.getElementById(
+                    "closeEditDeleteRequestModal"
+                );
+
+            const cancelEditDeleteRequestModalButton =
+                document.getElementById(
+                    "cancelEditDeleteRequestModal"
+                );
+
+            if (closeEditDeleteRequestModalButton) {
+                closeEditDeleteRequestModalButton.addEventListener(
+                    "click",
+                    closeEditDeleteRequestModal
+                );
+            }
+
+            if (cancelEditDeleteRequestModalButton) {
+                cancelEditDeleteRequestModalButton.addEventListener(
+                    "click",
+                    closeEditDeleteRequestModal
+                );
+            }
+
+            // =================================================
+            // CHAPTER DELETE REQUEST MODAL
+            // =================================================
+
+            const chapterDeleteModal =
+                document.getElementById(
+                    "chapterDeleteModal"
+                );
+
+            const chapterDeleteForm =
+                document.getElementById(
+                    "chapterDeleteForm"
+                );
+
+            const chapterDeleteName =
+                document.getElementById(
+                    "chapterDeleteName"
+                );
+
+            function openChapterDeleteModal(
+                deleteUrl,
+                chapterName
+            ) {
+
+                if (
+                    !chapterDeleteModal ||
+                    !chapterDeleteForm
+                ) {
+                    return;
+                }
+
+                chapterDeleteForm.action =
+                    deleteUrl;
+
+                if (chapterDeleteName) {
+                    chapterDeleteName.textContent =
+                        chapterName || "Selected Chapter";
+                }
+
+                chapterDeleteModal.classList.remove(
+                    "hidden"
+                );
+
+                chapterDeleteModal.classList.add(
+                    "flex"
+                );
+
+                chapterDeleteModal.setAttribute(
+                    "aria-hidden",
+                    "false"
+                );
+
+                document.body.classList.add(
+                    "overflow-hidden"
+                );
+
+            }
+
+            function closeChapterDeleteModal() {
+
+                if (!chapterDeleteModal) {
+                    return;
+                }
+
+                chapterDeleteModal.classList.add(
+                    "hidden"
+                );
+
+                chapterDeleteModal.classList.remove(
+                    "flex"
+                );
+
+                chapterDeleteModal.setAttribute(
+                    "aria-hidden",
+                    "true"
+                );
+
+                document.body.classList.remove(
+                    "overflow-hidden"
+                );
+
+            }
+
+            document.querySelectorAll(
+                ".chapter-delete-open"
+            ).forEach(
+                function (button) {
+
+                    button.addEventListener(
+                        "click",
+                        function () {
+                            openChapterDeleteModal(
+                                button.dataset.deleteUrl,
+                                button.dataset.chapterName
+                            );
+                        }
+                    );
+
+                }
+            );
+
+            const closeChapterDeleteModalButton =
+                document.getElementById(
+                    "closeChapterDeleteModal"
+                );
+
+            const cancelChapterDeleteModalButton =
+                document.getElementById(
+                    "cancelChapterDeleteModal"
+                );
+
+            if (closeChapterDeleteModalButton) {
+                closeChapterDeleteModalButton.addEventListener(
+                    "click",
+                    closeChapterDeleteModal
+                );
+            }
+
+            if (cancelChapterDeleteModalButton) {
+                cancelChapterDeleteModalButton.addEventListener(
+                    "click",
+                    closeChapterDeleteModal
+                );
+            }
+
+            // =================================================
+            // PDF DELETE REQUEST MODAL
+            // =================================================
+
+            const pdfDeleteModal =
+                document.getElementById(
+                    "pdfDeleteModal"
+                );
+
+            const pdfDeleteForm =
+                document.getElementById(
+                    "pdfDeleteForm"
+                );
+
+            const pdfDeleteName =
+                document.getElementById(
+                    "pdfDeleteName"
+                );
+
+            function openPdfDeleteModal(
+                deleteUrl,
+                pdfName
+            ) {
+
+                if (
+                    !pdfDeleteModal ||
+                    !pdfDeleteForm
+                ) {
+                    return;
+                }
+
+                pdfDeleteForm.action =
+                    deleteUrl;
+
+                if (pdfDeleteName) {
+                    pdfDeleteName.textContent =
+                        pdfName || "Selected PDF";
+                }
+
+                pdfDeleteModal.classList.remove(
+                    "hidden"
+                );
+
+                pdfDeleteModal.classList.add(
+                    "flex"
+                );
+
+                pdfDeleteModal.setAttribute(
+                    "aria-hidden",
+                    "false"
+                );
+
+                document.body.classList.add(
+                    "overflow-hidden"
+                );
+
+            }
+
+            function closePdfDeleteModal() {
+
+                if (!pdfDeleteModal) {
+                    return;
+                }
+
+                pdfDeleteModal.classList.add(
+                    "hidden"
+                );
+
+                pdfDeleteModal.classList.remove(
+                    "flex"
+                );
+
+                pdfDeleteModal.setAttribute(
+                    "aria-hidden",
+                    "true"
+                );
+
+                document.body.classList.remove(
+                    "overflow-hidden"
+                );
+
+            }
+
+            document.querySelectorAll(
+                ".pdf-delete-open"
+            ).forEach(
+                function (button) {
+
+                    button.addEventListener(
+                        "click",
+                        function () {
+                            openPdfDeleteModal(
+                                button.dataset.deleteUrl,
+                                button.dataset.pdfName
+                            );
+                        }
+                    );
+
+                }
+            );
+
+            const closePdfDeleteModalButton =
+                document.getElementById(
+                    "closePdfDeleteModal"
+                );
+
+            const cancelPdfDeleteModalButton =
+                document.getElementById(
+                    "cancelPdfDeleteModal"
+                );
+
+            if (closePdfDeleteModalButton) {
+                closePdfDeleteModalButton.addEventListener(
+                    "click",
+                    closePdfDeleteModal
+                );
+            }
+
+            if (cancelPdfDeleteModalButton) {
+                cancelPdfDeleteModalButton.addEventListener(
+                    "click",
+                    closePdfDeleteModal
+                );
+            }
+
+            // =================================================
+            // VIDEO DELETE REQUEST MODAL
+            // =================================================
+
+            const videoDeleteModal =
+                document.getElementById(
+                    "videoDeleteModal"
+                );
+
+            const videoDeleteForm =
+                document.getElementById(
+                    "videoDeleteForm"
+                );
+
+            const videoDeleteName =
+                document.getElementById(
+                    "videoDeleteName"
+                );
+
+            function openVideoDeleteModal(
+                deleteUrl,
+                videoName
+            ) {
+
+                if (
+                    !videoDeleteModal ||
+                    !videoDeleteForm
+                ) {
+                    return;
+                }
+
+                videoDeleteForm.action =
+                    deleteUrl;
+
+                if (videoDeleteName) {
+                    videoDeleteName.textContent =
+                        videoName || "Selected Video";
+                }
+
+                videoDeleteModal.classList.remove(
+                    "hidden"
+                );
+
+                videoDeleteModal.classList.add(
+                    "flex"
+                );
+
+                videoDeleteModal.setAttribute(
+                    "aria-hidden",
+                    "false"
+                );
+
+                document.body.classList.add(
+                    "overflow-hidden"
+                );
+
+            }
+
+            function closeVideoDeleteModal() {
+
+                if (!videoDeleteModal) {
+                    return;
+                }
+
+                videoDeleteModal.classList.add(
+                    "hidden"
+                );
+
+                videoDeleteModal.classList.remove(
+                    "flex"
+                );
+
+                videoDeleteModal.setAttribute(
+                    "aria-hidden",
+                    "true"
+                );
+
+                document.body.classList.remove(
+                    "overflow-hidden"
+                );
+
+            }
+
+            document.querySelectorAll(
+                ".video-delete-open"
+            ).forEach(
+                function (button) {
+
+                    button.addEventListener(
+                        "click",
+                        function () {
+                            openVideoDeleteModal(
+                                button.dataset.deleteUrl,
+                                button.dataset.videoName
+                            );
+                        }
+                    );
+
+                }
+            );
+
+            const closeVideoDeleteModalButton =
+                document.getElementById(
+                    "closeVideoDeleteModal"
+                );
+
+            const cancelVideoDeleteModalButton =
+                document.getElementById(
+                    "cancelVideoDeleteModal"
+                );
+
+            if (closeVideoDeleteModalButton) {
+                closeVideoDeleteModalButton.addEventListener(
+                    "click",
+                    closeVideoDeleteModal
+                );
+            }
+
+            if (cancelVideoDeleteModalButton) {
+                cancelVideoDeleteModalButton.addEventListener(
+                    "click",
+                    closeVideoDeleteModal
+                );
+            }
+
+            // =================================================
             // QUIZ DELETE REQUEST MODAL
             // =================================================
 

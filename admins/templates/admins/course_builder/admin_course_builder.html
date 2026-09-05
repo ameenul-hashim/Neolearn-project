@@ -868,6 +868,16 @@
                                     <!-- CONTENT ACTION -->
                                     <div class="flex flex-wrap items-center gap-2">
 
+                                        <!-- CREATE CHAPTER — ALWAYS AVAILABLE -->
+                                        <button
+                                            type="button"
+                                            id="contentCreateChapterBtn"
+                                            class="inline-flex items-center justify-center gap-1.5 rounded-lg border border-cyan-500/40 bg-cyan-500/10 px-3 py-2 text-[10px] font-bold text-cyan-300 shadow-sm transition hover:bg-cyan-500/20"
+                                        >
+                                            <i class="ri-add-circle-line text-xs"></i>
+                                            Create Chapter
+                                        </button>
+
                                         {% if selected_content != "timeline" and selected_content != "video_timeline" and selected_content != "pdf_timeline" and selected_content != "quiz_timeline" %}
 
                                         <!-- VIDEO ACTION -->
@@ -5507,6 +5517,10 @@
             const navbarActions = page.querySelectorAll("[data-navbar-action]");
 
             function updateNavbarAction(type) {
+                const validActions = ["videos", "pdfs", "quizzes", "live"];
+                if (!validActions.includes(type)) {
+                    type = "videos";
+                }
                 navbarActions.forEach(function (button) {
                     const active = button.dataset.navbarAction === type;
                     button.classList.toggle("hidden", !active);

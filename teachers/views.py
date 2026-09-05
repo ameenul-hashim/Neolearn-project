@@ -16,6 +16,7 @@ from django.contrib.auth import (
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.views.decorators.cache import cache_control
+from django.views.decorators.http import require_POST
 from django.db import transaction
 
 import re
@@ -4208,6 +4209,306 @@ def teacher_request_quiz_delete_view(
         (
             f"{builder_url}"
             f"?chapter={chapter.id}&view=quizzes"
+        )
+    )
+
+
+@login_required(login_url="teacher_login")
+@require_POST
+def teacher_request_video_delete_view(
+    request,
+    subject_id,
+    chapter_id,
+    video_id,
+):
+    """
+    Teacher requests deletion of a video.
+
+    Only a POST with a valid delete reason is accepted. The
+    shared request_delete service marks the video as pending and
+    writes the timeline entry. The actual delete is performed
+    by an admin after approval.
+    """
+
+    teacher, assignment = (
+        _get_teacher_subject_assignment(
+            request,
+            subject_id,
+        )
+    )
+
+    if teacher is None or assignment is None:
+
+        messages.error(
+            request,
+            "You do not have permission to request video deletion.",
+        )
+
+        return redirect("teacher_login")
+
+    chapter = get_object_or_404(
+        CourseChapter,
+        id=chapter_id,
+        batch=assignment.batch,
+        subject=assignment.subject,
+        is_deleted=False,
+    )
+
+    video = get_object_or_404(
+        ChapterVideo,
+        id=video_id,
+        chapter=chapter,
+        is_deleted=False,
+    )
+
+    def redirect_to_builder():
+        return redirect(
+            (
+                f"{reverse('teacher_course_builder', kwargs={'subject_id': subject_id})}"
+                f"?chapter={chapter.id}&view=videos"
+            )
+        )
+
+    if (
+        video.delete_requested
+        and video.delete_status == "pending"
+    ):
+
+        messages.info(
+            request,
+            "A delete request for this video is already pending.",
+        )
+
+        return redirect_to_builder()
+
+    form = DeleteReasonForm(
+        request.POST
+    )
+
+    if not form.is_valid():
+
+        messages.error(
+            request,
+            next(
+                iter(
+                    form.errors.values()
+                )
+            )[0],
+        )
+
+        return redirect_to_builder()
+
+    course_services.request_delete(
+        "video",
+        video,
+        teacher,
+        form.cleaned_data["delete_reason"],
+    )
+
+    messages.success(
+        request,
+        "Video deletion request submitted successfully.",
+    )
+
+    return redirect_to_builder()
+
+
+@login_required(login_url="teacher_login")
+@require_POST
+def teacher_withdraw_delete_request_view(
+    request,
+    subject_id,
+    chapter_id,
+    content_type,
+    content_id,
+):
+    """
+    Teacher withdraws a pending deletion request before Admin decides.
+    """
+
+    teacher, assignment = (
+        _get_teacher_subject_assignment(
+            request,
+            subject_id,
+        )
+    )
+
+    if teacher is None or assignment is None:
+
+        messages.error(
+            request,
+            "You do not have permission to withdraw deletion requests.",
+        )
+
+        return redirect("teacher_login")
+
+    chapter = get_object_or_404(
+        CourseChapter,
+        id=chapter_id,
+        batch=assignment.batch,
+        subject=assignment.subject,
+        is_deleted=False,
+    )
+
+    obj = None
+    if content_type == "chapter":
+        obj = get_object_or_404(
+            CourseChapter,
+            id=content_id,
+            batch=assignment.batch,
+            subject=assignment.subject,
+            is_deleted=False,
+        )
+    elif content_type == "video":
+        obj = get_object_or_404(
+            ChapterVideo,
+            id=content_id,
+            chapter=chapter,
+            is_deleted=False,
+        )
+    elif content_type == "pdf":
+        obj = get_object_or_404(
+            ChapterPDF,
+            id=content_id,
+            chapter=chapter,
+            is_deleted=False,
+        )
+    elif content_type == "quiz":
+        obj = get_object_or_404(
+            ChapterQuiz,
+            id=content_id,
+            chapter=chapter,
+            is_deleted=False,
+        )
+    else:
+        messages.error(request, "Unknown content type.")
+        return redirect("teacher_course_builder", subject_id=subject_id)
+
+    ok, message = course_services.withdraw_delete_request(
+        content_type,
+        obj,
+        teacher,
+    )
+
+    messages.success(request, message) if ok else messages.warning(request, message)
+
+    view = "overview" if content_type == "chapter" else f"{content_type}s"
+    return redirect(
+        (
+            f"{reverse('teacher_course_builder', kwargs={'subject_id': subject_id})}"
+            f"?chapter={chapter.id}&view={view}"
+        )
+    )
+
+
+@login_required(login_url="teacher_login")
+@require_POST
+def teacher_edit_delete_request_view(
+    request,
+    subject_id,
+    chapter_id,
+    content_type,
+    content_id,
+):
+    """
+    Teacher edits the reason of a pending deletion request.
+    """
+
+    teacher, assignment = (
+        _get_teacher_subject_assignment(
+            request,
+            subject_id,
+        )
+    )
+
+    if teacher is None or assignment is None:
+
+        messages.error(
+            request,
+            "You do not have permission to edit deletion requests.",
+        )
+
+        return redirect("teacher_login")
+
+    chapter = get_object_or_404(
+        CourseChapter,
+        id=chapter_id,
+        batch=assignment.batch,
+        subject=assignment.subject,
+        is_deleted=False,
+    )
+
+    obj = None
+    if content_type == "chapter":
+        obj = get_object_or_404(
+            CourseChapter,
+            id=content_id,
+            batch=assignment.batch,
+            subject=assignment.subject,
+            is_deleted=False,
+        )
+    elif content_type == "video":
+        obj = get_object_or_404(
+            ChapterVideo,
+            id=content_id,
+            chapter=chapter,
+            is_deleted=False,
+        )
+    elif content_type == "pdf":
+        obj = get_object_or_404(
+            ChapterPDF,
+            id=content_id,
+            chapter=chapter,
+            is_deleted=False,
+        )
+    elif content_type == "quiz":
+        obj = get_object_or_404(
+            ChapterQuiz,
+            id=content_id,
+            chapter=chapter,
+            is_deleted=False,
+        )
+    else:
+        messages.error(request, "Unknown content type.")
+        return redirect("teacher_course_builder", subject_id=subject_id)
+
+    form = DeleteReasonForm(
+        request.POST
+    )
+
+    if not form.is_valid():
+
+        messages.error(
+            request,
+            next(
+                iter(
+                    form.errors.values()
+                )
+            )[0],
+        )
+
+        view = "overview" if content_type == "chapter" else f"{content_type}s"
+        return redirect(
+            (
+                f"{reverse('teacher_course_builder', kwargs={'subject_id': subject_id})}"
+                f"?chapter={chapter.id}&view={view}"
+            )
+        )
+
+    ok, message = course_services.edit_delete_request(
+        content_type,
+        obj,
+        teacher,
+        form.cleaned_data["delete_reason"],
+    )
+
+    messages.success(request, message) if ok else messages.warning(request, message)
+
+    view = "overview" if content_type == "chapter" else f"{content_type}s"
+    return redirect(
+        (
+            f"{reverse('teacher_course_builder', kwargs={'subject_id': subject_id})}"
+            f"?chapter={chapter.id}&view={view}"
         )
     )
 
