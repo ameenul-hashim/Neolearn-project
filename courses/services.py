@@ -50,6 +50,12 @@ This file handles:
         - delete quiz question
         - timeline logging
 
+    Deletion
+        - teacher deletion requests (chapter/video/pdf/quiz)
+        - admin direct deletion
+        - admin approve/reject of teacher deletion requests
+        - deletion audit records
+
     Timeline
         - chapter logs
         - video logs
@@ -68,8 +74,6 @@ NOT handled here
     - render
     - Django messages
     - template/session popup state
-    - admin direct deletion
-    - teacher deletion requests
 
 The caller (Teacher/Admin view) is responsible for those.
 """
@@ -81,15 +85,7 @@ The caller (Teacher/Admin view) is responsible for those.
 
 from django.db import transaction
 from django.db.models import F
-
-
-# ============================================================
-# CURRENT MODEL IMPORTS
-#
-# IMPORTANT:
-# Course Builder models are still inside teachers.models.
-# We are intentionally NOT moving models in this step.
-# ============================================================
+from django.utils import timezone
 
 from teachers.models import (
     CourseChapter,
@@ -105,6 +101,8 @@ from teachers.models import (
     QuizQuestion,
     QuizOption,
     QuizChangeLog,
+
+    DeletionAudit,
 )
 
 
@@ -299,7 +297,8 @@ def create_chapter(
     *,
     batch,
     subject,
-    actor,
+    actor=None,
+    admin_actor=None,
     chapter_name,
     chapter_description,
     status,
@@ -309,6 +308,9 @@ def create_chapter(
 
     The caller must already have verified that the actor is
     allowed to modify this batch/subject.
+
+    Exactly one of ``actor`` (Teacher) or ``admin_actor`` (User)
+    must be provided so the correct actor fields are recorded.
 
     Form validation must already have happened in forms.py.
 
@@ -368,7 +370,9 @@ def create_chapter(
             batch=batch,
             subject=subject,
             created_by=actor,
+            created_by_admin=admin_actor,
             updated_by=actor,
+            updated_by_admin=admin_actor,
             chapter_name=chapter_name,
             chapter_description=chapter_description,
             chapter_order=chapter_order,
@@ -382,6 +386,7 @@ def create_chapter(
         ChapterChangeLog.objects.create(
             chapter=chapter,
             changed_by=actor,
+            changed_by_admin=admin_actor,
             action="created",
             field_name="chapter",
             old_value="",
@@ -407,7 +412,8 @@ def create_chapter(
 def update_chapter(
     *,
     chapter,
-    actor,
+    actor=None,
+    admin_actor=None,
     chapter_name,
     chapter_description,
     chapter_order,
@@ -423,6 +429,9 @@ def update_chapter(
         - status
         - chapter ordering
         - timeline entries
+
+    Exactly one of ``actor`` (Teacher) or ``admin_actor`` (User)
+    must be provided so the correct actor fields are recorded.
 
     Returns:
         CourseChapter instance
@@ -615,6 +624,10 @@ def update_chapter(
             actor
         )
 
+        chapter.updated_by_admin = (
+            admin_actor
+        )
+
         chapter.save()
 
         # ----------------------------------------------------
@@ -643,6 +656,7 @@ def update_chapter(
             ChapterChangeLog.objects.create(
                 chapter=chapter,
                 changed_by=actor,
+                changed_by_admin=admin_actor,
                 action="updated",
                 field_name="chapter_name",
                 old_value=old_name,
@@ -661,6 +675,7 @@ def update_chapter(
             ChapterChangeLog.objects.create(
                 chapter=chapter,
                 changed_by=actor,
+                changed_by_admin=admin_actor,
                 action="updated",
                 field_name="chapter_description",
                 old_value=old_description,
@@ -679,6 +694,7 @@ def update_chapter(
             ChapterChangeLog.objects.create(
                 chapter=chapter,
                 changed_by=actor,
+                changed_by_admin=admin_actor,
                 action="order_changed",
                 field_name="chapter_order",
                 old_value=str(old_order),
@@ -698,6 +714,7 @@ def update_chapter(
             ChapterChangeLog.objects.create(
                 chapter=chapter,
                 changed_by=actor,
+                changed_by_admin=admin_actor,
                 action="status_changed",
                 field_name="status",
                 old_value=old_status,
@@ -796,7 +813,8 @@ def normalize_video_orders(
 def create_video(
     *,
     chapter,
-    actor,
+    actor=None,
+    admin_actor=None,
     video_name,
     video_description,
     video_file,
@@ -805,6 +823,9 @@ def create_video(
     Create/upload a video.
 
     File validation belongs to forms.py.
+
+    Exactly one of ``actor`` (Teacher) or ``admin_actor`` (User)
+    must be provided so the correct actor fields are recorded.
 
     This service only performs the actual business operation.
     """
@@ -858,7 +879,9 @@ def create_video(
             video_file=video_file,
             video_order=video_order,
             created_by=actor,
+            created_by_admin=admin_actor,
             updated_by=actor,
+            updated_by_admin=admin_actor,
             delete_requested=False,
             delete_status="pending",
             is_deleted=False,
@@ -880,6 +903,7 @@ def create_video(
         VideoChangeLog.objects.create(
             video=video,
             changed_by=actor,
+            changed_by_admin=admin_actor,
             action="created",
             field_name="video",
             old_value="",
@@ -905,7 +929,8 @@ def create_video(
 def update_video(
     *,
     video,
-    actor,
+    actor=None,
+    admin_actor=None,
     video_name,
     video_description,
     video_order,
@@ -921,6 +946,9 @@ def update_video(
         - order
         - optional file replacement
         - timeline
+
+    Exactly one of ``actor`` (Teacher) or ``admin_actor`` (User)
+    must be provided so the correct actor fields are recorded.
 
     Returns:
         ChapterVideo
@@ -1090,6 +1118,10 @@ def update_video(
             actor
         )
 
+        locked_video.updated_by_admin = (
+            admin_actor
+        )
+
         if replacement_file is not None:
 
             locked_video.video_file = (
@@ -1117,6 +1149,7 @@ def update_video(
             for item in others:
 
                 item.updated_by = actor
+                item.updated_by_admin = admin_actor
 
             ChapterVideo.objects.bulk_update(
                 others,
@@ -1136,6 +1169,7 @@ def update_video(
             VideoChangeLog.objects.create(
                 video=locked_video,
                 changed_by=actor,
+                changed_by_admin=admin_actor,
                 action="name_changed",
                 field_name="video_name",
                 old_value=old_name,
@@ -1154,6 +1188,7 @@ def update_video(
             VideoChangeLog.objects.create(
                 video=locked_video,
                 changed_by=actor,
+                changed_by_admin=admin_actor,
                 action="description_changed",
                 field_name="video_description",
                 old_value=old_description,
@@ -1172,6 +1207,7 @@ def update_video(
             VideoChangeLog.objects.create(
                 video=locked_video,
                 changed_by=actor,
+                changed_by_admin=admin_actor,
                 action="order_changed",
                 field_name="video_order",
                 old_value=str(old_order),
@@ -1200,6 +1236,7 @@ def update_video(
             VideoChangeLog.objects.create(
                 video=locked_video,
                 changed_by=actor,
+                changed_by_admin=admin_actor,
                 action="file_changed",
                 field_name="video_file",
                 old_value=(
@@ -1325,7 +1362,8 @@ def normalize_pdf_orders(
 def create_pdf(
     *,
     chapter,
-    actor,
+    actor=None,
+    admin_actor=None,
     pdf_name,
     pdf_description,
     pdf_file,
@@ -1335,6 +1373,9 @@ def create_pdf(
     Create/upload a PDF note.
 
     Validation of the PDF and thumbnail belongs in forms.py.
+
+    Exactly one of ``actor`` (Teacher) or ``admin_actor`` (User)
+    must be provided so the correct actor fields are recorded.
     """
 
     pdf_name = _clean_string(
@@ -1387,7 +1428,9 @@ def create_pdf(
             pdf_thumbnail=pdf_thumbnail,
             pdf_order=pdf_order,
             created_by=actor,
+            created_by_admin=admin_actor,
             updated_by=actor,
+            updated_by_admin=admin_actor,
             delete_requested=False,
             delete_requested_by=None,
             delete_requested_at=None,
@@ -1421,6 +1464,7 @@ def create_pdf(
         PDFChangeLog.objects.create(
             pdf=pdf,
             changed_by=actor,
+            changed_by_admin=admin_actor,
             action="created",
             field_name="pdf",
             old_value="",
@@ -1447,7 +1491,8 @@ def create_pdf(
 def update_pdf(
     *,
     pdf,
-    actor,
+    actor=None,
+    admin_actor=None,
     pdf_name,
     pdf_description,
     pdf_order,
@@ -1465,6 +1510,9 @@ def update_pdf(
         - PDF replacement
         - thumbnail replacement
         - timeline
+
+    Exactly one of ``actor`` (Teacher) or ``admin_actor`` (User)
+    must be provided so the correct actor fields are recorded.
     """
 
     pdf_name = _clean_string(
@@ -1651,6 +1699,10 @@ def update_pdf(
             actor
         )
 
+        locked_pdf.updated_by_admin = (
+            admin_actor
+        )
+
         if replacement_file is not None:
 
             locked_pdf.pdf_file = (
@@ -1678,6 +1730,7 @@ def update_pdf(
         for item in other_pdfs:
 
             item.updated_by = actor
+            item.updated_by_admin = admin_actor
 
         if other_pdfs:
 
@@ -1699,6 +1752,7 @@ def update_pdf(
             PDFChangeLog.objects.create(
                 pdf=locked_pdf,
                 changed_by=actor,
+                changed_by_admin=admin_actor,
                 action="name_changed",
                 field_name="pdf_name",
                 old_value=old_name,
@@ -1717,6 +1771,7 @@ def update_pdf(
             PDFChangeLog.objects.create(
                 pdf=locked_pdf,
                 changed_by=actor,
+                changed_by_admin=admin_actor,
                 action="description_changed",
                 field_name="pdf_description",
                 old_value=old_description,
@@ -1745,6 +1800,7 @@ def update_pdf(
                 PDFChangeLog.objects.create(
                     pdf=item,
                     changed_by=actor,
+                    changed_by_admin=admin_actor,
                     action="order_changed",
                     field_name="pdf_order",
                     old_value=str(
@@ -1778,6 +1834,7 @@ def update_pdf(
             PDFChangeLog.objects.create(
                 pdf=locked_pdf,
                 changed_by=actor,
+                changed_by_admin=admin_actor,
                 action="file_changed",
                 field_name="pdf_file",
                 old_value=(
@@ -1811,6 +1868,7 @@ def update_pdf(
             PDFChangeLog.objects.create(
                 pdf=locked_pdf,
                 changed_by=actor,
+                changed_by_admin=admin_actor,
                 action="thumbnail_changed",
                 field_name="pdf_thumbnail",
                 old_value=(
@@ -1844,7 +1902,8 @@ def update_pdf(
 def create_quiz(
     *,
     chapter,
-    actor,
+    actor=None,
+    admin_actor=None,
     quiz_name,
     quiz_description,
     attempt_limit,
@@ -1852,6 +1911,9 @@ def create_quiz(
 ):
     """
     Create a complete quiz atomically.
+
+    Exactly one of ``actor`` (Teacher) or ``admin_actor`` (User)
+    must be provided so the correct actor fields are recorded.
 
     Expected question structure:
 
@@ -1953,7 +2015,9 @@ def create_quiz(
             quiz_description=quiz_description,
             attempt_limit=attempt_limit,
             created_by=actor,
+            created_by_admin=admin_actor,
             updated_by=actor,
+            updated_by_admin=admin_actor,
             delete_requested=False,
             delete_requested_by=None,
             delete_requested_at=None,
@@ -2033,6 +2097,7 @@ def create_quiz(
         QuizChangeLog.objects.create(
             quiz=quiz,
             changed_by=actor,
+            changed_by_admin=admin_actor,
             action="created",
             field_name="quiz",
             old_value="",
@@ -2061,13 +2126,17 @@ def create_quiz(
 def update_quiz(
     *,
     quiz,
-    actor,
+    actor=None,
+    admin_actor=None,
     quiz_name,
     quiz_description,
     attempt_limit,
 ):
     """
     Update quiz basic information.
+
+    Exactly one of ``actor`` (Teacher) or ``admin_actor`` (User)
+    must be provided so the correct actor fields are recorded.
 
     Handles:
 
@@ -2163,6 +2232,10 @@ def update_quiz(
             actor
         )
 
+        quiz.updated_by_admin = (
+            admin_actor
+        )
+
         quiz.save()
 
         # ----------------------------------------------------
@@ -2174,6 +2247,7 @@ def update_quiz(
             QuizChangeLog.objects.create(
                 quiz=quiz,
                 changed_by=actor,
+                changed_by_admin=admin_actor,
                 action="name_changed",
                 field_name="quiz_name",
                 old_value=old_name,
@@ -2192,6 +2266,7 @@ def update_quiz(
             QuizChangeLog.objects.create(
                 quiz=quiz,
                 changed_by=actor,
+                changed_by_admin=admin_actor,
                 action="description_changed",
                 field_name="quiz_description",
                 old_value=old_description,
@@ -2210,6 +2285,7 @@ def update_quiz(
             QuizChangeLog.objects.create(
                 quiz=quiz,
                 changed_by=actor,
+                changed_by_admin=admin_actor,
                 action="attempt_limit_changed",
                 field_name="attempt_limit",
                 old_value=str(
@@ -2235,7 +2311,8 @@ def update_quiz(
 def create_quiz_question(
     *,
     quiz,
-    actor,
+    actor=None,
+    admin_actor=None,
     question_text,
     marks,
     options,
@@ -2243,6 +2320,9 @@ def create_quiz_question(
 ):
     """
     Add a question to an existing quiz.
+
+    Exactly one of ``actor`` (Teacher) or ``admin_actor`` (User)
+    must be provided so the correct actor fields are recorded.
 
     This operation is useful for the future Admin/Teacher
     edit workspace.
@@ -2315,9 +2395,12 @@ def create_quiz_question(
 
         quiz.updated_by = actor
 
+        quiz.updated_by_admin = admin_actor
+
         quiz.save(
             update_fields=[
                 "updated_by",
+                "updated_by_admin",
                 "updated_at",
             ]
         )
@@ -2325,7 +2408,8 @@ def create_quiz_question(
         QuizChangeLog.objects.create(
             quiz=quiz,
             changed_by=actor,
-            action="question_created",
+            changed_by_admin=admin_actor,
+            action="question_added",
             field_name="question",
             old_value="",
             new_value=question_text,
@@ -2344,7 +2428,8 @@ def create_quiz_question(
 def update_quiz_question(
     *,
     question,
-    actor,
+    actor=None,
+    admin_actor=None,
     question_text,
     marks,
     options,
@@ -2352,6 +2437,9 @@ def update_quiz_question(
 ):
     """
     Update an existing quiz question and its four options.
+
+    Exactly one of ``actor`` (Teacher) or ``admin_actor`` (User)
+    must be provided so the correct actor fields are recorded.
     """
 
     question_text = _clean_string(
@@ -2473,9 +2561,12 @@ def update_quiz_question(
 
         quiz.updated_by = actor
 
+        quiz.updated_by_admin = admin_actor
+
         quiz.save(
             update_fields=[
                 "updated_by",
+                "updated_by_admin",
                 "updated_at",
             ]
         )
@@ -2489,6 +2580,7 @@ def update_quiz_question(
             QuizChangeLog.objects.create(
                 quiz=quiz,
                 changed_by=actor,
+                changed_by_admin=admin_actor,
                 action="question_updated",
                 field_name="question_text",
                 old_value=old_question_text,
@@ -2507,6 +2599,7 @@ def update_quiz_question(
             QuizChangeLog.objects.create(
                 quiz=quiz,
                 changed_by=actor,
+                changed_by_admin=admin_actor,
                 action="question_updated",
                 field_name="marks",
                 old_value=str(
@@ -2557,6 +2650,7 @@ def update_quiz_question(
                 QuizChangeLog.objects.create(
                     quiz=quiz,
                     changed_by=actor,
+                    changed_by_admin=admin_actor,
                     action="option_changed",
                     field_name=f"option_{label}",
                     old_value=old_value,
@@ -2572,6 +2666,7 @@ def update_quiz_question(
                 QuizChangeLog.objects.create(
                     quiz=quiz,
                     changed_by=actor,
+                    changed_by_admin=admin_actor,
                     action="correct_answer_changed",
                     field_name=(
                         f"option_{label}_correct"
@@ -2599,10 +2694,14 @@ def update_quiz_question(
 def delete_quiz_question(
     *,
     question,
-    actor,
+    actor=None,
+    admin_actor=None,
 ):
     """
     Delete a quiz question.
+
+    Exactly one of ``actor`` (Teacher) or ``admin_actor`` (User)
+    must be provided so the correct actor fields are recorded.
 
     IMPORTANT:
 
@@ -2629,9 +2728,12 @@ def delete_quiz_question(
 
         quiz.updated_by = actor
 
+        quiz.updated_by_admin = admin_actor
+
         quiz.save(
             update_fields=[
                 "updated_by",
+                "updated_by_admin",
                 "updated_at",
             ]
         )
@@ -2639,6 +2741,7 @@ def delete_quiz_question(
         QuizChangeLog.objects.create(
             quiz=quiz,
             changed_by=actor,
+            changed_by_admin=admin_actor,
             action="question_deleted",
             field_name="question",
             old_value=question_snapshot,
@@ -2764,15 +2867,46 @@ def build_timeline_entry(
         None,
     )
 
-    full_name = _get_full_name(
-        actor,
-        fallback="User",
+    admin_actor = getattr(
+        log,
+        "changed_by_admin",
+        None,
     )
 
-    first_name = _get_first_name(
-        actor,
-        fallback="User",
-    )
+    if admin_actor is not None:
+
+        full_name = (
+            admin_actor.get_full_name().strip()
+            or getattr(
+                admin_actor,
+                "username",
+                "",
+            )
+            or getattr(
+                admin_actor,
+                "email",
+                "",
+            )
+            or "Admin"
+        )
+
+        first_name = (
+            full_name.split()[0]
+            if full_name
+            else "Admin"
+        )
+
+    else:
+
+        full_name = _get_full_name(
+            actor,
+            fallback="User",
+        )
+
+        first_name = _get_first_name(
+            actor,
+            fallback="User",
+        )
 
     action_display = ""
 
@@ -3094,6 +3228,487 @@ def get_chapter_with_content(
         )
         .first()
     )
+
+
+# ============================================================
+# DELETION DOMAIN
+#
+# Shared deletion business logic used by both Teacher and Admin.
+#
+# Role behaviour stays different at the view layer:
+#     - Teacher calls request_delete_* (creates a pending request)
+#     - Admin calls direct_delete_* (immediate delete) or
+#       approve_delete_request / reject_delete_request
+#
+# All audit/history/storage logic is centralized here.
+# ============================================================
+
+def _delete_storage_file(field):
+    """
+    Safely delete a storage file field without saving the model.
+    """
+
+    try:
+        if field:
+            field.delete(save=False)
+    except Exception as exc:
+        print("Storage cleanup warning:", exc)
+
+
+def _teacher_actor_name(teacher):
+    if not teacher:
+        return "Teacher"
+    return (
+        getattr(teacher, "full_name", "")
+        or getattr(getattr(teacher, "user", None), "username", "")
+        or getattr(teacher, "email", "")
+        or "Teacher"
+    )
+
+
+def _admin_actor_name(user):
+    if not user:
+        return "Admin"
+    return (
+        user.get_full_name().strip()
+        or getattr(user, "username", "")
+        or getattr(user, "email", "")
+        or "Admin"
+    )
+
+
+def _content_snapshot(content_type, obj):
+    """
+    Build a JSON-serializable snapshot of content for a DeletionAudit.
+    """
+
+    if content_type == "chapter":
+        return {
+            "id": obj.id,
+            "name": obj.chapter_name,
+            "description": obj.chapter_description,
+            "order": obj.chapter_order,
+            "status": obj.status,
+            "created_at": obj.created_at.isoformat() if obj.created_at else None,
+            "created_by": _teacher_actor_name(obj.created_by) if obj.created_by else (_admin_actor_name(obj.created_by_admin) if obj.created_by_admin else "Unknown"),
+        }
+    if content_type == "video":
+        return {
+            "id": obj.id,
+            "name": obj.video_name,
+            "description": obj.video_description,
+            "order": obj.video_order,
+            "file_name": getattr(obj.video_file, "name", "") or "",
+            "created_at": obj.created_at.isoformat() if obj.created_at else None,
+            "created_by": _teacher_actor_name(obj.created_by) if obj.created_by else (_admin_actor_name(obj.created_by_admin) if obj.created_by_admin else "Unknown"),
+        }
+    if content_type == "pdf":
+        return {
+            "id": obj.id,
+            "name": obj.pdf_name,
+            "description": obj.pdf_description,
+            "order": obj.pdf_order,
+            "file_name": getattr(obj.pdf_file, "name", "") or "",
+            "thumbnail_name": getattr(obj.pdf_thumbnail, "name", "") or "",
+            "created_at": obj.created_at.isoformat() if obj.created_at else None,
+            "created_by": _teacher_actor_name(obj.created_by) if obj.created_by else (_admin_actor_name(obj.created_by_admin) if obj.created_by_admin else "Unknown"),
+        }
+    if content_type == "quiz":
+        questions = []
+        for question in obj.questions.all():
+            questions.append({
+                "id": question.id,
+                "text": question.question_text,
+                "marks": question.marks,
+                "options": [
+                    {
+                        "label": option.option_label,
+                        "text": option.option_text,
+                        "is_correct": option.is_correct,
+                    }
+                    for option in question.options.all()
+                ],
+            })
+        return {
+            "id": obj.id,
+            "name": obj.quiz_name,
+            "description": obj.quiz_description,
+            "attempt_limit": obj.attempt_limit,
+            "questions": questions,
+            "created_at": obj.created_at.isoformat() if obj.created_at else None,
+            "created_by": _teacher_actor_name(obj.created_by) if obj.created_by else (_admin_actor_name(obj.created_by_admin) if obj.created_by_admin else "Unknown"),
+        }
+    return {}
+
+
+def _audit_base(content_type, obj, subject, batch):
+    creator_teacher = getattr(obj, "created_by", None)
+    creator_admin = getattr(obj, "created_by_admin", None)
+    return {
+        "content_type": content_type,
+        "object_id": obj.id,
+        "content_name": (
+            getattr(obj, "chapter_name", None)
+            or getattr(obj, "video_name", None)
+            or getattr(obj, "pdf_name", None)
+            or getattr(obj, "quiz_name", None)
+            or f"{content_type.title()} #{obj.id}"
+        ),
+        "batch_name": getattr(batch, "batch_name", "") or "",
+        "subject_name": getattr(subject, "subject_name", "") or "",
+        "chapter_name": getattr(getattr(obj, "chapter", None), "chapter_name", "") or (
+            obj.chapter_name if content_type == "chapter" else ""
+        ),
+        "created_by_teacher": creator_teacher,
+        "created_by_admin": creator_admin,
+        "created_at_original": getattr(obj, "created_at", None),
+        "snapshot": _content_snapshot(content_type, obj),
+    }
+
+
+def _make_pending_audit(content_type, obj, subject, batch):
+    requested_by = getattr(obj, "delete_requested_by", None)
+    reason = getattr(obj, "delete_reason", "") or ""
+    if not requested_by or not getattr(obj, "delete_requested", False) or getattr(obj, "delete_status", "") != "pending":
+        return None
+
+    audit = DeletionAudit.objects.filter(
+        content_type=content_type,
+        object_id=obj.id,
+        status="pending",
+    ).order_by("-id").first()
+
+    defaults = _audit_base(content_type, obj, subject, batch)
+    defaults.update({
+        "delete_requested_by_teacher": requested_by,
+        "delete_requested_at": getattr(obj, "delete_requested_at", None),
+        "delete_request_reason": reason,
+        "status": "pending",
+    })
+
+    if audit:
+        changed = False
+        for key, value in defaults.items():
+            if key not in {"content_type", "object_id"} and getattr(audit, key) != value:
+                setattr(audit, key, value)
+                changed = True
+        if changed:
+            audit.save()
+        return audit
+
+    return DeletionAudit.objects.create(**defaults)
+
+
+def sync_pending_deletion_audits(subject):
+    """
+    Create/update pending DeletionAudit records for every content
+    item in a subject that currently has a pending teacher deletion
+    request.
+    """
+
+    batch = subject.batch
+    audits = []
+
+    chapters = CourseChapter.objects.filter(
+        batch=batch, subject=subject, is_deleted=False,
+        delete_requested=True, delete_status="pending",
+    ).select_related("created_by", "created_by_admin", "delete_requested_by")
+    for obj in chapters:
+        audit = _make_pending_audit("chapter", obj, subject, batch)
+        if audit:
+            audits.append(audit)
+
+        videos = obj.videos.filter(is_deleted=False, delete_requested=True, delete_status="pending").select_related("created_by", "created_by_admin", "delete_requested_by")
+        for child in videos:
+            audit = _make_pending_audit("video", child, subject, batch)
+            if audit:
+                audits.append(audit)
+
+        pdfs = obj.pdfs.filter(is_deleted=False, delete_requested=True, delete_status="pending").select_related("created_by", "created_by_admin", "delete_requested_by")
+        for child in pdfs:
+            audit = _make_pending_audit("pdf", child, subject, batch)
+            if audit:
+                audits.append(audit)
+
+        quizzes = obj.quizzes.filter(is_deleted=False, delete_requested=True, delete_status="pending").select_related("created_by", "created_by_admin", "delete_requested_by").prefetch_related("questions__options")
+        for child in quizzes:
+            audit = _make_pending_audit("quiz", child, subject, batch)
+            if audit:
+                audits.append(audit)
+
+    return audits
+
+
+def _finalize_audit(audit, admin_user, method, admin_reason="", admin_response="", decision=""):
+    audit.deleted_by_admin = admin_user
+    audit.decision_by_admin = admin_user
+    audit.decision_at = timezone.now()
+    audit.deletion_method = method
+    audit.admin_delete_reason = admin_reason or ""
+    audit.admin_response = admin_response or ""
+    if decision:
+        audit.admin_decision = decision
+    audit.status = "deleted"
+    audit.deleted_at = timezone.now()
+    audit.save()
+
+
+def _delete_one_content(content_type, obj, subject, batch, admin_user, reason, method="admin_direct", audit=None, admin_response=""):
+    if audit is None:
+        audit_data = _audit_base(content_type, obj, subject, batch)
+        audit = DeletionAudit.objects.create(
+            **audit_data,
+            deleted_by_admin=admin_user,
+            decision_by_admin=admin_user,
+            deletion_method=method,
+            admin_delete_reason=reason,
+            admin_response=admin_response,
+            status="deleted",
+            deleted_at=timezone.now(),
+        )
+    else:
+        _finalize_audit(audit, admin_user, method, reason, admin_response, "approved" if method == "teacher_request_approved" else "")
+
+    # Save the audit before the actual delete because change logs are
+    # CASCADE-linked to the content and must not be the source of history.
+    if content_type == "video":
+        _delete_storage_file(obj.video_file)
+    elif content_type == "pdf":
+        _delete_storage_file(obj.pdf_file)
+        _delete_storage_file(obj.pdf_thumbnail)
+
+    obj.delete()
+    return audit
+
+
+def _get_admin_subject_by_names(subject_name, batch_name):
+    if not subject_name:
+        return None
+    from admins.models import Subject
+    return Subject.objects.select_related("batch").filter(subject_name=subject_name, batch__batch_name=batch_name).first()
+
+
+def _get_admin_subject_from_object(obj, content_type):
+    chapter = obj if content_type == "chapter" else getattr(obj, "chapter", None)
+    if chapter:
+        from admins.models import Subject
+        return Subject.objects.select_related("batch").get(id=chapter.subject_id)
+    return None
+
+
+def _approve_audit(audit, admin_user):
+    content_type = audit.content_type
+    try:
+        if content_type == "chapter":
+            obj = CourseChapter.objects.get(id=audit.object_id, is_deleted=False)
+        elif content_type == "video":
+            obj = ChapterVideo.objects.select_related("chapter").get(id=audit.object_id, is_deleted=False)
+        elif content_type == "pdf":
+            obj = ChapterPDF.objects.select_related("chapter").get(id=audit.object_id, is_deleted=False)
+        elif content_type == "quiz":
+            obj = ChapterQuiz.objects.prefetch_related("questions__options").get(id=audit.object_id, is_deleted=False)
+        else:
+            return False, "Unknown content type."
+    except Exception:
+        audit.status = "approved"
+        audit.admin_decision = "approved"
+        audit.decision_by_admin = admin_user
+        audit.decision_at = timezone.now()
+        audit.admin_response = "The requested content was already removed or is no longer available."
+        audit.deleted_at = timezone.now()
+        audit.deletion_method = "teacher_request_approved"
+        audit.save()
+        return False, "The requested content no longer exists."
+
+    subject = _get_admin_subject_by_names(audit.subject_name, audit.batch_name)
+    if subject is None:
+        subject = _get_admin_subject_from_object(obj, content_type)
+    batch = subject.batch
+
+    reason = audit.delete_request_reason or "Teacher requested deletion."
+
+    # If a chapter is approved, preserve separate audits for every child
+    # because the common audit page must be able to filter Chapter/Video/PDF/Quiz.
+    if content_type == "chapter":
+        children = list(obj.videos.filter(is_deleted=False).select_related("created_by", "created_by_admin"))
+        children += list(obj.pdfs.filter(is_deleted=False).select_related("created_by", "created_by_admin"))
+        children += list(obj.quizzes.filter(is_deleted=False).select_related("created_by", "created_by_admin").prefetch_related("questions__options"))
+        for child in children:
+            child_type = "video" if isinstance(child, ChapterVideo) else "pdf" if isinstance(child, ChapterPDF) else "quiz"
+            child_audit = DeletionAudit.objects.filter(content_type=child_type, object_id=child.id, status="pending").order_by("-id").first()
+            _delete_one_content(child_type, child, subject, batch, admin_user, reason, "teacher_request_approved", child_audit, "Teacher deletion request approved by Admin.")
+
+    _delete_one_content(content_type, obj, subject, batch, admin_user, reason, "teacher_request_approved", audit, "Teacher deletion request approved by Admin.")
+    return True, "Deletion request approved and content deleted successfully."
+
+
+def request_delete(content_type, obj, actor, delete_reason):
+    """
+    Create a pending teacher deletion request for a content item.
+
+    ``content_type`` is one of "chapter", "video", "pdf", "quiz".
+
+    Returns the updated object.
+    """
+
+    obj.delete_requested = True
+    obj.delete_requested_by = actor
+    obj.delete_requested_at = timezone.now()
+    obj.delete_reason = delete_reason or ""
+    obj.delete_status = "pending"
+    obj.updated_by = actor
+    obj.updated_by_admin = None
+    obj.save()
+
+    if content_type == "chapter":
+        ChapterChangeLog.objects.create(
+            chapter=obj,
+            changed_by=actor,
+            action="delete_requested",
+            field_name="chapter",
+            old_value="",
+            new_value=delete_reason or "",
+            change_summary=f'Deletion requested for chapter "{obj.chapter_name}".',
+        )
+    elif content_type == "video":
+        VideoChangeLog.objects.create(
+            video=obj,
+            changed_by=actor,
+            action="delete_requested",
+            field_name="video",
+            old_value="",
+            new_value=delete_reason or "",
+            change_summary=f'Deletion requested for video "{obj.video_name}".',
+        )
+    elif content_type == "pdf":
+        PDFChangeLog.objects.create(
+            pdf=obj,
+            changed_by=actor,
+            action="delete_requested",
+            field_name="pdf",
+            old_value="",
+            new_value=delete_reason or "",
+            change_summary=f'Deletion requested for PDF "{obj.pdf_name}".',
+        )
+    elif content_type == "quiz":
+        QuizChangeLog.objects.create(
+            quiz=obj,
+            changed_by=actor,
+            action="delete_requested",
+            field_name="quiz",
+            old_value="",
+            new_value=delete_reason or "",
+            change_summary=f'Deletion requested for quiz "{obj.quiz_name}".',
+        )
+
+    return obj
+
+
+def direct_delete(content_type, obj, subject, batch, admin_user, reason):
+    """
+    Admin direct delete of a content item, recording a DeletionAudit.
+    """
+
+    return _delete_one_content(
+        content_type,
+        obj,
+        subject,
+        batch,
+        admin_user,
+        reason,
+        method="admin_direct",
+    )
+
+
+def approve_delete_request(audit, admin_user, admin_response=""):
+    """
+    Admin approves a pending teacher deletion request.
+    """
+
+    result = _approve_audit(audit, admin_user)
+    if admin_response:
+        # The audit survives even if the content was deleted.
+        DeletionAudit.objects.filter(id=audit.id).update(admin_response=admin_response)
+    return result
+
+
+def reject_delete_request(audit, admin_user, admin_response=""):
+    """
+    Admin rejects a pending teacher deletion request.
+
+    Clears the pending flags on the content object and records the
+    rejection in the audit and the content timeline.
+    """
+
+    content_type = audit.content_type
+    try:
+        if content_type == "chapter":
+            obj = CourseChapter.objects.get(id=audit.object_id, is_deleted=False)
+        elif content_type == "video":
+            obj = ChapterVideo.objects.get(id=audit.object_id, is_deleted=False)
+        elif content_type == "pdf":
+            obj = ChapterPDF.objects.get(id=audit.object_id, is_deleted=False)
+        elif content_type == "quiz":
+            obj = ChapterQuiz.objects.get(id=audit.object_id, is_deleted=False)
+        else:
+            return False, "Unknown content type."
+    except Exception:
+        return False, "The requested content no longer exists."
+
+    with transaction.atomic():
+        obj.delete_requested = False
+        obj.delete_status = "rejected"
+        obj.save()
+
+        if content_type == "chapter":
+            ChapterChangeLog.objects.create(
+                chapter=obj,
+                changed_by_admin=admin_user,
+                action="delete_rejected",
+                field_name="chapter",
+                old_value="pending",
+                new_value="rejected",
+                change_summary=f'Deletion request rejected for chapter "{obj.chapter_name}".',
+            )
+        elif content_type == "video":
+            VideoChangeLog.objects.create(
+                video=obj,
+                changed_by_admin=admin_user,
+                action="delete_rejected",
+                field_name="video",
+                old_value="pending",
+                new_value="rejected",
+                change_summary=f'Deletion request rejected for video "{obj.video_name}".',
+            )
+        elif content_type == "pdf":
+            PDFChangeLog.objects.create(
+                pdf=obj,
+                changed_by_admin=admin_user,
+                action="delete_rejected",
+                field_name="pdf",
+                old_value="pending",
+                new_value="rejected",
+                change_summary=f'Deletion request rejected for PDF "{obj.pdf_name}".',
+            )
+        elif content_type == "quiz":
+            QuizChangeLog.objects.create(
+                quiz=obj,
+                changed_by_admin=admin_user,
+                action="delete_rejected",
+                field_name="quiz",
+                old_value="pending",
+                new_value="rejected",
+                change_summary=f'Deletion request rejected for quiz "{obj.quiz_name}".',
+            )
+
+        audit.admin_decision = "rejected"
+        audit.status = "rejected"
+        audit.decision_by_admin = admin_user
+        audit.decision_at = timezone.now()
+        audit.admin_response = admin_response or ""
+        audit.save()
+
+    return True, "Deletion request rejected."
 
 
 # ============================================================

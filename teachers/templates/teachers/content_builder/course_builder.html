@@ -4599,7 +4599,7 @@
 
             <form
                 method="post"
-                action="{% url 'teacher_chapter_pdfs' subject.id selected_chapter.id %}"
+                action="{% if selected_chapter %}{% url 'teacher_chapter_pdfs' subject.id selected_chapter.id %}{% endif %}"
                 enctype="multipart/form-data"
                 id="pdfUploadForm"
                 novalidate
@@ -5560,7 +5560,7 @@
             id="quizCreateForm"
             method="post"
             novalidate
-            action="{% url 'teacher_chapter_quizzes' subject.id selected_chapter.id %}"
+action="{% if selected_chapter %}{% url 'teacher_chapter_quizzes' subject.id selected_chapter.id %}{% endif %}"
             class="p-4 sm:p-6"
         >
             {% csrf_token %}

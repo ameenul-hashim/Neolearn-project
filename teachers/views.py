@@ -17,7 +17,6 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.views.decorators.cache import cache_control
 from django.db import transaction
-from django.db.models import F
 
 import re
 
@@ -30,16 +29,23 @@ from admins.models import (
 )
 from teachers.models import (
     CourseChapter,
-    ChapterChangeLog,
     ChapterVideo,
-    VideoChangeLog,
     ChapterPDF,
-    PDFChangeLog,
     ChapterQuiz,
     QuizQuestion,
-    QuizOption,
-    QuizChangeLog,
 )
+from courses.forms import (
+    ChapterCreateForm,
+    ChapterEditForm,
+    VideoUploadForm,
+    VideoEditForm,
+    PDFUploadForm,
+    PDFEditForm,
+    QuizForm,
+    QuizQuestionForm,
+    DeleteReasonForm,
+)
+from courses import services as course_services
 
 
 # ============================================================
@@ -830,51 +836,12 @@ def teacher_course_builder_view(
 
         if selected_video:
 
-            video_logs = (
-                VideoChangeLog.objects
-                .filter(
-                    video=selected_video,
+            video_timeline_entries = [
+                course_services.build_timeline_entry(log)
+                for log in course_services.get_video_timeline(
+                    selected_video
                 )
-                .select_related(
-                    "changed_by",
-                )
-                .order_by(
-                    "-changed_at",
-                    "-id",
-                )
-            )
-
-            for log in video_logs:
-
-                full_name = (
-                    getattr(
-                        log.changed_by,
-                        "full_name",
-                        "",
-                    )
-                    or ""
-                ).strip()
-
-                first_name = (
-                    full_name.split()[0]
-                    if full_name
-                    else "Teacher"
-                )
-
-                video_timeline_entries.append(
-                    {
-                        "id": log.id,
-                        "actor_name": first_name,
-                        "actor_full_name": full_name,
-                        "action": log.get_action_display(),
-                        "action_key": log.action,
-                        "field_name": log.field_name,
-                        "old_value": log.old_value,
-                        "new_value": log.new_value,
-                        "summary": log.change_summary,
-                        "changed_at": log.changed_at,
-                    }
-                )
+            ]
 
     # ========================================================
     # SELECTED QUIZ FOR QUIZ WORKSPACE / EDIT / QUESTIONS
@@ -934,51 +901,12 @@ def teacher_course_builder_view(
 
         if selected_quiz:
 
-            quiz_logs = (
-                QuizChangeLog.objects
-                .filter(
-                    quiz=selected_quiz,
+            quiz_timeline_entries = [
+                course_services.build_timeline_entry(log)
+                for log in course_services.get_quiz_timeline(
+                    selected_quiz
                 )
-                .select_related(
-                    "changed_by",
-                )
-                .order_by(
-                    "-changed_at",
-                    "-id",
-                )
-            )
-
-            for log in quiz_logs:
-
-                full_name = (
-                    getattr(
-                        log.changed_by,
-                        "full_name",
-                        "",
-                    )
-                    or ""
-                ).strip()
-
-                first_name = (
-                    full_name.split()[0]
-                    if full_name
-                    else "Teacher"
-                )
-
-                quiz_timeline_entries.append(
-                    {
-                        "id": log.id,
-                        "actor_name": first_name,
-                        "actor_full_name": full_name,
-                        "action": log.get_action_display(),
-                        "action_key": log.action,
-                        "field_name": log.field_name,
-                        "old_value": log.old_value,
-                        "new_value": log.new_value,
-                        "summary": log.change_summary,
-                        "changed_at": log.changed_at,
-                    }
-                )
+            ]
 
     if (
         selected_chapter
@@ -1001,99 +929,21 @@ def teacher_course_builder_view(
 
         if selected_pdf:
 
-            pdf_logs = (
-                PDFChangeLog.objects
-                .filter(
-                    pdf=selected_pdf,
+            pdf_timeline_entries = [
+                course_services.build_timeline_entry(log)
+                for log in course_services.get_pdf_timeline(
+                    selected_pdf
                 )
-                .select_related(
-                    "changed_by",
-                )
-                .order_by(
-                    "-changed_at",
-                    "-id",
-                )
-            )
-
-            for log in pdf_logs:
-
-                full_name = (
-                    getattr(
-                        log.changed_by,
-                        "full_name",
-                        "",
-                    )
-                    or ""
-                ).strip()
-
-                first_name = (
-                    full_name.split()[0]
-                    if full_name
-                    else "Teacher"
-                )
-
-                pdf_timeline_entries.append(
-                    {
-                        "id": log.id,
-                        "actor_name": first_name,
-                        "actor_full_name": full_name,
-                        "action": log.get_action_display(),
-                        "action_key": log.action,
-                        "field_name": log.field_name,
-                        "old_value": log.old_value,
-                        "new_value": log.new_value,
-                        "summary": log.change_summary,
-                        "changed_at": log.changed_at,
-                    }
-                )
+            ]
 
     if selected_chapter and selected_content == "timeline":
 
-        timeline_logs = (
-            ChapterChangeLog.objects
-            .filter(
-                chapter=selected_chapter,
+        timeline_entries = [
+            course_services.build_timeline_entry(log)
+            for log in course_services.get_chapter_timeline(
+                selected_chapter
             )
-            .select_related(
-                "changed_by",
-            )
-            .order_by(
-                "-changed_at",
-                "-id",
-            )
-        )
-
-        for log in timeline_logs:
-
-            full_name = (
-                getattr(
-                    log.changed_by,
-                    "full_name",
-                    "",
-                )
-                or ""
-            ).strip()
-
-            first_name = (
-                full_name.split()[0]
-                if full_name
-                else "Teacher"
-            )
-
-            timeline_entries.append(
-                {
-                    "id": log.id,
-                    "actor_name": first_name,
-                    "actor_full_name": full_name,
-                    "action": log.get_action_display(),
-                    "action_key": log.action,
-                    "field_name": log.field_name,
-                    "old_value": log.old_value,
-                    "new_value": log.new_value,
-                    "summary": log.change_summary,
-                    "changed_at": log.changed_at,
-                }
-            )
+        ]
 
     # ========================================================
     # CHAPTER EDIT POPUP STATE
@@ -1523,142 +1373,32 @@ def teacher_create_chapter_view(
         )
 
     # ========================================================
-    # READ FORM DATA
-    # ========================================================
-
-    chapter_name = request.POST.get(
-        "chapter_name",
-        "",
-    ).strip()
-
-    chapter_description = request.POST.get(
-        "chapter_description",
-        "",
-    ).strip()
-
-    status = request.POST.get(
-        "status",
-        "",
-    ).strip().lower()
-
-    # ========================================================
-    # FIELD 1 — CHAPTER NAME
-    # ========================================================
-
-    if not chapter_name:
-
-        messages.error(
-            request,
-            "Chapter name is required.",
-        )
-
-        return redirect(
-            "teacher_course_builder",
-            subject_id=subject_id,
-        )
-
-    if len(chapter_name) > 255:
-
-        messages.error(
-            request,
-            "Chapter name cannot exceed 255 characters.",
-        )
-
-        return redirect(
-            "teacher_course_builder",
-            subject_id=subject_id,
-        )
-
-    # ========================================================
-    # FIELD 2 — CHAPTER DESCRIPTION
+    # SHARED CHAPTER CREATE FORM
     #
-    # Description is required according to the current
-    # chapter-create workflow.
+    # Batch and Subject are supplied by the view so the form
+    # can enforce the duplicate-name rule within the exact
+    # batch + subject scope.
     # ========================================================
 
-    if not chapter_description:
-
-        messages.error(
-            request,
-            "Chapter description is required.",
-        )
-
-        return redirect(
-            "teacher_course_builder",
-            subject_id=subject_id,
-        )
-
-    if len(chapter_description) > 255:
-
-        messages.error(
-            request,
-            "Chapter description cannot exceed 255 characters.",
-        )
-
-        return redirect(
-            "teacher_course_builder",
-            subject_id=subject_id,
-        )
-
-    # ========================================================
-    # FIELD 3 — STATUS
-    # ========================================================
-
-    valid_statuses = {
-        choice[0]
-        for choice in CourseChapter.STATUS_CHOICES
-    }
-
-    if not status:
-
-        messages.error(
-            request,
-            "Chapter status is required.",
-        )
-
-        return redirect(
-            "teacher_course_builder",
-            subject_id=subject_id,
-        )
-
-    if status not in valid_statuses:
-
-        messages.error(
-            request,
-            "Invalid chapter status selected.",
-        )
-
-        return redirect(
-            "teacher_course_builder",
-            subject_id=subject_id,
-        )
-
-    # ========================================================
-    # DUPLICATE CHAPTER NAME CHECK
-    #
-    # Uniqueness is handled within the exact:
-    #
-    #     batch + subject
-    #
-    # Deleted chapters are ignored.
-    # ========================================================
-
-    duplicate_chapter = (
-        CourseChapter.objects
-        .filter(
-            batch=assignment.batch,
-            subject=assignment.subject,
-            chapter_name__iexact=chapter_name,
-            is_deleted=False,
-        )
-        .exists()
+    form = ChapterCreateForm(
+        request.POST,
+        batch=assignment.batch,
+        subject=assignment.subject,
     )
 
-    if duplicate_chapter:
+    if not form.is_valid():
+
+        first_error = (
+            next(
+                iter(
+                    form.errors.values()
+                )
+            )[0]
+        )
 
         messages.error(
             request,
-            "A chapter with this name already exists in this subject.",
+            first_error,
         )
 
         return redirect(
@@ -1667,92 +1407,28 @@ def teacher_create_chapter_view(
         )
 
     # ========================================================
-    # AUTOMATIC CHAPTER ORDER
+    # CREATE CHAPTER VIA SHARED SERVICE
     #
-    # IMPORTANT:
-    # The teacher does NOT enter chapter order anymore.
-    #
-    # Existing:
-    #
-    #     1
-    #     2
-    #     3
-    #
-    # New chapter:
-    #
-    #     4
-    #
-    # Empty subject:
-    #
-    #     1
-    #
-    # We use the highest existing active order + 1 rather
-    # than chapter count + 1 so ordering remains correct even
-    # if an old record has a non-contiguous number.
-    # ========================================================
-
-    last_chapter = (
-        CourseChapter.objects
-        .filter(
-            batch=assignment.batch,
-            subject=assignment.subject,
-            is_deleted=False,
-        )
-        .order_by(
-            "-chapter_order",
-            "-id",
-        )
-        .first()
-    )
-
-    if last_chapter:
-
-        chapter_order = (
-            last_chapter.chapter_order + 1
-        )
-
-    else:
-
-        chapter_order = 1
-
-    # ========================================================
-    # CREATE CHAPTER
-    #
-    # No manual order is accepted.
+    # The service calculates the automatic chapter order and
+    # writes the change log.
     # ========================================================
 
     try:
 
-        with transaction.atomic():
-
-            chapter = CourseChapter.objects.create(
-                batch=assignment.batch,
-                subject=assignment.subject,
-                created_by=teacher,
-                updated_by=teacher,
-                chapter_name=chapter_name,
-                chapter_description=chapter_description,
-                chapter_order=chapter_order,
-                status=status,
-            )
-
-            ChapterChangeLog.objects.create(
-                chapter=chapter,
-                changed_by=teacher,
-                action="created",
-                field_name="chapter",
-                old_value="",
-                new_value=(
-                    f"Name: {chapter_name}; "
-                    f"Description: {chapter_description}; "
-                    f"Order: {chapter_order}; "
-                    f"Status: {status}"
-                ),
-                change_summary=(
-                    f'Chapter "{chapter_name}" was created as '
-                    f"Chapter {chapter_order}."
-                ),
-            )
+        chapter = course_services.create_chapter(
+            batch=assignment.batch,
+            subject=assignment.subject,
+            actor=teacher,
+            chapter_name=(
+                form.cleaned_data["chapter_name"]
+            ),
+            chapter_description=(
+                form.cleaned_data["chapter_description"]
+            ),
+            status=(
+                form.cleaned_data["status"]
+            ),
+        )
 
     except Exception as exc:
 
@@ -2141,340 +1817,92 @@ def teacher_edit_chapter_view(
         )
 
     # ========================================================
-    # READ FORM
+    # SHARED CHAPTER EDIT FORM
     # ========================================================
 
-    chapter_name = request.POST.get(
-        "chapter_name",
-        "",
-    ).strip()
-
-    chapter_description = request.POST.get(
-        "chapter_description",
-        "",
-    ).strip()
-
-    chapter_order_raw = request.POST.get(
-        "chapter_order",
-        "",
-    ).strip()
-
-    status = request.POST.get(
-        "status",
-        "",
-    ).strip().lower()
+    form = ChapterEditForm(
+        request.POST,
+        batch=assignment.batch,
+        subject=assignment.subject,
+        instance=chapter,
+    )
 
     form_data = {
         "chapter_id": chapter.id,
-        "chapter_name": chapter_name,
-        "chapter_description": chapter_description,
-        "chapter_order": chapter_order_raw,
-        "status": status,
+        "chapter_name": (
+            form.data.get("chapter_name", "") or ""
+        ),
+        "chapter_description": (
+            form.data.get("chapter_description", "") or ""
+        ),
+        "chapter_order": (
+            form.data.get("chapter_order", "") or ""
+        ),
+        "status": (
+            form.data.get("status", "") or ""
+        ),
     }
 
-    # ========================================================
-    # NAME VALIDATION
-    # ========================================================
+    if not form.is_valid():
 
-    if not chapter_name:
-
-        return open_edit_popup(
-            "Chapter name is required.",
-            form_data,
+        first_error = (
+            next(
+                iter(
+                    form.errors.values()
+                )
+            )[0]
         )
 
-    if len(chapter_name) > 255:
-
         return open_edit_popup(
-            "Chapter name cannot exceed 255 characters.",
-            form_data,
-        )
-
-    # ========================================================
-    # DESCRIPTION VALIDATION
-    # ========================================================
-
-    if not chapter_description:
-
-        return open_edit_popup(
-            "Chapter description is required.",
-            form_data,
-        )
-
-    if len(chapter_description) > 255:
-
-        return open_edit_popup(
-            "Chapter description cannot exceed 255 characters.",
+            first_error,
             form_data,
         )
 
     # ========================================================
-    # DUPLICATE NAME VALIDATION
+    # UPDATE VIA SHARED SERVICE
+    #
+    # The service validates the order against the active
+    # chapter count, repositions siblings, and writes the
+    # timeline entries.
     # ========================================================
-
-    duplicate_chapter = (
-        CourseChapter.objects
-        .filter(
-            batch=assignment.batch,
-            subject=assignment.subject,
-            chapter_name__iexact=chapter_name,
-            is_deleted=False,
-        )
-        .exclude(
-            id=chapter.id,
-        )
-        .exists()
-    )
-
-    if duplicate_chapter:
-
-        return open_edit_popup(
-            "Another chapter with this name already exists.",
-            form_data,
-        )
-
-    # ========================================================
-    # ORDER VALIDATION
-    # ========================================================
-
-    if not chapter_order_raw:
-
-        return open_edit_popup(
-            "Chapter order is required.",
-            form_data,
-        )
 
     try:
 
-        new_order = int(
-            chapter_order_raw
+        course_services.update_chapter(
+            chapter=chapter,
+            actor=teacher,
+            chapter_name=(
+                form.cleaned_data["chapter_name"]
+            ),
+            chapter_description=(
+                form.cleaned_data["chapter_description"]
+            ),
+            chapter_order=(
+                form.cleaned_data["chapter_order"]
+            ),
+            status=(
+                form.cleaned_data["status"]
+            ),
         )
 
-    except (
-        TypeError,
-        ValueError,
-    ):
+    except ValueError as exc:
 
         return open_edit_popup(
-            "Invalid chapter order. Enter a whole number.",
+            str(exc),
             form_data,
         )
 
-    if new_order <= 0:
+    except Exception as exc:
+
+        print(
+            "Chapter update error:",
+            exc,
+        )
 
         return open_edit_popup(
-            "Chapter order must be greater than zero.",
+            "The chapter could not be updated. Please try again.",
             form_data,
         )
-
-    # ========================================================
-    # STATUS VALIDATION
-    # ========================================================
-
-    valid_statuses = {
-        choice[0]
-        for choice in CourseChapter.STATUS_CHOICES
-    }
-
-    if not status:
-
-        return open_edit_popup(
-            "Chapter status is required.",
-            form_data,
-        )
-
-    if status not in valid_statuses:
-
-        return open_edit_popup(
-            "Invalid chapter status selected.",
-            form_data,
-        )
-
-    # ========================================================
-    # VALUES BEFORE UPDATE
-    #
-    # These are used for the chapter timeline.
-    # ========================================================
-
-    old_name = chapter.chapter_name
-    old_description = (
-        chapter.chapter_description or ""
-    )
-    old_order = chapter.chapter_order
-    old_status = chapter.status
-
-    # ========================================================
-    # ATOMIC UPDATE + ORDER REPOSITIONING
-    # ========================================================
-
-    with transaction.atomic():
-
-        all_chapters = list(
-            CourseChapter.objects
-            .select_for_update()
-            .filter(
-                batch=assignment.batch,
-                subject=assignment.subject,
-                is_deleted=False,
-            )
-            .order_by(
-                "chapter_order",
-                "id",
-            )
-        )
-
-        total_chapters = len(
-            all_chapters
-        )
-
-        if total_chapters == 0:
-
-            return open_edit_popup(
-                "No chapters are available to reorder.",
-                form_data,
-            )
-
-        if new_order > total_chapters:
-
-            return open_edit_popup(
-                (
-                    "Chapter order cannot be greater than "
-                    f"the current number of chapters ({total_chapters})."
-                ),
-                form_data,
-            )
-
-        # Remove edited chapter from current order.
-        ordered = [
-            item
-            for item in all_chapters
-            if item.id != chapter.id
-        ]
-
-        # Insert at requested 1-based position.
-        ordered.insert(
-            new_order - 1,
-            chapter,
-        )
-
-        # Temporary values avoid collisions while the final
-        # contiguous sequence is written.
-        temporary_start = (
-            total_chapters + 1000
-        )
-
-        for position, item in enumerate(
-            ordered,
-            start=1,
-        ):
-
-            item.chapter_order = (
-                temporary_start + position
-            )
-
-        CourseChapter.objects.bulk_update(
-            ordered,
-            [
-                "chapter_order",
-            ],
-        )
-
-        # Final order 1..N.
-        for position, item in enumerate(
-            ordered,
-            start=1,
-        ):
-
-            item.chapter_order = position
-
-        # Edited chapter gets its new values.
-        chapter.chapter_name = chapter_name
-        chapter.chapter_description = chapter_description
-        chapter.chapter_order = new_order
-        chapter.status = status
-        chapter.updated_by = teacher
-
-        chapter.save()
-
-        # Save the other reordered chapters.
-        other_chapters = [
-            item
-            for item in ordered
-            if item.id != chapter.id
-        ]
-
-        if other_chapters:
-
-            CourseChapter.objects.bulk_update(
-                other_chapters,
-                [
-                    "chapter_order",
-                ],
-            )
-
-        # ====================================================
-        # TIMELINE LOGS
-        #
-        # Only actual changes are recorded.
-        # ====================================================
-
-        if old_name != chapter_name:
-
-            ChapterChangeLog.objects.create(
-                chapter=chapter,
-                changed_by=teacher,
-                action="updated",
-                field_name="chapter_name",
-                old_value=old_name,
-                new_value=chapter_name,
-                change_summary=(
-                    "Chapter name was updated."
-                ),
-            )
-
-        if old_description != chapter_description:
-
-            ChapterChangeLog.objects.create(
-                chapter=chapter,
-                changed_by=teacher,
-                action="updated",
-                field_name="chapter_description",
-                old_value=old_description,
-                new_value=chapter_description,
-                change_summary=(
-                    "Chapter description was updated."
-                ),
-            )
-
-        if old_order != new_order:
-
-            ChapterChangeLog.objects.create(
-                chapter=chapter,
-                changed_by=teacher,
-                action="order_changed",
-                field_name="chapter_order",
-                old_value=str(old_order),
-                new_value=str(new_order),
-                change_summary=(
-                    f"Chapter order changed from "
-                    f"{old_order} to {new_order}."
-                ),
-            )
-
-        if old_status != status:
-
-            ChapterChangeLog.objects.create(
-                chapter=chapter,
-                changed_by=teacher,
-                action="status_changed",
-                field_name="status",
-                old_value=old_status,
-                new_value=status,
-                change_summary=(
-                    f"Chapter status changed from "
-                    f"{old_status} to {status}."
-                ),
-            )
 
     # ========================================================
     # SUCCESS
@@ -2587,16 +2015,23 @@ def teacher_request_chapter_delete_view(
     # DELETE REASON
     # ========================================================
 
-    delete_reason = request.POST.get(
-        "delete_reason",
-        "",
-    ).strip()
+    form = DeleteReasonForm(
+        request.POST
+    )
 
-    if not delete_reason:
+    if not form.is_valid():
+
+        first_error = (
+            next(
+                iter(
+                    form.errors.values()
+                )
+            )[0]
+        )
 
         messages.error(
             request,
-            "Please provide a reason for deleting the chapter.",
+            first_error,
         )
 
         return redirect(
@@ -2606,38 +2041,14 @@ def teacher_request_chapter_delete_view(
         )
 
     # ========================================================
-    # SAVE DELETE REQUEST
+    # SAVE DELETE REQUEST VIA SHARED SERVICE
     # ========================================================
 
-    from django.utils import timezone
-
-    chapter.delete_requested = True
-    chapter.delete_requested_by = teacher
-    chapter.delete_requested_at = timezone.now()
-    chapter.delete_reason = delete_reason
-    chapter.delete_status = "pending"
-
-    chapter.save(
-        update_fields=[
-            "delete_requested",
-            "delete_requested_by",
-            "delete_requested_at",
-            "delete_reason",
-            "delete_status",
-            "updated_at",
-        ]
-    )
-
-    ChapterChangeLog.objects.create(
-        chapter=chapter,
-        changed_by=teacher,
-        action="delete_requested",
-        field_name="delete_request",
-        old_value="",
-        new_value=delete_reason,
-        change_summary=(
-            "Chapter deletion was requested."
-        ),
+    course_services.request_delete(
+        "chapter",
+        chapter,
+        teacher,
+        form.cleaned_data["delete_reason"],
     )
 
     messages.success(
@@ -2678,116 +2089,6 @@ def teacher_request_chapter_delete_view(
 # - Create video timeline entry
 # - Display all videos of the selected chapter
 # ============================================================
-
-# ============================================================
-# NORMALIZE VIDEO ORDERS
-#
-# Used whenever a video is actually removed/approved for deletion
-# and whenever a future video-edit operation repositions videos.
-#
-# This guarantees:
-#
-#   1, 2, 3, 4
-#
-# never becomes:
-#
-#   1, 2, 4, 5
-#
-# ============================================================
-
-def _normalize_video_orders(
-    chapter,
-):
-    videos = list(
-        ChapterVideo.objects
-        .select_for_update()
-        .filter(
-            chapter=chapter,
-            is_deleted=False,
-        )
-        .order_by(
-            "video_order",
-            "id",
-        )
-    )
-
-    changed = []
-
-    for index, video in enumerate(
-        videos,
-        start=1,
-    ):
-
-        if video.video_order != index:
-
-            video.video_order = index
-            changed.append(video)
-
-    if changed:
-
-        ChapterVideo.objects.bulk_update(
-            changed,
-            ["video_order"],
-        )
-
-    return videos
-
-
-
-def _normalize_pdf_orders(
-    chapter,
-):
-    """
-    Keep active PDF order values continuous: 1, 2, 3, ...
-    Must be called inside a transaction after the chapter's
-    active PDFs have been locked.
-    """
-
-    pdfs = list(
-        ChapterPDF.objects
-        .select_for_update()
-        .filter(
-            chapter=chapter,
-            is_deleted=False,
-        )
-        .order_by(
-            "pdf_order",
-            "id",
-        )
-    )
-
-    changed = []
-
-    for index, pdf in enumerate(
-        pdfs,
-        start=1,
-    ):
-
-        if pdf.pdf_order != index:
-
-            old_order = pdf.pdf_order
-
-            pdf.pdf_order = index
-
-            changed.append(
-                (
-                    pdf,
-                    old_order,
-                    index,
-                )
-            )
-
-    for pdf, _, _ in changed:
-
-        pdf.save(
-            update_fields=[
-                "pdf_order",
-                "updated_at",
-            ]
-        )
-
-    return pdfs, changed
-
 
 @login_required(login_url="teacher_login")
 @cache_control(
@@ -2840,51 +2141,6 @@ def teacher_chapter_videos_view(
                 f"?chapter={chapter.id}&view=videos"
             )
         )
-
-    # ========================================================
-    # COMMON MP4 VALIDATION
-    # ========================================================
-
-    def validate_mp4(video_file):
-
-        if not video_file:
-            return False, "Please select a valid MP4 video file."
-
-        if getattr(video_file, "size", 0) <= 0:
-            return False, "The selected video file is empty."
-
-        file_name = (
-            getattr(video_file, "name", "") or ""
-        ).strip().lower()
-
-        if not file_name.endswith(".mp4"):
-            return (
-                False,
-                "Invalid video format. Only MP4 video files are allowed.",
-            )
-
-        content_type = (
-            getattr(video_file, "content_type", "") or ""
-        ).strip().lower()
-
-        rejected_types = {
-            "text/plain",
-            "text/html",
-            "application/pdf",
-            "application/zip",
-            "application/x-zip-compressed",
-            "image/jpeg",
-            "image/png",
-            "image/gif",
-            "audio/mpeg",
-            "audio/mp3",
-            "audio/wav",
-        }
-
-        if content_type in rejected_types:
-            return False, "The selected file is not a valid MP4 video."
-
-        return True, ""
 
     # ========================================================
     # UPLOAD VALIDATION ERROR
@@ -2945,124 +2201,51 @@ def teacher_chapter_videos_view(
 
     if action == "upload":
 
-        video_name = (
-            request.POST.get("video_name", "") or ""
-        ).strip()
-
-        video_description = (
-            request.POST.get("video_description", "") or ""
-        ).strip()
-
-        video_file = request.FILES.get("video_file")
-
-        # NAME
-        if not video_name:
-            return upload_error(
-                "Video name is required.",
-                video_name,
-                video_description,
-            )
-
-        if len(video_name) > 255:
-            return upload_error(
-                "Video name cannot exceed 255 characters.",
-                video_name,
-                video_description,
-            )
-
-        duplicate = (
-            ChapterVideo.objects
-            .filter(
-                chapter=chapter,
-                video_name__iexact=video_name,
-                is_deleted=False,
-            )
-            .exists()
+        form = VideoUploadForm(
+            request.POST,
+            request.FILES,
+            chapter=chapter,
         )
 
-        if duplicate:
-            return upload_error(
-                "A video with this name already exists in this chapter.",
-                video_name,
-                video_description,
+        if not form.is_valid():
+
+            first_error = (
+                next(
+                    iter(
+                        form.errors.values()
+                    )
+                )[0]
             )
 
-        # DESCRIPTION
-        if not video_description:
             return upload_error(
-                "Video description is required.",
-                video_name,
-                video_description,
-            )
-
-        if len(video_description) > 5000:
-            return upload_error(
-                "Video description cannot exceed 5000 characters.",
-                video_name,
-                video_description,
-            )
-
-        # FILE
-        valid_file, file_error = validate_mp4(video_file)
-
-        if not valid_file:
-            return upload_error(
-                file_error,
-                video_name,
-                video_description,
+                first_error,
+                form.data.get("video_name", "") or "",
+                form.data.get("video_description", "") or "",
             )
 
         try:
 
-            with transaction.atomic():
+            video = course_services.create_video(
+                chapter=chapter,
+                actor=teacher,
+                video_name=(
+                    form.cleaned_data["video_name"]
+                ),
+                video_description=(
+                    form.cleaned_data["video_description"]
+                ),
+                video_file=(
+                    form.cleaned_data["video_file"]
+                ),
+            )
 
-                last_video = (
-                    ChapterVideo.objects
-                    .select_for_update()
-                    .filter(
-                        chapter=chapter,
-                        is_deleted=False,
-                    )
-                    .order_by("-video_order", "-id")
-                    .first()
-                )
+        except ValueError as exc:
 
-                video_order = (
-                    last_video.video_order + 1
-                    if last_video
-                    else 1
-                )
-
-                video = ChapterVideo.objects.create(
-                    chapter=chapter,
-                    video_name=video_name,
-                    video_description=video_description,
-                    video_file=video_file,
-                    video_order=video_order,
-                    created_by=teacher,
-                    updated_by=teacher,
-                    delete_requested=False,
-                    delete_status="pending",
-                    is_deleted=False,
-                )
-
-                VideoChangeLog.objects.create(
-                    video=video,
-                    changed_by=teacher,
-                    action="created",
-                    field_name="video",
-                    old_value="",
-                    new_value=(
-                        f"Name: {video.video_name}; "
-                        f"Description: {video.video_description}; "
-                        f"Order: {video.video_order}; "
-                        f"File: {getattr(video_file, 'name', '')}"
-                    ),
-                    change_summary=(
-                        f'Video "{video.video_name}" was created '
-                        f"at order {video.video_order}."
-                    ),
-                )
+            return upload_error(
+                str(exc),
+                form.data.get("video_name", "") or "",
+                form.data.get("video_description", "") or "",
+            )
 
         except Exception as exc:
 
@@ -3070,8 +2253,8 @@ def teacher_chapter_videos_view(
 
             return upload_error(
                 "The video could not be uploaded. Please try again.",
-                video_name,
-                video_description,
+                form.data.get("video_name", "") or "",
+                form.data.get("video_description", "") or "",
             )
 
         # Clear only upload error state.
@@ -3115,343 +2298,79 @@ def teacher_chapter_videos_view(
             is_deleted=False,
         )
 
-        old_name = video.video_name or ""
-        old_description = video.video_description or ""
-        old_order = video.video_order
-        old_file_name = getattr(video.video_file, "name", "") or ""
-
-        new_name = (
-            request.POST.get("video_name", "") or ""
-        ).strip()
-
-        new_description = (
-            request.POST.get("video_description", "") or ""
-        ).strip()
-
-        order_raw = (
-            request.POST.get("video_order", "") or ""
-        ).strip()
-
-        replacement_file = request.FILES.get("video_file")
-
-        # ----------------------------------------------------
-        # NAME REQUIRED
-        # ----------------------------------------------------
-
-        if not new_name:
-
-            return edit_error(
-                "Video name is required.",
-                video.id,
-                new_name,
-                new_description,
-                order_raw or old_order,
-                old_file_name,
-            )
-
-        if len(new_name) > 255:
-
-            return edit_error(
-                "Video name cannot exceed 255 characters.",
-                video.id,
-                new_name,
-                new_description,
-                order_raw or old_order,
-                old_file_name,
-            )
-
-        # ----------------------------------------------------
-        # DUPLICATE NAME — EXCLUDE CURRENT VIDEO
-        # ----------------------------------------------------
-
-        duplicate = (
-            ChapterVideo.objects
-            .filter(
-                chapter=chapter,
-                video_name__iexact=new_name,
-                is_deleted=False,
-            )
-            .exclude(id=video.id)
-            .exists()
+        old_file_name = (
+            getattr(video.video_file, "name", "") or ""
         )
 
-        if duplicate:
+        form = VideoEditForm(
+            request.POST,
+            request.FILES,
+            chapter=chapter,
+            instance=video,
+        )
 
-            return edit_error(
-                "A video with this name already exists in this chapter.",
-                video.id,
-                new_name,
-                new_description,
-                order_raw or old_order,
-                old_file_name,
+        form_data = {
+            "video_id": video.id,
+            "video_name": (
+                form.data.get("video_name", "") or ""
+            ),
+            "video_description": (
+                form.data.get("video_description", "") or ""
+            ),
+            "video_order": (
+                form.data.get("video_order", "") or ""
+            ),
+            "current_file_name": old_file_name,
+        }
+
+        if not form.is_valid():
+
+            first_error = (
+                next(
+                    iter(
+                        form.errors.values()
+                    )
+                )[0]
             )
 
-        # ----------------------------------------------------
-        # DESCRIPTION REQUIRED
-        # ----------------------------------------------------
-
-        if not new_description:
-
             return edit_error(
-                "Video description is required.",
+                first_error,
                 video.id,
-                new_name,
-                new_description,
-                order_raw or old_order,
-                old_file_name,
-            )
-
-        if len(new_description) > 5000:
-
-            return edit_error(
-                "Video description cannot exceed 5000 characters.",
-                video.id,
-                new_name,
-                new_description,
-                order_raw or old_order,
-                old_file_name,
-            )
-
-        # ----------------------------------------------------
-        # ORDER REQUIRED + >= 1
-        # ----------------------------------------------------
-
-        if not order_raw:
-
-            return edit_error(
-                "Video order is required.",
-                video.id,
-                new_name,
-                new_description,
-                order_raw,
+                form_data["video_name"],
+                form_data["video_description"],
+                form_data["video_order"] or video.video_order,
                 old_file_name,
             )
 
         try:
-            new_order = int(order_raw)
-        except (TypeError, ValueError):
+
+            course_services.update_video(
+                video=video,
+                actor=teacher,
+                video_name=(
+                    form.cleaned_data["video_name"]
+                ),
+                video_description=(
+                    form.cleaned_data["video_description"]
+                ),
+                video_order=(
+                    form.cleaned_data["video_order"]
+                ),
+                replacement_file=(
+                    form.cleaned_data.get("video_file")
+                ),
+            )
+
+        except ValueError as exc:
 
             return edit_error(
-                "Video order must be a valid number.",
+                str(exc),
                 video.id,
-                new_name,
-                new_description,
-                order_raw,
+                form_data["video_name"],
+                form_data["video_description"],
+                form_data["video_order"] or video.video_order,
                 old_file_name,
             )
-
-        if new_order <= 0:
-
-            return edit_error(
-                "Video order must be greater than zero.",
-                video.id,
-                new_name,
-                new_description,
-                new_order,
-                old_file_name,
-            )
-
-        current_count = (
-            ChapterVideo.objects
-            .filter(
-                chapter=chapter,
-                is_deleted=False,
-            )
-            .count()
-        )
-
-        if new_order > current_count:
-
-            return edit_error(
-                f"Video order must be between 1 and {current_count}.",
-                video.id,
-                new_name,
-                new_description,
-                new_order,
-                old_file_name,
-            )
-
-        # ----------------------------------------------------
-        # OPTIONAL FILE REPLACEMENT
-        # ----------------------------------------------------
-
-        if replacement_file:
-
-            valid_file, file_error = validate_mp4(
-                replacement_file,
-            )
-
-            if not valid_file:
-
-                return edit_error(
-                    file_error,
-                    video.id,
-                    new_name,
-                    new_description,
-                    new_order,
-                    old_file_name,
-                )
-
-        # ----------------------------------------------------
-        # SAVE / REORDER / LOG
-        # ----------------------------------------------------
-
-        try:
-
-            with transaction.atomic():
-
-                # Lock active videos in this chapter.
-                locked_videos = list(
-                    ChapterVideo.objects
-                    .select_for_update()
-                    .filter(
-                        chapter=chapter,
-                        is_deleted=False,
-                    )
-                    .order_by(
-                        "video_order",
-                        "id",
-                    )
-                )
-
-                locked_count = len(locked_videos)
-
-                if new_order > locked_count:
-
-                    return edit_error(
-                        (
-                            f"Video order must be between "
-                            f"1 and {locked_count}."
-                        ),
-                        video.id,
-                        new_name,
-                        new_description,
-                        new_order,
-                        old_file_name,
-                    )
-
-                # Find current persisted order after locking.
-                locked_video = next(
-                    (
-                        item
-                        for item in locked_videos
-                        if item.id == video.id
-                    ),
-                    None,
-                )
-
-                if locked_video is None:
-                    return edit_error(
-                        "The selected video no longer exists.",
-                        video.id,
-                        new_name,
-                        new_description,
-                        new_order,
-                        old_file_name,
-                    )
-
-                old_order = locked_video.video_order
-
-                # Move down: 2 -> 5
-                # 3,4,5 shift to 2,3,4
-                if new_order > old_order:
-
-                    ChapterVideo.objects.filter(
-                        chapter=chapter,
-                        is_deleted=False,
-                        video_order__gt=old_order,
-                        video_order__lte=new_order,
-                    ).update(
-                        video_order=F("video_order") - 1
-                    )
-
-                # Move up: 5 -> 2
-                # 2,3,4 shift to 3,4,5
-                elif new_order < old_order:
-
-                    ChapterVideo.objects.filter(
-                        chapter=chapter,
-                        is_deleted=False,
-                        video_order__gte=new_order,
-                        video_order__lt=old_order,
-                    ).update(
-                        video_order=F("video_order") + 1
-                    )
-
-                video.video_name = new_name
-                video.video_description = new_description
-                video.video_order = new_order
-                video.updated_by = teacher
-
-                if replacement_file:
-                    video.video_file = replacement_file
-
-                video.save()
-
-                # NAME
-                if old_name != new_name:
-
-                    VideoChangeLog.objects.create(
-                        video=video,
-                        changed_by=teacher,
-                        action="name_changed",
-                        field_name="video_name",
-                        old_value=old_name,
-                        new_value=new_name,
-                        change_summary="Video name was updated.",
-                    )
-
-                # DESCRIPTION
-                if old_description != new_description:
-
-                    VideoChangeLog.objects.create(
-                        video=video,
-                        changed_by=teacher,
-                        action="description_changed",
-                        field_name="video_description",
-                        old_value=old_description,
-                        new_value=new_description,
-                        change_summary="Video description was updated.",
-                    )
-
-                # ORDER
-                if old_order != new_order:
-
-                    VideoChangeLog.objects.create(
-                        video=video,
-                        changed_by=teacher,
-                        action="order_changed",
-                        field_name="video_order",
-                        old_value=str(old_order),
-                        new_value=str(new_order),
-                        change_summary=(
-                            f"Video order changed from "
-                            f"{old_order} to {new_order}."
-                        ),
-                    )
-
-                # FILE
-                if replacement_file:
-
-                    VideoChangeLog.objects.create(
-                        video=video,
-                        changed_by=teacher,
-                        action="file_changed",
-                        field_name="video_file",
-                        old_value=old_file_name or "Previous MP4 file",
-                        new_value=(
-                            getattr(
-                                replacement_file,
-                                "name",
-                                "",
-                            )
-                            or "New MP4 file"
-                        ),
-                        change_summary="Video file was replaced.",
-                    )
-
-                # Always normalize after a reorder.
-                _normalize_video_orders(chapter)
 
         except Exception as exc:
 
@@ -3460,9 +2379,9 @@ def teacher_chapter_videos_view(
             return edit_error(
                 "The video could not be updated. Please try again.",
                 video.id,
-                new_name,
-                new_description,
-                new_order,
+                form_data["video_name"],
+                form_data["video_description"],
+                form_data["video_order"] or video.video_order,
                 old_file_name,
             )
 
@@ -3625,351 +2544,64 @@ def teacher_chapter_pdfs_view(
         )
 
     # ========================================================
-    # READ TEXT FIELDS
+    # SHARED PDF UPLOAD FORM
     # ========================================================
 
-    pdf_name = (
-        request.POST.get(
-            "pdf_name",
-            "",
-        )
-        or ""
-    ).strip()
-
-    pdf_description = (
-        request.POST.get(
-            "pdf_description",
-            "",
-        )
-        or ""
-    ).strip()
-
-    pdf_file = request.FILES.get(
-        "pdf_file",
+    form = PDFUploadForm(
+        request.POST,
+        request.FILES,
+        chapter=chapter,
     )
 
-    pdf_thumbnail = request.FILES.get(
-        "pdf_thumbnail",
-    )
+    if not form.is_valid():
 
-    # ========================================================
-    # FIELD 1 — PDF NAME
-    # ========================================================
-
-    if not pdf_name:
-
-        return validation_error(
-            "PDF notes name is required.",
-            pdf_name,
-            pdf_description,
+        first_error = (
+            next(
+                iter(
+                    form.errors.values()
+                )
+            )[0]
         )
 
-    if len(pdf_name) > 255:
-
         return validation_error(
-            "PDF notes name cannot exceed 255 characters.",
-            pdf_name,
-            pdf_description,
+            first_error,
+            form.data.get("pdf_name", "") or "",
+            form.data.get("pdf_description", "") or "",
         )
 
     # ========================================================
-    # DUPLICATE PDF NAME
+    # CREATE PDF VIA SHARED SERVICE
     #
-    # Unique within the exact chapter.
-    # Case-insensitive and ignores soft-deleted PDFs.
-    # ========================================================
-
-    duplicate_pdf = (
-        ChapterPDF.objects
-        .filter(
-            chapter=chapter,
-            pdf_name__iexact=pdf_name,
-            is_deleted=False,
-        )
-        .exists()
-    )
-
-    if duplicate_pdf:
-
-        return validation_error(
-            "A PDF with this name already exists in this chapter.",
-            pdf_name,
-            pdf_description,
-        )
-
-    # ========================================================
-    # FIELD 2 — DESCRIPTION
-    # ========================================================
-
-    if not pdf_description:
-
-        return validation_error(
-            "PDF notes description is required.",
-            pdf_name,
-            pdf_description,
-        )
-
-    if len(pdf_description) > 5000:
-
-        return validation_error(
-            "PDF notes description cannot exceed 5000 characters.",
-            pdf_name,
-            pdf_description,
-        )
-
-    # ========================================================
-    # FIELD 3 — PDF FILE
-    #
-    # Backend rule:
-    #     extension must be .pdf
-    #
-    # We deliberately do not trust the browser's accept="..."
-    # attribute as validation.
-    # ========================================================
-
-    if not pdf_file:
-
-        return validation_error(
-            "Please select a PDF file.",
-            pdf_name,
-            pdf_description,
-        )
-
-    if getattr(pdf_file, "size", 0) <= 0:
-
-        return validation_error(
-            "The selected PDF file is empty.",
-            pdf_name,
-            pdf_description,
-        )
-
-    pdf_original_name = (
-        getattr(
-            pdf_file,
-            "name",
-            "",
-        )
-        or ""
-    ).strip()
-
-    if not pdf_original_name.lower().endswith(".pdf"):
-
-        return validation_error(
-            "Invalid file format. Only PDF files are allowed.",
-            pdf_name,
-            pdf_description,
-        )
-
-    # Browser MIME can be missing or unreliable, so use it only
-    # to reject obvious non-PDF values. Extension remains the
-    # required backend rule.
-    pdf_content_type = (
-        getattr(
-            pdf_file,
-            "content_type",
-            "",
-        )
-        or ""
-    ).strip().lower()
-
-    rejected_pdf_types = {
-        "image/jpeg",
-        "image/png",
-        "image/gif",
-        "image/webp",
-        "video/mp4",
-        "audio/mpeg",
-        "audio/wav",
-        "application/zip",
-        "application/x-zip-compressed",
-        "text/plain",
-        "text/html",
-    }
-
-    if pdf_content_type in rejected_pdf_types:
-
-        return validation_error(
-            "The selected file is not a valid PDF document.",
-            pdf_name,
-            pdf_description,
-        )
-
-    # ========================================================
-    # FIELD 4 — OPTIONAL THUMBNAIL
-    #
-    # Allowed:
-    #     PNG
-    #     JPG
-    #     JPEG
-    #     WEBP
-    #
-    # The model stores it in Cloudinary as an image.
-    # ========================================================
-
-    if pdf_thumbnail:
-
-        thumbnail_name = (
-            getattr(
-                pdf_thumbnail,
-                "name",
-                "",
-            )
-            or ""
-        ).strip().lower()
-
-        thumbnail_extension = ""
-
-        if "." in thumbnail_name:
-
-            thumbnail_extension = (
-                "."
-                + thumbnail_name.rsplit(
-                    ".",
-                    1,
-                )[1]
-            )
-
-        allowed_thumbnail_extensions = {
-            ".png",
-            ".jpg",
-            ".jpeg",
-            ".webp",
-        }
-
-        if thumbnail_extension not in allowed_thumbnail_extensions:
-
-            return validation_error(
-                (
-                    "Invalid thumbnail format. Only PNG, JPG, "
-                    "JPEG, and WEBP images are allowed."
-                ),
-                pdf_name,
-                pdf_description,
-            )
-
-        if getattr(pdf_thumbnail, "size", 0) <= 0:
-
-            return validation_error(
-                "The selected thumbnail image is empty.",
-                pdf_name,
-                pdf_description,
-            )
-
-        thumbnail_content_type = (
-            getattr(
-                pdf_thumbnail,
-                "content_type",
-                "",
-            )
-            or ""
-        ).strip().lower()
-
-        allowed_thumbnail_types = {
-            "image/png",
-            "image/jpeg",
-            "image/webp",
-        }
-
-        if (
-            thumbnail_content_type
-            and thumbnail_content_type not in allowed_thumbnail_types
-        ):
-
-            return validation_error(
-                (
-                    "The selected thumbnail is not a valid image. "
-                    "Use PNG, JPG, JPEG, or WEBP."
-                ),
-                pdf_name,
-                pdf_description,
-            )
-
-    # ========================================================
-    # AUTOMATIC ORDER + CREATE
-    #
-    # New PDFs always go after the current last active PDF.
-    #
-    # 1, 2, 3
-    # new PDF -> 4
-    #
-    # Reordering is deliberately reserved for PDF Edit.
+    # The service assigns the automatic order and writes the
+    # PDF timeline entry.
     # ========================================================
 
     try:
 
-        with transaction.atomic():
+        pdf = course_services.create_pdf(
+            chapter=chapter,
+            actor=teacher,
+            pdf_name=(
+                form.cleaned_data["pdf_name"]
+            ),
+            pdf_description=(
+                form.cleaned_data["pdf_description"]
+            ),
+            pdf_file=(
+                form.cleaned_data["pdf_file"]
+            ),
+            pdf_thumbnail=(
+                form.cleaned_data.get("pdf_thumbnail")
+            ),
+        )
 
-            last_pdf = (
-                ChapterPDF.objects
-                .select_for_update()
-                .filter(
-                    chapter=chapter,
-                    is_deleted=False,
-                )
-                .order_by(
-                    "-pdf_order",
-                    "-id",
-                )
-                .first()
-            )
+    except ValueError as exc:
 
-            pdf_order = (
-                last_pdf.pdf_order + 1
-                if last_pdf
-                else 1
-            )
-
-            pdf = ChapterPDF.objects.create(
-                chapter=chapter,
-                pdf_name=pdf_name,
-                pdf_description=pdf_description,
-                pdf_file=pdf_file,
-                pdf_thumbnail=pdf_thumbnail,
-                pdf_order=pdf_order,
-                created_by=teacher,
-                updated_by=teacher,
-                delete_requested=False,
-                delete_requested_by=None,
-                delete_requested_at=None,
-                delete_reason="",
-                delete_status="pending",
-                is_deleted=False,
-            )
-
-            # ====================================================
-            # PDF TIMELINE — CREATED
-            #
-            # The later PDF Timeline will read this record and
-            # display teacher + time + field values.
-            # ====================================================
-
-            thumbnail_label = (
-                getattr(
-                    pdf_thumbnail,
-                    "name",
-                    "",
-                )
-                or "Default NeoLearner branding thumbnail"
-            )
-
-            PDFChangeLog.objects.create(
-                pdf=pdf,
-                changed_by=teacher,
-                action="created",
-                field_name="pdf",
-                old_value="",
-                new_value=(
-                    f"Name: {pdf.pdf_name}; "
-                    f"Description: {pdf.pdf_description}; "
-                    f"Order: {pdf.pdf_order}; "
-                    f"File: {pdf_original_name}; "
-                    f"Thumbnail: {thumbnail_label}"
-                ),
-                change_summary=(
-                    f'PDF "{pdf.pdf_name}" was created at '
-                    f"order {pdf.pdf_order}."
-                ),
-            )
+        return validation_error(
+            str(exc),
+            form.data.get("pdf_name", "") or "",
+            form.data.get("pdf_description", "") or "",
+        )
 
     except Exception as exc:
 
@@ -3982,8 +2614,8 @@ def teacher_chapter_pdfs_view(
 
         return validation_error(
             "The PDF could not be uploaded. Please try again.",
-            pdf_name,
-            pdf_description,
+            form.data.get("pdf_name", "") or "",
+            form.data.get("pdf_description", "") or "",
         )
 
     # ========================================================
@@ -4249,597 +2881,83 @@ def teacher_edit_pdf_view(
         return redirect_to_builder()
 
     # ========================================================
-    # FORM DATA
+    # SHARED PDF EDIT FORM
     # ========================================================
 
-    new_name = (
-        request.POST.get(
-            "pdf_name",
-            "",
-        )
-        or ""
-    ).strip()
-
-    new_description = (
-        request.POST.get(
-            "pdf_description",
-            "",
-        )
-        or ""
-    ).strip()
-
-    order_raw = (
-        request.POST.get(
-            "pdf_order",
-            "",
-        )
-        or ""
-    ).strip()
-
-    replacement_file = request.FILES.get(
-        "pdf_file"
+    form = PDFEditForm(
+        request.POST,
+        request.FILES,
+        chapter=chapter,
+        instance=pdf,
     )
 
-    replacement_thumbnail = request.FILES.get(
-        "pdf_thumbnail"
-    )
+    form_data = {
+        "pdf_id": pdf.id,
+        "pdf_name": (
+            form.data.get("pdf_name", "") or ""
+        ),
+        "pdf_description": (
+            form.data.get("pdf_description", "") or ""
+        ),
+        "pdf_order": (
+            form.data.get("pdf_order", "") or ""
+        ),
+    }
 
-    old_name = pdf.pdf_name or ""
+    if not form.is_valid():
 
-    old_description = (
-        pdf.pdf_description or ""
-    )
-
-    old_order = pdf.pdf_order
-
-    old_file_name = (
-        getattr(
-            pdf.pdf_file,
-            "name",
-            "",
-        )
-        or ""
-    )
-
-    old_thumbnail_name = ""
-
-    if pdf.pdf_thumbnail:
-
-        old_thumbnail_name = (
-            str(
-                getattr(
-                    pdf.pdf_thumbnail,
-                    "name",
-                    "",
+        first_error = (
+            next(
+                iter(
+                    form.errors.values()
                 )
-                or ""
-            )
+            )[0]
+        )
+
+        return save_edit_state(
+            first_error,
+            form_data["pdf_name"],
+            form_data["pdf_description"],
+            form_data["pdf_order"] or pdf.pdf_order,
         )
 
     # ========================================================
-    # NAME
+    # UPDATE VIA SHARED SERVICE
+    #
+    # The service validates the order against the active PDF
+    # count, repositions siblings, and writes the timeline.
     # ========================================================
-
-    if not new_name:
-
-        return save_edit_state(
-            "PDF notes name is required.",
-            new_name,
-            new_description,
-            order_raw or old_order,
-        )
-
-    if len(new_name) > 255:
-
-        return save_edit_state(
-            "PDF notes name cannot exceed 255 characters.",
-            new_name,
-            new_description,
-            order_raw or old_order,
-        )
-
-    duplicate = (
-        ChapterPDF.objects
-        .filter(
-            chapter=chapter,
-            pdf_name__iexact=new_name,
-            is_deleted=False,
-        )
-        .exclude(
-            id=pdf.id,
-        )
-        .exists()
-    )
-
-    if duplicate:
-
-        return save_edit_state(
-            "A PDF with this name already exists in this chapter.",
-            new_name,
-            new_description,
-            order_raw or old_order,
-        )
-
-    # ========================================================
-    # DESCRIPTION
-    # ========================================================
-
-    if not new_description:
-
-        return save_edit_state(
-            "PDF notes description is required.",
-            new_name,
-            new_description,
-            order_raw or old_order,
-        )
-
-    if len(new_description) > 5000:
-
-        return save_edit_state(
-            "PDF notes description cannot exceed 5000 characters.",
-            new_name,
-            new_description,
-            order_raw or old_order,
-        )
-
-    # ========================================================
-    # ORDER
-    # ========================================================
-
-    if not order_raw:
-
-        return save_edit_state(
-            "PDF order is required.",
-            new_name,
-            new_description,
-            order_raw,
-        )
 
     try:
 
-        new_order = int(
-            order_raw
-        )
-
-    except (
-        TypeError,
-        ValueError,
-    ):
-
-        return save_edit_state(
-            "PDF order must be a valid number.",
-            new_name,
-            new_description,
-            order_raw,
-        )
-
-    if new_order <= 0:
-
-        return save_edit_state(
-            "PDF order must be greater than zero.",
-            new_name,
-            new_description,
-            new_order,
-        )
-
-    current_count = (
-        ChapterPDF.objects
-        .filter(
-            chapter=chapter,
-            is_deleted=False,
-        )
-        .count()
-    )
-
-    if new_order > current_count:
-
-        return save_edit_state(
-            (
-                f"PDF order must be between "
-                f"1 and {current_count}."
+        course_services.update_pdf(
+            pdf=pdf,
+            actor=teacher,
+            pdf_name=(
+                form.cleaned_data["pdf_name"]
             ),
-            new_name,
-            new_description,
-            new_order,
+            pdf_description=(
+                form.cleaned_data["pdf_description"]
+            ),
+            pdf_order=(
+                form.cleaned_data["pdf_order"]
+            ),
+            replacement_file=(
+                form.cleaned_data.get("pdf_file")
+            ),
+            replacement_thumbnail=(
+                form.cleaned_data.get("pdf_thumbnail")
+            ),
         )
 
-    # ========================================================
-    # OPTIONAL PDF REPLACEMENT
-    # ========================================================
-
-    if replacement_file:
-
-        replacement_name = (
-            getattr(
-                replacement_file,
-                "name",
-                "",
-            )
-            or ""
-        ).strip()
-
-        if getattr(
-            replacement_file,
-            "size",
-            0,
-        ) <= 0:
-
-            return save_edit_state(
-                "The replacement PDF file is empty.",
-                new_name,
-                new_description,
-                new_order,
-            )
-
-        if not replacement_name.lower().endswith(
-            ".pdf"
-        ):
-
-            return save_edit_state(
-                "Invalid file format. Only PDF files are allowed.",
-                new_name,
-                new_description,
-                new_order,
-            )
-
-        replacement_type = (
-            getattr(
-                replacement_file,
-                "content_type",
-                "",
-            )
-            or ""
-        ).strip().lower()
-
-        rejected_types = {
-            "image/jpeg",
-            "image/png",
-            "image/gif",
-            "image/webp",
-            "video/mp4",
-            "audio/mpeg",
-            "audio/wav",
-            "application/zip",
-            "application/x-zip-compressed",
-            "text/plain",
-            "text/html",
-        }
-
-        if replacement_type in rejected_types:
-
-            return save_edit_state(
-                "The replacement file is not a valid PDF document.",
-                new_name,
-                new_description,
-                new_order,
-            )
-
-    # ========================================================
-    # OPTIONAL THUMBNAIL REPLACEMENT
-    # ========================================================
-
-    if replacement_thumbnail:
-
-        thumbnail_name = (
-            getattr(
-                replacement_thumbnail,
-                "name",
-                "",
-            )
-            or ""
-        ).strip().lower()
-
-        extension = ""
-
-        if "." in thumbnail_name:
-
-            extension = (
-                "."
-                + thumbnail_name.rsplit(
-                    ".",
-                    1,
-                )[1]
-            )
-
-        allowed_extensions = {
-            ".png",
-            ".jpg",
-            ".jpeg",
-            ".webp",
-        }
-
-        if extension not in allowed_extensions:
-
-            return save_edit_state(
-                (
-                    "Invalid thumbnail format. Only PNG, JPG, "
-                    "JPEG, and WEBP images are allowed."
-                ),
-                new_name,
-                new_description,
-                new_order,
-            )
-
-        if getattr(
-            replacement_thumbnail,
-            "size",
-            0,
-        ) <= 0:
-
-            return save_edit_state(
-                "The replacement thumbnail image is empty.",
-                new_name,
-                new_description,
-                new_order,
-            )
-
-        thumbnail_type = (
-            getattr(
-                replacement_thumbnail,
-                "content_type",
-                "",
-            )
-            or ""
-        ).strip().lower()
-
-        allowed_types = {
-            "image/png",
-            "image/jpeg",
-            "image/webp",
-        }
-
-        if (
-            thumbnail_type
-            and thumbnail_type not in allowed_types
-        ):
-
-            return save_edit_state(
-                (
-                    "The replacement thumbnail is not a valid image. "
-                    "Use PNG, JPG, JPEG, or WEBP."
-                ),
-                new_name,
-                new_description,
-                new_order,
-            )
-
-    # ========================================================
-    # TRANSACTION
-    # ========================================================
-
-    try:
-
-        with transaction.atomic():
-
-            locked_pdfs = list(
-                ChapterPDF.objects
-                .select_for_update()
-                .filter(
-                    chapter=chapter,
-                    is_deleted=False,
-                )
-                .order_by(
-                    "pdf_order",
-                    "id",
-                )
-            )
-
-            locked_pdf = next(
-                (
-                    item
-                    for item in locked_pdfs
-                    if item.id == pdf.id
-                ),
-                None,
-            )
-
-            if locked_pdf is None:
-
-                return save_edit_state(
-                    "The selected PDF no longer exists.",
-                    new_name,
-                    new_description,
-                    new_order,
-                )
-
-            if new_order > len(locked_pdfs):
-
-                return save_edit_state(
-                    (
-                        f"PDF order must be between "
-                        f"1 and {len(locked_pdfs)}."
-                    ),
-                    new_name,
-                    new_description,
-                    new_order,
-                )
-
-            original_orders = {
-                item.id: item.pdf_order
-                for item in locked_pdfs
-            }
-
-            # Build final ordered list and insert the edited PDF.
-            reordered_ids = [
-                item.id
-                for item in locked_pdfs
-                if item.id != locked_pdf.id
-            ]
-
-            reordered_ids.insert(
-                new_order - 1,
-                locked_pdf.id,
-            )
-
-            # Assign the final continuous order.
-            pdf_by_id = {
-                item.id: item
-                for item in locked_pdfs
-            }
-
-            for index, pdf_id_value in enumerate(
-                reordered_ids,
-                start=1,
-            ):
-
-                pdf_by_id[
-                    pdf_id_value
-                ].pdf_order = index
-
-            # Update edited PDF fields.
-            locked_pdf.pdf_name = new_name
-
-            locked_pdf.pdf_description = (
-                new_description
-            )
-
-            locked_pdf.updated_by = teacher
-
-            if replacement_file:
-                locked_pdf.pdf_file = replacement_file
-
-            if replacement_thumbnail:
-                locked_pdf.pdf_thumbnail = (
-                    replacement_thumbnail
-                )
-
-            # Save everything that changed.
-            for target in locked_pdfs:
-
-                original_order = original_orders[
-                    target.id
-                ]
-
-                order_changed = (
-                    original_order
-                    != target.pdf_order
-                )
-
-                if target.id == locked_pdf.id:
-
-                    target.save()
-
-                elif order_changed:
-
-                    target.updated_by = teacher
-
-                    target.save(
-                        update_fields=[
-                            "pdf_order",
-                            "updated_by",
-                            "updated_at",
-                        ]
-                    )
-
-            # NAME
-            if old_name != new_name:
-
-                PDFChangeLog.objects.create(
-                    pdf=locked_pdf,
-                    changed_by=teacher,
-                    action="name_changed",
-                    field_name="pdf_name",
-                    old_value=old_name,
-                    new_value=new_name,
-                    change_summary=(
-                        "PDF notes name was updated."
-                    ),
-                )
-
-            # DESCRIPTION
-            if old_description != new_description:
-
-                PDFChangeLog.objects.create(
-                    pdf=locked_pdf,
-                    changed_by=teacher,
-                    action="description_changed",
-                    field_name="pdf_description",
-                    old_value=old_description,
-                    new_value=new_description,
-                    change_summary=(
-                        "PDF notes description was updated."
-                    ),
-                )
-
-            # ORDER
-            for target in locked_pdfs:
-
-                original_order = original_orders[
-                    target.id
-                ]
-
-                if (
-                    original_order
-                    != target.pdf_order
-                ):
-
-                    PDFChangeLog.objects.create(
-                        pdf=target,
-                        changed_by=teacher,
-                        action="order_changed",
-                        field_name="pdf_order",
-                        old_value=str(
-                            original_order
-                        ),
-                        new_value=str(
-                            target.pdf_order
-                        ),
-                        change_summary=(
-                            f'PDF "{target.pdf_name}" order '
-                            f"changed from {original_order} "
-                            f"to {target.pdf_order}."
-                        ),
-                    )
-
-            # FILE
-            if replacement_file:
-
-                PDFChangeLog.objects.create(
-                    pdf=locked_pdf,
-                    changed_by=teacher,
-                    action="file_changed",
-                    field_name="pdf_file",
-                    old_value=(
-                        old_file_name
-                        or "Previous PDF file"
-                    ),
-                    new_value=(
-                        getattr(
-                            replacement_file,
-                            "name",
-                            "",
-                        )
-                        or "New PDF file"
-                    ),
-                    change_summary=(
-                        "PDF file was replaced."
-                    ),
-                )
-
-            # THUMBNAIL
-            if replacement_thumbnail:
-
-                PDFChangeLog.objects.create(
-                    pdf=locked_pdf,
-                    changed_by=teacher,
-                    action="thumbnail_changed",
-                    field_name="pdf_thumbnail",
-                    old_value=(
-                        old_thumbnail_name
-                        or "Default NeoLearner thumbnail"
-                    ),
-                    new_value=(
-                        getattr(
-                            replacement_thumbnail,
-                            "name",
-                            "",
-                        )
-                        or "New PDF thumbnail"
-                    ),
-                    change_summary=(
-                        "PDF thumbnail was replaced."
-                    ),
-                )
+    except ValueError as exc:
+
+        return save_edit_state(
+            str(exc),
+            form_data["pdf_name"],
+            form_data["pdf_description"],
+            form_data["pdf_order"] or pdf.pdf_order,
+        )
 
     except Exception as exc:
 
@@ -4850,9 +2968,9 @@ def teacher_edit_pdf_view(
 
         return save_edit_state(
             "The PDF could not be updated. Please try again.",
-            new_name,
-            new_description,
-            new_order,
+            form_data["pdf_name"],
+            form_data["pdf_description"],
+            form_data["pdf_order"] or pdf.pdf_order,
         )
 
     # Clear edit state.
@@ -4863,7 +2981,7 @@ def teacher_edit_pdf_view(
 
     messages.success(
         request,
-        f'PDF "{locked_pdf.pdf_name}" updated successfully.',
+        f'PDF "{pdf.pdf_name}" updated successfully.',
     )
 
     return redirect_to_builder()
@@ -4888,10 +3006,12 @@ def teacher_request_pdf_delete_view(
     pdf_id,
 ):
     """
-    Endpoint for the PDF Delete Request card icon.
+    Teacher requests deletion of a PDF note.
 
-    The confirmation form + admin approval workflow will be
-    implemented in the dedicated PDF delete-request stage.
+    Only a POST with a valid delete reason is accepted. The
+    shared request_delete service marks the PDF as pending and
+    writes the timeline entry. The actual delete is performed
+    by an admin after approval.
     """
 
     teacher, assignment = (
@@ -4922,19 +3042,88 @@ def teacher_request_pdf_delete_view(
         ChapterPDF,
         id=pdf_id,
         chapter=chapter,
+        is_deleted=False,
     )
 
-    messages.info(
-        request,
-        f'PDF "{pdf.pdf_name}" delete request form will be connected in the next PDF stage.',
-    )
-
-    return redirect(
-        (
-            f"{reverse('teacher_course_builder', kwargs={'subject_id': subject_id})}"
-            f"?chapter={chapter.id}&view=pdfs"
+    def redirect_to_builder():
+        return redirect(
+            (
+                f"{reverse('teacher_course_builder', kwargs={'subject_id': subject_id})}"
+                f"?chapter={chapter.id}&view=pdfs"
+            )
         )
+
+    # ========================================================
+    # DELETE REQUEST MUST BE POST
+    # ========================================================
+
+    if request.method != "POST":
+
+        messages.error(
+            request,
+            "Invalid delete request.",
+        )
+
+        return redirect_to_builder()
+
+    # ========================================================
+    # ALREADY PENDING
+    # ========================================================
+
+    if (
+        pdf.delete_requested
+        and pdf.delete_status == "pending"
+    ):
+
+        messages.info(
+            request,
+            "A delete request for this PDF is already pending.",
+        )
+
+        return redirect_to_builder()
+
+    # ========================================================
+    # DELETE REASON
+    # ========================================================
+
+    form = DeleteReasonForm(
+        request.POST
     )
+
+    if not form.is_valid():
+
+        first_error = (
+            next(
+                iter(
+                    form.errors.values()
+                )
+            )[0]
+        )
+
+        messages.error(
+            request,
+            first_error,
+        )
+
+        return redirect_to_builder()
+
+    # ========================================================
+    # SAVE DELETE REQUEST VIA SHARED SERVICE
+    # ========================================================
+
+    course_services.request_delete(
+        "pdf",
+        pdf,
+        teacher,
+        form.cleaned_data["delete_reason"],
+    )
+
+    messages.success(
+        request,
+        "PDF deletion request submitted successfully.",
+    )
+
+    return redirect_to_builder()
 
 
 # ============================================================
@@ -5098,50 +3287,28 @@ def teacher_chapter_quizzes_view(
             "questions": questions,
         }
 
-        if not quiz_name:
-            return save_create_error("Quiz name is required.", form_data)
-        if len(quiz_name) < 2:
-            return save_create_error(
-                "Quiz name must contain at least 2 characters.", form_data
-            )
-        if len(quiz_name) > 255:
-            return save_create_error(
-                "Quiz name cannot exceed 255 characters.", form_data
+        # ----------------------------------------------------
+        # SHARED QUIZ BASIC FORM
+        # ----------------------------------------------------
+
+        form = QuizForm(
+            request.POST,
+            chapter=chapter,
+        )
+
+        if not form.is_valid():
+
+            first_error = (
+                next(
+                    iter(
+                        form.errors.values()
+                    )
+                )[0]
             )
 
-        if not quiz_description:
             return save_create_error(
-                "Quiz description is required.", form_data
-            )
-        if len(quiz_description) < 5:
-            return save_create_error(
-                "Quiz description must contain at least 5 characters.",
+                first_error,
                 form_data,
-            )
-        if len(quiz_description) > 5000:
-            return save_create_error(
-                "Quiz description cannot exceed 5000 characters.",
-                form_data,
-            )
-
-        if not attempt_limit_raw:
-            return save_create_error(
-                "Maximum attempts is required.", form_data
-            )
-        if not attempt_limit_raw.isdigit():
-            return save_create_error(
-                "Maximum attempts must be a positive whole number.",
-                form_data,
-            )
-
-        attempt_limit = int(attempt_limit_raw)
-        if attempt_limit < 1:
-            return save_create_error(
-                "Maximum attempts must be greater than 0.", form_data
-            )
-        if attempt_limit > 100:
-            return save_create_error(
-                "Maximum attempts cannot be greater than 100.", form_data
             )
 
         if not questions:
@@ -5150,152 +3317,71 @@ def teacher_chapter_quizzes_view(
                 form_data,
             )
 
+        # ----------------------------------------------------
+        # SHARED QUESTION FORM — ONE PER QUESTION
+        # ----------------------------------------------------
+
         validated_questions = []
         for index, question_data in enumerate(questions, start=1):
-            qtext = question_data["question_text"]
-            options = {
-                "A": question_data["option_a"],
-                "B": question_data["option_b"],
-                "C": question_data["option_c"],
-                "D": question_data["option_d"],
-            }
-            correct = question_data["correct_option"]
-            marks_raw = question_data["marks"]
+            question_form = QuizQuestionForm(question_data)
 
-            if not qtext:
-                return save_create_error(
-                    f"Question {index}: question text is required.", form_data
-                )
-            if len(qtext) < 3:
-                return save_create_error(
-                    f"Question {index}: question must contain at least 3 characters.",
-                    form_data,
-                )
-            if len(qtext) > 10000:
-                return save_create_error(
-                    f"Question {index}: question cannot exceed 10000 characters.",
-                    form_data,
+            if not question_form.is_valid():
+
+                first_error = (
+                    next(
+                        iter(
+                            question_form.errors.values()
+                        )
+                    )[0]
                 )
 
-            for label, value in options.items():
-                if not value:
-                    return save_create_error(
-                        f"Question {index}: Option {label} is required.",
-                        form_data,
-                    )
-                if len(value) > 500:
-                    return save_create_error(
-                        f"Question {index}: Option {label} cannot exceed 500 characters.",
-                        form_data,
-                    )
-
-            if len({options[label].casefold() for label in options}) != 4:
                 return save_create_error(
-                    f"Question {index}: all four answer options must be different.",
-                    form_data,
-                )
-
-            if correct not in {"A", "B", "C", "D"}:
-                return save_create_error(
-                    f"Question {index}: select exactly one correct answer.",
-                    form_data,
-                )
-
-            if not marks_raw or not marks_raw.isdigit():
-                return save_create_error(
-                    f"Question {index}: marks must be a positive whole number.",
-                    form_data,
-                )
-            marks = int(marks_raw)
-            if marks < 1 or marks > 1000:
-                return save_create_error(
-                    f"Question {index}: marks must be between 1 and 1000.",
+                    f"Question {index}: {first_error}",
                     form_data,
                 )
 
             validated_questions.append({
-                "question_text": qtext,
-                "marks": marks,
-                "options": options,
-                "correct_option": correct,
+                "question_text": (
+                    question_form.cleaned_data["question_text"]
+                ),
+                "marks": (
+                    question_form.cleaned_data["marks"]
+                ),
+                "options": {
+                    "A": question_form.cleaned_data["option_a"],
+                    "B": question_form.cleaned_data["option_b"],
+                    "C": question_form.cleaned_data["option_c"],
+                    "D": question_form.cleaned_data["option_d"],
+                },
+                "correct_option": (
+                    question_form.cleaned_data["correct_option"]
+                ),
             })
 
-        if len(validated_questions) > 100:
-            return save_create_error(
-                "A quiz cannot contain more than 100 questions.",
-                form_data,
-            )
-
-        duplicate_quiz = (
-            ChapterQuiz.objects
-            .filter(
-                chapter=chapter,
-                quiz_name__iexact=quiz_name,
-                is_deleted=False,
-            )
-            .exists()
-        )
-        if duplicate_quiz:
-            return save_create_error(
-                "A quiz with this name already exists in this chapter.",
-                form_data,
-            )
+        # ----------------------------------------------------
+        # CREATE QUIZ VIA SHARED SERVICE
+        # ----------------------------------------------------
 
         try:
-            with transaction.atomic():
-                quiz = ChapterQuiz.objects.create(
-                    chapter=chapter,
-                    quiz_name=quiz_name,
-                    quiz_description=quiz_description,
-                    attempt_limit=attempt_limit,
-                    created_by=teacher,
-                    updated_by=teacher,
-                    delete_requested=False,
-                    delete_requested_by=None,
-                    delete_requested_at=None,
-                    delete_reason="",
-                    delete_status="pending",
-                    is_deleted=False,
-                )
-
-                total_marks = 0
-                for question_data in validated_questions:
-                    question = QuizQuestion.objects.create(
-                        quiz=quiz,
-                        question_text=question_data["question_text"],
-                        marks=question_data["marks"],
-                    )
-                    total_marks += question.marks
-
-                    for label, option_text in question_data["options"].items():
-                        QuizOption.objects.create(
-                            question=question,
-                            option_label=label,
-                            option_text=option_text,
-                            is_correct=(
-                                label == question_data["correct_option"]
-                            ),
-                        )
-
-                QuizChangeLog.objects.create(
-                    quiz=quiz,
-                    changed_by=teacher,
-                    action="created",
-                    field_name="quiz",
-                    old_value="",
-                    new_value=(
-                        f"Name: {quiz.quiz_name}; "
-                        f"Description: {quiz.quiz_description}; "
-                        f"Attempt Limit: {quiz.attempt_limit}; "
-                        f"Questions: {len(validated_questions)}; "
-                        f"Total Marks: {total_marks}"
-                    ),
-                    change_summary=(
-                        f'Quiz "{quiz.quiz_name}" was created with '
-                        f"{len(validated_questions)} question"
-                        f'{"s" if len(validated_questions) != 1 else ""}.'
-                    ),
-                )
+            quiz = course_services.create_quiz(
+                chapter=chapter,
+                actor=teacher,
+                quiz_name=(
+                    form.cleaned_data["quiz_name"]
+                ),
+                quiz_description=(
+                    form.cleaned_data["quiz_description"]
+                ),
+                attempt_limit=(
+                    form.cleaned_data["attempt_limit"]
+                ),
+                questions=validated_questions,
+            )
+        except ValueError as exc:
+            return save_create_error(
+                str(exc),
+                form_data,
+            )
         except Exception as exc:
             print("Complete quiz creation error:", repr(exc))
             return save_create_error(
@@ -5444,113 +3530,38 @@ def teacher_edit_quiz_view(
         return redirect_to_builder()
 
     # ========================================================
-    # BASIC QUIZ DATA
+    # SHARED QUIZ FORM — BASIC FIELDS
     # ========================================================
 
-    quiz_name = (
-        request.POST.get(
-            "quiz_name",
-            "",
-        )
-        or ""
-    ).strip()
-
-    quiz_description = (
-        request.POST.get(
-            "quiz_description",
-            "",
-        )
-        or ""
-    ).strip()
-
-    attempt_limit_raw = (
-        request.POST.get(
-            "attempt_limit",
-            "",
-        )
-        or ""
-    ).strip()
-
-    # ========================================================
-    # VALIDATE BASIC FIELDS
-    # ========================================================
+    form = QuizForm(
+        request.POST,
+        chapter=chapter,
+        instance=quiz,
+    )
 
     validation_errors = []
 
-    if not quiz_name:
-        validation_errors.append(
-            "Quiz name is required."
-        )
-    elif len(quiz_name) < 2:
-        validation_errors.append(
-            "Quiz name must contain at least 2 characters."
-        )
-    elif len(quiz_name) > 255:
-        validation_errors.append(
-            "Quiz name cannot exceed 255 characters."
-        )
+    if not form.is_valid():
 
-    if not quiz_description:
-        validation_errors.append(
-            "Quiz description is required."
-        )
-    elif len(quiz_description) < 5:
-        validation_errors.append(
-            "Quiz description must contain at least 5 characters."
-        )
-    elif len(quiz_description) > 5000:
-        validation_errors.append(
-            "Quiz description cannot exceed 5000 characters."
-        )
+        for field_errors in form.errors.values():
 
-    if not attempt_limit_raw:
-        validation_errors.append(
-            "Maximum attempts is required."
-        )
-        attempt_limit = None
-    elif not attempt_limit_raw.isdigit():
-        validation_errors.append(
-            "Maximum attempts must be a positive whole number."
-        )
-        attempt_limit = None
-    else:
-        attempt_limit = int(attempt_limit_raw)
+            for error in field_errors:
 
-        if attempt_limit < 1:
-            validation_errors.append(
-                "Maximum attempts must be greater than zero."
-            )
+                validation_errors.append(
+                    error
+                )
 
-        if attempt_limit > 100:
-            validation_errors.append(
-                "Maximum attempts cannot be greater than 100."
-            )
+    quiz_name = (
+        form.data.get("quiz_name", "") or ""
+    ).strip()
 
-    # ========================================================
-    # QUIZ NAME DUPLICATE CHECK
-    # ========================================================
+    quiz_description = (
+        form.data.get("quiz_description", "") or ""
+    ).strip()
 
-    if not any(
-        error.startswith("Quiz name")
-        for error in validation_errors
-    ):
-        duplicate_quiz = (
-            ChapterQuiz.objects
-            .filter(
-                chapter=chapter,
-                quiz_name__iexact=quiz_name,
-                is_deleted=False,
-            )
-            .exclude(
-                id=quiz.id,
-            )
-            .exists()
-        )
-
-        if duplicate_quiz:
-            validation_errors.append(
-                "Another quiz with this name already exists."
-            )
+    attempt_limit_raw = (
+        form.data.get("attempt_limit", "") or ""
+    ).strip()
 
     # ========================================================
     # READ ALL QUESTION CARDS
@@ -5596,13 +3607,6 @@ def teacher_edit_quiz_view(
 
     submitted_questions = []
     submitted_existing_ids = set()
-
-    option_labels = (
-        ("A", "option_a"),
-        ("B", "option_b"),
-        ("C", "option_c"),
-        ("D", "option_d"),
-    )
 
     for index in range(question_count):
 
@@ -5697,100 +3701,30 @@ def teacher_edit_quiz_view(
             parsed_question_id = None
 
         # ----------------------------------------------------
-        # QUESTION TEXT
+        # SHARED QUESTION FORM VALIDATION
         # ----------------------------------------------------
 
-        if not question_text:
-            validation_errors.append(
-                f"Question {question_number}: question is required."
-            )
-        elif len(question_text) < 3:
-            validation_errors.append(
-                f"Question {question_number}: question must contain at least 3 characters."
-            )
-        elif len(question_text) > 10000:
-            validation_errors.append(
-                f"Question {question_number}: question cannot exceed 10000 characters."
-            )
+        question_form = QuizQuestionForm(
+            {
+                "question_text": question_text,
+                "marks": marks_raw,
+                "option_a": option_a,
+                "option_b": option_b,
+                "option_c": option_c,
+                "option_d": option_d,
+                "correct_option": correct_option,
+            }
+        )
 
-        # ----------------------------------------------------
-        # OPTIONS
-        # ----------------------------------------------------
+        if not question_form.is_valid():
 
-        option_values = {
-            "A": option_a,
-            "B": option_b,
-            "C": option_c,
-            "D": option_d,
-        }
+            for field_errors in question_form.errors.values():
 
-        for label, value in option_values.items():
+                for error in field_errors:
 
-            if not value:
-                validation_errors.append(
-                    f"Question {question_number}: Option {label} is required."
-                )
-            elif len(value) > 500:
-                validation_errors.append(
-                    f"Question {question_number}: Option {label} cannot exceed 500 characters."
-                )
-
-        normalized_options = [
-            value.casefold()
-            for value in option_values.values()
-            if value
-        ]
-
-        if (
-            len(normalized_options) == 4
-            and len(set(normalized_options)) != 4
-        ):
-            validation_errors.append(
-                f"Question {question_number}: all four answer options must be different."
-            )
-
-        # ----------------------------------------------------
-        # CORRECT ANSWER
-        # ----------------------------------------------------
-
-        if correct_option not in {
-            "A",
-            "B",
-            "C",
-            "D",
-        }:
-            validation_errors.append(
-                f"Question {question_number}: select exactly one correct answer."
-            )
-
-        # ----------------------------------------------------
-        # MARKS
-        # ----------------------------------------------------
-
-        if not marks_raw:
-            validation_errors.append(
-                f"Question {question_number}: marks are required."
-            )
-            parsed_marks = None
-
-        elif not marks_raw.isdigit():
-            validation_errors.append(
-                f"Question {question_number}: marks must be a positive whole number."
-            )
-            parsed_marks = None
-
-        else:
-            parsed_marks = int(marks_raw)
-
-            if parsed_marks < 1:
-                validation_errors.append(
-                    f"Question {question_number}: marks must be greater than zero."
-                )
-
-            if parsed_marks > 1000:
-                validation_errors.append(
-                    f"Question {question_number}: marks cannot exceed 1000."
-                )
+                    validation_errors.append(
+                        f"Question {question_number}: {error}"
+                    )
 
         submitted_questions.append(
             {
@@ -5802,7 +3736,11 @@ def teacher_edit_quiz_view(
                 "option_c": option_c,
                 "option_d": option_d,
                 "correct_option": correct_option,
-                "marks": parsed_marks,
+                "marks": (
+                    question_form.cleaned_data.get("marks")
+                    if question_form.is_valid()
+                    else None
+                ),
             }
         )
 
@@ -5958,64 +3896,21 @@ def teacher_edit_quiz_view(
     # SAVE EVERYTHING IN ONE TRANSACTION
     # ========================================================
 
-    old_quiz_name = quiz.quiz_name
-    old_quiz_description = quiz.quiz_description
-    old_attempt_limit = quiz.attempt_limit
-
     try:
 
         with transaction.atomic():
 
             # ------------------------------------------------
-            # BASIC QUIZ UPDATE
+            # BASIC QUIZ UPDATE VIA SHARED SERVICE
             # ------------------------------------------------
 
-            quiz.quiz_name = quiz_name
-            quiz.quiz_description = quiz_description
-            quiz.attempt_limit = attempt_limit
-            quiz.updated_by = teacher
-            quiz.save()
-
-            if old_quiz_name != quiz_name:
-                QuizChangeLog.objects.create(
-                    quiz=quiz,
-                    changed_by=teacher,
-                    action="name_changed",
-                    field_name="quiz_name",
-                    old_value=old_quiz_name,
-                    new_value=quiz_name,
-                    change_summary=(
-                        "Quiz name was updated."
-                    ),
-                )
-
-            if old_quiz_description != quiz_description:
-                QuizChangeLog.objects.create(
-                    quiz=quiz,
-                    changed_by=teacher,
-                    action="description_changed",
-                    field_name="quiz_description",
-                    old_value=old_quiz_description,
-                    new_value=quiz_description,
-                    change_summary=(
-                        "Quiz description was updated."
-                    ),
-                )
-
-            if old_attempt_limit != attempt_limit:
-                QuizChangeLog.objects.create(
-                    quiz=quiz,
-                    changed_by=teacher,
-                    action="attempt_limit_changed",
-                    field_name="attempt_limit",
-                    old_value=str(old_attempt_limit),
-                    new_value=str(attempt_limit),
-                    change_summary=(
-                        f"Attempt limit changed from "
-                        f"{old_attempt_limit} to "
-                        f"{attempt_limit}."
-                    ),
-                )
+            course_services.update_quiz(
+                quiz=quiz,
+                actor=teacher,
+                quiz_name=form.cleaned_data["quiz_name"],
+                quiz_description=form.cleaned_data["quiz_description"],
+                attempt_limit=form.cleaned_data["attempt_limit"],
+            )
 
             # ------------------------------------------------
             # DELETE REMOVED EXISTING QUESTIONS
@@ -6030,25 +3925,9 @@ def teacher_edit_quiz_view(
                 if question is None:
                     continue
 
-                question_snapshot = (
-                    question.question_text
-                )
-
-                question.delete()
-
-                QuizChangeLog.objects.create(
-                    quiz=quiz,
-                    changed_by=teacher,
-                    action="question_deleted",
-                    field_name="question",
-                    old_value=(
-                        f"Question {question_id}: "
-                        f"{question_snapshot}"
-                    ),
-                    new_value="",
-                    change_summary=(
-                        f"Question {question_id} was deleted."
-                    ),
+                course_services.delete_quiz_question(
+                    question=question,
+                    actor=teacher,
                 )
 
             # ------------------------------------------------
@@ -6061,33 +3940,18 @@ def teacher_edit_quiz_view(
 
                 if question_id is None:
 
-                    question = QuizQuestion.objects.create(
+                    course_services.create_quiz_question(
                         quiz=quiz,
+                        actor=teacher,
                         question_text=item["question_text"],
                         marks=item["marks"],
-                    )
-
-                    for label, field_name in option_labels:
-
-                        QuizOption.objects.create(
-                            question=question,
-                            option_label=label,
-                            option_text=item[field_name],
-                            is_correct=(
-                                label == item["correct_option"]
-                            ),
-                        )
-
-                    QuizChangeLog.objects.create(
-                        quiz=quiz,
-                        changed_by=teacher,
-                        action="question_added",
-                        field_name="question",
-                        old_value="",
-                        new_value=item["question_text"],
-                        change_summary=(
-                            f"Question {question.id} was added."
-                        ),
+                        options={
+                            "A": item["option_a"],
+                            "B": item["option_b"],
+                            "C": item["option_c"],
+                            "D": item["option_d"],
+                        },
+                        correct_option=item["correct_option"],
                     )
 
                     continue
@@ -6101,141 +3965,19 @@ def teacher_edit_quiz_view(
                         "An existing question could not be found during save."
                     )
 
-                old_question_text = (
-                    question.question_text
+                course_services.update_quiz_question(
+                    question=question,
+                    actor=teacher,
+                    question_text=item["question_text"],
+                    marks=item["marks"],
+                    options={
+                        "A": item["option_a"],
+                        "B": item["option_b"],
+                        "C": item["option_c"],
+                        "D": item["option_d"],
+                    },
+                    correct_option=item["correct_option"],
                 )
-
-                old_marks = question.marks
-
-                old_options = {
-                    option.option_label: (
-                        option.option_text,
-                        option.is_correct,
-                    )
-                    for option in question.options.all()
-                }
-
-                question.question_text = (
-                    item["question_text"]
-                )
-                question.marks = item["marks"]
-
-                question.save(
-                    update_fields=[
-                        "question_text",
-                        "marks",
-                        "updated_at",
-                    ]
-                )
-
-                if (
-                    old_question_text
-                    != item["question_text"]
-                ):
-                    QuizChangeLog.objects.create(
-                        quiz=quiz,
-                        changed_by=teacher,
-                        action="question_updated",
-                        field_name="question_text",
-                        old_value=old_question_text,
-                        new_value=item["question_text"],
-                        change_summary=(
-                            f"Question {question.id} text "
-                            "was updated."
-                        ),
-                    )
-
-                if old_marks != item["marks"]:
-                    QuizChangeLog.objects.create(
-                        quiz=quiz,
-                        changed_by=teacher,
-                        action="question_updated",
-                        field_name="marks",
-                        old_value=str(old_marks),
-                        new_value=str(item["marks"]),
-                        change_summary=(
-                            f"Question {question.id} marks "
-                            "were updated."
-                        ),
-                    )
-
-                for label, field_name in option_labels:
-
-                    option, created = (
-                        question.options
-                        .get_or_create(
-                            option_label=label,
-                            defaults={
-                                "option_text": (
-                                    item[field_name]
-                                ),
-                                "is_correct": (
-                                    label
-                                    == item["correct_option"]
-                                ),
-                            },
-                        )
-                    )
-
-                    if created:
-                        old_value = ""
-                        old_correct = False
-                    else:
-                        old_value = option.option_text
-                        old_correct = option.is_correct
-
-                        option.option_text = (
-                            item[field_name]
-                        )
-                        option.is_correct = (
-                            label
-                            == item["correct_option"]
-                        )
-
-                        option.save(
-                            update_fields=[
-                                "option_text",
-                                "is_correct",
-                                "updated_at",
-                            ]
-                        )
-
-                    new_value = item[field_name]
-                    new_correct = (
-                        label
-                        == item["correct_option"]
-                    )
-
-                    if old_value != new_value:
-                        QuizChangeLog.objects.create(
-                            quiz=quiz,
-                            changed_by=teacher,
-                            action="option_changed",
-                            field_name=f"option_{label}",
-                            old_value=old_value,
-                            new_value=new_value,
-                            change_summary=(
-                                f"Option {label} of question "
-                                f"{question.id} was updated."
-                            ),
-                        )
-
-                    if old_correct != new_correct:
-                        QuizChangeLog.objects.create(
-                            quiz=quiz,
-                            changed_by=teacher,
-                            action="correct_answer_changed",
-                            field_name=(
-                                f"option_{label}_correct"
-                            ),
-                            old_value=str(old_correct),
-                            new_value=str(new_correct),
-                            change_summary=(
-                                f"Correct answer for option "
-                                f"{label} of question "
-                                f"{question.id} was updated."
-                            ),
-                        )
 
     except Exception as exc:
 
@@ -6424,71 +4166,37 @@ def teacher_request_quiz_delete_view(
             )
         )
 
-    delete_reason = (
-        request.POST.get(
-            "delete_reason",
-            "",
-        )
-        or ""
-    ).strip()
-
-    if not delete_reason:
-
-        messages.error(
-            request,
-            "Please provide a reason for deleting the quiz.",
-        )
-
-        return redirect(
-            (
-                f"{builder_url}"
-                f"?chapter={chapter.id}&view=quizzes"
-            )
-        )
-
-    if len(delete_reason) > 2000:
-
-        messages.error(
-            request,
-            "Delete reason cannot exceed 2000 characters.",
-        )
-
-        return redirect(
-            (
-                f"{builder_url}"
-                f"?chapter={chapter.id}&view=quizzes"
-            )
-        )
-
-    from django.utils import timezone
-
-    quiz.delete_requested = True
-    quiz.delete_requested_by = teacher
-    quiz.delete_requested_at = timezone.now()
-    quiz.delete_reason = delete_reason
-    quiz.delete_status = "pending"
-    quiz.updated_by = teacher
-
-    quiz.save(
-        update_fields=[
-            "delete_requested",
-            "delete_requested_by",
-            "delete_requested_at",
-            "delete_reason",
-            "delete_status",
-            "updated_by",
-            "updated_at",
-        ]
+    form = DeleteReasonForm(
+        request.POST
     )
 
-    QuizChangeLog.objects.create(
-        quiz=quiz,
-        changed_by=teacher,
-        action="delete_requested",
-        field_name="delete_request",
-        old_value="",
-        new_value=delete_reason,
-        change_summary="Quiz deletion was requested.",
+    if not form.is_valid():
+
+        messages.error(
+            request,
+            next(
+                iter(
+                    form.errors.values()
+                )
+            )[0],
+        )
+
+        return redirect(
+            (
+                f"{builder_url}"
+                f"?chapter={chapter.id}&view=quizzes"
+            )
+        )
+
+    delete_reason = (
+        form.cleaned_data["delete_reason"]
+    )
+
+    course_services.request_delete(
+        content_type="quiz",
+        obj=quiz,
+        actor=teacher,
+        delete_reason=delete_reason,
     )
 
     messages.success(

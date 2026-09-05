@@ -871,16 +871,44 @@
                                         {% if selected_content != "timeline" and selected_content != "video_timeline" and selected_content != "pdf_timeline" and selected_content != "quiz_timeline" %}
 
                                         <!-- VIDEO ACTION -->
-                                        
+                                        <button
+                                            type="button"
+                                            data-navbar-action="videos"
+                                            class="navbar-content-action hidden inline-flex items-center justify-center gap-1.5 rounded-lg bg-red-500 px-3 py-2 text-[10px] font-bold text-white shadow-sm transition hover:bg-red-400"
+                                        >
+                                            <i class="ri-video-add-line text-xs"></i>
+                                            Upload Video
+                                        </button>
 
                                         <!-- PDF ACTION -->
-                                        
+                                        <button
+                                            type="button"
+                                            data-navbar-action="pdfs"
+                                            class="navbar-content-action hidden inline-flex items-center justify-center gap-1.5 rounded-lg bg-blue-500 px-3 py-2 text-[10px] font-bold text-white shadow-sm transition hover:bg-blue-400"
+                                        >
+                                            <i class="ri-file-add-line text-xs"></i>
+                                            Upload PDF
+                                        </button>
 
                                         <!-- QUIZ ACTION -->
-                                        
+                                        <button
+                                            type="button"
+                                            data-navbar-action="quizzes"
+                                            class="navbar-content-action hidden inline-flex items-center justify-center gap-1.5 rounded-lg bg-amber-500 px-3 py-2 text-[10px] font-bold text-slate-950 shadow-sm transition hover:bg-amber-400"
+                                        >
+                                            <i class="ri-question-line text-xs"></i>
+                                            Create Quiz
+                                        </button>
 
                                         <!-- LIVE ACTION -->
-                                        
+                                        <button
+                                            type="button"
+                                            data-navbar-action="live"
+                                            class="navbar-content-action hidden inline-flex items-center justify-center gap-1.5 rounded-lg bg-emerald-500 px-3 py-2 text-[10px] font-bold text-slate-950 shadow-sm transition hover:bg-emerald-400"
+                                        >
+                                            <i class="ri-live-line text-xs"></i>
+                                            Live
+                                        </button>
 
                                         <!-- EDIT CHAPTER IS ALWAYS AVAILABLE -->
 
@@ -3156,7 +3184,252 @@
          CREATE CHAPTER MODAL
     ========================================================== -->
 
-    
+    <div
+        id="chapterModal"
+        class="fixed inset-0 z-[80] hidden items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+        aria-hidden="true"
+    >
+
+        <div
+            class="w-full max-w-lg overflow-hidden rounded-2xl border border-slate-700 bg-[#0E1626] shadow-2xl"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="chapterCreateTitle"
+        >
+
+            <!-- HEADER -->
+
+            <div
+                class="flex items-center justify-between border-b border-slate-800 px-5 py-4"
+            >
+
+                <div class="flex items-center gap-3">
+
+                    <div
+                        class="flex h-9 w-9 items-center justify-center rounded-lg bg-cyan-500/10"
+                    >
+                        <i class="ri-folder-add-line text-lg text-cyan-400"></i>
+                    </div>
+
+                    <div>
+
+                        <h2
+                            id="chapterCreateTitle"
+                            class="text-sm font-bold text-white"
+                        >
+                            Create Chapter
+                        </h2>
+
+                        <p class="mt-0.5 text-[10px] text-slate-500">
+                            Add a chapter to the curriculum.
+                        </p>
+
+                    </div>
+
+                </div>
+
+                <button
+                    id="closeChapterModal"
+                    type="button"
+                    class="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-800 hover:text-white"
+                    aria-label="Close create chapter"
+                >
+                    <i class="ri-close-line text-lg"></i>
+                </button>
+
+            </div>
+
+
+            <!-- FORM -->
+
+            <form
+                method="POST"
+                id="chapterCreateForm"
+                action="{% url 'admin_create_chapter' subject.id %}"
+                class="p-5"
+                novalidate
+            >
+
+                {% csrf_token %}
+
+                {% if chapter_create_error %}
+
+                    <div
+                        id="chapterCreateInlineError"
+                        class="mb-4 flex items-start gap-2.5 rounded-xl border border-red-500/30 bg-red-500/10 px-3.5 py-3"
+                        role="alert"
+                        aria-live="polite"
+                    >
+
+                        <span
+                            class="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-red-500/15 text-red-300"
+                        >
+                            <i class="ri-error-warning-line text-sm"></i>
+                        </span>
+
+                        <div class="min-w-0">
+
+                            <p class="text-[11px] font-bold text-red-300">
+                                Chapter creation failed
+                            </p>
+
+                            <p class="mt-0.5 text-[10px] leading-4 text-red-200/80">
+                                {{ chapter_create_error }}
+                            </p>
+
+                        </div>
+
+                    </div>
+
+                {% endif %}
+
+
+                <!-- NAME -->
+
+                <div>
+
+                    <label
+                        for="chapter_name"
+                        class="mb-1.5 block text-xs font-semibold text-slate-300"
+                    >
+                        Chapter Name
+                        <span class="text-red-400">*</span>
+                    </label>
+
+                    <input
+                        type="text"
+                        name="chapter_name"
+                        id="chapter_name"
+                        maxlength="255"
+                        autocomplete="off"
+                        value="{{ chapter_create_form.chapter_name|default:"" }}"
+                        placeholder="Example: Introduction to Chemistry"
+                        class="w-full rounded-lg border border-slate-700 bg-[#09111F] px-3.5 py-2.5 text-xs text-white placeholder-slate-600 outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/10"
+                    >
+
+                </div>
+
+
+                <!-- DESCRIPTION -->
+
+                <div class="mt-4">
+
+                    <label
+                        for="chapter_description"
+                        class="mb-1.5 block text-xs font-semibold text-slate-300"
+                    >
+                        Chapter Description
+                        <span class="text-red-400">*</span>
+                    </label>
+
+                    <textarea
+                        name="chapter_description"
+                        id="chapter_description"
+                        rows="3"
+                        maxlength="255"
+                        autocomplete="off"
+                        placeholder="Describe what students will learn in this chapter..."
+                        class="w-full resize-none rounded-lg border border-slate-700 bg-[#09111F] px-3.5 py-2.5 text-xs text-white placeholder-slate-600 outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/10"
+                    >{{ chapter_create_form.chapter_description|default:"" }}</textarea>
+
+                    <div class="mt-1 flex items-center justify-between text-[9px] text-slate-600">
+                        <span>Maximum 255 characters.</span>
+                        <span id="chapterDescriptionCounter">0 / 255</span>
+                    </div>
+
+                </div>
+
+
+                <!-- AUTOMATIC ORDER -->
+
+                <div class="mt-4">
+                    <label class="mb-1.5 block text-xs font-semibold text-slate-300">
+                        Chapter Order
+                    </label>
+
+                    <div class="flex items-center justify-between rounded-lg border border-slate-800 bg-slate-900/70 px-3.5 py-2.5">
+                        <div class="flex items-center gap-2">
+                            <i class="ri-sort-asc text-cyan-400"></i>
+                            <span class="text-xs text-slate-400">
+                                Automatically assigned
+                            </span>
+                        </div>
+
+                        <span class="rounded-full border border-cyan-500/20 bg-cyan-500/10 px-2.5 py-1 text-[10px] font-bold text-cyan-300">
+                            Next available
+                        </span>
+                    </div>
+
+                    <p class="mt-1.5 text-[9px] leading-4 text-slate-600">
+                        The system automatically assigns the next chapter number.
+                    </p>
+                </div>
+
+
+                <!-- STATUS -->
+
+                <div class="mt-4">
+
+                    <label
+                        for="status"
+                        class="mb-1.5 block text-xs font-semibold text-slate-300"
+                    >
+                        Chapter Status
+                        <span class="text-red-400">*</span>
+                    </label>
+
+                    <select
+                        name="status"
+                        id="status"
+                        class="w-full rounded-lg border border-slate-700 bg-[#09111F] px-3.5 py-2.5 text-xs text-white outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/10"
+                    >
+
+                        <option value="draft" {% if chapter_create_form.status == "draft" %}selected{% endif %}>
+                            Draft
+                        </option>
+
+                        <option value="published" {% if chapter_create_form.status == "published" %}selected{% endif %}>
+                            Published
+                        </option>
+
+                    </select>
+
+                    <p class="mt-1.5 text-[9px] leading-4 text-slate-600">
+                        Choose the chapter status before creating the chapter.
+                    </p>
+
+                </div>
+
+
+                <!-- FOOTER -->
+
+                <div
+                    class="mt-5 flex flex-col-reverse gap-2 border-t border-slate-800 pt-4 sm:flex-row sm:justify-end"
+                >
+
+                    <button
+                        id="cancelChapterModal"
+                        type="button"
+                        class="rounded-lg border border-slate-700 bg-slate-900 px-4 py-2.5 text-xs font-semibold text-slate-400 transition hover:bg-slate-800 hover:text-white"
+                    >
+                        Cancel
+                    </button>
+
+                    <button
+                        type="submit"
+                        class="inline-flex items-center justify-center gap-2 rounded-lg bg-cyan-500 px-5 py-2.5 text-xs font-bold text-slate-950 transition hover:bg-cyan-400"
+                    >
+                        <i class="ri-add-line"></i>
+                        Create Chapter
+                    </button>
+
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
 
 
     <!-- =========================================================
@@ -3683,8 +3956,316 @@
          PDF UPLOAD MODAL
     ========================================================== -->
 
-    
+    <div
+        id="pdfUploadModal"
+        class="fixed inset-0 z-[105] {% if pdf_upload_open %}flex{% else %}hidden{% endif %} items-center justify-center bg-slate-950/80 p-3 backdrop-blur-sm sm:p-4"
+        aria-hidden="{% if pdf_upload_open %}false{% else %}true{% endif %}"
+    >
 
+        <div
+            class="flex w-full max-w-lg max-h-[90vh] flex-col overflow-hidden rounded-2xl border border-sky-500/20 bg-[#0E1626] shadow-2xl"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="pdfUploadTitle"
+        >
+
+            <!-- HEADER -->
+
+            <div class="flex shrink-0 items-center justify-between border-b border-slate-800 px-4 py-3.5 sm:px-5 sm:py-4">
+
+                <div class="flex min-w-0 items-center gap-3">
+
+                    <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-sky-500/20 bg-sky-500/10">
+                        <i class="ri-file-pdf-2-line text-lg text-sky-300"></i>
+                    </div>
+
+                    <div class="min-w-0">
+
+                        <p class="text-[9px] font-bold uppercase tracking-[0.2em] text-sky-400">
+                            PDF Content
+                        </p>
+
+                        <h3
+                            id="pdfUploadTitle"
+                            class="mt-1 text-sm font-bold text-white"
+                        >
+                            Upload PDF Notes
+                        </h3>
+
+                        <p class="mt-1 truncate text-[10px] text-slate-500">
+                            {{ selected_chapter.chapter_name }}
+                        </p>
+
+                    </div>
+
+                </div>
+
+
+                <button
+                    type="button"
+                    id="closePdfUploadModal"
+                    class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-700 bg-slate-900 text-slate-400 transition hover:border-sky-500/30 hover:text-white"
+                    aria-label="Close PDF upload form"
+                >
+                    <i class="ri-close-line text-lg"></i>
+                </button>
+
+            </div>
+
+
+            {% if selected_chapter %}
+
+            {% if pdf_upload_error %}
+
+                <div
+                    id="pdfUploadError"
+                    class="mx-5 mt-4 flex shrink-0 items-start gap-2.5 rounded-xl border border-red-500/30 bg-red-500/10 px-3.5 py-3"
+                    role="alert"
+                    aria-live="polite"
+                >
+
+                    <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-red-500/15 text-red-300">
+
+                        <i class="ri-error-warning-line text-sm"></i>
+
+                    </span>
+
+
+                    <div class="min-w-0">
+
+                        <p class="text-[9px] font-bold uppercase tracking-[0.18em] text-red-400">
+                            PDF upload failed
+                        </p>
+
+                        <p class="mt-1 text-xs font-medium leading-5 text-red-200">
+                            {{ pdf_upload_error }}
+                        </p>
+
+                    </div>
+
+                </div>
+
+            {% endif %}
+
+
+            <!-- FORM -->
+
+            <form
+                method="post"
+                action="{% url 'admin_upload_pdf' subject.id selected_chapter.id %}"
+                enctype="multipart/form-data"
+                id="pdfUploadForm"
+                novalidate
+                class="flex min-h-0 flex-1 flex-col"
+            >
+
+                {% csrf_token %}
+
+
+                <div class="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 sm:p-5">
+
+                    <div class="space-y-4">
+
+
+                        <!-- NOTES NAME -->
+
+                        <div>
+
+                            <label
+                                for="pdf_name"
+                                class="text-xs font-semibold text-slate-300"
+                            >
+                                Notes Name
+                                <span class="text-red-400">*</span>
+                            </label>
+
+                            <input
+                                id="pdf_name"
+                                name="pdf_name"
+                                type="text"
+                                maxlength="255"
+                                autocomplete="off"
+                                value="{{ pdf_upload_form.pdf_name|default:'' }}"
+                                placeholder="Enter notes name"
+                                class="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950/60 px-3.5 py-3 text-sm text-white outline-none transition placeholder:text-slate-700 focus:border-sky-500/50 focus:ring-1 focus:ring-sky-500/20"
+                            >
+
+                        </div>
+
+
+                        <!-- DESCRIPTION -->
+
+                        <div>
+
+                            <label
+                                for="pdf_description"
+                                class="text-xs font-semibold text-slate-300"
+                            >
+                                Description
+                                <span class="text-red-400">*</span>
+                            </label>
+
+                            <textarea
+                                id="pdf_description"
+                                name="pdf_description"
+                                rows="4"
+                                maxlength="5000"
+                                autocomplete="off"
+                                placeholder="Describe what students will learn from these notes..."
+                                class="mt-2 w-full resize-none rounded-xl border border-slate-700 bg-slate-950/60 px-3.5 py-3 text-sm text-white outline-none transition placeholder:text-slate-700 focus:border-sky-500/50 focus:ring-1 focus:ring-sky-500/20"
+                            >{{ pdf_upload_form.pdf_description|default:'' }}</textarea>
+
+                            <div class="mt-1.5 flex justify-between gap-3 text-[9px] text-slate-600">
+
+                                <span>
+                                    Maximum 5000 characters.
+                                </span>
+
+                                <span id="pdfDescriptionCounter">
+                                    0 / 5000
+                                </span>
+
+                            </div>
+
+                        </div>
+
+
+                        <!-- ORDER -->
+
+                        <div class="rounded-xl border border-sky-500/10 bg-sky-500/[0.03] px-3.5 py-3">
+
+                            <div class="flex items-start gap-3">
+
+                                <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-sky-500/10 text-sky-300">
+                                    <i class="ri-sort-asc text-sm"></i>
+                                </span>
+
+                                <div>
+
+                                    <p class="text-[8px] font-bold uppercase tracking-[0.18em] text-sky-400">
+                                        Automatic Order
+                                    </p>
+
+                                    <p class="mt-1 text-[10px] leading-4 text-slate-500">
+                                        This PDF will be added after the current last PDF.
+                                        The order can be changed later in PDF Edit.
+                                    </p>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+
+                        <!-- PDF FILE -->
+
+                        <div>
+
+                            <label
+                                for="pdf_file"
+                                class="text-xs font-semibold text-slate-300"
+                            >
+                                PDF File
+                                <span class="text-red-400">*</span>
+                            </label>
+
+                            <div class="mt-2 rounded-xl border border-dashed border-slate-700 bg-slate-950/40 p-3">
+
+                                <input
+                                    id="pdf_file"
+                                    name="pdf_file"
+                                    type="file"
+                                    accept=".pdf,application/pdf"
+                                    class="block w-full text-xs text-slate-400 file:mr-3 file:rounded-lg file:border-0 file:bg-blue-500 file:px-3 file:py-2 file:text-xs file:font-bold file:text-white hover:file:bg-blue-400"
+                                >
+
+                                <p class="mt-2 text-[10px] leading-4 text-slate-600">
+                                    Only PDF files are accepted. Django validates the file on upload.
+                                </p>
+
+                            </div>
+
+                        </div>
+
+
+                        <!-- THUMBNAIL -->
+
+                        <div>
+
+                            <div class="flex items-center justify-between gap-3">
+
+                                <label
+                                    for="pdf_thumbnail"
+                                    class="text-xs font-semibold text-slate-300"
+                                >
+                                    PDF Thumbnail
+                                    <span class="text-slate-600">(optional)</span>
+                                </label>
+
+                                <span class="rounded-full border border-slate-700 bg-slate-950 px-2 py-1 text-[8px] font-semibold uppercase tracking-wide text-slate-500">
+                                    16:9 Recommended
+                                </span>
+
+                            </div>
+
+
+                            <div class="mt-2 rounded-xl border border-dashed border-slate-700 bg-slate-950/40 p-3">
+
+                                <input
+                                    id="pdf_thumbnail"
+                                    name="pdf_thumbnail"
+                                    type="file"
+                                    accept="image/png,image/jpeg,image/webp"
+                                    class="block w-full text-xs text-slate-400 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-700 file:px-3 file:py-2 file:text-xs file:font-bold file:text-white hover:file:bg-slate-600"
+                                >
+
+                                <p class="mt-2 text-[10px] leading-4 text-slate-600">
+                                    PNG, JPG, JPEG or WEBP only.
+                                    Leave empty to use the NeoLearner branding thumbnail.
+                                </p>
+
+                            </div>
+
+                        </div>
+
+
+                    </div>
+
+                </div>
+
+
+                <!-- FOOTER -->
+
+                <div class="flex shrink-0 flex-col-reverse gap-2 border-t border-slate-800 bg-[#0E1626] px-4 py-3 sm:flex-row sm:items-center sm:justify-end sm:px-5 sm:py-4">
+
+                    <button
+                        id="cancelPdfUpload"
+                        type="button"
+                        class="rounded-lg border border-slate-700 bg-slate-900 px-4 py-2.5 text-xs font-semibold text-slate-400 transition hover:bg-slate-800 hover:text-white"
+                    >
+                        Cancel
+                    </button>
+
+
+                    <button
+                        id="submitPdfUpload"
+                        type="submit"
+                        class="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-500 px-5 py-2.5 text-xs font-bold text-white transition hover:bg-blue-400"
+                    >
+                        <i class="ri-upload-2-line"></i>
+                        Upload PDF
+                    </button>
+
+                </div>
+
+            </form>
+
+            {% endif %}
+
+        </div>
+
+    </div>
 
 
     <!-- =========================================================
@@ -3990,7 +4571,163 @@
     <!-- =========================================================
          VIDEO UPLOAD MODAL
     ========================================================== -->
-    
+
+    <div
+        id="videoUploadModal"
+        class="fixed inset-0 z-[105] {% if video_upload_open %}flex{% else %}hidden{% endif %} items-center justify-center bg-slate-950/80 p-3 backdrop-blur-sm sm:p-4"
+        aria-hidden="{% if video_upload_open %}false{% else %}true{% endif %}"
+    >
+        <div
+            class="flex w-full max-w-lg max-h-[90vh] flex-col overflow-hidden rounded-2xl border border-slate-700 bg-[#0E1626] shadow-2xl"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="videoUploadTitle"
+        >
+            <div class="flex shrink-0 items-center justify-between border-b border-slate-800 px-4 py-3.5 sm:px-5 sm:py-4">
+                <div>
+                    <p class="text-[9px] font-semibold uppercase tracking-[0.2em] text-red-400">Video Content</p>
+                    <h3 id="videoUploadTitle" class="mt-1 text-sm font-bold text-white">Upload Video</h3>
+                    <p class="mt-1 text-[10px] text-slate-500">
+                        Add a video to {{ selected_chapter.chapter_name }}.
+                    </p>
+                </div>
+
+                <button
+                    type="button"
+                    id="closeVideoUploadModal"
+                    class="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-700 bg-slate-900 text-slate-400 transition hover:text-white"
+                    aria-label="Close upload video form"
+                >
+                    <i class="ri-close-line text-lg"></i>
+                </button>
+            </div>
+
+            {% if selected_chapter %}
+
+            {% if video_upload_error %}
+                <div
+                    id="videoUploadError"
+                    class="video-upload-error mx-5 mt-4 flex shrink-0 items-start gap-2.5 rounded-xl border border-red-500/30 bg-red-500/10 px-3.5 py-3"
+                    role="alert"
+                    aria-live="polite"
+                >
+                    <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-red-500/15 text-red-300">
+                        <i class="ri-error-warning-line text-sm"></i>
+                    </span>
+
+                    <div class="min-w-0">
+                        <p class="text-[9px] font-bold uppercase tracking-[0.18em] text-red-400">
+                            Video upload failed
+                        </p>
+                        <p class="mt-1 text-xs font-medium leading-5 text-red-200">
+                            {{ video_upload_error }}
+                        </p>
+                    </div>
+                </div>
+            {% endif %}
+
+            <form
+                method="post"
+                action="{% url 'admin_upload_video' subject.id selected_chapter.id %}"
+                enctype="multipart/form-data"
+                id="videoUploadForm"
+                novalidate
+                class="flex min-h-0 flex-1 flex-col"
+            >
+                {% csrf_token %}
+
+                <div class="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 sm:p-5">
+                    <div class="grid grid-cols-1 gap-3.5">
+
+                        <div>
+                            <label for="video_name" class="text-xs font-semibold text-slate-300">
+                                Video Name <span class="text-red-400">*</span>
+                            </label>
+                            <input
+                                id="video_name"
+                                name="video_name"
+                                type="text"
+                                maxlength="255"
+                                value="{{ video_upload_form.video_name|default:'' }}"
+                                placeholder="Enter video name"
+                                class="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950/60 px-3.5 py-3 text-sm text-white outline-none placeholder:text-slate-700 focus:border-red-500/50 focus:ring-1 focus:ring-red-500/20"
+                            >
+                        </div>
+
+                        <div>
+                            <label for="video_description" class="text-xs font-semibold text-slate-300">
+                                Description
+                            </label>
+                            <textarea
+                                id="video_description"
+                                name="video_description"
+                                rows="3"
+                                maxlength="5000"
+                                placeholder="Describe what this video teaches..."
+                                class="mt-2 w-full resize-y rounded-xl border border-slate-700 bg-slate-950/60 px-3.5 py-3 text-sm text-white outline-none placeholder:text-slate-700 focus:border-red-500/50 focus:ring-1 focus:ring-red-500/20"
+                            >{{ video_upload_form.video_description|default:"" }}</textarea>
+                        </div>
+
+                        <div class="rounded-xl border border-cyan-500/10 bg-cyan-500/[0.03] px-3.5 py-3">
+                            <div class="flex items-center gap-2">
+                                <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-cyan-500/10 text-cyan-300">
+                                    <i class="ri-sort-asc text-sm"></i>
+                                </span>
+                                <div>
+                                    <p class="text-[9px] font-bold uppercase tracking-[0.18em] text-cyan-400">
+                                        Video Order
+                                    </p>
+                                    <p class="mt-0.5 text-[10px] leading-4 text-slate-500">
+                                        Automatically added after the last video. Order can be changed later from Edit.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label for="video_file" class="text-xs font-semibold text-slate-300">
+                                Video File <span class="text-red-400">*</span>
+                            </label>
+
+                            <div class="mt-2 rounded-xl border border-dashed border-slate-700 bg-slate-950/40 p-3">
+                                <input
+                                    id="video_file"
+                                    name="video_file"
+                                    type="file"
+                                    accept=".mp4,video/mp4"
+                                    class="block w-full text-xs text-slate-400 file:mr-3 file:rounded-lg file:border-0 file:bg-red-500 file:px-3 file:py-2 file:text-xs file:font-bold file:text-white hover:file:bg-red-400"
+                                >
+                                <p class="mt-2 text-[10px] leading-4 text-slate-600">
+                                    MP4 only. Other video formats are rejected by the server.
+                                </p>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <div class="flex shrink-0 flex-col-reverse gap-2 border-t border-slate-800 bg-[#0E1626] px-4 py-3 sm:flex-row sm:items-center sm:justify-end sm:px-5 sm:py-4">
+                    <button
+                        type="button"
+                        id="cancelVideoUpload"
+                        class="rounded-lg border border-slate-700 bg-slate-900 px-4 py-2.5 text-xs font-semibold text-slate-400 hover:text-white"
+                    >
+                        Cancel
+                    </button>
+
+                    <button
+                        type="submit"
+                        id="submitVideoUpload"
+                        class="inline-flex items-center gap-2 rounded-lg bg-red-500 px-4 py-2.5 text-xs font-bold text-white hover:bg-red-400"
+                    >
+                        <i class="ri-upload-cloud-2-line"></i>
+                        Upload Video
+                    </button>
+                </div>
+            </form>
+            {% endif %}
+        </div>
+    </div>
 
 
     <!-- =========================================================
@@ -4151,7 +4888,445 @@
          QUIZ CREATE MODAL
     ========================================================== -->
 
-    
+    <style>
+        #quizCreateModal > div{
+            width:min(100%,48rem);
+            max-height:92vh;
+        }
+
+        #quizCreateModal form{
+            min-width:0;
+        }
+
+        #quizCreateModal input,
+        #quizCreateModal textarea,
+        #quizCreateModal select{
+            width:100%;
+            max-width:100%;
+            min-width:0;
+            box-sizing:border-box;
+        }
+
+        #quizQuestionsContainer,
+        #quizQuestionsContainer .quiz-question-card{
+            min-width:0;
+        }
+
+        @media (max-width:640px){
+            #quizCreateModal{
+                padding:.75rem;
+            }
+
+            #quizCreateModal > div{
+                max-height:94vh;
+                border-radius:1rem;
+            }
+        }
+    </style>
+
+    <div
+        id="quizCreateModal"
+        class="fixed inset-0 z-[120] hidden items-start justify-center overflow-y-auto bg-slate-950/85 p-3 backdrop-blur-sm sm:items-center sm:p-4 quiz-modal-scroll-area"
+        aria-hidden="true"
+    >
+        <div class="my-4 w-full max-w-3xl overflow-hidden rounded-2xl border border-amber-500/20 bg-[#0E1626] shadow-2xl sm:my-5">
+
+            <div class="flex items-start justify-between gap-3 border-b border-slate-800 px-4 py-3 sm:px-5">
+                <div class="flex items-start gap-3">
+                    <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-amber-500/20 bg-amber-500/10">
+                        <i class="ri-question-answer-line text-xl text-amber-300"></i>
+                    </div>
+                    <div class="min-w-0">
+                        <p class="text-[9px] font-bold uppercase tracking-[0.2em] text-amber-400">
+                            Quiz Builder
+                        </p>
+                        <h3 class="mt-1 text-lg font-bold text-white sm:text-xl">
+                            Create Complete Quiz
+                        </h3>
+                        <p class="mt-1 max-w-3xl text-[10px] leading-5 text-slate-500 sm:text-xs">
+                            Enter the quiz details once, then add as many multiple-choice questions as in this same workspace.
+                        </p>
+                    </div>
+                </div>
+
+                <button
+                    type="button"
+                    id="closeQuizCreateModal"
+                    class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-700 bg-slate-900 text-slate-400 hover:border-slate-600 hover:text-white"
+                    aria-label="Close quiz builder"
+                >
+                    <i class="ri-close-line"></i>
+                </button>
+            </div>
+
+            {% if selected_chapter %}
+
+            {% if quiz_create_error %}
+                <div class="mx-5 mt-4 rounded-xl border border-red-500/25 bg-red-500/10 px-3.5 py-3 sm:mx-6">
+                    <div class="flex items-start gap-2">
+                        <i class="ri-error-warning-line mt-0.5 text-sm text-red-300"></i>
+                        <p class="text-[10px] leading-5 text-red-200 sm:text-[11px]">
+                            {{ quiz_create_error }}
+                        </p>
+                    </div>
+                </div>
+            {% endif %}
+
+            <form
+                id="quizCreateForm"
+                method="post"
+                novalidate
+                action="{% url 'admin_create_quiz' subject.id selected_chapter.id %}"
+                class="p-4 sm:p-6"
+            >
+                {% csrf_token %}
+                <input
+                    type="hidden"
+                    id="quizQuestionCount"
+                    name="question_count"
+                    value="{% if quiz_create_form.questions %}{{ quiz_create_form.questions|length }}{% else %}1{% endif %}"
+                >
+
+                <div
+                    id="quizCustomError"
+                    class="mb-4 hidden rounded-xl border border-red-500/25 bg-red-500/10 px-3.5 py-3"
+                    role="alert"
+                    aria-live="polite"
+                >
+                    <div class="flex items-start gap-2">
+                        <i class="ri-error-warning-line mt-0.5 text-sm text-red-300"></i>
+                        <div class="min-w-0">
+                            <p class="text-[10px] font-bold uppercase tracking-[0.14em] text-red-300">
+                                Quiz Validation Error
+                            </p>
+                            <p id="quizCustomErrorText" class="mt-0.5 text-[10px] leading-5 text-red-200 sm:text-[11px]"></p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- BASIC QUIZ INFORMATION -->
+                <section class="rounded-2xl border border-amber-500/15 bg-[#101928] p-4 sm:p-4">
+
+                    <div class="flex items-center gap-2">
+                        <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-500/10 text-amber-300">
+                            <i class="ri-information-line"></i>
+                        </div>
+                        <div>
+                            <p class="text-[8px] font-bold uppercase tracking-[0.2em] text-amber-400">
+                                Quiz Information
+                            </p>
+                            <h4 class="mt-0.5 text-sm font-bold text-white">
+                                Basic Details
+                            </h4>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-2">
+
+                        <div class="lg:col-span-2">
+                            <label class="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500">
+                                Quiz Name *
+                            </label>
+                            <input
+                                type="text"
+                                name="quiz_name"
+                                maxlength="255"
+                                value="{{ quiz_create_form.quiz_name|default:'' }}"
+                                placeholder="Enter quiz name"
+                                class="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950/60 px-3.5 py-3 text-xs text-white outline-none placeholder:text-slate-700 focus:border-amber-400/60 focus:ring-2 focus:ring-amber-400/10"
+                            >
+                        </div>
+
+                        <div class="lg:col-span-2">
+                            <label class="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500">
+                                Description *
+                            </label>
+                            <textarea
+                                name="quiz_description"
+                                rows="3"
+                                maxlength="5000"
+                                placeholder="Describe what this quiz covers"
+                                class="mt-2 w-full resize-y rounded-xl border border-slate-700 bg-slate-950/60 px-3.5 py-3 text-xs text-white outline-none placeholder:text-slate-700 focus:border-amber-400/60 focus:ring-2 focus:ring-amber-400/10"
+                            >{{ quiz_create_form.quiz_description|default:'' }}</textarea>
+                        </div>
+
+                        <div class="max-w-md">
+                            <label class="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500">
+                                Maximum Attempts *
+                            </label>
+                            <input
+                                type="number"
+                                name="attempt_limit"
+                                min="1"
+                                max="100"
+                                value="{{ quiz_create_form.attempt_limit|default:'1' }}"
+                                class="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950/60 px-3.5 py-3 text-xs text-white outline-none focus:border-amber-400/60 focus:ring-2 focus:ring-amber-400/10"
+                            >
+                            <p class="mt-1.5 text-[9px] text-slate-600">
+                                Student attempt enforcement will be connected later.
+                            </p>
+                        </div>
+
+                    </div>
+                </section>
+
+
+                <!-- QUESTIONS -->
+                <section class="mt-4 rounded-2xl border border-slate-800 bg-[#101928]">
+
+                    <div class="flex flex-col gap-3 border-b border-slate-800 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+                        <div>
+                            <p class="text-[8px] font-bold uppercase tracking-[0.2em] text-amber-400">
+                                Questions
+                            </p>
+                            <h4 class="mt-1 text-base font-bold text-white">
+                                Build Your Quiz
+                            </h4>
+                            <p class="mt-1 text-[9px] leading-5 text-slate-600">
+                                Every question has four options, one correct answer, and individual marks.
+                            </p>
+                        </div>
+
+                        <button
+                            type="button"
+                            id="addQuizQuestionButton"
+                            class="inline-flex items-center justify-center gap-2 rounded-lg bg-amber-500 px-4 py-2.5 text-[10px] font-extrabold text-slate-950 transition hover:bg-amber-400"
+                        >
+                            <i class="ri-add-circle-line"></i>
+                            Add Question
+                        </button>
+                    </div>
+
+
+                    <div
+                        id="quizQuestionsContainer"
+                        class="space-y-4 p-4 sm:p-4"
+                    >
+
+                        {% if quiz_create_form.questions %}
+
+                            {% for question in quiz_create_form.questions %}
+
+                                <article
+                                    class="quiz-question-card rounded-2xl border border-slate-800 bg-slate-900/35 p-4 sm:p-4"
+                                    data-question-index="{{ forloop.counter0 }}"
+                                >
+
+                                    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                        <div>
+                                            <div class="flex items-center gap-2">
+                                                <span class="quiz-question-number flex h-7 w-7 items-center justify-center rounded-lg border border-amber-500/20 bg-amber-500/10 text-[9px] font-extrabold text-amber-300">
+                                                    {{ forloop.counter }}
+                                                </span>
+                                                <h5 class="text-xs font-bold text-white">
+                                                    Question {{ forloop.counter }}
+                                                </h5>
+                                            </div>
+                                        </div>
+
+                                        <button
+                                            type="button"
+                                            class="remove-quiz-question inline-flex items-center gap-1.5 rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-[9px] font-bold text-red-300 hover:border-red-400/40"
+                                        >
+                                            <i class="ri-delete-bin-line"></i>
+                                            Remove
+                                        </button>
+                                    </div>
+
+
+                                    <div class="mt-4 grid grid-cols-1 gap-3">
+
+                                        <div>
+                                            <label class="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500">
+                                                Question *
+                                            </label>
+                                            <textarea
+                                                name="question_{{ forloop.counter0 }}_text"
+                                                rows="3"
+                                                maxlength="10000"
+                                                placeholder="Enter the question"
+                                                class="mt-2 w-full resize-y rounded-xl border border-slate-700 bg-slate-950/60 px-3.5 py-3 text-xs text-white outline-none placeholder:text-slate-700 focus:border-amber-400/60"
+                                            >{{ question.question_text|default:'' }}</textarea>
+                                        </div>
+
+
+                                        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+
+                                            <div>
+                                                <label class="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500">Option A *</label>
+                                                <input type="text" name="question_{{ forloop.counter0 }}_option_a" maxlength="500" value="{{ question.option_a|default:'' }}" placeholder="Option A" class="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950/60 px-3.5 py-3 text-xs text-white outline-none placeholder:text-slate-700 focus:border-amber-400/60">
+                                            </div>
+
+                                            <div>
+                                                <label class="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500">Option B *</label>
+                                                <input type="text" name="question_{{ forloop.counter0 }}_option_b" maxlength="500" value="{{ question.option_b|default:'' }}" placeholder="Option B" class="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950/60 px-3.5 py-3 text-xs text-white outline-none placeholder:text-slate-700 focus:border-amber-400/60">
+                                            </div>
+
+                                            <div>
+                                                <label class="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500">Option C *</label>
+                                                <input type="text" name="question_{{ forloop.counter0 }}_option_c" maxlength="500" value="{{ question.option_c|default:'' }}" placeholder="Option C" class="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950/60 px-3.5 py-3 text-xs text-white outline-none placeholder:text-slate-700 focus:border-amber-400/60">
+                                            </div>
+
+                                            <div>
+                                                <label class="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500">Option D *</label>
+                                                <input type="text" name="question_{{ forloop.counter0 }}_option_d" maxlength="500" value="{{ question.option_d|default:'' }}" placeholder="Option D" class="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950/60 px-3.5 py-3 text-xs text-white outline-none placeholder:text-slate-700 focus:border-amber-400/60">
+                                            </div>
+
+                                        </div>
+
+
+                                        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+
+                                            <div>
+                                                <label class="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500">
+                                                    Correct Answer *
+                                                </label>
+                                                <select
+                                                    name="question_{{ forloop.counter0 }}_correct"
+                                                    class="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950/60 px-3.5 py-3 text-xs text-white outline-none focus:border-amber-400/60"
+                                                >
+                                                    <option value="">Choose correct option</option>
+                                                    <option value="A" {% if question.correct_option == "A" %}selected{% endif %}>A</option>
+                                                    <option value="B" {% if question.correct_option == "B" %}selected{% endif %}>B</option>
+                                                    <option value="C" {% if question.correct_option == "C" %}selected{% endif %}>C</option>
+                                                    <option value="D" {% if question.correct_option == "D" %}selected{% endif %}>D</option>
+                                                </select>
+                                            </div>
+
+                                            <div>
+                                                <label class="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500">
+                                                    Marks *
+                                                </label>
+                                                <input
+                                                    type="number"
+                                                    name="question_{{ forloop.counter0 }}_marks"
+                                                    min="1"
+                                                    max="1000"
+                                                    value="{{ question.marks|default:'1' }}"
+                                                    class="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950/60 px-3.5 py-3 text-xs text-white outline-none focus:border-amber-400/60"
+                                                >
+                                            </div>
+
+                                        </div>
+
+                                    </div>
+                                </article>
+
+                            {% endfor %}
+
+                        {% else %}
+
+                            <article
+                                class="quiz-question-card rounded-2xl border border-slate-800 bg-slate-900/35 p-4 sm:p-4"
+                                data-question-index="0"
+                            >
+                                <div class="flex items-center justify-between gap-3">
+                                    <div class="flex items-center gap-2">
+                                        <span class="quiz-question-number flex h-7 w-7 items-center justify-center rounded-lg border border-amber-500/20 bg-amber-500/10 text-[9px] font-extrabold text-amber-300">
+                                            1
+                                        </span>
+                                        <h5 class="text-xs font-bold text-white">
+                                            Question 1
+                                        </h5>
+                                    </div>
+                                </div>
+
+                                <div class="mt-4 grid grid-cols-1 gap-3">
+                                    <div>
+                                        <label class="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500">Question *</label>
+                                        <textarea name="question_0_text" rows="3" maxlength="10000" placeholder="Enter the question" class="mt-2 w-full resize-y rounded-xl border border-slate-700 bg-slate-950/60 px-3.5 py-3 text-xs text-white outline-none placeholder:text-slate-700 focus:border-amber-400/60"></textarea>
+                                    </div>
+
+                                    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                        <div>
+                                            <label class="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500">Option A *</label>
+                                            <input type="text" name="question_0_option_a" maxlength="500" placeholder="Option A" class="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950/60 px-3.5 py-3 text-xs text-white outline-none placeholder:text-slate-700 focus:border-amber-400/60">
+                                        </div>
+                                        <div>
+                                            <label class="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500">Option B *</label>
+                                            <input type="text" name="question_0_option_b" maxlength="500" placeholder="Option B" class="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950/60 px-3.5 py-3 text-xs text-white outline-none placeholder:text-slate-700 focus:border-amber-400/60">
+                                        </div>
+                                        <div>
+                                            <label class="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500">Option C *</label>
+                                            <input type="text" name="question_0_option_c" maxlength="500" placeholder="Option C" class="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950/60 px-3.5 py-3 text-xs text-white outline-none placeholder:text-slate-700 focus:border-amber-400/60">
+                                        </div>
+                                        <div>
+                                            <label class="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500">Option D *</label>
+                                            <input type="text" name="question_0_option_d" maxlength="500" placeholder="Option D" class="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950/60 px-3.5 py-3 text-xs text-white outline-none placeholder:text-slate-700 focus:border-amber-400/60">
+                                        </div>
+                                    </div>
+
+                                    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                        <div>
+                                            <label class="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500">Correct Answer *</label>
+                                            <select name="question_0_correct" class="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950/60 px-3.5 py-3 text-xs text-white outline-none focus:border-amber-400/60">
+                                                <option value="">Choose correct option</option>
+                                                <option value="A">A</option>
+                                                <option value="B">B</option>
+                                                <option value="C">C</option>
+                                                <option value="D">D</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label class="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500">Marks *</label>
+                                            <input type="number" name="question_0_marks" min="1" max="1000" value="1" class="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950/60 px-3.5 py-3 text-xs text-white outline-none focus:border-amber-400/60">
+                                        </div>
+                                    </div>
+                                </div>
+                            </article>
+
+                        {% endif %}
+
+                    </div>
+
+
+                    <div class="border-t border-slate-800 px-4 py-4 sm:px-5">
+
+                        <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+
+                            <div class="grid grid-cols-2 gap-2 sm:flex sm:items-center sm:gap-2">
+                                <span id="quizQuestionSummary" class="rounded-full border border-slate-700 bg-slate-950 px-3 py-1.5 text-[9px] font-bold text-slate-400">
+                                    Questions: 1
+                                </span>
+                                <span id="quizMarksSummary" class="rounded-full border border-slate-700 bg-slate-950 px-3 py-1.5 text-[9px] font-bold text-amber-300">
+                                    Total Marks: 1
+                                </span>
+                            </div>
+
+
+                            <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+
+                                <button
+                                    type="button"
+                                    id="cancelQuizCreateModal"
+                                    class="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-700 bg-slate-900 px-4 py-2.5 text-[10px] font-bold text-slate-300 hover:border-slate-600 hover:text-white"
+                                >
+                                    Cancel
+                                </button>
+
+                                <button
+                                    type="submit"
+                                    id="saveCompleteQuizButton"
+                                    class="inline-flex items-center justify-center gap-2 rounded-lg bg-amber-500 px-5 py-2.5 text-[10px] font-extrabold text-slate-950 hover:bg-amber-400"
+                                >
+                                    <i class="ri-save-3-line"></i>
+                                    Save Complete Quiz
+                                </button>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </section>
+            </form>
+
+            {% endif %}
+
+        </div>
+    </div>
+
 </div>
 
 

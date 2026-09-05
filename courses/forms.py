@@ -171,6 +171,11 @@ class ChapterCreateForm(forms.ModelForm):
             )
         )
 
+        if not description:
+            raise ValidationError(
+                "Chapter description is required."
+            )
+
         if len(description) > 255:
             raise ValidationError(
                 "Chapter description cannot exceed 255 characters."
@@ -353,6 +358,11 @@ class ChapterEditForm(forms.ModelForm):
                 "chapter_description"
             )
         )
+
+        if not description:
+            raise ValidationError(
+                "Chapter description is required."
+            )
 
         if len(description) > 255:
             raise ValidationError(
