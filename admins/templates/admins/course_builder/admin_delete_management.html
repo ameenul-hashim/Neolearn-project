@@ -368,7 +368,7 @@
     class="fixed inset-0 z-[200] hidden items-center justify-center bg-slate-950/85 p-4 backdrop-blur-sm"
     aria-hidden="true"
 >
-    <div class="w-full max-w-md overflow-hidden rounded-2xl border border-emerald-500/25 bg-[#0E1626] shadow-2xl">
+    <div class="flex w-full max-w-md max-h-[90vh] flex-col overflow-hidden rounded-2xl border border-emerald-500/25 bg-[#0E1626] shadow-2xl">
 
         <div class="flex items-start justify-between gap-4 border-b border-slate-800 px-5 py-4">
 
@@ -412,9 +412,11 @@
             id="approveVerifyForm"
             method="post"
             action=""
-            class="p-5 sm:p-6"
+            class="flex min-h-0 flex-1 flex-col"
         >
             {% csrf_token %}
+
+            <div class="min-h-0 flex-1 overflow-y-auto overscroll-contain p-5 sm:p-6">
 
             <div class="space-y-4">
 
@@ -472,7 +474,9 @@
 
             </div>
 
-            <div class="mt-6 flex items-center gap-3">
+            </div>
+
+            <div class="mt-6 flex shrink-0 items-center gap-3 border-t border-slate-800 px-5 py-4 sm:px-6">
 
                 <button
                     type="button"
@@ -505,7 +509,7 @@
     class="fixed inset-0 z-[200] hidden items-center justify-center bg-slate-950/85 p-4 backdrop-blur-sm"
     aria-hidden="true"
 >
-    <div class="w-full max-w-md overflow-hidden rounded-2xl border border-red-500/25 bg-[#0E1626] shadow-2xl">
+    <div class="flex w-full max-w-md max-h-[90vh] flex-col overflow-hidden rounded-2xl border border-red-500/25 bg-[#0E1626] shadow-2xl">
 
         <div class="flex items-start justify-between gap-4 border-b border-slate-800 px-5 py-4">
 
@@ -548,9 +552,11 @@
             id="rejectForm"
             method="post"
             action=""
-            class="p-5 sm:p-6"
+            class="flex min-h-0 flex-1 flex-col"
         >
             {% csrf_token %}
+
+            <div class="min-h-0 flex-1 overflow-y-auto overscroll-contain p-5 sm:p-6">
 
             <div>
 
@@ -569,7 +575,9 @@
 
             </div>
 
-            <div class="mt-6 flex items-center gap-3">
+            </div>
+
+            <div class="mt-6 flex shrink-0 items-center gap-3 border-t border-slate-800 px-5 py-4 sm:px-6">
 
                 <button
                     type="button"
