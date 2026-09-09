@@ -1,5 +1,4 @@
 {% extends 'students/base_student.html' %}
-
 {% load static %}
 
 {% block title %}
@@ -10,358 +9,1622 @@ Marketplace | NeoLearn
 
 <div class="space-y-6">
 
-    <!-- HERO - Reduced Height -->
-    <section class="relative overflow-hidden rounded-2xl border border-cyan-500/10 bg-gradient-to-r from-cyan-500/10 via-slate-900 to-blue-900/40 px-6 lg:px-8 py-6 lg:py-8">
-        <div class="absolute right-[-80px] top-[-80px] w-[200px] h-[200px] rounded-full bg-cyan-400/10 blur-3xl"></div>
-        <div class="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div>
-                <span class="inline-flex items-center gap-2 rounded-full bg-cyan-500/10 px-3 py-1 text-cyan-300 text-xs font-semibold">
+    <!-- =========================================================
+         MARKETPLACE HERO
+    ========================================================== -->
+
+    <section
+        class="relative overflow-hidden rounded-2xl border border-cyan-500/10 bg-gradient-to-r from-cyan-500/10 via-slate-900 to-blue-900/40 px-5 py-6 sm:px-6 lg:px-8 lg:py-8"
+    >
+
+        <!-- Decorative Glow -->
+
+        <div
+            class="absolute right-[-80px] top-[-80px] h-[200px] w-[200px] rounded-full bg-cyan-400/10 blur-3xl"
+        ></div>
+
+        <div
+            class="absolute bottom-[-100px] left-[-60px] h-[180px] w-[180px] rounded-full bg-blue-500/10 blur-3xl"
+        ></div>
+
+
+        <div
+            class="relative z-10 flex flex-col gap-4 md:flex-row md:items-center md:justify-between"
+        >
+
+            <!-- HERO CONTENT -->
+
+            <div class="min-w-0">
+
+                <span
+                    class="inline-flex items-center gap-2 rounded-full bg-cyan-500/10 px-3 py-1 text-xs font-semibold text-cyan-300"
+                >
                     <i class="ri-graduation-cap-line"></i>
                     NeoLearn Marketplace
                 </span>
-                <h1 class="mt-2 text-2xl lg:text-3xl font-extrabold leading-tight">
-                    Discover Your <span class="text-cyan-400">Next Skill</span>
+
+
+                <h1
+                    class="mt-2 text-2xl font-extrabold leading-tight text-white sm:text-3xl"
+                >
+                    Discover Your
+                    <span class="text-cyan-400">Next Skill</span>
                 </h1>
-                <p class="mt-1 text-slate-300 text-sm">Browse all published batches from our expert instructors</p>
+
+
+                <p class="mt-1 max-w-2xl text-sm text-slate-300">
+                    Explore batches and learning opportunities from NeoLearn.
+                </p>
+
             </div>
-            <div class="flex items-center gap-2">
-                <span class="rounded-full bg-cyan-500/10 px-4 py-1 text-cyan-300 text-sm font-semibold" id="totalCourses">
-                    {{ batches.count }} Courses
+
+
+            <!-- COURSE COUNT -->
+
+            <div class="flex shrink-0 items-center gap-2">
+
+                <span
+                    class="rounded-full bg-cyan-500/10 px-4 py-1.5 text-sm font-semibold text-cyan-300"
+                >
+                    {{ batches.count }}
+                    Course{{ batches.count|pluralize }}
                 </span>
+
             </div>
+
         </div>
+
     </section>
 
-    <!-- SEARCH & FILTERS -->
-    <div class="space-y-4">
-        <!-- Search Bar -->
-        <div class="flex flex-col md:flex-row gap-3">
-            <div class="relative flex-1">
-                <input 
-                    id="searchInput" 
-                    type="text" 
-                    placeholder="Search courses..." 
-                    class="w-full h-12 rounded-xl bg-[#111827] border border-white/10 pl-12 pr-12 outline-none focus:border-cyan-400 text-sm transition-all"
+
+
+    <!-- =========================================================
+         SEARCH / STATUS / FILTER
+    ========================================================== -->
+
+    <form
+        method="get"
+        action="{% url 'marketplace' %}"
+        class="w-full"
+        id="marketplaceSearchForm"
+    >
+
+        <!-- =====================================================
+             PRESERVE EXISTING FILTER VALUES
+        ====================================================== -->
+
+        {% if request.GET.search %}
+            <input
+                type="hidden"
+                name="search"
+                value="{{ request.GET.search }}"
+            >
+        {% endif %}
+
+
+        {% if request.GET.batch_id %}
+            <input
+                type="hidden"
+                name="batch_id"
+                value="{{ request.GET.batch_id }}"
+            >
+        {% endif %}
+
+
+        {% if request.GET.sort %}
+            <input
+                type="hidden"
+                name="sort"
+                value="{{ request.GET.sort }}"
+            >
+        {% endif %}
+
+
+        {% if request.GET.discount %}
+            <input
+                type="hidden"
+                name="discount"
+                value="{{ request.GET.discount }}"
+            >
+        {% endif %}
+
+
+        {% if request.GET.min_price %}
+            <input
+                type="hidden"
+                name="min_price"
+                value="{{ request.GET.min_price }}"
+            >
+        {% endif %}
+
+
+        {% if request.GET.max_price %}
+            <input
+                type="hidden"
+                name="max_price"
+                value="{{ request.GET.max_price }}"
+            >
+        {% endif %}
+
+
+        <!-- =====================================================
+             MAIN CONTROL ROW
+        ====================================================== -->
+
+        <div
+            class="grid grid-cols-[minmax(0,1fr)_auto_auto] gap-2 sm:gap-3"
+        >
+
+            <!-- =================================================
+                 SEARCH
+            ================================================== -->
+
+            <div class="relative min-w-0">
+
+                <input
+                    id="searchInput"
+                    name="search"
+                    type="search"
+                    value="{{ request.GET.search|default:'' }}"
+                    placeholder="Search batches..."
+                    autocomplete="off"
+                    aria-label="Search batches"
+                    class="h-12 w-full rounded-xl border border-white/10 bg-[#111827] pl-11 pr-10 text-sm text-white outline-none transition-all placeholder:text-slate-500 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400/20"
                 >
-                <i class="ri-search-line absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
-                <button id="clearSearch" class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white hidden">
-                    <i class="ri-close-line"></i>
-                </button>
-            </div>
-            <button id="filterToggle" class="h-12 px-6 rounded-xl bg-[#111827] border border-white/10 hover:border-cyan-400 transition-all flex items-center gap-2 text-sm">
-                <i class="ri-slider-3-line"></i>
-                Filters
-            </button>
-        </div>
 
-        <!-- Category Chips - Horizontal Scroll -->
-        <div class="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-            <button class="category-chip active px-4 py-1.5 rounded-full bg-cyan-500 text-black text-sm font-semibold whitespace-nowrap" data-category="all">
-                All
-            </button>
-            {% for category in categories %}
-            <button class="category-chip px-4 py-1.5 rounded-full bg-[#111827] text-slate-300 hover:bg-cyan-500/20 hover:text-white text-sm font-medium whitespace-nowrap transition-all" data-category="{{ category.id }}">
-                {{ category.name }}
-            </button>
-            {% endfor %}
-        </div>
-    </div>
 
-    <!-- SECTION HEADER - Removed Sort Dropdown -->
-    <div class="flex items-center justify-between">
-        <h2 class="text-xl font-bold" id="resultsCount">Showing {{ batches.count }} Courses</h2>
-    </div>
+                <i
+                    class="ri-search-line absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+                ></i>
 
-    <!-- COURSE GRID - 4 Columns -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5" id="courseGrid">
-        {% for batch in batches %}
-        <div class="course-card group cursor-pointer" 
-             data-id="{{ batch.id }}" 
-             data-name="{{ batch.batch_name|lower }}" 
-             data-price="{{ batch.final_price }}" 
-             data-discount="{{ batch.discount_value|default:0 }}"
-             data-discount-type="{{ batch.discount_type }}"
-             data-offer-active="{{ batch.is_offer_active|yesno:'true,false' }}"
-             data-featured="{{ batch.featured|yesno:'true,false' }}"
-             data-status="{{ batch.marketplace_status }}"
-             data-category="{% for subject in batch.subjects.all %}{{ subject.id }} {% endfor %}">
-            
-            <div class="overflow-hidden rounded-xl border border-white/10 bg-[#111827] transition-all duration-300 hover:-translate-y-1.5 hover:border-cyan-400/30 hover:shadow-[0_20px_60px_rgba(6,182,212,0.15)]">
-                
-                <!-- THUMBNAIL - 16:9 -->
-                <div class="relative overflow-hidden aspect-video">
-                    <img 
-                        src="{{ batch.batch_thumbnail.url }}" 
-                        alt="{{ batch.batch_name }}" 
-                        class="w-full h-full object-cover transition-all duration-500 group-hover:scale-105"
+
+                {% if request.GET.search %}
+
+                    <a
+                        href="?status={{ current_status }}"
+                        class="absolute right-3 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg text-slate-400 transition hover:bg-white/5 hover:text-white"
+                        aria-label="Clear search"
                     >
-                    
-                    <!-- SINGLE BADGE - Top Left -->
-                    <div class="absolute top-3 left-3">
-                        {% if batch.is_new %}
-                        <span class="px-2.5 py-0.5 rounded-full bg-blue-500 text-white text-xs font-bold shadow-lg">
-                            ✨ NEW
-                        </span>
-                        {% elif batch.is_offer_active and batch.discount_type == 'percentage' and batch.discount_value %}
-                        <span class="px-2.5 py-0.5 rounded-full bg-red-500 text-white text-xs font-bold shadow-lg">
-                            🔥 {{ batch.discount_value }}% OFF
-                        </span>
-                        {% elif batch.is_offer_active and batch.discount_type == 'fixed' and batch.discount_value %}
-                        <span class="px-2.5 py-0.5 rounded-full bg-amber-500 text-white text-xs font-bold shadow-lg">
-                            💰 SAVE ₹{{ batch.discount_value }}
-                        </span>
+                        <i class="ri-close-line text-lg"></i>
+                    </a>
+
+                {% endif %}
+
+            </div>
+
+
+
+            <!-- =================================================
+                 STATUS
+            ================================================== -->
+
+            <select
+                name="status"
+                aria-label="Batch status"
+                onchange="this.form.submit()"
+                class="h-12 w-[118px] min-w-0 rounded-xl border border-white/10 bg-[#111827] px-2 text-xs font-semibold text-white outline-none transition focus:border-cyan-400 sm:w-48 sm:px-4 sm:text-sm"
+            >
+
+                <option
+                    value="all"
+                    {% if current_status == 'all' %}
+                        selected
+                    {% endif %}
+                >
+                    All Batches
+                </option>
+
+
+                <option
+                    value="buy_now"
+                    {% if current_status == 'buy_now' %}
+                        selected
+                    {% endif %}
+                >
+                    Active Batches
+                </option>
+
+
+                <option
+                    value="coming_soon"
+                    {% if current_status == 'coming_soon' %}
+                        selected
+                    {% endif %}
+                >
+                    Coming Soon
+                </option>
+
+
+                <option
+                    value="admissions_closed"
+                    {% if current_status == 'admissions_closed' %}
+                        selected
+                    {% endif %}
+                >
+                    Admissions Closed
+                </option>
+
+            </select>
+
+
+
+            <!-- =================================================
+                 FILTER BUTTON
+            ================================================== -->
+
+            <button
+                type="button"
+                id="filterToggle"
+                aria-label="Open filters"
+                class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-[#111827] text-white transition-all hover:border-cyan-400 hover:bg-white/5 sm:w-auto sm:px-5"
+            >
+
+                <i class="ri-equalizer-3-line text-lg sm:mr-1"></i>
+
+                <span class="hidden sm:inline">
+                    Filters
+                </span>
+
+            </button>
+
+        </div>
+
+    </form>
+
+
+
+    <!-- =========================================================
+         BATCH FILTER BUBBLES
+
+         Small horizontal scrollable bubbles.
+         No dropdown.
+         No "Filter by Batch" text.
+         No subjects.
+    ========================================================== -->
+
+    <div class="relative">
+
+        <div
+            class="batch-filter-pills flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide"
+            aria-label="Filter batches"
+        >
+
+            <!-- =================================================
+                 ALL BATCHES
+            ================================================== -->
+
+            <a
+                href="?status={{ current_status }}"
+                class="
+                    inline-flex
+                    shrink-0
+                    items-center
+                    justify-center
+                    rounded-full
+                    border
+                    px-4
+                    py-2
+                    text-xs
+                    font-bold
+                    transition-all
+                    duration-200
+                    {% if not batch_id %}
+                        border-cyan-400/40
+                        bg-cyan-400/15
+                        text-cyan-300
+                        shadow-sm
+                        shadow-cyan-400/10
+                    {% else %}
+                        border-white/10
+                        bg-[#111827]
+                        text-slate-400
+                        hover:border-cyan-400/30
+                        hover:bg-cyan-400/5
+                        hover:text-cyan-300
+                    {% endif %}
+                "
+            >
+                All
+            </a>
+
+
+
+            <!-- =================================================
+                 DYNAMIC BATCHES
+            ================================================== -->
+
+            {% for batch in marketplace_filter_batches %}
+
+                <a
+                    href="?status={{ current_status }}&batch_id={{ batch.id }}"
+                    class="
+                        inline-flex
+                        shrink-0
+                        max-w-[220px]
+                        items-center
+                        justify-center
+                        rounded-full
+                        border
+                        px-4
+                        py-2
+                        text-xs
+                        font-bold
+                        transition-all
+                        duration-200
+                        {% if batch_id == batch.id|stringformat:'s' %}
+                            border-cyan-400/40
+                            bg-cyan-400/15
+                            text-cyan-300
+                            shadow-sm
+                            shadow-cyan-400/10
+                        {% else %}
+                            border-white/10
+                            bg-[#111827]
+                            text-slate-400
+                            hover:border-cyan-400/30
+                            hover:bg-cyan-400/5
+                            hover:text-cyan-300
                         {% endif %}
+                    "
+                    title="{{ batch.batch_name }}"
+                >
+
+                    <i class="ri-stack-line mr-1.5 shrink-0"></i>
+
+                    <span class="truncate">
+                        {{ batch.batch_name }}
+                    </span>
+
+                </a>
+
+            {% endfor %}
+
+        </div>
+
+    </div>
+
+
+
+    <!-- =========================================================
+         ACTIVE FILTER INDICATOR
+    ========================================================== -->
+
+    {% if request.GET.search or batch_id or request.GET.sort or request.GET.discount or request.GET.min_price or request.GET.max_price %}
+
+        <div
+            class="flex flex-wrap items-center gap-2"
+        >
+
+            <span
+                class="text-xs font-semibold text-slate-500"
+            >
+                Active filters:
+            </span>
+
+
+            {% if request.GET.search %}
+
+                <span
+                    class="inline-flex items-center gap-1 rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1 text-xs font-medium text-cyan-300"
+                >
+
+                    <i class="ri-search-line"></i>
+
+                    {{ request.GET.search }}
+
+                </span>
+
+            {% endif %}
+
+
+
+            {% if batch_id %}
+
+                <span
+                    class="inline-flex items-center gap-1 rounded-full border border-blue-400/20 bg-blue-400/10 px-3 py-1 text-xs font-medium text-blue-300"
+                >
+
+                    <i class="ri-stack-line"></i>
+
+                    {% for batch in marketplace_filter_batches %}
+
+                        {% if batch.id|stringformat:'s' == batch_id %}
+                            {{ batch.batch_name }}
+                        {% endif %}
+
+                    {% endfor %}
+
+                </span>
+
+            {% endif %}
+
+
+
+            {% if request.GET.sort %}
+
+                <span
+                    class="inline-flex items-center gap-1 rounded-full border border-purple-400/20 bg-purple-400/10 px-3 py-1 text-xs font-medium text-purple-300"
+                >
+
+                    <i class="ri-sort-desc"></i>
+
+                    {{ request.GET.sort }}
+
+                </span>
+
+            {% endif %}
+
+
+
+            {% if request.GET.discount %}
+
+                <span
+                    class="inline-flex items-center gap-1 rounded-full border border-red-400/20 bg-red-400/10 px-3 py-1 text-xs font-medium text-red-300"
+                >
+
+                    <i class="ri-price-tag-3-line"></i>
+
+                    {{ request.GET.discount }}
+
+                </span>
+
+            {% endif %}
+
+        </div>
+
+    {% endif %}
+
+
+
+    <!-- =========================================================
+         RESULT HEADER
+    ========================================================== -->
+
+    <div
+        class="flex items-center justify-between gap-4"
+    >
+
+        <div class="min-w-0">
+
+            <h2 class="text-xl font-bold text-white">
+
+                {% if current_status == 'all' %}
+
+                    All Batches
+
+                {% elif current_status == 'buy_now' %}
+
+                    Active Batches
+
+                {% elif current_status == 'coming_soon' %}
+
+                    Coming Soon
+
+                {% else %}
+
+                    Admissions Closed
+
+                {% endif %}
+
+            </h2>
+
+
+            <p class="mt-1 text-xs text-slate-500">
+
+                Showing
+                {{ batches.count }}
+                course{{ batches.count|pluralize }}
+
+            </p>
+
+        </div>
+
+    </div>
+
+
+
+    <!-- =========================================================
+         COURSE GRID
+    ========================================================== -->
+
+    <div
+        id="courseGrid"
+        class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+    >
+
+        {% for batch in batches %}
+
+            <article
+                class="course-card group relative min-w-0"
+            >
+
+                <!-- =================================================
+                     CLICKABLE COURSE CARD
+                ================================================== -->
+
+                <a
+                    href="{% url 'marketplace_detail' batch.id %}"
+                    class="block overflow-hidden rounded-xl border border-white/10 bg-[#111827] transition-all duration-300 hover:-translate-y-1.5 hover:border-cyan-400/30 hover:shadow-[0_20px_60px_rgba(6,182,212,0.15)]"
+                >
+
+                    <!-- IMAGE -->
+
+                    <div
+                        class="relative aspect-video overflow-hidden"
+                    >
+
+                        {% if batch.batch_thumbnail %}
+
+                            <img
+                                src="{{ batch.batch_thumbnail.url }}"
+                                alt="{{ batch.batch_name }}"
+                                loading="lazy"
+                                class="h-full w-full object-cover transition-all duration-500 group-hover:scale-105"
+                            >
+
+                        {% else %}
+
+                            <div
+                                class="flex h-full w-full items-center justify-center bg-slate-800"
+                            >
+
+                                <i
+                                    class="ri-graduation-cap-line text-5xl text-slate-600"
+                                ></i>
+
+                            </div>
+
+                        {% endif %}
+
+
+
+                        <!-- OFFER / NEW -->
+
+                        <div
+                            class="absolute left-3 top-3"
+                        >
+
+                            {% if batch.is_new %}
+
+                                <span
+                                    class="rounded-full bg-blue-500 px-2.5 py-0.5 text-xs font-bold text-white shadow-lg"
+                                >
+                                    ✨ NEW
+                                </span>
+
+
+                            {% elif batch.is_offer_active and batch.discount_type == 'percentage' and batch.discount_value %}
+
+                                <span
+                                    class="rounded-full bg-red-500 px-2.5 py-0.5 text-xs font-bold text-white shadow-lg"
+                                >
+                                    🔥 {{ batch.discount_value }}% OFF
+                                </span>
+
+
+                            {% elif batch.is_offer_active and batch.discount_type == 'fixed' and batch.discount_value %}
+
+                                <span
+                                    class="rounded-full bg-amber-500 px-2.5 py-0.5 text-xs font-bold text-white shadow-lg"
+                                >
+                                    💰 SAVE ₹{{ batch.discount_value }}
+                                </span>
+
+                            {% endif %}
+
+                        </div>
+
+
+
+                        <!-- STATUS -->
+
+                        <div
+                            class="absolute bottom-3 right-3"
+                        >
+
+                            {% if batch.marketplace_status == 'buy_now' %}
+
+                                <span
+                                    class="rounded-full bg-emerald-500 px-2.5 py-0.5 text-xs font-bold text-white shadow-lg"
+                                >
+                                    🛒 Buy Now
+                                </span>
+
+
+                            {% elif batch.marketplace_status == 'coming_soon' %}
+
+                                <span
+                                    class="rounded-full bg-indigo-500 px-2.5 py-0.5 text-xs font-bold text-white shadow-lg"
+                                >
+                                    📅 Coming Soon
+                                </span>
+
+
+                            {% elif batch.marketplace_status == 'admissions_closed' %}
+
+                                <span
+                                    class="rounded-full bg-gray-500 px-2.5 py-0.5 text-xs font-bold text-white shadow-lg"
+                                >
+                                    🔒 Admissions Closed
+                                </span>
+
+                            {% endif %}
+
+                        </div>
+
                     </div>
 
-                    <!-- WISHLIST - Updated with wishlist-icon class and return false -->
+
+
+                    <!-- CARD CONTENT -->
+
+                    <div class="p-4">
+
+                        <h3
+                            class="mb-2 line-clamp-2 text-base font-bold leading-tight text-white"
+                        >
+                            {{ batch.batch_name }}
+                        </h3>
+
+
+                        <div
+                            class="mb-2 flex items-center justify-between gap-3"
+                        >
+
+                            <span
+                                class="min-w-0 truncate text-xs text-slate-400"
+                            >
+
+                                <i class="ri-user-line mr-1"></i>
+
+                                {{ batch.assigned_teachers.first.full_name|default:"Multiple Teachers" }}
+
+                            </span>
+
+
+                            <span
+                                class="shrink-0 text-xs text-yellow-400"
+                            >
+
+                                <i class="ri-star-fill mr-1"></i>
+
+                                4.9
+
+                            </span>
+
+                        </div>
+
+
+
+                        <!-- SUBJECT COUNT -->
+
+                        <div
+                            class="mb-3 text-xs text-slate-400"
+                        >
+
+                            <i class="ri-book-2-line mr-1"></i>
+
+                            {{ batch.subjects.count }}
+
+                            Subject{{ batch.subjects.count|pluralize }}
+
+                        </div>
+
+
+
+                        <!-- PRICE -->
+
+                        <div
+                            class="border-t border-white/5 pt-3"
+                        >
+
+                            {% if batch.original_price and batch.is_offer_active %}
+
+                                <div
+                                    class="text-xs text-slate-500 line-through"
+                                >
+                                    ₹{{ batch.original_price }}
+                                </div>
+
+                            {% endif %}
+
+
+                            <div
+                                class="mt-0.5 flex items-center gap-2"
+                            >
+
+                                <span
+                                    class="text-2xl font-extrabold text-cyan-400"
+                                >
+                                    ₹{{ batch.final_price }}
+                                </span>
+
+                            </div>
+
+
+                            {% if batch.is_offer_active and batch.discount_value %}
+
+                                {% if batch.discount_type == 'percentage' %}
+
+                                    <div
+                                        class="mt-0.5 text-xs font-semibold text-red-400"
+                                    >
+                                        🔥 {{ batch.discount_value }}% OFF
+                                    </div>
+
+
+                                {% elif batch.discount_type == 'fixed' %}
+
+                                    <div
+                                        class="mt-0.5 text-xs font-semibold text-red-400"
+                                    >
+                                        💰 SAVE ₹{{ batch.discount_value }}
+                                    </div>
+
+                                {% endif %}
+
+                            {% endif %}
+
+
+                            {% if batch.offer_end_date and batch.is_offer_active %}
+
+                                <div
+                                    class="mt-1 text-[10px] text-slate-500"
+                                >
+
+                                    📅 Offer Ends:
+
+                                    {{ batch.offer_end_date|date:"d M Y" }}
+
+                                </div>
+
+                            {% endif %}
+
+                        </div>
+
+                    </div>
+
+                </a>
+
+
+
+                <!-- =================================================
+                     WISHLIST
+                ================================================== -->
+
+                <form
+                    method="post"
+                    action="{% url 'toggle_wishlist' batch.id %}"
+                    class="absolute right-3 top-3 z-20"
+                >
+
+                    {% csrf_token %}
+
                     <button
-                        class="wishlist-btn absolute top-3 right-3 w-9 h-9 rounded-full flex items-center justify-center transition-all duration-300 bg-white/18 backdrop-blur-[12px] border border-white/25 shadow-sm hover:bg-white/30 hover:border-white/40"
-                        data-batch-id="{{ batch.id }}"
-                        onclick="event.stopPropagation(); return false;"
+                        type="submit"
+                        class="wishlist-btn flex h-9 w-9 items-center justify-center rounded-full transition-all duration-300"
+                        aria-label="Toggle wishlist for {{ batch.batch_name }}"
                     >
+
                         {% if batch.id in wishlisted_batch_ids %}
-                            <i class="ri-heart-3-fill wishlist-icon text-red-500 text-lg transition-all duration-300"></i>
+
+                            <i
+                                class="ri-heart-3-fill wishlist-icon text-lg text-red-500"
+                            ></i>
+
                         {% else %}
-                            <i class="ri-heart-3-line wishlist-icon text-gray-400 text-lg transition-all duration-300"></i>
+
+                            <i
+                                class="ri-heart-3-line wishlist-icon text-lg text-gray-300"
+                            ></i>
+
                         {% endif %}
+
                     </button>
 
-                    <!-- STATUS BADGE - Bottom Right -->
+                </form>
+
+
+
+                <!-- =================================================
+                     CART BUTTON
+                ================================================== -->
+
+                <div class="mt-3">
+
                     {% if batch.marketplace_status == 'buy_now' %}
-                    <span class="absolute bottom-3 right-3 px-2.5 py-0.5 rounded-full bg-emerald-500 text-white text-xs font-bold shadow-lg">
-                        🛒 Buy Now
-                    </span>
-                    {% elif batch.marketplace_status == 'coming_soon' %}
-                    <span class="absolute bottom-3 right-3 px-2.5 py-0.5 rounded-full bg-indigo-500 text-white text-xs font-bold shadow-lg">
-                        📅 Coming Soon
-                    </span>
-                    {% elif batch.marketplace_status == 'admissions_closed' %}
-                    <span class="absolute bottom-3 right-3 px-2.5 py-0.5 rounded-full bg-gray-500 text-white text-xs font-bold shadow-lg">
-                        🔒 Admissions Closed
-                    </span>
-                    {% endif %}
-                </div>
 
-                <!-- CONTENT -->
-                <div class="p-4">
-                    <!-- Batch Name -->
-                    <h3 class="text-base font-bold text-white line-clamp-2 leading-tight mb-2">
-                        {{ batch.batch_name }}
-                    </h3>
 
-                    <!-- Teacher & Rating -->
-                    <div class="flex items-center justify-between mb-2">
-                        <span class="text-xs text-slate-400">
-                            <i class="ri-user-line mr-1"></i>
-                            {{ batch.assigned_teachers.first.full_name|default:"Multiple Teachers" }}
-                        </span>
-                        <span class="text-xs text-yellow-400">
-                            <i class="ri-star-fill mr-1"></i>
-                            4.9
-                        </span>
-                    </div>
+                        {% if batch.id in cart_batch_ids %}
 
-                    <!-- Subjects -->
-                    <div class="text-xs text-slate-400 mb-3">
-                        <i class="ri-book-2-line mr-1"></i>
-                        {{ batch.subjects.count }} Subjects
-                    </div>
+                            <!-- =====================================
+                                 ALREADY IN CART
+                            ====================================== -->
 
-                    <!-- PRICE SECTION -->
-                    <div class="border-t border-white/5 pt-3">
-                        {% if batch.original_price and batch.is_offer_active %}
-                        <div class="text-slate-500 text-xs line-through">₹{{ batch.original_price }}</div>
-                        {% endif %}
-                        
-                        <div class="flex items-center gap-2 mt-0.5">
-                            <span class="text-2xl font-extrabold text-cyan-400">₹{{ batch.final_price }}</span>
-                        </div>
-                        
-                        {% if batch.is_offer_active and batch.discount_value %}
-                            {% if batch.discount_type == 'percentage' %}
-                            <div class="text-xs text-red-400 font-semibold mt-0.5">🔥 {{ batch.discount_value }}% OFF</div>
-                            {% else %}
-                            <div class="text-xs text-red-400 font-semibold mt-0.5">💰 SAVE ₹{{ batch.discount_value }}</div>
-                            {% endif %}
-                        {% endif %}
-                        
-                        {% if batch.offer_end_date and batch.is_offer_active %}
-                        <div class="text-[10px] text-slate-500 mt-1">
-                            📅 Offer Ends: {{ batch.offer_end_date|date:"d M Y" }}
-                        </div>
-                        {% endif %}
-                    </div>
+                            <div
+                                class="flex w-full items-center justify-center gap-2 rounded-full border border-emerald-400/30 bg-emerald-500/15 py-2.5 text-sm font-bold text-emerald-400"
+                                aria-label="Already added to cart"
+                            >
 
-                    <!-- ADD TO CART BUTTON -->
-                    <div class="mt-3">
-                        {% if batch.marketplace_status == 'buy_now' %}
-                        <button class="add-to-cart w-full py-2 rounded-full bg-gradient-to-r from-cyan-400 to-blue-400 text-black text-sm font-bold transition-all duration-300 hover:scale-[1.03] hover:shadow-lg hover:shadow-cyan-500/25" onclick="event.stopPropagation(); return false;">
-                            🛒 Add to Cart
-                        </button>
-                        {% elif batch.marketplace_status == 'coming_soon' %}
-                        <button class="w-full py-2 rounded-full bg-indigo-500/20 text-indigo-400 text-sm font-semibold cursor-not-allowed" onclick="event.stopPropagation(); return false;">
-                            📅 Coming Soon
-                        </button>
+                                <i
+                                    class="ri-check-line text-lg"
+                                ></i>
+
+                                Added to Cart
+
+                            </div>
+
+
                         {% else %}
-                        <button class="w-full py-2 rounded-full bg-gray-600/30 text-gray-400 text-sm font-semibold cursor-not-allowed" onclick="event.stopPropagation(); return false;">
-                            🔒 Admissions Closed
-                        </button>
+
+                            <!-- =====================================
+                                 ADD TO CART
+                            ====================================== -->
+
+                            <form
+                                method="post"
+                                action="{% url 'add_to_cart' batch.id %}"
+                            >
+
+                                {% csrf_token %}
+
+                                <button
+                                    type="submit"
+                                    class="w-full rounded-full bg-gradient-to-r from-cyan-400 to-blue-400 py-2.5 text-sm font-bold text-black transition-all duration-300 hover:scale-[1.02] hover:shadow-lg hover:shadow-cyan-500/25"
+                                >
+
+                                    <i
+                                        class="ri-shopping-cart-line mr-1"
+                                    ></i>
+
+                                    Add to Cart
+
+                                </button>
+
+                            </form>
+
                         {% endif %}
-                    </div>
+
+
+                    {% elif batch.marketplace_status == 'coming_soon' %}
+
+                        <button
+                            type="button"
+                            disabled
+                            class="w-full cursor-not-allowed rounded-full bg-indigo-500/20 py-2.5 text-sm font-semibold text-indigo-400"
+                        >
+
+                            <i
+                                class="ri-calendar-schedule-line mr-1"
+                            ></i>
+
+                            Coming Soon
+
+                        </button>
+
+
+                    {% else %}
+
+                        <button
+                            type="button"
+                            disabled
+                            class="w-full cursor-not-allowed rounded-full bg-gray-600/30 py-2.5 text-sm font-semibold text-gray-400"
+                        >
+
+                            <i
+                                class="ri-lock-line mr-1"
+                            ></i>
+
+                            Admissions Closed
+
+                        </button>
+
+                    {% endif %}
+
                 </div>
-            </div>
-        </div>
+
+            </article>
+
+
         {% empty %}
-        <!-- EMPTY STATE -->
-        <div class="col-span-full rounded-2xl border border-dashed border-cyan-500/20 bg-[#111827] py-16 px-8 text-center">
-            <div class="mx-auto w-20 h-20 rounded-full bg-cyan-500/10 flex items-center justify-center">
-                <i class="ri-book-open-line text-4xl text-cyan-400"></i>
+
+            <!-- =================================================
+                 EMPTY STATE
+            ================================================== -->
+
+            <div
+                class="col-span-full rounded-2xl border border-dashed border-cyan-500/20 bg-[#111827] px-6 py-16 text-center sm:px-8"
+            >
+
+                <div
+                    class="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-cyan-500/10"
+                >
+
+                    <i
+                        class="ri-book-open-line text-4xl text-cyan-400"
+                    ></i>
+
+                </div>
+
+
+                <h3
+                    class="mt-6 text-2xl font-bold text-white"
+                >
+
+                    {% if current_status == 'all' %}
+
+                        No Batches Available
+
+                    {% elif current_status == 'buy_now' %}
+
+                        No Active Batches Available
+
+                    {% elif current_status == 'coming_soon' %}
+
+                        No Upcoming Batches
+
+                    {% else %}
+
+                        No Closed Batches
+
+                    {% endif %}
+
+                </h3>
+
+
+                <p
+                    class="mx-auto mt-2 max-w-md text-sm leading-relaxed text-slate-400"
+                >
+
+                    {% if current_status == 'all' %}
+
+                        There are currently no marketplace batches to display.
+
+                    {% elif current_status == 'buy_now' %}
+
+                        There are currently no batches available for purchase.
+
+                    {% elif current_status == 'coming_soon' %}
+
+                        There are currently no upcoming batches.
+
+                    {% else %}
+
+                        There are currently no admissions-closed batches to display.
+
+                    {% endif %}
+
+                </p>
+
             </div>
-            <h3 class="mt-6 text-2xl font-bold text-white">No Published Batches</h3>
-            <p class="mt-2 max-w-md mx-auto text-slate-400 text-sm leading-relaxed">
-                There are currently no published batches available. Please check back later.
-            </p>
-        </div>
+
         {% endfor %}
+
     </div>
+
+
+
+    <!-- =========================================================
+         FILTER DRAWER
+    ========================================================== -->
+
+    <div
+        id="filterPanel"
+        class="pointer-events-none fixed inset-0 z-[9999] m-0 p-0 opacity-0 transition-all duration-300"
+        aria-hidden="true"
+    >
+
+        <!-- OVERLAY -->
+
+        <div
+            id="filterOverlay"
+            class="absolute inset-0 m-0 bg-black/60 p-0 backdrop-blur-sm"
+        ></div>
+
+
+
+        <!-- DRAWER -->
+
+        <aside
+            id="filterDrawer"
+            class="absolute inset-y-0 right-0 m-0 h-[100dvh] w-full max-w-sm translate-x-full overflow-y-auto rounded-none border-l border-white/10 bg-[#0a1628] p-0 transition-transform duration-300 sm:max-w-md"
+        >
+
+            <div
+                class="min-h-full p-5 sm:p-6"
+            >
+
+                <!-- =================================================
+                     HEADER
+                ================================================== -->
+
+                <div
+                    class="mb-6 flex items-center justify-between"
+                >
+
+                    <div>
+
+                        <h3
+                            class="text-lg font-bold text-white"
+                        >
+                            Filters
+                        </h3>
+
+                        <p
+                            class="mt-1 text-xs text-slate-500"
+                        >
+                            Refine your marketplace results.
+                        </p>
+
+                    </div>
+
+
+                    <button
+                        type="button"
+                        id="filterClose"
+                        class="flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 transition hover:bg-white/5 hover:text-white"
+                        aria-label="Close filters"
+                    >
+
+                        <i class="ri-close-line text-xl"></i>
+
+                    </button>
+
+                </div>
+
+
+
+                <!-- =================================================
+                     FILTER FORM
+                ================================================== -->
+
+                <form
+                    method="get"
+                    action="{% url 'marketplace' %}"
+                    class="space-y-6"
+                >
+
+                    <!-- STATUS -->
+
+                    <input
+                        type="hidden"
+                        name="status"
+                        value="{{ current_status }}"
+                    >
+
+
+                    <!-- SEARCH -->
+
+                    {% if request.GET.search %}
+
+                        <input
+                            type="hidden"
+                            name="search"
+                            value="{{ request.GET.search }}"
+                        >
+
+                    {% endif %}
+
+
+                    <!-- BATCH -->
+
+                    {% if batch_id %}
+
+                        <input
+                            type="hidden"
+                            name="batch_id"
+                            value="{{ batch_id }}"
+                        >
+
+                    {% endif %}
+
+
+
+                    <!-- =================================================
+                         SORT
+                    ================================================== -->
+
+                    <div>
+
+                        <h4
+                            class="mb-3 text-sm font-semibold text-slate-300"
+                        >
+                            Sort By
+                        </h4>
+
+
+                        <div class="space-y-2.5">
+
+                            <label
+                                class="flex cursor-pointer items-center gap-3 text-sm text-slate-300 hover:text-white"
+                            >
+
+                                <input
+                                    type="radio"
+                                    name="sort"
+                                    value="newest"
+                                    {% if request.GET.sort == 'newest' or not request.GET.sort %}
+                                        checked
+                                    {% endif %}
+                                    class="h-4 w-4 accent-cyan-400"
+                                >
+
+                                Newest
+
+                            </label>
+
+
+                            <label
+                                class="flex cursor-pointer items-center gap-3 text-sm text-slate-300 hover:text-white"
+                            >
+
+                                <input
+                                    type="radio"
+                                    name="sort"
+                                    value="oldest"
+                                    {% if request.GET.sort == 'oldest' %}
+                                        checked
+                                    {% endif %}
+                                    class="h-4 w-4 accent-cyan-400"
+                                >
+
+                                Oldest
+
+                            </label>
+
+
+                            <label
+                                class="flex cursor-pointer items-center gap-3 text-sm text-slate-300 hover:text-white"
+                            >
+
+                                <input
+                                    type="radio"
+                                    name="sort"
+                                    value="a_z"
+                                    {% if request.GET.sort == 'a_z' %}
+                                        checked
+                                    {% endif %}
+                                    class="h-4 w-4 accent-cyan-400"
+                                >
+
+                                A → Z
+
+                            </label>
+
+
+                            <label
+                                class="flex cursor-pointer items-center gap-3 text-sm text-slate-300 hover:text-white"
+                            >
+
+                                <input
+                                    type="radio"
+                                    name="sort"
+                                    value="z_a"
+                                    {% if request.GET.sort == 'z_a' %}
+                                        checked
+                                    {% endif %}
+                                    class="h-4 w-4 accent-cyan-400"
+                                >
+
+                                Z → A
+
+                            </label>
+
+
+                            <label
+                                class="flex cursor-pointer items-center gap-3 text-sm text-slate-300 hover:text-white"
+                            >
+
+                                <input
+                                    type="radio"
+                                    name="sort"
+                                    value="price_low"
+                                    {% if request.GET.sort == 'price_low' %}
+                                        checked
+                                    {% endif %}
+                                    class="h-4 w-4 accent-cyan-400"
+                                >
+
+                                Price: Low → High
+
+                            </label>
+
+
+                            <label
+                                class="flex cursor-pointer items-center gap-3 text-sm text-slate-300 hover:text-white"
+                            >
+
+                                <input
+                                    type="radio"
+                                    name="sort"
+                                    value="price_high"
+                                    {% if request.GET.sort == 'price_high' %}
+                                        checked
+                                    {% endif %}
+                                    class="h-4 w-4 accent-cyan-400"
+                                >
+
+                                Price: High → Low
+
+                            </label>
+
+
+                            <label
+                                class="flex cursor-pointer items-center gap-3 text-sm text-slate-300 hover:text-white"
+                            >
+
+                                <input
+                                    type="radio"
+                                    name="sort"
+                                    value="discount"
+                                    {% if request.GET.sort == 'discount' %}
+                                        checked
+                                    {% endif %}
+                                    class="h-4 w-4 accent-cyan-400"
+                                >
+
+                                Highest Discount
+
+                            </label>
+
+                        </div>
+
+                    </div>
+
+
+
+                    <hr class="border-white/5">
+
+
+
+                    <!-- =================================================
+                         DISCOUNT
+                    ================================================== -->
+
+                    <div>
+
+                        <h4
+                            class="mb-3 text-sm font-semibold text-slate-300"
+                        >
+                            Discount
+                        </h4>
+
+
+                        <div class="space-y-2.5">
+
+                            <label
+                                class="flex cursor-pointer items-center gap-3 text-sm text-slate-300 hover:text-white"
+                            >
+
+                                <input
+                                    type="radio"
+                                    name="discount"
+                                    value="percentage"
+                                    {% if request.GET.discount == 'percentage' %}
+                                        checked
+                                    {% endif %}
+                                    class="h-4 w-4 accent-cyan-400"
+                                >
+
+                                🔥 Percentage Offers
+
+                            </label>
+
+
+                            <label
+                                class="flex cursor-pointer items-center gap-3 text-sm text-slate-300 hover:text-white"
+                            >
+
+                                <input
+                                    type="radio"
+                                    name="discount"
+                                    value="fixed"
+                                    {% if request.GET.discount == 'fixed' %}
+                                        checked
+                                    {% endif %}
+                                    class="h-4 w-4 accent-cyan-400"
+                                >
+
+                                💰 Fixed Offers
+
+                            </label>
+
+
+                            <label
+                                class="flex cursor-pointer items-center gap-3 text-sm text-slate-300 hover:text-white"
+                            >
+
+                                <input
+                                    type="radio"
+                                    name="discount"
+                                    value="none"
+                                    {% if request.GET.discount == 'none' %}
+                                        checked
+                                    {% endif %}
+                                    class="h-4 w-4 accent-cyan-400"
+                                >
+
+                                No Offer
+
+                            </label>
+
+                        </div>
+
+                    </div>
+
+
+
+                    <hr class="border-white/5">
+
+
+
+                    <!-- =================================================
+                         PRICE
+                    ================================================== -->
+
+                    <div>
+
+                        <h4
+                            class="mb-3 text-sm font-semibold text-slate-300"
+                        >
+                            Price
+                        </h4>
+
+
+                        <div class="flex gap-2">
+
+                            <input
+                                type="number"
+                                name="min_price"
+                                value="{{ request.GET.min_price|default:'' }}"
+                                min="0"
+                                step="0.01"
+                                placeholder="Min"
+                                class="h-10 w-1/2 rounded-lg border border-white/10 bg-[#111827] px-3 text-sm text-white outline-none transition focus:border-cyan-400"
+                            >
+
+
+                            <input
+                                type="number"
+                                name="max_price"
+                                value="{{ request.GET.max_price|default:'' }}"
+                                min="0"
+                                step="0.01"
+                                placeholder="Max"
+                                class="h-10 w-1/2 rounded-lg border border-white/10 bg-[#111827] px-3 text-sm text-white outline-none transition focus:border-cyan-400"
+                            >
+
+                        </div>
+
+                    </div>
+
+
+
+                    <!-- =================================================
+                         ACTIONS
+                    ================================================== -->
+
+                    <div class="space-y-3 pt-2">
+
+                        <button
+                            type="submit"
+                            class="w-full rounded-xl bg-gradient-to-r from-cyan-400 to-cyan-300 py-3 text-sm font-bold text-black transition-all hover:shadow-lg hover:shadow-cyan-500/25"
+                        >
+
+                            <i class="ri-filter-3-line mr-1"></i>
+
+                            Apply Filters
+
+                        </button>
+
+
+                        <a
+                            href="?status={{ current_status }}"
+                            class="flex w-full items-center justify-center rounded-xl border border-white/10 py-3 text-sm font-bold text-slate-300 transition-all hover:bg-white/5 hover:text-white"
+                        >
+
+                            Reset Filters
+
+                        </a>
+
+                    </div>
+
+                </form>
+
+            </div>
+
+        </aside>
+
+    </div>
+
 </div>
 
-<!-- FILTER SIDE PANEL -->
-<div id="filterPanel" class="fixed inset-0 z-50 pointer-events-none opacity-0 transition-all duration-300">
-    <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="closeFilters()"></div>
-    <div class="absolute right-0 top-0 h-full w-80 bg-[#0a1628] border-l border-white/10 p-6 overflow-y-auto pointer-events-auto translate-x-full transition-transform duration-300">
-        <div class="flex items-center justify-between mb-6">
-            <h3 class="text-lg font-bold">Filters</h3>
-            <button onclick="closeFilters()" class="text-slate-400 hover:text-white">
-                <i class="ri-close-line text-xl"></i>
-            </button>
-        </div>
-        
-        <div class="space-y-6">
-            <!-- SORT OPTIONS -->
-            <div>
-                <h4 class="text-sm font-semibold mb-3 text-slate-300">Sort By</h4>
-                <div class="space-y-2">
-                    <label class="flex items-center gap-3 text-sm text-slate-300 cursor-pointer hover:text-white transition-all active">
-                        <input type="radio" name="sort" value="newest" checked class="accent-cyan-400 w-4 h-4"> Newest
-                    </label>
-                    <label class="flex items-center gap-3 text-sm text-slate-300 cursor-pointer hover:text-white transition-all">
-                        <input type="radio" name="sort" value="oldest" class="accent-cyan-400 w-4 h-4"> Oldest
-                    </label>
-                    <label class="flex items-center gap-3 text-sm text-slate-300 cursor-pointer hover:text-white transition-all">
-                        <input type="radio" name="sort" value="a_z" class="accent-cyan-400 w-4 h-4"> A → Z
-                    </label>
-                    <label class="flex items-center gap-3 text-sm text-slate-300 cursor-pointer hover:text-white transition-all">
-                        <input type="radio" name="sort" value="z_a" class="accent-cyan-400 w-4 h-4"> Z → A
-                    </label>
-                    <label class="flex items-center gap-3 text-sm text-slate-300 cursor-pointer hover:text-white transition-all">
-                        <input type="radio" name="sort" value="price_low" class="accent-cyan-400 w-4 h-4"> Price: Low → High
-                    </label>
-                    <label class="flex items-center gap-3 text-sm text-slate-300 cursor-pointer hover:text-white transition-all">
-                        <input type="radio" name="sort" value="price_high" class="accent-cyan-400 w-4 h-4"> Price: High → Low
-                    </label>
-                    <label class="flex items-center gap-3 text-sm text-slate-300 cursor-pointer hover:text-white transition-all">
-                        <input type="radio" name="sort" value="discount" class="accent-cyan-400 w-4 h-4"> Highest Discount
-                    </label>
-                </div>
-            </div>
 
-            <hr class="border-white/5">
 
-            <!-- STATUS FILTERS -->
-            <div>
-                <h4 class="text-sm font-semibold mb-3 text-slate-300">Status</h4>
-                <div class="space-y-2">
-                    <label class="flex items-center gap-3 text-sm text-slate-300 cursor-pointer hover:text-white transition-all">
-                        <input type="checkbox" class="filter-status rounded border-white/10 bg-[#111827] text-cyan-400 w-4 h-4" value="buy_now"> 🛒 Buy Now
-                    </label>
-                    <label class="flex items-center gap-3 text-sm text-slate-300 cursor-pointer hover:text-white transition-all">
-                        <input type="checkbox" class="filter-status rounded border-white/10 bg-[#111827] text-cyan-400 w-4 h-4" value="coming_soon"> 📅 Coming Soon
-                    </label>
-                    <label class="flex items-center gap-3 text-sm text-slate-300 cursor-pointer hover:text-white transition-all">
-                        <input type="checkbox" class="filter-status rounded border-white/10 bg-[#111827] text-cyan-400 w-4 h-4" value="admissions_closed"> 🔒 Admissions Closed
-                    </label>
-                </div>
-            </div>
-
-            <hr class="border-white/5">
-
-            <!-- DISCOUNT FILTERS -->
-            <div>
-                <h4 class="text-sm font-semibold mb-3 text-slate-300">Discount</h4>
-                <div class="space-y-2">
-                    <label class="flex items-center gap-3 text-sm text-slate-300 cursor-pointer hover:text-white transition-all">
-                        <input type="checkbox" class="filter-discount rounded border-white/10 bg-[#111827] text-cyan-400 w-4 h-4" value="percentage"> 🔥 Percentage Offers
-                    </label>
-                    <label class="flex items-center gap-3 text-sm text-slate-300 cursor-pointer hover:text-white transition-all">
-                        <input type="checkbox" class="filter-discount rounded border-white/10 bg-[#111827] text-cyan-400 w-4 h-4" value="fixed"> 💰 Fixed Offers
-                    </label>
-                    <label class="flex items-center gap-3 text-sm text-slate-300 cursor-pointer hover:text-white transition-all">
-                        <input type="checkbox" class="filter-discount rounded border-white/10 bg-[#111827] text-cyan-400 w-4 h-4" value="no_offer"> No Offer
-                    </label>
-                </div>
-            </div>
-
-            <hr class="border-white/5">
-
-            <!-- PRICE RANGE -->
-            <div>
-                <h4 class="text-sm font-semibold mb-3 text-slate-300">Price</h4>
-                <div class="flex gap-2">
-                    <input type="number" id="priceMin" placeholder="Min" class="w-1/2 h-10 rounded-lg bg-[#111827] border border-white/10 px-3 text-sm outline-none focus:border-cyan-400">
-                    <input type="number" id="priceMax" placeholder="Max" class="w-1/2 h-10 rounded-lg bg-[#111827] border border-white/10 px-3 text-sm outline-none focus:border-cyan-400">
-                </div>
-            </div>
-
-            <hr class="border-white/5">
-            
-            <!-- BUTTONS -->
-            <div class="space-y-3">
-                <button id="applyFilters" class="w-full h-12 rounded-xl bg-gradient-to-r from-cyan-400 to-cyan-300 text-black font-bold hover:shadow-lg hover:shadow-cyan-500/25 transition-all">
-                    Apply Filters
-                </button>
-                <button id="resetFilters" class="w-full h-12 rounded-xl border border-white/10 text-slate-300 font-bold hover:bg-white/5 transition-all">
-                    Reset Filters
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<input
-    type="hidden"
-    id="csrf-token"
-    value="{{ csrf_token }}"
->
+<!-- =============================================================
+     MARKETPLACE JAVASCRIPT
+============================================================= -->
 
 <script src="{% static 'students/js/marketplace.js' %}"></script>
 
+
+
+<!-- =============================================================
+     LOCAL MARKETPLACE STYLES
+============================================================= -->
+
 <style>
-.scrollbar-hide::-webkit-scrollbar {
-    display: none;
-}
-.scrollbar-hide {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-}
-.category-chip.active {
-    background-color: #06D6F6 !important;
-    color: black !important;
-}
 
-/* Glassmorphism for Wishlist */
-.wishlist-btn {
-    background: rgba(255, 255, 255, 0.18);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.25);
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
+    /* =========================================================
+       HORIZONTAL BATCH PILLS
+    ========================================================== */
 
-.wishlist-btn:hover {
-    background: rgba(255, 255, 255, 0.30);
-    border-color: rgba(255, 255, 255, 0.40);
-}
+    .batch-filter-pills {
+        scroll-behavior: smooth;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+    }
+
+
+    .batch-filter-pills::-webkit-scrollbar {
+        display: none;
+    }
+
+
+    .scrollbar-hide {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+    }
+
+
+    .scrollbar-hide::-webkit-scrollbar {
+        display: none;
+    }
+
+
+
+    /* =========================================================
+       WISHLIST BUTTON
+    ========================================================== */
+
+    .wishlist-btn {
+        background: rgba(255, 255, 255, 0.18);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.25);
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+
+    .wishlist-btn:hover {
+        background: rgba(255, 255, 255, 0.30);
+        border-color: rgba(255, 255, 255, 0.40);
+    }
+
+
+
+    /* =========================================================
+       FILTER PANEL
+
+       Force the drawer to start from the actual
+       viewport top.
+    ========================================================== */
+
+    #filterPanel {
+        position: fixed !important;
+
+        inset: 0 !important;
+
+        top: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        left: 0 !important;
+
+        margin: 0 !important;
+        padding: 0 !important;
+
+        width: 100vw !important;
+        height: 100dvh !important;
+    }
+
+
+
+    /* =========================================================
+       FILTER DRAWER
+    ========================================================== */
+
+    #filterDrawer {
+        position: absolute !important;
+
+        top: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+
+        margin: 0 !important;
+
+        height: 100dvh !important;
+        max-height: 100dvh !important;
+
+        padding-top: 0 !important;
+
+        overflow-y: auto;
+
+        overscroll-behavior: contain;
+    }
+
+
+
+    /* =========================================================
+       MOBILE DRAWER
+    ========================================================== */
+
+    @media (max-width: 639px) {
+
+        #filterDrawer {
+            width: 100% !important;
+            max-width: 100% !important;
+
+            border-left: 0 !important;
+            border-radius: 0 !important;
+        }
+
+    }
+
+
+
+    /* =========================================================
+       SMALL MOBILE
+    ========================================================== */
+
+    @media (max-width: 380px) {
+
+        #searchInput {
+            font-size: 12px;
+        }
+
+
+        select[name="status"] {
+            width: 108px;
+            padding-left: 8px;
+            padding-right: 8px;
+            font-size: 11px;
+        }
+
+    }
+
+
+
+    /* =========================================================
+       TOUCH
+    ========================================================== */
+
+    @media (max-width: 639px) {
+
+        button,
+        select,
+        input,
+        a {
+            -webkit-tap-highlight-color: transparent;
+        }
+
+    }
+
+
+
+    /* =========================================================
+       BATCH PILL TOUCH FEEDBACK
+    ========================================================== */
+
+    .batch-filter-pills a {
+        touch-action: manipulation;
+        user-select: none;
+    }
+
+
+    .batch-filter-pills a:active {
+        transform: scale(0.96);
+    }
+
 </style>
 
 {% endblock %}

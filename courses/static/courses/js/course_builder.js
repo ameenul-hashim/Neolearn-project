@@ -32,6 +32,8 @@ document.addEventListener("DOMContentLoaded", function () {
         chapterModal.classList.remove("hidden");
         chapterModal.classList.add("flex");
 
+        chapterModal.setAttribute("aria-hidden", "false");
+
         document.body.classList.add("overflow-hidden");
     }
 
@@ -45,6 +47,8 @@ document.addEventListener("DOMContentLoaded", function () {
         chapterModal.classList.remove("flex");
         chapterModal.classList.add("hidden");
 
+        chapterModal.setAttribute("aria-hidden", "true");
+
         document.body.classList.remove("overflow-hidden");
     }
 
@@ -54,26 +58,32 @@ document.addEventListener("DOMContentLoaded", function () {
     ============================================================ */
 
     if (openChapterModal) {
+
         openChapterModal.addEventListener(
             "click",
             openChapterModalWindow
         );
+
     }
 
 
     if (emptyAddChapterBtn) {
+
         emptyAddChapterBtn.addEventListener(
             "click",
             openChapterModalWindow
         );
+
     }
 
 
     if (contentCreateChapterBtn) {
+
         contentCreateChapterBtn.addEventListener(
             "click",
             openChapterModalWindow
         );
+
     }
 
 
@@ -82,18 +92,22 @@ document.addEventListener("DOMContentLoaded", function () {
     ============================================================ */
 
     if (closeChapterModal) {
+
         closeChapterModal.addEventListener(
             "click",
             closeChapterModalWindow
         );
+
     }
 
 
     if (cancelChapterModal) {
+
         cancelChapterModal.addEventListener(
             "click",
             closeChapterModalWindow
         );
+
     }
 
 
@@ -102,6 +116,7 @@ document.addEventListener("DOMContentLoaded", function () {
     ============================================================ */
 
     if (chapterModal) {
+
         chapterModal.addEventListener(
             "click",
             function (event) {
@@ -112,6 +127,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
             }
         );
+
     }
 
 
@@ -128,7 +144,9 @@ document.addEventListener("DOMContentLoaded", function () {
                 chapterModal &&
                 !chapterModal.classList.contains("hidden")
             ) {
+
                 closeChapterModalWindow();
+
             }
 
         }
@@ -136,9 +154,91 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
     /* ============================================================
+       SERVER-SIDE NAVIGATION FOR EXISTING ACTION BUTTONS
+       ------------------------------------------------------------
+       JavaScript does NOT perform validation.
+
+       Django remains responsible for:
+       - Validation
+       - Authorization
+       - Database operations
+       - Redirects
+       - Permissions
+    ============================================================ */
+
+    const navbarActionButtons =
+        document.querySelectorAll(
+            "[data-navbar-action][data-action-url]"
+        );
+
+
+    navbarActionButtons.forEach(function (button) {
+
+        button.addEventListener(
+            "click",
+            function () {
+
+                const actionUrl =
+                    button.getAttribute("data-action-url");
+
+
+                if (!actionUrl) {
+                    return;
+                }
+
+
+                window.location.href = actionUrl;
+
+            }
+        );
+
+    });
+
+
+    /* ============================================================
+       CHAPTER EDIT BUTTON
+       ------------------------------------------------------------
+       Django provides the URL through data-edit-url.
+       JavaScript only performs normal browser navigation.
+    ============================================================ */
+
+    const chapterEditButtons =
+        document.querySelectorAll(
+            ".chapter-edit-button[data-edit-url]"
+        );
+
+
+    chapterEditButtons.forEach(function (button) {
+
+        button.addEventListener(
+            "click",
+            function () {
+
+                const editUrl =
+                    button.getAttribute("data-edit-url");
+
+
+                if (
+                    !editUrl ||
+                    editUrl === "#"
+                ) {
+                    return;
+                }
+
+
+                window.location.href = editUrl;
+
+            }
+        );
+
+    });
+
+
+    /* ============================================================
        DJANGO MESSAGE AUTO DISMISS
        ------------------------------------------------------------
        Django is responsible for creating the messages.
+
        JavaScript only handles the UI disappearance.
 
        Messages disappear after 5 seconds:
@@ -146,7 +246,7 @@ document.addEventListener("DOMContentLoaded", function () {
        - Error
        - Warning
        - Info
-       - Create Chapter inline error
+       - Inline errors
     ============================================================ */
 
     const djangoMessages =
@@ -157,28 +257,46 @@ document.addEventListener("DOMContentLoaded", function () {
 
     djangoMessages.forEach(function (message) {
 
-        setTimeout(function () {
+        setTimeout(
+            function () {
 
-            if (!message || !message.isConnected) {
-                return;
-            }
-
-            message.style.transition =
-                "opacity 0.35s ease, transform 0.35s ease";
-
-            message.style.opacity = "0";
-            message.style.transform = "translateY(-4px)";
-
-
-            setTimeout(function () {
-
-                if (message && message.isConnected) {
-                    message.remove();
+                if (
+                    !message ||
+                    !message.isConnected
+                ) {
+                    return;
                 }
 
-            }, 350);
 
-        }, 5000);
+                message.style.transition =
+                    "opacity 0.35s ease, transform 0.35s ease";
+
+
+                message.style.opacity = "0";
+
+                message.style.transform =
+                    "translateY(-4px)";
+
+
+                setTimeout(
+                    function () {
+
+                        if (
+                            message &&
+                            message.isConnected
+                        ) {
+
+                            message.remove();
+
+                        }
+
+                    },
+                    350
+                );
+
+            },
+            5000
+        );
 
     });
 
@@ -187,8 +305,10 @@ document.addEventListener("DOMContentLoaded", function () {
        CREATE CHAPTER ERROR
        ------------------------------------------------------------
        Django renders the error inside the popup.
+
        JavaScript only opens the popup.
-       No validation is performed here.
+
+       NO validation is performed here.
     ============================================================ */
 
     const chapterCreateInlineError =
@@ -197,12 +317,23 @@ document.addEventListener("DOMContentLoaded", function () {
         );
 
 
-    if (chapterCreateInlineError && chapterModal) {
+    if (
+        chapterCreateInlineError &&
+        chapterModal
+    ) {
 
         chapterModal.classList.remove("hidden");
+
         chapterModal.classList.add("flex");
 
-        document.body.classList.add("overflow-hidden");
+        chapterModal.setAttribute(
+            "aria-hidden",
+            "false"
+        );
+
+        document.body.classList.add(
+            "overflow-hidden"
+        );
 
     }
 

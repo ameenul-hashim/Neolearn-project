@@ -1020,48 +1020,48 @@
 
 </a>
 
-                <!-- CART -->
+             <!-- CART -->
 
-                <button
-                    class="
-                        relative
-                        text-[#CBD5E1]
-                        hover:text-white
-                        transition-all
-                    "
-                >
+<a
+    href="{% url 'cart' %}"
+    class="
+        relative
+        text-[#CBD5E1]
+        hover:text-cyan-400
+        transition-all
+    "
+    title="Cart"
+>
+    <i class="ri-shopping-cart-2-line text-[21px]"></i>
 
-                    <i class="ri-shopping-cart-2-line text-[21px]"></i>
+    {% if cart_count %}
+        <span
+            class="
+                absolute
+                -top-2
+                -right-2
 
-                    <span
-                        class="
-                            absolute
-                            -top-1
-                            -right-2
+                min-w-[18px]
+                h-[18px]
+                px-1
 
-                            w-[18px]
-                            h-[18px]
+                rounded-full
 
-                            rounded-full
+                bg-cyan-400
 
-                            bg-cyan-400
+                text-black
+                text-[10px]
+                font-bold
 
-                            text-black
-                            text-[10px]
-                            font-bold
-
-                            flex
-                            items-center
-                            justify-center
-                        "
-                    >
-
-                        3
-
-                    </span>
-
-                </button>
-
+                flex
+                items-center
+                justify-center
+            "
+        >
+            {{ cart_count }}
+        </span>
+    {% endif %}
+</a>
                 <!-- NOTIFICATION -->
 
                 <button

@@ -721,7 +721,7 @@
                                                 <!-- ONLY CHAPTER NAME ON LEFT -->
 
                                                 <a
-                                                    href="{% url 'course_builder' batch.id subject.id %}?chapter={{ chapter.id }}"
+                                                    href="{% url 'courses:course_builder' batch.id subject.id %}?chapter={{ chapter.id }}"
                                                     class="min-w-0 flex-1"
                                                     title="{{ chapter.chapter_name }}"
                                                 >
@@ -800,7 +800,7 @@
                                                 <!-- VIEW CHAPTER TIMELINE -->
 
                                                 <a
-                                                    href="{% url 'course_builder' batch.id subject.id %}?chapter={{ chapter.id }}&view=timeline"
+                                                    href="{% url 'courses:course_builder' batch.id subject.id %}?chapter={{ chapter.id }}&view=timeline"
                                                     class="chapter-timeline-link flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-cyan-500/20 bg-cyan-500/10 text-cyan-300 transition {% if selected_chapter and selected_chapter.id == chapter.id and selected_content == 'timeline' %}timeline-active{% endif %}"
                                                     title="View chapter timeline"
                                                     aria-label="View chapter timeline"
@@ -834,7 +834,7 @@
                                                         type="button"
                                                         class="content-type-link flex items-center gap-2 rounded-lg border px-2.5 py-2.5 text-[10px] font-medium transition {% if selected_chapter and selected_chapter.id == chapter.id and selected_content == "videos" or selected_content == "video_timeline" %}workspace-active{% endif %}"
                                                         data-workspace-type="videos"
-                                                        data-workspace-url="{% url 'course_builder' batch.id subject.id %}?chapter={{ chapter.id }}&view=videos"
+                                                        data-workspace-url="{% url 'courses:course_builder' batch.id subject.id %}?chapter={{ chapter.id }}&view=videos"
                                                         title="Show video workspace"
                                                      data-server-timeline-active="{% if selected_content == "video_timeline" %}true{% else %}false{% endif %}">
                                                         <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-red-500/10 text-red-400">
@@ -849,7 +849,7 @@
                                                         type="button"
                                                         class="content-type-link flex items-center gap-2 rounded-lg border px-2.5 py-2.5 text-[10px] font-medium transition {% if selected_chapter and selected_chapter.id == chapter.id and selected_content == "pdfs" or selected_content == "pdf_timeline" %}workspace-active{% endif %}"
                                                         data-workspace-type="pdfs"
-                                                        data-workspace-url="{% url 'course_builder' batch.id subject.id %}?chapter={{ chapter.id }}&view=pdfs"
+                                                        data-workspace-url="{% url 'courses:course_builder' batch.id subject.id %}?chapter={{ chapter.id }}&view=pdfs"
                                                         title="Show PDF workspace"
                                                      data-server-timeline-active="{% if selected_content == "pdf_timeline" %}true{% else %}false{% endif %}">
                                                         <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-sky-400/10 text-sky-300">
@@ -864,7 +864,7 @@
                                                         type="button"
                                                         class="content-type-link flex items-center gap-2 rounded-lg border px-2.5 py-2.5 text-[10px] font-medium transition {% if selected_chapter and selected_chapter.id == chapter.id and selected_content == "quizzes" or selected_content == "quiz_timeline" %}workspace-active{% endif %}"
                                                         data-workspace-type="quizzes"
-                                                        data-workspace-url="{% url 'course_builder' batch.id subject.id %}?chapter={{ chapter.id }}&view=quizzes"
+                                                        data-workspace-url="{% url 'courses:course_builder' batch.id subject.id %}?chapter={{ chapter.id }}&view=quizzes"
                                                         title="Show quiz workspace"
                                                     >
                                                         <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-amber-500/10 text-amber-400">
@@ -879,7 +879,7 @@
                                                         type="button"
                                                         class="content-type-link flex items-center gap-2 rounded-lg border px-2.5 py-2.5 text-[10px] font-medium transition {% if selected_chapter and selected_chapter.id == chapter.id and selected_content == "live" %}workspace-active{% endif %}"
                                                         data-workspace-type="live"
-                                                        data-workspace-url="{% url 'course_builder' batch.id subject.id %}?chapter={{ chapter.id }}&view=live"
+                                                        data-workspace-url="{% url 'courses:course_builder' batch.id subject.id %}?chapter={{ chapter.id }}&view=live"
                                                         title="Show live class workspace"
                                                     >
                                                         <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-emerald-500/10 text-emerald-400">
@@ -1122,7 +1122,7 @@
                                                         <div class="flex shrink-0 flex-wrap items-center gap-2">
 
                                                             <a
-                                                                href="{% url 'course_builder' batch.id subject.id %}?chapter={{ selected_chapter.id }}&view=videos"
+                                                                href="{% url 'courses:course_builder' batch.id subject.id %}?chapter={{ selected_chapter.id }}&view=videos"
                                                                 class="inline-flex items-center gap-2 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-[10px] font-bold text-red-300 transition hover:border-red-400/60 hover:bg-red-500/20 hover:text-red-200"
                                                             >
                                                                 <i class="ri-arrow-left-line"></i>
@@ -1459,7 +1459,7 @@
                                                 <div class="flex shrink-0 justify-end border-t border-slate-800 bg-[#101928] px-5 py-4 sm:px-6">
 
                                                     <a
-                                                        href="{% url 'course_builder' batch.id subject.id %}?chapter={{ selected_chapter.id }}&view=videos"
+                                                        href="{% url 'courses:course_builder' batch.id subject.id %}?chapter={{ selected_chapter.id }}&view=videos"
                                                         class="inline-flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-900 px-4 py-2.5 text-xs font-semibold text-slate-300 transition hover:border-red-500/30 hover:bg-slate-800 hover:text-red-300"
                                                     >
                                                         <i class="ri-arrow-left-line"></i>
@@ -1487,7 +1487,7 @@
                                                 </p>
 
                                                 <a
-                                                    href="{% url 'course_builder' batch.id subject.id %}?chapter={{ selected_chapter.id }}&view=videos"
+                                                    href="{% url 'courses:course_builder' batch.id subject.id %}?chapter={{ selected_chapter.id }}&view=videos"
                                                     class="mt-5 inline-flex items-center gap-2 rounded-lg bg-red-500 px-4 py-2.5 text-xs font-bold text-white transition hover:bg-red-400"
                                                 >
                                                     <i class="ri-arrow-left-line"></i>
@@ -1519,7 +1519,7 @@
                                                         </div>
 
                                                         <a
-                                                            href="{% url 'course_builder' batch.id subject.id %}?chapter={{ selected_chapter.id }}&view=quizzes"
+                                                            href="{% url 'courses:course_builder' batch.id subject.id %}?chapter={{ selected_chapter.id }}&view=quizzes"
                                                             class="inline-flex items-center gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3.5 py-2.5 text-[10px] font-bold text-amber-300 hover:border-amber-400/60"
                                                         >
                                                             <i class="ri-arrow-left-line"></i>
@@ -1719,7 +1719,7 @@
                                                         <div>
 
                                                             <a
-                                                                href="{% url 'course_builder' batch.id subject.id %}?chapter={{ selected_chapter.id }}&view=pdfs"
+                                                                href="{% url 'courses:course_builder' batch.id subject.id %}?chapter={{ selected_chapter.id }}&view=pdfs"
                                                                 class="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-sky-500/30 bg-sky-500/10 px-3.5 py-2.5 text-[10px] font-bold text-sky-300 transition hover:border-sky-400/60 hover:bg-sky-500/20 hover:text-sky-200 sm:w-auto"
                                                             >
                                                                 <i class="ri-arrow-left-line"></i>
@@ -2041,7 +2041,7 @@
                                                         </span>
 
                                                         <a
-                                                            href="{% url 'course_builder' batch.id subject.id %}?chapter={{ selected_chapter.id }}&view=videos"
+                                                            href="{% url 'courses:course_builder' batch.id subject.id %}?chapter={{ selected_chapter.id }}&view=videos"
                                                             class="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-red-500/30 bg-red-500/10 px-3.5 py-2 text-[10px] font-bold text-red-300 transition hover:border-red-400/60 hover:bg-red-500/20 hover:text-red-200 sm:w-auto"
                                                         >
                                                             <i class="ri-arrow-left-line"></i>
@@ -2463,7 +2463,7 @@
 
                                                                         <!-- VIDEO TIMELINE -->
                                                                         <a
-                                                                            href="{% url 'course_builder' batch.id subject.id %}?chapter={{ selected_chapter.id }}&view=video_timeline&video={{ video.id }}"
+                                                                            href="{% url 'courses:course_builder' batch.id subject.id %}?chapter={{ selected_chapter.id }}&view=video_timeline&video={{ video.id }}"
                                                                             class="video-timeline-link flex h-8 w-8 items-center justify-center rounded-lg border border-amber-500/25 bg-amber-500/10 text-amber-300 transition hover:border-amber-400/60 hover:bg-amber-500/20 hover:text-amber-200"
                                                                             title="View video timeline"
                                                                             aria-label="View video timeline"
@@ -2815,7 +2815,7 @@
                                                             </div>
 
                                                             <a
-                                                                href="{% url 'course_builder' batch.id subject.id %}?chapter={{ selected_chapter.id }}&view=quizzes&quiz={{ selected_quiz.id }}"
+                                                                href="{% url 'courses:course_builder' batch.id subject.id %}?chapter={{ selected_chapter.id }}&view=quizzes&quiz={{ selected_quiz.id }}"
                                                                 class="inline-flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-[9px] font-bold text-slate-300 hover:border-amber-500/30 hover:text-amber-300"
                                                             >
                                                                 <i class="ri-arrow-left-line"></i>
@@ -2894,7 +2894,7 @@
                                                                 <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
 
                                                                     <a
-                                                                        href="{% url 'course_builder' batch.id subject.id %}?chapter={{ selected_chapter.id }}&view=quizzes&quiz={{ selected_quiz.id }}"
+                                                                        href="{% url 'courses:course_builder' batch.id subject.id %}?chapter={{ selected_chapter.id }}&view=quizzes&quiz={{ selected_quiz.id }}"
                                                                         class="inline-flex items-center justify-center rounded-lg border border-slate-700 bg-slate-900 px-4 py-2.5 text-[10px] font-bold text-slate-300"
                                                                     >
                                                                         Finish Later
@@ -2920,7 +2920,7 @@
                                                                 <p class="text-[8px] font-bold uppercase tracking-[0.18em] text-slate-600">Saved Questions</p>
                                                                 <p class="mt-1 text-xs font-bold text-white">{{ selected_quiz.questions.count }} question{{ selected_quiz.questions.count|pluralize }}</p>
                                                             <a
-                                                                href="{% url 'course_builder' batch.id subject.id %}?chapter={{ selected_chapter.id }}&view=quizzes&quiz={{ selected_quiz.id }}&quiz_mode=questions"
+                                                                href="{% url 'courses:course_builder' batch.id subject.id %}?chapter={{ selected_chapter.id }}&view=quizzes&quiz={{ selected_quiz.id }}&quiz_mode=questions"
                                                                 class="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-[9px] font-extrabold text-amber-300 transition hover:border-amber-400/60 hover:bg-amber-500/15"
                                                             >
                                                                 <i class="ri-add-line"></i>
@@ -2984,7 +2984,7 @@
                                                             </div>
 
                                                             <a
-                                                                href="{% url 'course_builder' batch.id subject.id %}?chapter={{ selected_chapter.id }}&view=quizzes&quiz={{ selected_quiz.id }}"
+                                                                href="{% url 'courses:course_builder' batch.id subject.id %}?chapter={{ selected_chapter.id }}&view=quizzes&quiz={{ selected_quiz.id }}"
                                                                 class="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-[9px] font-bold text-slate-300 transition hover:border-cyan-500/30 hover:text-cyan-300"
                                                             >
                                                                 <i class="ri-arrow-left-line"></i>
@@ -3424,7 +3424,7 @@
                                                             <div class="flex w-full flex-col-reverse gap-2 sm:w-auto sm:flex-row">
 
                                                                 <a
-                                                                    href="{% url 'course_builder' batch.id subject.id %}?chapter={{ selected_chapter.id }}&view=quizzes&quiz={{ selected_quiz.id }}"
+                                                                    href="{% url 'courses:course_builder' batch.id subject.id %}?chapter={{ selected_chapter.id }}&view=quizzes&quiz={{ selected_quiz.id }}"
                                                                     class="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-700 bg-slate-900 px-4 py-2.5 text-[10px] font-bold text-slate-300 transition hover:border-slate-600 hover:text-white"
                                                                 >
                                                                     Cancel
@@ -3516,7 +3516,7 @@
 
                                                                     <div class="flex items-center gap-1.5">
 
-                                                                        <a href="{% url 'course_builder' batch.id subject.id %}?chapter={{ selected_chapter.id }}&view=quizzes&quiz={{ quiz.id }}&quiz_mode=edit" class="flex h-8 w-8 items-center justify-center rounded-lg border border-cyan-500/25 bg-cyan-500/10 text-cyan-300 hover:border-cyan-400/60" title="Edit quiz">
+                                                                        <a href="{% url 'courses:course_builder' batch.id subject.id %}?chapter={{ selected_chapter.id }}&view=quizzes&quiz={{ quiz.id }}&quiz_mode=edit" class="flex h-8 w-8 items-center justify-center rounded-lg border border-cyan-500/25 bg-cyan-500/10 text-cyan-300 hover:border-cyan-400/60" title="Edit quiz">
                                                                             <i class="ri-pencil-line text-sm"></i>
                                                                         </a>
 
@@ -3878,7 +3878,7 @@
 
             <form
                 method="POST"
-                action="{% url 'course_builder' batch.id subject.id %}"
+                action="{% url 'courses:course_builder' batch.id subject.id %}"
                 class="p-4 sm:p-5"
                 novalidate
             >

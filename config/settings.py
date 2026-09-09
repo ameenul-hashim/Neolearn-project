@@ -111,6 +111,8 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
 
                 'django.contrib.messages.context_processors.messages',
+                
+                'students.context_processors.student_navigation_counts',
             ],
         },
     },

@@ -1,0 +1,1519 @@
+{% extends "students/base_student.html" %}
+{% load static %}
+
+{% block title %}
+    Your Cart | NeoLearn
+{% endblock %}
+
+{% block student_content %}
+
+<div class="mx-auto w-full max-w-[1450px]">
+
+    <!-- =========================================================
+         CART HEADER
+    ========================================================== -->
+
+    <section class="mb-6">
+
+        <div class="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
+
+            <!-- LEFT -->
+
+            <div class="flex items-center gap-4">
+
+                <a
+                    href="{% url 'marketplace' %}"
+                    class="
+                        inline-flex
+                        h-11
+                        items-center
+                        gap-2
+                        rounded-xl
+                        border
+                        border-cyan-400/20
+                        bg-cyan-400/[0.04]
+                        px-4
+                        text-sm
+                        font-semibold
+                        text-cyan-300
+                        transition-all
+                        hover:border-cyan-400/40
+                        hover:bg-cyan-400/10
+                        hover:text-cyan-200
+                    "
+                >
+                    <i class="ri-arrow-left-line text-lg"></i>
+                    Back to Marketplace
+                </a>
+
+                <div class="hidden h-10 w-px bg-white/10 sm:block"></div>
+
+                <div class="flex items-center gap-4">
+
+                    <div
+                        class="
+                            flex
+                            h-[58px]
+                            w-[58px]
+                            shrink-0
+                            items-center
+                            justify-center
+                            rounded-full
+                            border
+                            border-cyan-400/40
+                            bg-cyan-400/[0.08]
+                            text-cyan-400
+                            shadow-[0_0_30px_rgba(0,245,212,0.08)]
+                        "
+                    >
+                        <i class="ri-shopping-cart-2-line text-[28px]"></i>
+                    </div>
+
+                    <div>
+
+                        <h1
+                            class="
+                                text-3xl
+                                font-black
+                                tracking-tight
+                                text-white
+                                sm:text-4xl
+                            "
+                        >
+                            Your
+                            <span class="text-cyan-400">
+                                Cart
+                            </span>
+                        </h1>
+
+                        <p class="mt-1 text-sm text-slate-400 sm:text-base">
+                            {% if cart_items %}
+                                {{ cart_items|length }}
+                                {% if cart_items|length == 1 %}
+                                    batch
+                                {% else %}
+                                    batches
+                                {% endif %}
+                                in your cart
+                            {% else %}
+                                Your cart is currently empty
+                            {% endif %}
+                        </p>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- RIGHT MESSAGE -->
+
+            {% if cart_items %}
+
+                <div
+                    class="
+                        hidden
+                        items-center
+                        gap-4
+                        rounded-2xl
+                        border
+                        border-white/5
+                        bg-white/[0.02]
+                        px-5
+                        py-3
+                        lg:flex
+                    "
+                >
+
+                    <div class="text-right">
+
+                        <p class="text-sm font-bold text-white">
+                            Great choices!
+                        </p>
+
+                        <p class="mt-1 text-xs text-slate-500">
+                            You're one step closer to your learning goals.
+                        </p>
+
+                    </div>
+
+                    <div
+                        class="
+                            flex
+                            h-12
+                            w-12
+                            items-center
+                            justify-center
+                            rounded-xl
+                            bg-cyan-400/5
+                            text-cyan-400/40
+                        "
+                    >
+                        <i class="ri-shopping-bag-3-line text-3xl"></i>
+                    </div>
+
+                </div>
+
+            {% endif %}
+
+        </div>
+
+    </section>
+
+
+    <!-- =========================================================
+         EMPTY CART
+    ========================================================== -->
+
+    {% if not cart_items %}
+
+        <section
+            class="
+                rounded-3xl
+                border
+                border-white/10
+                bg-[#071224]/80
+                px-6
+                py-16
+                text-center
+                shadow-2xl
+                shadow-black/20
+            "
+        >
+
+            <div
+                class="
+                    mx-auto
+                    flex
+                    h-24
+                    w-24
+                    items-center
+                    justify-center
+                    rounded-full
+                    border
+                    border-cyan-400/20
+                    bg-cyan-400/[0.06]
+                    text-cyan-400
+                "
+            >
+                <i class="ri-shopping-cart-2-line text-5xl"></i>
+            </div>
+
+            <h2 class="mt-6 text-2xl font-black text-white">
+                Your cart is empty
+            </h2>
+
+            <p class="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-400">
+                Explore the available batches and add the ones you want
+                to your learning journey.
+            </p>
+
+            <a
+                href="{% url 'marketplace' %}"
+                class="
+                    mt-7
+                    inline-flex
+                    h-12
+                    items-center
+                    justify-center
+                    gap-2
+                    rounded-xl
+                    bg-gradient-to-r
+                    from-cyan-400
+                    to-sky-400
+                    px-6
+                    text-sm
+                    font-black
+                    text-slate-950
+                    shadow-lg
+                    shadow-cyan-500/10
+                    transition-all
+                    hover:-translate-y-0.5
+                    hover:shadow-cyan-500/20
+                "
+            >
+                <i class="ri-store-2-line text-lg"></i>
+                Explore Marketplace
+            </a>
+
+        </section>
+
+    {% else %}
+
+
+        <!-- =====================================================
+             CART ITEMS
+        ====================================================== -->
+
+        <section class="space-y-3">
+
+            {% for item in cart_items %}
+
+                {% with batch=item.batch %}
+
+                    <article
+                        class="
+                            group
+                            relative
+                            overflow-hidden
+                            rounded-2xl
+                            border
+                            border-white/10
+                            bg-[#071224]/85
+                            shadow-xl
+                            shadow-black/10
+                            transition-all
+                            duration-300
+                            hover:border-cyan-400/20
+                            hover:bg-[#09172a]
+                        "
+                    >
+
+                        <!-- subtle glow -->
+
+                        <div
+                            class="
+                                pointer-events-none
+                                absolute
+                                inset-y-0
+                                left-0
+                                w-1
+                                bg-gradient-to-b
+                                from-cyan-400
+                                via-cyan-400/40
+                                to-transparent
+                                opacity-0
+                                transition-opacity
+                                duration-300
+                                group-hover:opacity-100
+                            "
+                        ></div>
+
+
+                        <div
+                            class="
+                                flex
+                                flex-col
+                                gap-5
+                                p-4
+                                sm:p-5
+                                lg:flex-row
+                                lg:items-center
+                            "
+                        >
+
+                            <!-- =================================================
+                                 THUMBNAIL
+                            ================================================== -->
+
+                            <div
+                                class="
+                                    relative
+                                    h-[145px]
+                                    w-full
+                                    shrink-0
+                                    overflow-hidden
+                                    rounded-xl
+                                    border
+                                    border-white/10
+                                    bg-[#0b1424]
+                                    sm:h-[160px]
+                                    lg:h-[112px]
+                                    lg:w-[180px]
+                                "
+                            >
+
+                                {% if batch.batch_thumbnail %}
+
+                                    <img
+                                        src="{{ batch.batch_thumbnail.url }}"
+                                        alt="{{ batch.batch_name }}"
+                                        loading="lazy"
+                                        class="
+                                            h-full
+                                            w-full
+                                            object-cover
+                                            transition-transform
+                                            duration-500
+                                            group-hover:scale-105
+                                        "
+                                    >
+
+                                {% else %}
+
+                                    <div
+                                        class="
+                                            flex
+                                            h-full
+                                            w-full
+                                            items-center
+                                            justify-center
+                                            bg-gradient-to-br
+                                            from-cyan-400/10
+                                            to-sky-500/5
+                                            text-cyan-400/60
+                                        "
+                                    >
+                                        <i class="ri-image-line text-4xl"></i>
+                                    </div>
+
+                                {% endif %}
+
+                                <!-- BATCH LABEL -->
+
+                                <div
+                                    class="
+                                        absolute
+                                        left-3
+                                        top-3
+                                        rounded-lg
+                                        border
+                                        border-white/10
+                                        bg-[#020817]/80
+                                        px-2.5
+                                        py-1
+                                        text-[10px]
+                                        font-bold
+                                        uppercase
+                                        tracking-wide
+                                        text-cyan-300
+                                        backdrop-blur-md
+                                    "
+                                >
+                                    Batch
+                                </div>
+
+                            </div>
+
+
+                            <!-- =================================================
+                                 BATCH INFORMATION
+                            ================================================== -->
+
+                            <div class="min-w-0 flex-1">
+
+                                <div
+                                    class="
+                                        flex
+                                        flex-col
+                                        gap-2
+                                        sm:flex-row
+                                        sm:items-start
+                                        sm:justify-between
+                                    "
+                                >
+
+                                    <div class="min-w-0">
+
+                                        <h2
+                                            class="
+                                                line-clamp-2
+                                                text-lg
+                                                font-black
+                                                leading-6
+                                                text-white
+                                                transition-colors
+                                                group-hover:text-cyan-100
+                                                sm:text-xl
+                                            "
+                                        >
+                                            {{ batch.batch_name }}
+                                        </h2>
+
+                                        <p
+                                            class="
+                                                mt-1
+                                                line-clamp-2
+                                                max-w-2xl
+                                                text-xs
+                                                leading-5
+                                                text-slate-500
+                                            "
+                                        >
+                                            {{ batch.batch_description }}
+                                        </p>
+
+                                    </div>
+
+                                </div>
+
+
+                                <!-- META -->
+
+                                <div
+                                    class="
+                                        mt-4
+                                        flex
+                                        flex-wrap
+                                        items-center
+                                        gap-x-5
+                                        gap-y-2
+                                        text-xs
+                                        text-slate-400
+                                    "
+                                >
+
+                                    <!-- TEACHER -->
+
+                                    {% with teacher_assignment=batch.assigned_teachers.all|first %}
+
+                                        {% if teacher_assignment %}
+
+                                            <div class="flex items-center gap-2">
+
+                                                <i
+                                                    class="
+                                                        ri-user-star-line
+                                                        text-base
+                                                        text-cyan-400
+                                                    "
+                                                ></i>
+
+                                                <span>
+                                                    {{ teacher_assignment.teacher.full_name }}
+                                                </span>
+
+                                            </div>
+
+                                        {% else %}
+
+                                            <div class="flex items-center gap-2">
+
+                                                <i
+                                                    class="
+                                                        ri-user-star-line
+                                                        text-base
+                                                        text-slate-600
+                                                    "
+                                                ></i>
+
+                                                <span class="text-slate-500">
+                                                    Teacher not assigned
+                                                </span>
+
+                                            </div>
+
+                                        {% endif %}
+
+                                    {% endwith %}
+
+
+                                    <!-- SUBJECT COUNT -->
+
+                                    <div class="flex items-center gap-2">
+
+                                        <i
+                                            class="
+                                                ri-book-open-line
+                                                text-base
+                                                text-cyan-400
+                                            "
+                                        ></i>
+
+                                        <span>
+                                            {{ batch.subjects.all|length }}
+                                            {% if batch.subjects.all|length == 1 %}
+                                                Subject
+                                            {% else %}
+                                                Subjects
+                                            {% endif %}
+                                        </span>
+
+                                    </div>
+
+
+                                    <!-- COURSE END -->
+
+                                    {% if batch.course_end_date %}
+
+                                        <div class="flex items-center gap-2">
+
+                                            <i
+                                                class="
+                                                    ri-calendar-line
+                                                    text-base
+                                                    text-cyan-400
+                                                "
+                                            ></i>
+
+                                            <span>
+                                                Ends {{ batch.course_end_date|date:"d M Y" }}
+                                            </span>
+
+                                        </div>
+
+                                    {% endif %}
+
+                                </div>
+
+                            </div>
+
+
+                            <!-- =================================================
+                                 PRICE
+                            ================================================== -->
+
+                            <div
+                                class="
+                                    flex
+                                    shrink-0
+                                    flex-row
+                                    items-center
+                                    justify-between
+                                    gap-5
+                                    border-t
+                                    border-white/5
+                                    pt-4
+                                    sm:justify-end
+                                    sm:border-t-0
+                                    sm:pt-0
+                                    lg:w-[220px]
+                                "
+                            >
+
+                                <div>
+
+                                    {% if batch.original_price > batch.final_price %}
+
+                                        <div
+                                            class="
+                                                text-xs
+                                                font-medium
+                                                text-slate-500
+                                                line-through
+                                            "
+                                        >
+                                            ₹{{ batch.original_price|floatformat:2 }}
+                                        </div>
+
+                                    {% endif %}
+
+                                    <div
+                                        class="
+                                            mt-0.5
+                                            text-2xl
+                                            font-black
+                                            text-cyan-400
+                                        "
+                                    >
+                                        ₹{{ batch.final_price|floatformat:2 }}
+                                    </div>
+
+
+                                    {% if batch.is_offer_active and batch.discount_value %}
+
+                                        <div
+                                            class="
+                                                mt-2
+                                                inline-flex
+                                                items-center
+                                                rounded-lg
+                                                border
+                                                border-emerald-400/20
+                                                bg-emerald-400/10
+                                                px-2.5
+                                                py-1
+                                                text-[11px]
+                                                font-black
+                                                text-emerald-300
+                                            "
+                                        >
+
+                                            {% if batch.discount_type == "percentage" %}
+
+                                                {{ batch.discount_value|floatformat:0 }}% OFF
+
+                                            {% elif batch.discount_type == "fixed" %}
+
+                                                ₹{{ batch.discount_value|floatformat:0 }} OFF
+
+                                            {% endif %}
+
+                                        </div>
+
+                                    {% endif %}
+
+                                </div>
+
+
+                                <!-- REMOVE -->
+
+                                <form
+                                    method="post"
+                                    action="{% url 'remove_from_cart' batch.id %}"
+                                    class="shrink-0"
+                                >
+
+                                    {% csrf_token %}
+
+                                    <button
+                                        type="submit"
+                                        class="
+                                            flex
+                                            h-11
+                                            w-11
+                                            items-center
+                                            justify-center
+                                            rounded-xl
+                                            border
+                                            border-red-500/30
+                                            bg-red-500/[0.04]
+                                            text-red-400
+                                            transition-all
+                                            duration-200
+                                            hover:border-red-400/50
+                                            hover:bg-red-500/10
+                                            hover:text-red-300
+                                        "
+                                        title="Remove {{ batch.batch_name }} from cart"
+                                        aria-label="Remove {{ batch.batch_name }} from cart"
+                                    >
+                                        <i class="ri-delete-bin-6-line text-lg"></i>
+                                    </button>
+
+                                </form>
+
+                            </div>
+
+                        </div>
+
+                    </article>
+
+                {% endwith %}
+
+            {% endfor %}
+
+        </section>
+
+
+        <!-- =====================================================
+             CART ACTIONS
+        ====================================================== -->
+
+        <div
+            class="
+                mt-4
+                flex
+                flex-col
+                gap-3
+                sm:flex-row
+                sm:items-center
+                sm:justify-between
+            "
+        >
+
+            <form
+                method="post"
+                action="{% url 'clear_cart' %}"
+                id="clearCartForm"
+            >
+
+                {% csrf_token %}
+
+                <button
+                    type="submit"
+                    id="clearCartButton"
+                    class="
+                        inline-flex
+                        h-11
+                        items-center
+                        justify-center
+                        gap-2
+                        rounded-xl
+                        border
+                        border-red-500/30
+                        bg-red-500/[0.03]
+                        px-4
+                        text-sm
+                        font-bold
+                        text-red-400
+                        transition-all
+                        hover:border-red-400/50
+                        hover:bg-red-500/10
+                    "
+                >
+                    <i class="ri-delete-bin-6-line text-lg"></i>
+                    Clear Cart
+                </button>
+
+            </form>
+
+<!-- =========================================================
+     CLEAR CART CONFIRMATION MODAL
+========================================================== -->
+
+<div
+    id="clearCartModal"
+    class="
+        fixed
+        inset-0
+        z-[100]
+        hidden
+        items-center
+        justify-center
+        bg-black/70
+        px-4
+        backdrop-blur-sm
+    "
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="clearCartModalTitle"
+>
+    <div
+        class="
+            w-full
+            max-w-md
+            overflow-hidden
+            rounded-2xl
+            border
+            border-red-500/20
+            bg-[#071224]
+            shadow-2xl
+            shadow-black/50
+        "
+    >
+
+        <!-- MODAL HEADER -->
+
+        <div
+            class="
+                flex
+                items-center
+                gap-4
+                border-b
+                border-white/5
+                px-5
+                py-5
+            "
+        >
+
+            <div
+                class="
+                    flex
+                    h-12
+                    w-12
+                    shrink-0
+                    items-center
+                    justify-center
+                    rounded-xl
+                    border
+                    border-red-500/20
+                    bg-red-500/10
+                    text-red-400
+                "
+            >
+                <i class="ri-delete-bin-6-line text-2xl"></i>
+            </div>
+
+            <div class="min-w-0">
+
+                <h2
+                    id="clearCartModalTitle"
+                    class="text-lg font-black text-white"
+                >
+                    Clear Entire Cart?
+                </h2>
+
+                <p class="mt-1 text-xs text-slate-500">
+                    Please confirm this action.
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <!-- MODAL MESSAGE -->
+
+        <div class="px-5 py-5">
+
+            <p class="text-sm leading-6 text-slate-300">
+                Are you sure you want to remove all batches from your cart?
+            </p>
+
+            <div
+                class="
+                    mt-4
+                    flex
+                    items-start
+                    gap-3
+                    rounded-xl
+                    border
+                    border-red-500/10
+                    bg-red-500/[0.04]
+                    px-4
+                    py-3
+                "
+            >
+
+                <i
+                    class="
+                        ri-information-line
+                        mt-0.5
+                        shrink-0
+                        text-red-400
+                    "
+                ></i>
+
+                <p class="text-xs leading-5 text-slate-400">
+                    This will remove every batch currently in your cart.
+                    You can add them again from the Marketplace.
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <!-- MODAL ACTIONS -->
+
+        <div
+            class="
+                flex
+                flex-col-reverse
+                gap-3
+                border-t
+                border-white/5
+                px-5
+                py-4
+                sm:flex-row
+                sm:justify-end
+            "
+        >
+
+            <button
+                type="button"
+                id="cancelClearCartButton"
+                class="
+                    inline-flex
+                    h-11
+                    items-center
+                    justify-center
+                    rounded-xl
+                    border
+                    border-white/10
+                    bg-white/[0.03]
+                    px-5
+                    text-sm
+                    font-bold
+                    text-slate-300
+                    transition-all
+                    hover:border-white/20
+                    hover:bg-white/[0.06]
+                    hover:text-white
+                "
+            >
+                Cancel
+            </button>
+
+
+            <button
+                type="button"
+                id="confirmClearCartButton"
+                class="
+                    inline-flex
+                    h-11
+                    items-center
+                    justify-center
+                    gap-2
+                    rounded-xl
+                    bg-gradient-to-r
+                    from-red-500
+                    to-rose-500
+                    px-5
+                    text-sm
+                    font-black
+                    text-white
+                    shadow-lg
+                    shadow-red-500/10
+                    transition-all
+                    hover:-translate-y-0.5
+                    hover:shadow-red-500/20
+                "
+            >
+                <i class="ri-delete-bin-6-line text-lg"></i>
+                Clear Cart
+            </button>
+
+        </div>
+
+    </div>
+</div>
+
+            <div class="text-sm text-slate-500">
+
+                {{ cart_items|length }}
+
+                {% if cart_items|length == 1 %}
+                    item
+                {% else %}
+                    items
+                {% endif %}
+
+                in your cart
+
+            </div>
+
+        </div>
+
+
+        <!-- =====================================================
+             COUPON SECTION
+             UI ONLY FOR NOW
+             ADMIN COUPON SYSTEM WILL BE CONNECTED NEXT
+        ====================================================== -->
+
+        <section
+            class="
+                mt-5
+                overflow-hidden
+                rounded-2xl
+                border
+                border-cyan-400/15
+                bg-gradient-to-r
+                from-cyan-400/[0.05]
+                via-[#071224]
+                to-sky-400/[0.04]
+            "
+        >
+
+            <div
+                class="
+                    flex
+                    flex-col
+                    gap-5
+                    p-5
+                    lg:flex-row
+                    lg:items-center
+                    lg:justify-between
+                    lg:p-6
+                "
+            >
+
+                <!-- COUPON INFO -->
+
+                <div class="flex items-center gap-4">
+
+                    <div
+                        class="
+                            flex
+                            h-12
+                            w-12
+                            shrink-0
+                            items-center
+                            justify-center
+                            rounded-xl
+                            border
+                            border-cyan-400/20
+                            bg-cyan-400/[0.06]
+                            text-cyan-400
+                        "
+                    >
+                        <i class="ri-coupon-3-line text-2xl"></i>
+                    </div>
+
+                    <div>
+
+                        <h3 class="text-base font-black text-cyan-300">
+                            Have a coupon code?
+                        </h3>
+
+                        <p class="mt-1 text-xs text-slate-400">
+                            Enter your coupon code to get a discount on your order.
+                        </p>
+
+                    </div>
+
+                </div>
+
+
+                <!-- COUPON INPUT -->
+
+                <div
+                    class="
+                        flex
+                        w-full
+                        flex-col
+                        gap-3
+                        sm:flex-row
+                        lg:max-w-[470px]
+                    "
+                >
+
+                    <input
+                        type="text"
+                        id="couponCode"
+                        name="coupon_code"
+                        maxlength="50"
+                        autocomplete="off"
+                        placeholder="Enter coupon code"
+                        class="
+                            h-12
+                            min-w-0
+                            flex-1
+                            rounded-xl
+                            border
+                            border-white/10
+                            bg-[#020817]/60
+                            px-4
+                            text-sm
+                            font-medium
+                            text-white
+                            outline-none
+                            placeholder:text-slate-600
+                            focus:border-cyan-400/40
+                            focus:ring-2
+                            focus:ring-cyan-400/10
+                        "
+                    >
+
+                    <button
+                        type="button"
+                        id="couponApplyButton"
+                        class="
+                            h-12
+                            rounded-xl
+                            bg-gradient-to-r
+                            from-cyan-400
+                            to-sky-400
+                            px-6
+                            text-sm
+                            font-black
+                            text-slate-950
+                            transition-all
+                            hover:-translate-y-0.5
+                            hover:shadow-lg
+                            hover:shadow-cyan-500/10
+                        "
+                    >
+                        Apply
+                    </button>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- =====================================================
+             ORDER SUMMARY
+        ====================================================== -->
+
+        <section
+            class="
+                mt-5
+                overflow-hidden
+                rounded-2xl
+                border
+                border-white/10
+                bg-[#071224]/90
+                shadow-2xl
+                shadow-black/10
+            "
+        >
+
+            <div
+                class="
+                    grid
+                    gap-6
+                    p-5
+                    md:p-6
+                    xl:grid-cols-[1.1fr_0.8fr_0.8fr_1fr_auto]
+                    xl:items-center
+                    xl:gap-0
+                "
+            >
+
+                <!-- SUMMARY TITLE -->
+
+                <div>
+
+                    <h2 class="text-xl font-black text-white">
+                        Order Summary
+                    </h2>
+
+                    <p class="mt-1 text-sm text-slate-500">
+                        Review your items and proceed to checkout.
+                    </p>
+
+                </div>
+
+
+                <!-- SUBTOTAL -->
+
+                <div
+                    class="
+                        border-t
+                        border-white/5
+                        pt-5
+                        xl:border-l
+                        xl:border-t-0
+                        xl:pl-7
+                        xl:pt-0
+                    "
+                >
+
+                    <p class="text-xs font-semibold text-slate-400">
+                        Subtotal
+                    </p>
+
+                    <p class="mt-1 text-xs text-slate-600">
+                        ({{ cart_items|length }} batches)
+                    </p>
+
+                    <p class="mt-1 text-xl font-black text-white">
+                        ₹{{ subtotal|floatformat:2 }}
+                    </p>
+
+                </div>
+
+
+                <!-- DISCOUNT -->
+
+                <div
+                    class="
+                        border-t
+                        border-white/5
+                        pt-5
+                        xl:border-l
+                        xl:border-t-0
+                        xl:pl-7
+                        xl:pt-0
+                    "
+                >
+
+                    <p class="text-xs font-semibold text-slate-400">
+                        Discount
+                    </p>
+
+                    <p class="mt-2 text-xl font-black text-emerald-400">
+                        - ₹0.00
+                    </p>
+
+                </div>
+
+
+                <!-- TOTAL -->
+
+                <div
+                    class="
+                        border-t
+                        border-white/5
+                        pt-5
+                        xl:border-l
+                        xl:border-t-0
+                        xl:pl-7
+                        xl:pt-0
+                    "
+                >
+
+                    <p class="text-xs font-semibold text-slate-400">
+                        Total
+                    </p>
+
+                    <p
+                        class="
+                            mt-1
+                            text-2xl
+                            font-black
+                            text-cyan-400
+                            sm:text-3xl
+                        "
+                    >
+                        ₹{{ subtotal|floatformat:2 }}
+                    </p>
+
+                </div>
+
+
+                <!-- CHECKOUT -->
+
+                <div
+                    class="
+                        border-t
+                        border-white/5
+                        pt-5
+                        xl:border-l
+                        xl:border-t-0
+                        xl:pl-7
+                        xl:pt-0
+                    "
+                >
+
+                    <!--
+                        Checkout route will be connected after
+                        the coupon + checkout backend is ready.
+                    -->
+
+                    <button
+                        type="button"
+                        id="checkoutButton"
+                        disabled
+                        title="Checkout will be enabled after the checkout flow is connected."
+                        class="
+                            flex
+                            h-14
+                            w-full
+                            min-w-[230px]
+                            cursor-not-allowed
+                            items-center
+                            justify-center
+                            gap-3
+                            rounded-xl
+                            bg-gradient-to-r
+                            from-cyan-400
+                            to-sky-400
+                            px-6
+                            text-sm
+                            font-black
+                            text-slate-950
+                            opacity-60
+                            xl:w-auto
+                        "
+                    >
+                        <i class="ri-lock-line text-lg"></i>
+                        Proceed to Checkout
+                        <i class="ri-arrow-right-line text-lg"></i>
+                    </button>
+
+                    <div
+                        class="
+                            mt-2
+                            flex
+                            items-center
+                            justify-center
+                            gap-2
+                            text-[11px]
+                            text-slate-500
+                        "
+                    >
+                        <i class="ri-shield-check-line text-emerald-400"></i>
+                        Secure and Encrypted Payment
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- =====================================================
+             ASSURANCE ROW
+        ====================================================== -->
+
+        <section
+            class="
+                mt-5
+                grid
+                grid-cols-1
+                overflow-hidden
+                rounded-2xl
+                border
+                border-white/5
+                bg-[#050e1c]/70
+                sm:grid-cols-2
+                xl:grid-cols-4
+            "
+        >
+
+            <!-- 30 DAY -->
+
+            <div
+                class="
+                    flex
+                    items-center
+                    gap-4
+                    border-b
+                    border-white/5
+                    p-5
+                    sm:border-r
+                    xl:border-b-0
+                "
+            >
+
+                <div
+                    class="
+                        flex
+                        h-11
+                        w-11
+                        shrink-0
+                        items-center
+                        justify-center
+                        rounded-full
+                        border
+                        border-cyan-400/30
+                        text-cyan-400
+                    "
+                >
+                    <i class="ri-shield-check-line text-xl"></i>
+                </div>
+
+                <div>
+
+                    <p class="text-sm font-bold text-white">
+                        30-Day Money-Back Guarantee
+                    </p>
+
+                    <p class="mt-1 text-xs text-slate-500">
+                        Not satisfied? Get a full refund.
+                    </p>
+
+                </div>
+
+            </div>
+
+
+            <!-- SECURE -->
+
+            <div
+                class="
+                    flex
+                    items-center
+                    gap-4
+                    border-b
+                    border-white/5
+                    p-5
+                    xl:border-b-0
+                    xl:border-r
+                "
+            >
+
+                <div
+                    class="
+                        flex
+                        h-11
+                        w-11
+                        shrink-0
+                        items-center
+                        justify-center
+                        rounded-full
+                        border
+                        border-cyan-400/30
+                        text-cyan-400
+                    "
+                >
+                    <i class="ri-bank-card-line text-xl"></i>
+                </div>
+
+                <div>
+
+                    <p class="text-sm font-bold text-white">
+                        Secure Payment Processing
+                    </p>
+
+                    <p class="mt-1 text-xs text-slate-500">
+                        Your payment data stays protected.
+                    </p>
+
+                </div>
+
+            </div>
+
+
+            <!-- ACCESS -->
+
+            <div
+                class="
+                    flex
+                    items-center
+                    gap-4
+                    border-b
+                    border-white/5
+                    p-5
+                    sm:border-b-0
+                    sm:border-r
+                "
+            >
+
+                <div
+                    class="
+                        flex
+                        h-11
+                        w-11
+                        shrink-0
+                        items-center
+                        justify-center
+                        rounded-full
+                        border
+                        border-cyan-400/30
+                        text-cyan-400
+                    "
+                >
+                    <i class="ri-graduation-cap-line text-xl"></i>
+                </div>
+
+                <div>
+
+                    <p class="text-sm font-bold text-white">
+                        Instant Course Access
+                    </p>
+
+                    <p class="mt-1 text-xs text-slate-500">
+                        Start learning immediately.
+                    </p>
+
+                </div>
+
+            </div>
+
+
+            <!-- LIFETIME -->
+
+            <div
+                class="
+                    flex
+                    items-center
+                    gap-4
+                    p-5
+                "
+            >
+
+                <div
+                    class="
+                        flex
+                        h-11
+                        w-11
+                        shrink-0
+                        items-center
+                        justify-center
+                        rounded-full
+                        border
+                        border-cyan-400/30
+                        text-cyan-400
+                    "
+                >
+                    <i class="ri-infinity-line text-xl"></i>
+                </div>
+
+                <div>
+
+                    <p class="text-sm font-bold text-white">
+                        Lifetime Access
+                    </p>
+
+                    <p class="mt-1 text-xs text-slate-500">
+                        Learn at your own pace.
+                    </p>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+    {% endif %}
+
+</div>
+
+
+<!-- =============================================================
+     CART JAVASCRIPT
+============================================================== -->
+
+<script src="{% static 'students/js/cart.js' %}"></script>
+
+{% endblock %}
