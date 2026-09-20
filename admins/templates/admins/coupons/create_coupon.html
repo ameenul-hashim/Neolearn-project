@@ -1,0 +1,2005 @@
+{% extends "admins/admin_base.html" %}
+{% load static %}
+
+{% block title %}Create Coupon | NeoLearn Admin{% endblock %}
+
+{% block admin_content %}
+<style>
+    /* -------------------------------------------------------------
+       NeoLearn Coupon Create — reference layout
+       Batch-wise keeps the existing left/right layout.
+       General right panel uses compact internal table scrolling.
+    ------------------------------------------------------------- */
+    .coupon-create-root {
+        color: #e7f5ff;
+    }
+
+    .coupon-create-root * {
+        box-sizing: border-box;
+    }
+
+    .coupon-panel {
+        background:
+            linear-gradient(145deg, rgba(3, 28, 49, .97), rgba(2, 18, 34, .985));
+        border: 1px solid rgba(0, 190, 255, .28);
+        border-radius: 10px;
+    }
+
+    .coupon-outer-card {
+        background:
+            linear-gradient(145deg, rgba(2, 21, 38, .98), rgba(1, 14, 26, .99));
+        border: 1px solid rgba(0, 182, 255, .27);
+        border-radius: 10px;
+        height: 100%;
+        min-width: 0;
+        align-self: stretch;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .coupon-main-grid {
+        align-items: stretch !important;
+        width: 100%;
+    }
+
+    .coupon-main-grid > .coupon-outer-card {
+        align-self: stretch;
+        height: 100%;
+        min-width: 0;
+    }
+
+    .coupon-main-grid > .coupon-outer-card > .coupon-panel,
+    .coupon-main-grid > .coupon-outer-card > .coupon-card-stack {
+        width: 100%;
+        min-width: 0;
+        flex: 1 1 auto;
+    }
+
+    .coupon-main-grid > .coupon-outer-card > .coupon-panel {
+        display: flex;
+        flex-direction: column;
+        min-height: 100%;
+    }
+
+    .coupon-card-stack {
+        width: 100%;
+    }
+
+    .coupon-card-stack > .coupon-panel {
+        flex: 0 0 auto;
+    }
+
+    .coupon-right-content {
+        flex: 1 1 auto;
+        min-height: 0;
+    }
+
+    .coupon-section-title {
+        font-size: 15px;
+        line-height: 1.15;
+    }
+
+    .coupon-right-stat {
+        min-height: 92px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .coupon-right-stat-value {
+        font-size: 21px;
+        line-height: 1;
+    }
+
+    .coupon-right-note {
+        min-height: 82px;
+    }
+
+    /* -------------------------------------------------------------
+       General coupon — right-side applicability workspace
+       Balanced full cards with silent internal scrolling.
+       Page scroll remains available when nested scroll reaches its
+       top or bottom boundary.
+    ------------------------------------------------------------- */
+    .general-right-panel {
+        display: flex;
+        flex-direction: column;
+        min-height: 100%;
+        height: 100%;
+        overflow: hidden;
+        background:
+            radial-gradient(circle at 92% 8%, rgba(34, 211, 238, .065), transparent 29%),
+            radial-gradient(circle at 8% 92%, rgba(129, 140, 248, .055), transparent 31%),
+            linear-gradient(145deg, rgba(3, 29, 49, .985), rgba(2, 17, 31, .99));
+    }
+
+    .general-right-content {
+        display: flex;
+        flex-direction: column;
+        flex: 1 1 auto;
+        min-height: 0;
+        gap: 12px;
+    }
+
+    .general-list-card {
+        display: flex;
+        flex: 1 1 0;
+        flex-direction: column;
+        min-width: 0;
+        min-height: 0;
+        overflow: hidden;
+        border-radius: 12px;
+        background: linear-gradient(145deg, rgba(3, 20, 34, .94), rgba(1, 12, 23, .97));
+    }
+
+    /*
+       Each table gets one consistent viewport.
+       Roughly 7–8 normal rows remain visible before scrolling starts.
+       Only this area scrolls; the complete page can still scroll normally.
+    */
+    .general-table-shell {
+        flex: 0 0 330px;
+        height: 330px;
+        min-height: 330px;
+        max-height: 330px;
+        overflow: auto;
+        overscroll-behavior: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+    }
+
+    .general-table-shell::-webkit-scrollbar {
+        width: 0;
+        height: 0;
+        display: none;
+    }
+
+    .general-table-shell::-webkit-scrollbar-track,
+    .general-table-shell::-webkit-scrollbar-thumb {
+        background: transparent;
+        border: 0;
+    }
+
+    .general-table {
+        border-collapse: separate;
+        border-spacing: 0;
+        width: 100%;
+        min-width: 820px;
+    }
+
+    .general-table thead th {
+        position: sticky;
+        top: 0;
+        z-index: 3;
+        height: 36px;
+        padding-top: 7px;
+        padding-bottom: 7px;
+        background: rgba(3, 17, 30, .985);
+        box-shadow: inset 0 -1px 0 rgba(255,255,255,.055);
+    }
+
+    .general-table tbody tr {
+        height: 40px;
+        transition: background-color .16s ease;
+    }
+
+    .general-table tbody tr:hover {
+        background: rgba(34, 211, 238, .032);
+    }
+
+    .general-table tbody td {
+        height: 40px;
+        padding-top: 6px;
+        padding-bottom: 6px;
+        vertical-align: middle;
+    }
+
+    .general-table-empty {
+        height: 330px;
+    }
+
+    .general-empty-state {
+        display: flex;
+        min-height: 255px;
+        height: 100%;
+        align-items: center;
+        justify-content: center;
+        padding: 25px;
+        text-align: center;
+    }
+
+    .general-empty-icon {
+        width: 48px;
+        height: 48px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 11px;
+        border-radius: 14px;
+    }
+
+    .general-empty-state h4 {
+        margin: 0;
+        font-size: 12px;
+        font-weight: 900;
+        color: #d8edf8;
+    }
+
+    .general-empty-state p {
+        max-width: 300px;
+        margin: 5px auto 0;
+        font-size: 9px;
+        line-height: 1.55;
+        color: #647f93;
+    }
+
+    @media (min-width: 1101px) {
+        .general-right-panel {
+            min-height: 100%;
+        }
+
+        .general-list-card {
+            flex: 0 0 auto;
+        }
+
+        .general-table-shell {
+            flex-basis: 330px;
+            height: 330px;
+            min-height: 330px;
+            max-height: 330px;
+        }
+    }
+
+    @media (max-width: 1100px) {
+        .general-right-panel {
+            min-height: 0;
+            height: auto;
+        }
+
+        .general-right-content {
+            min-height: 0;
+        }
+
+        .general-list-card {
+            flex: 0 0 auto;
+        }
+
+        .general-table-shell {
+            flex-basis: 330px;
+            height: 330px;
+            min-height: 330px;
+            max-height: 330px;
+        }
+    }
+
+    @media (max-width: 760px) {
+        .general-right-content {
+            gap: 10px;
+        }
+
+        .general-list-card {
+            flex: 0 0 auto;
+        }
+
+        .general-table-shell {
+            flex-basis: 300px;
+            height: 300px;
+            min-height: 300px;
+            max-height: 300px;
+        }
+
+        .general-table {
+            min-width: 760px;
+        }
+
+        .general-empty-state {
+            min-height: 225px;
+        }
+    }
+
+    @media (max-width: 520px) {
+        .general-table-shell {
+            flex-basis: 270px;
+            height: 270px;
+            min-height: 270px;
+            max-height: 270px;
+        }
+
+        .general-table {
+            min-width: 720px;
+        }
+
+        .general-empty-state {
+            min-height: 200px;
+            padding-left: 18px;
+            padding-right: 18px;
+        }
+    }
+
+    @media (max-width: 1100px) {
+        .coupon-main-grid {
+            grid-template-columns: 1fr !important;
+            align-items: stretch !important;
+        }
+
+        .coupon-main-grid > .coupon-outer-card {
+            height: auto;
+        }
+
+        .coupon-main-grid > .coupon-outer-card > .coupon-panel {
+            min-height: 0;
+        }
+    }
+
+    .coupon-field {
+        width: 100%;
+        min-width: 0;
+        height: 36px;
+        border-radius: 6px;
+        border: 1px solid rgba(64, 146, 192, .42);
+        background: rgba(3, 27, 47, .92);
+        color: #f4fbff;
+        outline: none;
+        padding: 0 11px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    .coupon-field:focus {
+        border-color: rgba(34, 211, 238, .72);
+        box-shadow: 0 0 0 2px rgba(34, 211, 238, .10);
+    }
+
+    .coupon-field::placeholder {
+        color: #7290a5;
+    }
+
+    .coupon-textarea {
+        height: 48px;
+        min-height: 48px;
+        padding-top: 9px;
+        padding-bottom: 9px;
+        resize: none;
+        line-height: 1.45;
+    }
+
+    .coupon-select {
+        appearance: auto;
+    }
+
+    .coupon-label {
+        display: block;
+        margin-bottom: 5px;
+        color: #ffffff;
+        font-size: 11px;
+        font-weight: 700;
+    }
+
+    .coupon-help {
+        margin-top: 4px;
+        color: #7e98ab;
+        font-size: 9px;
+        line-height: 1.35;
+    }
+
+    .coupon-step {
+        width: 34px;
+        height: 34px;
+        min-width: 34px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 999px;
+        background: linear-gradient(145deg, #07c4eb, #24d9f2);
+        color: #062338;
+        font-size: 15px;
+        font-weight: 900;
+        box-shadow: 0 0 20px rgba(34, 211, 238, .12);
+    }
+
+    .discount-option {
+        display: flex;
+        align-items: flex-start;
+        gap: 9px;
+        cursor: pointer;
+    }
+
+    .discount-dot {
+        width: 21px;
+        height: 21px;
+        min-width: 21px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-top: 1px;
+        border-radius: 50%;
+        border: 1px solid rgba(132, 170, 198, .70);
+        background: rgba(3, 17, 29, .88);
+    }
+
+    .discount-dot > span {
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        background: #fff;
+        opacity: 0;
+    }
+
+    .discount-radio:checked + .discount-dot {
+        border-color: #8ab7ff;
+        background: #2563eb;
+        box-shadow: 0 0 12px rgba(37, 99, 235, .22);
+    }
+
+    .discount-radio:checked + .discount-dot > span {
+        opacity: 1;
+    }
+
+    .mode-button {
+        height: 34px;
+        border-radius: 8px;
+        border: 1px solid rgba(56, 139, 181, .36);
+        background: rgba(2, 19, 33, .72);
+        color: #93a8b9;
+        font-size: 10px;
+        font-weight: 900;
+        transition: .18s ease;
+    }
+
+    .mode-button:hover {
+        color: #ffffff;
+        border-color: rgba(34, 211, 238, .46);
+    }
+
+    .mode-button.is-active {
+        color: #68eaff;
+        border-color: rgba(34, 211, 238, .52);
+        background: rgba(0, 180, 220, .09);
+        box-shadow: inset 0 0 18px rgba(34, 211, 238, .035);
+    }
+
+    .coupon-switch {
+        position: relative;
+        width: 39px;
+        height: 22px;
+        display: inline-flex;
+        flex: 0 0 auto;
+    }
+
+    .coupon-switch input {
+        position: absolute;
+        opacity: 0;
+        pointer-events: none;
+    }
+
+    .coupon-switch-track {
+        position: absolute;
+        inset: 0;
+        border-radius: 999px;
+        background: #334155;
+        transition: .18s ease;
+    }
+
+    .coupon-switch-thumb {
+        position: absolute;
+        top: 3px;
+        left: 3px;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: #ffffff;
+        box-shadow: 0 1px 4px rgba(0,0,0,.3);
+        transition: .18s ease;
+    }
+
+    .coupon-switch input:checked + .coupon-switch-track {
+        background: #1dd3aa;
+    }
+
+    .coupon-switch input:checked + .coupon-switch-track + .coupon-switch-thumb {
+        transform: translateX(17px);
+    }
+
+    .coupon-image-box {
+        width: 252px;
+        max-width: 100%;
+        height: 79px;
+        overflow: hidden;
+        border-radius: 6px;
+        border: 1px solid rgba(86, 148, 185, .34);
+        background: rgba(6, 19, 31, .94);
+    }
+
+    .coupon-image-box img {
+        width: 100%;
+        height: 100%;
+        display: block;
+        object-fit: cover;
+    }
+
+    .coupon-upload-placeholder {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #61798d;
+        font-size: 9px;
+    }
+
+    .batch-select-shell {
+        position: relative;
+    }
+
+    .batch-select-shell select {
+        padding-right: 40px;
+    }
+
+    .preview-card {
+        background: rgba(2, 19, 33, .75);
+        border: 1px solid rgba(73, 135, 173, .24);
+        border-radius: 8px;
+    }
+
+    .preview-stat {
+        text-align: center;
+        padding: 9px 11px;
+    }
+
+    .preview-divider {
+        border-left: 1px solid rgba(114, 156, 180, .22);
+    }
+
+    .info-row {
+        min-height: 31px;
+        display: grid;
+        grid-template-columns: 22px 122px minmax(0, 1fr);
+        align-items: center;
+        gap: 8px;
+        padding: 0 10px;
+        border-bottom: 1px solid rgba(255,255,255,.06);
+    }
+
+    .info-row:last-child {
+        border-bottom: 0;
+    }
+
+    .general-table th,
+    .general-table td {
+        border-bottom: 1px solid rgba(255,255,255,.045);
+    }
+
+    .general-table th {
+        padding: 8px 8px;
+        font-size: 8px;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: .03em;
+        color: #91a5b5;
+        white-space: nowrap;
+    }
+
+    .general-table td {
+        padding: 7px 8px;
+        font-size: 9px;
+        color: #e7f3fb;
+    }
+
+    .batch-thumb {
+        width: 31px;
+        height: 31px;
+        flex: 0 0 auto;
+        border-radius: 6px;
+        object-fit: cover;
+        border: 1px solid rgba(255,255,255,.08);
+    }
+
+    .table-switch {
+        width: 39px;
+        height: 22px;
+    }
+
+    .table-switch .coupon-switch-thumb {
+        width: 16px;
+        height: 16px;
+    }
+
+    .table-switch input:checked + .coupon-switch-track + .coupon-switch-thumb {
+        transform: translateX(17px);
+    }
+
+    @media (max-width: 900px) {
+        .coupon-header-actions {
+            width: 100%;
+            flex-wrap: wrap;
+            justify-content: flex-start;
+        }
+
+        .coupon-mode-bar {
+            max-width: 100%;
+        }
+
+        .coupon-right-stat {
+            min-height: 78px;
+        }
+    }
+
+    @media (max-width: 760px) {
+        .coupon-create-root {
+            overflow-x: hidden;
+        }
+
+        .coupon-header-actions {
+            width: 100%;
+            align-items: stretch;
+            justify-content: flex-start;
+            gap: 8px;
+        }
+
+        .coupon-mode-bar {
+            width: 100%;
+        }
+
+        .coupon-mode-bar .mode-button {
+            width: 50% !important;
+        }
+
+        .coupon-header-actions > a {
+            width: 100%;
+            justify-content: center;
+        }
+
+        .coupon-main-grid {
+            grid-template-columns: 1fr !important;
+            gap: 10px;
+        }
+
+        .two-col-mobile {
+            grid-template-columns: 1fr !important;
+        }
+
+        .coupon-image-box {
+            width: 100%;
+        }
+
+        .coupon-right-stat {
+            min-height: 72px;
+        }
+
+        .coupon-right-stat-value {
+            font-size: 19px;
+        }
+
+        .coupon-section-title {
+            font-size: 14px;
+        }
+    }
+
+    @media (max-width: 520px) {
+        .coupon-create-root {
+            padding-left: 10px !important;
+            padding-right: 10px !important;
+        }
+
+        .coupon-step {
+            width: 31px;
+            height: 31px;
+            min-width: 31px;
+            font-size: 13px;
+        }
+
+        .coupon-panel > div,
+        .coupon-outer-card {
+            border-radius: 9px;
+        }
+
+        .preview-stat {
+            padding: 8px 6px;
+        }
+
+    }
+</style>
+
+<div id="couponCreatePage" class="coupon-create-root w-full overflow-x-hidden px-3 pb-6 pt-2 sm:px-4 lg:px-5" data-default-mode="batch_specific">
+
+    <!-- HEADER -->
+    <div class="mx-auto w-full max-w-[1330px]">
+        <div class="flex items-start justify-between gap-4">
+            <div class="min-w-0">
+                <div class="mb-1.5 flex items-center gap-1.5 text-[10px] text-slate-500">
+                    <i class="ri-coupon-line text-[11px]"></i>
+                    <a href="{% url 'admin_coupons' %}" class="transition hover:text-cyan-300">Coupons</a>
+                    <i class="ri-arrow-right-s-line"></i>
+                    <span>Create Coupon</span>
+                    <i class="ri-arrow-right-s-line"></i>
+                    <span id="breadcrumbType" class="font-bold text-slate-300">Batch-wise Coupon</span>
+                </div>
+
+                <h1 id="pageTitle" class="text-[22px] font-black leading-none tracking-tight text-white sm:text-[23px]">
+                    Create Batch-wise Coupon
+                </h1>
+                <p id="pageSubtitle" class="mt-1.5 text-[11px] text-slate-300">
+                    Create a coupon for a specific batch only. The coupon value must be less than or equal to the current selling price of the batch.
+                </p>
+            </div>
+
+            <div class="coupon-header-actions flex shrink-0 items-start gap-2">
+                <div class="coupon-mode-bar flex items-center gap-1 rounded-lg border border-white/10 bg-[#031321]/80 p-1">
+                    <button type="button" class="mode-button is-active w-[118px]" data-mode="batch_specific" aria-selected="true">
+                        Batch Specific
+                    </button>
+                    <button type="button" class="mode-button w-[118px]" data-mode="general" aria-selected="false">
+                        General Coupon
+                    </button>
+                </div>
+
+                <a href="{% url 'admin_coupons' %}"
+                   class="inline-flex h-[36px] shrink-0 items-center gap-2 rounded-lg border border-cyan-400/20 bg-cyan-400/[0.025] px-4 text-[10px] font-black text-slate-200 transition hover:border-cyan-400/45 hover:bg-cyan-400/[0.08] hover:text-cyan-300">
+                    <i class="ri-arrow-left-line"></i>
+                    Back to Coupons
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- FORM -->
+    <form id="couponCreateForm"
+          class="mx-auto mt-3 w-full max-w-[1330px]"
+          method="post"
+          enctype="multipart/form-data">
+
+        {% csrf_token %}
+        <input type="hidden" name="coupon_type" id="couponType" value="batch_specific">
+
+        <!-- =========================================================
+             BATCH-SPECIFIC WORKSPACE
+        ========================================================== -->
+        <div id="batchSpecificWorkspace" class="coupon-main-grid grid grid-cols-[minmax(430px,0.42fr)_minmax(0,0.58fr)] items-stretch gap-4">
+
+            <!-- LEFT -->
+            <div class="coupon-outer-card p-1.5">
+                <div class="coupon-card-stack space-y-1.5">
+
+                    <!-- 1 DETAILS -->
+                    <section class="coupon-panel overflow-hidden">
+                        <div class="flex items-center gap-3 border-b border-white/5 px-4 py-2.5">
+                            <span class="coupon-step">1</span>
+                            <h2 class="text-[14px] font-black text-cyan-300">Coupon Details</h2>
+                        </div>
+
+                        <div class="space-y-3 p-4">
+                            <div>
+                                <label class="coupon-label" for="couponCodeBS">Coupon Code <span class="text-rose-400">*</span></label>
+                                <input id="couponCodeBS" name="code" type="text" maxlength="50" autocomplete="off"
+                                       value="{{ form_data.code|default:'' }}"
+                                       placeholder="SUPER500" class="coupon-field uppercase">
+                                <p class="coupon-help">Use a unique and easy to remember code.</p>
+                            </div>
+
+                            <div>
+                                <label class="coupon-label" for="descriptionBS">Description <span class="text-rose-400">*</span></label>
+                                <textarea id="descriptionBS" name="description" class="coupon-field coupon-textarea"
+                                          placeholder="Special offer for selected batch">{{ form_data.description|default:'' }}</textarea>
+                            </div>
+
+                            <div>
+                                <label class="coupon-label">Coupon Thumbnail <span class="text-rose-400">*</span></label>
+                                <div class="flex flex-wrap items-center gap-3">
+                                    <div id="thumbnailPreviewBoxBS" class="coupon-image-box hidden">
+                                        <img id="thumbnailPreviewBS" class="h-full w-full object-cover" alt="Coupon thumbnail preview">
+                                    </div>
+                                    <div class="min-w-0">
+                                        <p class="mb-1.5 text-[9px] font-black text-rose-300">Image required</p>
+                                        <label for="couponThumbnail" class="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-lg border border-cyan-400/30 bg-cyan-400/[0.035] px-4 text-[10px] font-black text-cyan-300 transition hover:bg-cyan-400/[0.09]">
+                                            <i class="ri-image-edit-line"></i>
+                                            Select Image
+                                        </label>
+                                        <p class="mt-1.5 text-[8px] text-slate-500">JPG, PNG or WEBP • Recommended size: 600 × 300px</p>
+                                    </div>
+                                </div>
+                                <input id="couponThumbnail" name="coupon_thumbnail" type="file" accept="image/jpeg,image/png,image/webp" class="hidden">
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- 2 SELECT BATCH -->
+                    <section class="coupon-panel overflow-hidden">
+                        <div class="flex items-center gap-3 border-b border-white/5 px-4 py-2.5">
+                            <span class="coupon-step">2</span>
+                            <h2 class="text-[14px] font-black text-cyan-300">Select Batch</h2>
+                        </div>
+                        <div class="p-4">
+                            <label class="coupon-label" for="batchSpecificSelect">Batch <span class="text-rose-400">*</span></label>
+                            <div class="batch-select-shell">
+                                <select id="batchSpecificSelect" name="batch_specific_batch" class="coupon-field coupon-select">
+                                    <option value="">Select a batch</option>
+                                    {% for row in coupon_batch_rows %}
+                                        <option value="{{ row.batch_id }}"
+                                                {% if row.is_selected %}selected{% endif %}
+                                                data-name="{{ row.batch_name|escape }}"
+                                                data-original="{{ row.original_price }}"
+                                                data-current="{{ row.current_price }}"
+                                                data-existing-type="{{ row.batch.discount_type|default:'none' }}"
+                                                data-existing-value="{{ row.batch.discount_value|default:'0' }}"
+                                                data-description="{{ row.batch.batch_description|default:''|escape }}"
+                                                data-thumbnail="{% if row.batch.batch_thumbnail %}{{ row.batch.batch_thumbnail.url }}{% endif %}"
+                                                data-subject-count="{{ row.subject_count|default:0 }}"
+                                                data-teacher-count="{{ row.teacher_count|default:0 }}"
+                                                data-student-count="{{ row.student_count|default:0 }}"
+                                                data-status="{{ row.batch.batch_status|default:''|escape }}">
+                                            {{ row.batch_name }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <p class="coupon-help">Select one published marketplace batch.</p>
+                        </div>
+                    </section>
+
+                    <!-- 3 DISCOUNT -->
+                    <section class="coupon-panel overflow-hidden">
+                        <div class="flex items-center gap-3 border-b border-white/5 px-4 py-2.5">
+                            <span class="coupon-step">3</span>
+                            <h2 class="text-[14px] font-black text-cyan-300">Discount Settings</h2>
+                        </div>
+                        <div class="p-4">
+                            <p class="mb-2 text-[10px] font-black uppercase tracking-wide text-slate-400">Discount Type</p>
+                            <div class="grid grid-cols-2 gap-8">
+                                <label class="discount-option">
+                                    <input class="discount-radio sr-only" type="radio" name="discount_type" value="fixed" checked>
+                                    <span class="discount-dot"><span></span></span>
+                                    <span>
+                                        <span class="block text-[11px] font-bold text-white">Fixed Amount</span>
+                                        <span class="text-[9px] text-slate-400">(e.g. ₹500 off)</span>
+                                    </span>
+                                </label>
+                                <label class="discount-option">
+                                    <input class="discount-radio sr-only" type="radio" name="discount_type" value="percentage">
+                                    <span class="discount-dot"><span></span></span>
+                                    <span>
+                                        <span class="block text-[11px] font-bold text-white">Percentage</span>
+                                        <span class="text-[9px] text-slate-400">(e.g. 30% off)</span>
+                                    </span>
+                                </label>
+                            </div>
+
+                            <div class="mt-3">
+                                <label id="discountValueLabelBS" class="coupon-label" for="discountValueBS">Discount Value (₹) <span class="text-rose-400">*</span></label>
+                                <div class="flex items-center gap-3">
+                                    <input id="discountValueBS" name="discount_value" type="number" min="0" step="0.01" inputmode="decimal"
+                                           value="{{ form_data.discount_value|default:'' }}" placeholder="500" class="coupon-field max-w-[240px]">
+                                    <span id="discountHelperBS" class="text-[9px] text-slate-400">Flat discount amount in rupees.</span>
+                                </div>
+                            </div>
+                    </section>
+
+                    <!-- 4 USAGE -->
+                    <section class="coupon-panel overflow-hidden">
+                        <div class="flex items-center gap-3 border-b border-white/5 px-4 py-2.5">
+                            <span class="coupon-step">4</span>
+                            <h2 class="text-[14px] font-black text-cyan-300">Usage &amp; Validity</h2>
+                        </div>
+                        <div class="space-y-3 p-4">
+                            <div class="two-col-mobile grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="coupon-label" for="usageLimitBS">Total Usage Limit <span class="text-rose-400">*</span></label>
+                                    <input id="usageLimitBS" name="usage_limit" type="number" min="1" step="1"
+                                           value="{{ form_data.usage_limit|default:'' }}" placeholder="500" class="coupon-field">
+                                    <p class="coupon-help">Total number of times this coupon can be used.</p>
+                                </div>
+                                <div>
+                                    <label class="coupon-label" for="perUserBS">Per Student Usage Limit</label>
+                                    <input id="perUserBS" name="per_user_limit" type="number" min="1" step="1"
+                                           value="{{ form_data.per_user_limit|default:'' }}" placeholder="1" class="coupon-field">
+                                    <p class="coupon-help">How many times a single student can use this coupon.</p>
+                                </div>
+                            </div>
+
+                            <div class="two-col-mobile grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="coupon-label" for="validFromBS">Valid From <span class="text-rose-400">*</span></label>
+                                    <input id="validFromBS" name="valid_from" type="datetime-local"
+                                           value="{{ form_data.valid_from|default:'' }}" class="coupon-field">
+                                </div>
+                                <div>
+                                    <label class="coupon-label" for="validUntilBS">Valid Until <span class="text-rose-400">*</span></label>
+                                    <input id="validUntilBS" name="valid_until" type="datetime-local"
+                                           value="{{ form_data.valid_until|default:'' }}" class="coupon-field">
+                                </div>
+                            </div>
+
+                            <div class="flex items-center justify-between border-t border-white/5 pt-2">
+                                <div>
+                                    <p class="text-[9px] font-black uppercase tracking-wide text-slate-500">Status</p>
+                                    <p id="statusLabelBS" class="mt-0.5 text-[10px] font-bold text-white">Active</p>
+                                </div>
+                                <label class="coupon-switch cursor-pointer" title="Toggle status">
+                                    <input id="statusBS" name="status" type="checkbox" value="active" checked>
+                                    <span class="coupon-switch-track"></span>
+                                    <span class="coupon-switch-thumb"></span>
+                                </label>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+            </div>
+
+            <!-- RIGHT -->
+            <div class="coupon-outer-card p-1.5">
+                <div class="coupon-panel overflow-hidden">
+                    <div class="flex items-start gap-3 border-b border-white/5 px-4 py-3">
+                        <span class="coupon-step shrink-0">5</span>
+                        <div>
+                            <h2 class="text-[14px] font-black text-cyan-300">Batch Preview &amp; Price Details</h2>
+                            <p class="mt-0.5 text-[9px] text-slate-400">Here is how this coupon will be applied to the selected batch. Please verify the details before creating.</p>
+                        </div>
+                    </div>
+
+                    <div class="coupon-right-content space-y-3 p-4">
+                        <!-- SELECTED BATCH -->
+                        <section class="preview-card p-4">
+                            <div class="flex items-start gap-4">
+                                <div class="h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-cyan-400/10">
+                                    <img id="selectedBatchThumbBS" class="hidden h-full w-full object-cover" alt="Selected batch thumbnail">
+                                    <div id="selectedBatchIconBS" class="flex h-full w-full items-center justify-center text-cyan-300">
+                                        <i class="ri-book-open-line text-2xl"></i>
+                                    </div>
+                                </div>
+                                <div class="min-w-0 flex-1">
+                                    <h3 id="selectedBatchNameBS" class="truncate text-[15px] font-black text-white">Select a batch</h3>
+                                    <p id="selectedBatchDescriptionBS" class="mt-0.5 truncate text-[10px] text-slate-400">Selected marketplace batch</p>
+                                    <div class="mt-2 flex items-center gap-4 text-[9px] text-slate-400">
+                                        <span class="text-cyan-300"><i class="ri-book-open-line mr-1"></i><span id="selectedSubjectCountBS">0</span> Subjects</span>
+                                        <span class="text-cyan-300"><i class="ri-user-3-line mr-1"></i><span id="selectedTeacherCountBS">0</span> Teachers</span>
+                                        <span class="text-cyan-300"><i class="ri-group-line mr-1"></i><span id="selectedStudentCountBS">0</span> Students</span>
+                                    </div>
+                                </div>
+                                <span id="selectedBatchStatusBS" class="inline-flex shrink-0 items-center rounded-md border border-emerald-400/30 bg-emerald-400/10 px-2 py-1 text-[8px] font-black text-emerald-300">—</span>
+                                <button type="button" class="hidden shrink-0 rounded-md border border-cyan-400/30 bg-cyan-400/[0.04] px-3 py-2 text-[9px] font-black text-cyan-300 xl:inline-flex">
+                                    View Batch Details <i class="ri-arrow-right-line ml-1"></i>
+                                </button>
+                            </div>
+                        </section>
+
+                        <!-- PRICE -->
+                        <section class="preview-card p-4">
+                            <h3 class="coupon-section-title mb-3 font-black text-white">Price Breakdown</h3>
+                            <div class="grid grid-cols-3">
+                                <div class="preview-stat coupon-right-stat">
+                                    <p class="text-[8px] text-slate-400">Original Price</p>
+                                    <p id="previewOriginalBS" class="coupon-right-stat-value mt-2 font-black text-white">—</p>
+                                </div>
+                                <div class="preview-stat preview-divider">
+                                    <p class="text-[8px] text-slate-400">Existing Discount</p>
+                                    <p id="previewExistingBS" class="coupon-right-stat-value mt-2 font-black text-rose-400">—</p>
+                                </div>
+                                <div class="preview-stat preview-divider">
+                                    <p class="text-[8px] text-slate-400">Current Selling Price</p>
+                                    <p id="previewCurrentBS" class="coupon-right-stat-value mt-2 font-black text-cyan-300">—</p>
+                                </div>
+                            </div>
+                        </section>
+
+                        <!-- CALC -->
+                        <section class="preview-card p-4">
+                            <h3 class="coupon-section-title mb-3 font-black text-white">Coupon Calculation <span id="calculationTypeBS" class="text-cyan-300">(Fixed Amount)</span></h3>
+                            <div class="grid grid-cols-3">
+                                <div class="preview-stat coupon-right-stat">
+                                    <p class="text-[8px] text-slate-400">Current Selling Price</p>
+                                    <p id="calcCurrentBS" class="coupon-right-stat-value mt-2 font-black text-white">—</p>
+                                </div>
+                                <div class="preview-stat preview-divider">
+                                    <p class="text-[8px] text-slate-400">Coupon Discount</p>
+                                    <p id="calcDiscountBS" class="coupon-right-stat-value mt-2 font-black text-emerald-300">—</p>
+                                </div>
+                                <div class="preview-stat preview-divider">
+                                    <p class="text-[8px] text-slate-400">Final Price (After Coupon)</p>
+                                    <p id="calcFinalBS" class="coupon-right-stat-value mt-2 font-black text-cyan-300">—</p>
+                                </div>
+                            </div>
+                            <div id="calcMessageBS" class="mt-3 rounded-lg border border-emerald-400/20 bg-emerald-400/[0.04] px-3 py-2 text-[9px] leading-4 text-emerald-200">
+                                Select a batch to preview its current price.
+                            </div>
+                        </section>
+
+                        <!-- INFO -->
+                        <section class="preview-card overflow-hidden">
+                            <div class="px-3 py-2.5">
+                                <h3 class="text-[11px] font-black text-white">Batch Information</h3>
+                            </div>
+                            <div>
+                                <div class="info-row">
+                                    <i class="ri-price-tag-3-line text-cyan-300"></i>
+                                    <span class="text-[9px] text-slate-400">Batch Name</span>
+                                    <span id="infoNameBS" class="truncate text-[9px] font-bold text-slate-100">—</span>
+                                </div>
+                                <div class="info-row">
+                                    <i class="ri-file-text-line text-cyan-300"></i>
+                                    <span class="text-[9px] text-slate-400">Description</span>
+                                    <span id="infoDescriptionBS" class="truncate text-[9px] text-slate-200">—</span>
+                                </div>
+                                <div class="info-row">
+                                    <i class="ri-book-open-line text-cyan-300"></i>
+                                    <span class="text-[9px] text-slate-400">Subjects</span>
+                                    <span id="infoSubjectsBS" class="text-[9px] text-slate-200">0 Subjects</span>
+                                </div>
+                                <div class="info-row">
+                                    <i class="ri-user-line text-cyan-300"></i>
+                                    <span class="text-[9px] text-slate-400">Teachers</span>
+                                    <span id="infoTeachersBS" class="text-[9px] text-slate-200">0 Teachers</span>
+                                </div>
+                                <div class="info-row">
+                                    <i class="ri-group-line text-cyan-300"></i>
+                                    <span class="text-[9px] text-slate-400">Students</span>
+                                    <span id="infoStudentsBS" class="text-[9px] text-slate-200">0 Enrolled</span>
+                                </div>
+                                <div class="info-row">
+                                    <i class="ri-checkbox-circle-line text-cyan-300"></i>
+                                    <span class="text-[9px] text-slate-400">Status</span>
+                                    <span id="infoStatusBS" class="inline-flex w-fit items-center rounded-md border border-slate-400/30 bg-slate-400/10 px-2 py-1 text-[8px] font-black text-slate-300">—</span>
+                                </div>
+                            </div>
+                        </section>
+
+                        <!-- NOTE -->
+                        <section class="coupon-right-note rounded-lg border border-cyan-400/25 bg-cyan-400/[0.035] p-4">
+                            <div class="flex items-start gap-2">
+                                <span class="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-cyan-400 text-slate-950">
+                                    <i class="ri-information-line text-xs"></i>
+                                </span>
+                                <div>
+                                    <h3 class="text-[10px] font-black text-cyan-300">Important Note</h3>
+                                    <ul class="mt-1.5 space-y-1 text-[8px] leading-4 text-slate-400">
+                                        <li>• For batch-wise coupons, the coupon value must be less than or equal to the current selling price of the selected batch.</li>
+                                        <li>• Order amount rules (minimum/maximum) are not applicable for batch-wise coupons.</li>
+                                        <li>• You can create a separate coupon for each batch.</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- =========================================================
+             GENERAL WORKSPACE
+        ========================================================== -->
+        <div id="generalWorkspace" class="coupon-main-grid hidden grid grid-cols-[minmax(0,0.42fr)_minmax(0,0.58fr)] items-stretch gap-4">
+
+            <!-- LEFT -->
+            <div class="coupon-outer-card p-1.5 shadow-[0_18px_55px_rgba(0,0,0,.18)]">
+                <div class="coupon-card-stack space-y-1.5">
+
+                    <!-- 1 DETAILS -->
+                    <section class="coupon-panel overflow-hidden">
+                        <div class="flex items-center gap-3 border-b border-white/5 px-4 py-2.5">
+                            <span class="coupon-step">1</span>
+                            <h2 class="text-[14px] font-black text-cyan-300">Coupon Details</h2>
+                        </div>
+                        <div class="space-y-3 p-4 md:p-5">
+                            <div>
+                                <label class="coupon-label" for="couponCodeGeneral">Coupon Code <span class="text-rose-400">*</span></label>
+                                <input id="couponCodeGeneral" type="text" maxlength="50" autocomplete="off"
+                                       value="{{ form_data.code|default:'' }}" placeholder="ONAM2000" class="coupon-field uppercase"
+                                       data-shared-field="code">
+                                <p class="coupon-help">Use a unique and easy to remember code.</p>
+                            </div>
+                            <div>
+                                <label class="coupon-label" for="descriptionGeneral">Description <span class="text-rose-400">*</span></label>
+                                <textarea id="descriptionGeneral" class="coupon-field coupon-textarea" placeholder="Onam special offer - Flat ₹2,000 off on selected batches" data-shared-field="description">{{ form_data.description|default:'' }}</textarea>
+                            </div>
+                            <div>
+                                <label class="coupon-label">Coupon Banner <span class="text-rose-400">*</span></label>
+                                <div class="flex flex-wrap items-center gap-3">
+                                    <div id="thumbnailPreviewBoxGeneral" class="coupon-image-box hidden">
+                                        <img id="thumbnailPreviewGeneral" class="h-full w-full object-cover" alt="Coupon banner preview">
+                                    </div>
+                                    <div class="min-w-0">
+                                        <p class="mb-1.5 text-[9px] font-black text-rose-300">Image required</p>
+                                        <label for="couponThumbnailGeneralTrigger" class="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-lg border border-cyan-400/30 bg-cyan-400/[0.035] px-4 text-[10px] font-black text-cyan-300 transition hover:bg-cyan-400/[0.09] hover:text-cyan-200">
+                                            <i class="ri-image-edit-line"></i>
+                                            Select Image
+                                        </label>
+                                        <p class="mt-1.5 text-[8px] text-slate-500">JPG, PNG or WEBP • Recommended size: 600 × 300px</p>
+                                    </div>
+                                </div>
+                                <input id="couponThumbnailGeneralTrigger" type="file" accept="image/jpeg,image/png,image/webp" class="hidden">
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- 2 DISCOUNT -->
+                    <section class="coupon-panel overflow-hidden">
+                        <div class="flex items-center gap-3 border-b border-white/5 px-4 py-2.5">
+                            <span class="coupon-step">2</span>
+                            <h2 class="text-[14px] font-black text-cyan-300">Discount Settings</h2>
+                        </div>
+                        <div class="p-4 md:p-5">
+                            <p class="mb-2 text-[10px] font-black uppercase tracking-wide text-slate-400">Discount Type</p>
+                            <div class="grid grid-cols-2 gap-8">
+                                <label class="discount-option">
+                                    <input class="discount-radio sr-only" type="radio" name="general_discount_type_ui" value="fixed" checked>
+                                    <span class="discount-dot"><span></span></span>
+                                    <span>
+                                        <span class="block text-[11px] font-bold text-white">Fixed Amount</span>
+                                        <span class="text-[9px] text-slate-400">(e.g. ₹2,000 off)</span>
+                                    </span>
+                                </label>
+                                <label class="discount-option">
+                                    <input class="discount-radio sr-only" type="radio" name="general_discount_type_ui" value="percentage">
+                                    <span class="discount-dot"><span></span></span>
+                                    <span>
+                                        <span class="block text-[11px] font-bold text-white">Percentage</span>
+                                        <span class="text-[9px] text-slate-400">(e.g. 30% off)</span>
+                                    </span>
+                                </label>
+                            </div>
+                            <div class="mt-3">
+                                <label id="generalDiscountLabel" class="coupon-label" for="generalDiscountValue">Discount Value (₹) <span class="text-rose-400">*</span></label>
+                                <div class="flex items-center gap-3">
+                                    <input id="generalDiscountValue" type="number" min="0" step="0.01" value="{{ form_data.discount_value|default:'' }}" placeholder="2000" class="coupon-field max-w-[250px]" data-shared-field="discount_value">
+                                    <span id="generalDiscountHelp" class="text-[9px] leading-4 text-slate-400">Flat discount amount in rupees.</span>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- 3 ORDER -->
+                    <section class="coupon-panel overflow-hidden">
+                        <div class="flex items-center gap-3 border-b border-white/5 px-4 py-2.5">
+                            <span class="coupon-step">3</span>
+                            <h2 class="text-[14px] font-black text-cyan-300">Order Amount Rules</h2>
+                        </div>
+                        <div class="p-4 md:p-5">
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="coupon-label" for="minimumOrderGeneral">Minimum Order Amount (₹) <span class="text-rose-400">*</span></label>
+                                    <input id="minimumOrderGeneral" type="number" min="0" step="0.01" value="{{ form_data.minimum_order_amount|default:'0' }}" placeholder="5000" class="coupon-field" data-shared-field="minimum_order_amount">
+                                    <p class="coupon-help">Coupon applies only if total eligible amount is ≥ minimum.</p>
+                                </div>
+                                <div>
+                                    <label class="coupon-label" for="maximumOrderGeneral">Maximum Order Amount (₹)</label>
+                                    <input id="maximumOrderGeneral" type="number" min="0" step="0.01" value="{{ form_data.maximum_order_amount|default:'' }}" placeholder="20000" class="coupon-field" data-shared-field="maximum_order_amount">
+                                    <p class="coupon-help">Leave empty if no maximum limit.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- 4 USAGE -->
+                    <section class="coupon-panel overflow-hidden">
+                        <div class="flex items-center gap-3 border-b border-white/5 px-4 py-2.5">
+                            <span class="coupon-step">4</span>
+                            <h2 class="text-[14px] font-black text-cyan-300">Usage &amp; Validity</h2>
+                        </div>
+                        <div class="space-y-3 p-4">
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="coupon-label" for="generalUsage">Total Usage Limit <span class="text-rose-400">*</span></label>
+                                    <input id="generalUsage" type="number" min="1" step="1" value="{{ form_data.usage_limit|default:'' }}" placeholder="500" class="coupon-field" data-shared-field="usage_limit">
+                                    <p class="coupon-help">Total number of times this coupon can be used (across all students).</p>
+                                </div>
+                                <div>
+                                    <label class="coupon-label" for="generalPerUser">Per Student Usage Limit</label>
+                                    <input id="generalPerUser" type="number" min="1" step="1" value="{{ form_data.per_user_limit|default:'' }}" placeholder="1" class="coupon-field" data-shared-field="per_user_limit">
+                                    <p class="coupon-help">How many times a single student can use this coupon.</p>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="coupon-label" for="generalValidFrom">Valid From <span class="text-rose-400">*</span></label>
+                                    <input id="generalValidFrom" type="datetime-local" value="{{ form_data.valid_from|default:'' }}" class="coupon-field" data-shared-field="valid_from">
+                                </div>
+                                <div>
+                                    <label class="coupon-label" for="generalValidUntil">Valid Until <span class="text-rose-400">*</span></label>
+                                    <input id="generalValidUntil" type="datetime-local" value="{{ form_data.valid_until|default:'' }}" class="coupon-field" data-shared-field="valid_until">
+                                </div>
+                            </div>
+                            <div class="flex items-center justify-between border-t border-white/5 pt-2">
+                                <div>
+                                    <p class="text-[9px] font-black uppercase tracking-wide text-slate-500">Status</p>
+                                    <p id="statusLabelGeneral" class="mt-0.5 text-[10px] font-bold text-white">Active</p>
+                                </div>
+                                <label class="coupon-switch cursor-pointer">
+                                    <input id="statusGeneral" type="checkbox" value="active" checked>
+                                    <span class="coupon-switch-track"></span>
+                                    <span class="coupon-switch-thumb"></span>
+                                </label>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+            </div>
+
+            <!-- RIGHT -->
+            <div class="coupon-outer-card p-1.5 shadow-[0_22px_65px_rgba(0,0,0,.22)]">
+                <div class="coupon-panel general-right-panel">
+                    <div class="flex items-start gap-3 border-b border-cyan-400/10 bg-gradient-to-r from-cyan-400/[0.05] via-transparent to-violet-400/[0.05] px-4 py-3.5 md:px-5">
+                        <span class="coupon-step shrink-0 shadow-[0_0_22px_rgba(34,211,238,.16)]">5</span>
+                        <div class="min-w-0 flex-1">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <h2 class="coupon-section-title font-black text-cyan-300">Batch Applicability</h2>
+                                <span class="rounded-full border border-cyan-400/20 bg-cyan-400/[0.05] px-2 py-1 text-[7px] font-black uppercase tracking-wider text-cyan-200">General Coupon</span>
+                            </div>
+                            <p class="mt-1 text-[9px] leading-4 text-slate-400">Review marketplace batches, eligibility, pricing and coupon results before enabling a batch.</p>
+                        </div>
+                    </div>
+
+                    <div class="coupon-right-content general-right-content p-3.5 md:p-5">
+                        <!-- TOOLBAR -->
+                        <div class="mb-3 grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_150px_repeat(3,minmax(88px,1fr))]">
+                            <div class="relative">
+                                <i class="ri-search-line pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-500"></i>
+                                <input id="generalSearch" type="search" autocomplete="off" placeholder="Search batches..." class="coupon-field pl-9">
+                            </div>
+                            <select id="generalFilter" class="coupon-field">
+                                <option value="all">All Batches</option>
+                                <option value="enabled">Enabled</option>
+                                <option value="disabled">Disabled</option>
+                            </select>
+                            <div class="rounded-xl border border-cyan-400/20 bg-gradient-to-br from-cyan-400/[0.06] to-transparent px-3 py-2.5 shadow-inner shadow-cyan-400/[0.03]">
+                                <p class="text-[7px] font-black uppercase tracking-wide text-slate-500">Total Batches</p>
+                                <p id="generalTotalCount" class="mt-0.5 text-[16px] font-black text-white">0</p>
+                            </div>
+                            <div class="rounded-xl border border-emerald-400/20 bg-gradient-to-br from-emerald-400/[0.06] to-transparent px-3 py-2.5 shadow-inner shadow-emerald-400/[0.03]">
+                                <p class="text-[7px] font-black uppercase tracking-wide text-slate-500">Eligible</p>
+                                <p id="generalEligibleCount" class="mt-0.5 text-[16px] font-black text-emerald-300">0</p>
+                            </div>
+                            <div class="rounded-xl border border-rose-400/20 bg-gradient-to-br from-rose-400/[0.06] to-transparent px-3 py-2.5 shadow-inner shadow-rose-400/[0.03]">
+                                <p class="text-[7px] font-black uppercase tracking-wide text-slate-500">Not Eligible</p>
+                                <p id="generalNotEligibleCount" class="mt-0.5 text-[16px] font-black text-rose-300">0</p>
+                            </div>
+                        </div>
+
+                        <!-- ELIGIBLE -->
+                        <section class="general-list-card overflow-hidden border border-emerald-400/15 bg-slate-950/55 shadow-[0_12px_30px_rgba(16,185,129,.045)]">
+                            <div class="flex shrink-0 items-center justify-between gap-3 border-b border-emerald-400/10 bg-gradient-to-r from-emerald-400/[0.055] via-transparent to-transparent px-3 py-2.5">
+                                <div class="flex min-w-0 items-center gap-2">
+                                    <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-400 text-[9px] font-black text-slate-950 shadow-[0_0_18px_rgba(16,185,129,.14)]">
+                                        <i class="ri-check-line"></i>
+                                    </span>
+                                    <div class="min-w-0">
+                                        <p class="text-[11px] font-black text-emerald-300">Eligible Batches</p>
+                                        <p class="mt-0.5 text-[7px] uppercase tracking-[.13em] text-slate-500">Within the configured order amount rules</p>
+                                    </div>
+                                </div>
+                                <span id="eligibleSectionCount" class="inline-flex h-6 min-w-[26px] shrink-0 items-center justify-center rounded-full border border-emerald-400/20 bg-emerald-400/[0.08] px-2 text-[8px] font-black text-emerald-300">0</span>
+                            </div>
+                            <div class="general-table-shell">
+                                <table class="general-table">
+                                    <thead>
+                                        <tr>
+                                            <th class="text-left" style="width:34%">Batch</th>
+                                            <th>Original Price</th>
+                                            <th>Existing Discount</th>
+                                            <th>Current Price</th>
+                                            <th>Coupon Discount</th>
+                                            <th>Final Price</th>
+                                            <th>Apply</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="eligibleBody"></tbody>
+                                </table>
+                            </div>
+                        </section>
+
+                        <!-- INELIGIBLE -->
+                        <section class="general-list-card overflow-hidden border border-rose-400/15 bg-slate-950/55 shadow-[0_12px_30px_rgba(244,63,94,.045)]">
+                            <div class="flex shrink-0 items-center justify-between gap-3 border-b border-rose-400/10 bg-gradient-to-r from-rose-400/[0.055] via-transparent to-transparent px-3 py-2.5">
+                                <div class="flex min-w-0 items-center gap-2">
+                                    <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-rose-400 text-[9px] font-black text-slate-950 shadow-[0_0_18px_rgba(244,63,94,.12)]">
+                                        <i class="ri-close-line"></i>
+                                    </span>
+                                    <div class="min-w-0">
+                                        <p class="text-[11px] font-black text-rose-300">Not Eligible Batches</p>
+                                        <p class="mt-0.5 text-[7px] uppercase tracking-[.13em] text-slate-500">Outside the configured amount or discount rules</p>
+                                    </div>
+                                </div>
+                                <span id="ineligibleSectionCount" class="inline-flex h-6 min-w-[26px] shrink-0 items-center justify-center rounded-full border border-rose-400/20 bg-rose-400/[0.08] px-2 text-[8px] font-black text-rose-300">0</span>
+                            </div>
+                            <div class="general-table-shell">
+                                <table class="general-table">
+                                    <thead>
+                                        <tr>
+                                            <th class="text-left" style="width:39%">Batch</th>
+                                            <th>Current Price</th>
+                                            <th class="text-left" style="width:39%">Reason</th>
+                                            <th>Apply</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="ineligibleBody"></tbody>
+                                </table>
+                            </div>
+                        </section>
+
+                        <!-- NOTE -->
+                        <section class="shrink-0 rounded-xl border border-cyan-400/25 bg-cyan-400/[0.035] p-3 shadow-inner shadow-cyan-400/[0.02]">
+                            <div class="flex items-start gap-2">
+                                <span class="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-cyan-400 text-slate-950">
+                                    <i class="ri-information-line text-xs"></i>
+                                </span>
+                                <div>
+                                    <h3 class="text-[10px] font-black text-cyan-300">How eligibility works?</h3>
+                                    <ul class="mt-1.5 space-y-1 text-[8px] leading-4 text-slate-400">
+                                        <li>• A batch is eligible if its current selling price is greater than or equal to the minimum order amount.</li>
+                                        <li>• If you set a maximum order amount, the batch must also be less than or equal to that amount.</li>
+                                        <li>• You can enable or disable the coupon for each eligible batch individually.</li>
+                                        <li>• Batches outside the amount rules are shown in the Not Eligible section.</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- COMMON ACTIONS -->
+        <div class="mx-auto mt-2 flex w-full max-w-[1330px] justify-end gap-2">
+            <a href="{% url 'admin_coupons' %}" class="inline-flex h-9 items-center justify-center rounded-lg border border-white/10 bg-white/[0.03] px-5 text-[10px] font-black text-slate-300 transition hover:bg-white/[0.07] hover:text-white">
+                Cancel
+            </a>
+            <button type="submit" class="inline-flex h-9 items-center justify-center gap-2 rounded-lg bg-cyan-400 px-6 text-[10px] font-black text-slate-950 shadow-lg shadow-cyan-400/10 transition hover:bg-cyan-300">
+                <i class="ri-check-line"></i>
+                Create Coupon
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+(function () {
+    "use strict";
+
+    const page = document.getElementById("couponCreatePage");
+    if (!page) return;
+
+    const form = document.getElementById("couponCreateForm");
+    const couponType = document.getElementById("couponType");
+    const batchWorkspace = document.getElementById("batchSpecificWorkspace");
+    const generalWorkspace = document.getElementById("generalWorkspace");
+    const modeButtons = Array.from(document.querySelectorAll(".mode-button"));
+
+    const pageTitle = document.getElementById("pageTitle");
+    const pageSubtitle = document.getElementById("pageSubtitle");
+    const breadcrumbType = document.getElementById("breadcrumbType");
+
+    const batchSelect = document.getElementById("batchSpecificSelect");
+    const discountValueBS = document.getElementById("discountValueBS");
+    const calculationTypeBS = document.getElementById("calculationTypeBS");
+    const discountValueLabelBS = document.getElementById("discountValueLabelBS");
+    const discountHelperBS = document.getElementById("discountHelperBS");
+
+    const selectedBatchNameBS = document.getElementById("selectedBatchNameBS");
+    const selectedBatchDescriptionBS = document.getElementById("selectedBatchDescriptionBS");
+    const selectedBatchThumbBS = document.getElementById("selectedBatchThumbBS");
+    const selectedBatchIconBS = document.getElementById("selectedBatchIconBS");
+    const previewOriginalBS = document.getElementById("previewOriginalBS");
+    const previewExistingBS = document.getElementById("previewExistingBS");
+    const previewCurrentBS = document.getElementById("previewCurrentBS");
+    const calcCurrentBS = document.getElementById("calcCurrentBS");
+    const calcDiscountBS = document.getElementById("calcDiscountBS");
+    const calcFinalBS = document.getElementById("calcFinalBS");
+    const calcMessageBS = document.getElementById("calcMessageBS");
+    const infoNameBS = document.getElementById("infoNameBS");
+    const infoDescriptionBS = document.getElementById("infoDescriptionBS");
+    const selectedSubjectCountBS = document.getElementById("selectedSubjectCountBS");
+    const selectedTeacherCountBS = document.getElementById("selectedTeacherCountBS");
+    const selectedStudentCountBS = document.getElementById("selectedStudentCountBS");
+    const selectedBatchStatusBS = document.getElementById("selectedBatchStatusBS");
+    const infoSubjectsBS = document.getElementById("infoSubjectsBS");
+    const infoTeachersBS = document.getElementById("infoTeachersBS");
+    const infoStudentsBS = document.getElementById("infoStudentsBS");
+    const infoStatusBS = document.getElementById("infoStatusBS");
+
+    const statusBS = document.getElementById("statusBS");
+    const statusLabelBS = document.getElementById("statusLabelBS");
+    const statusGeneral = document.getElementById("statusGeneral");
+    const statusLabelGeneral = document.getElementById("statusLabelGeneral");
+
+    const generalDiscountValue = document.getElementById("generalDiscountValue");
+    const generalDiscountLabel = document.getElementById("generalDiscountLabel");
+    const generalDiscountHelp = document.getElementById("generalDiscountHelp");
+    const minimumOrderGeneral = document.getElementById("minimumOrderGeneral");
+    const maximumOrderGeneral = document.getElementById("maximumOrderGeneral");
+    const generalSearch = document.getElementById("generalSearch");
+    const generalFilter = document.getElementById("generalFilter");
+    const eligibleBody = document.getElementById("eligibleBody");
+    const ineligibleBody = document.getElementById("ineligibleBody");
+    const generalTotalCount = document.getElementById("generalTotalCount");
+    const generalEligibleCount = document.getElementById("generalEligibleCount");
+    const generalNotEligibleCount = document.getElementById("generalNotEligibleCount");
+    const eligibleSectionCount = document.getElementById("eligibleSectionCount");
+    const ineligibleSectionCount = document.getElementById("ineligibleSectionCount");
+
+    const thumbnailInput = document.getElementById("couponThumbnail");
+    const generalThumbnailTrigger = document.getElementById("couponThumbnailGeneralTrigger");
+
+    const generalDiscountRadios = Array.from(document.querySelectorAll('input[name="general_discount_type_ui"]'));
+    const batchDiscountRadios = Array.from(document.querySelectorAll('input[name="discount_type"]'));
+
+    const batchRows = Array.from(document.querySelectorAll("#batchSpecificSelect option[data-current]"));
+    const generalRows = batchRows.map(function (option) {
+        return {
+            id: option.value,
+            name: option.dataset.name || "",
+            original: Number(option.dataset.original || 0),
+            current: Number(option.dataset.current || 0),
+            existingType: option.dataset.existingType || "none",
+            existingValue: Number(option.dataset.existingValue || 0),
+            description: option.dataset.description || "",
+            thumbnail: option.dataset.thumbnail || "",
+            subjectCount: Number(option.dataset.subjectCount || 0),
+            teacherCount: Number(option.dataset.teacherCount || 0),
+            studentCount: Number(option.dataset.studentCount || 0),
+            status: option.dataset.status || ""
+        };
+    });
+
+    function formatINR(value) {
+        const number = Number(value);
+        if (!Number.isFinite(number)) return "—";
+        return "₹" + number.toLocaleString("en-IN", {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 2
+        });
+    }
+
+    function getBatchDiscountType() {
+        const checked = batchDiscountRadios.find(function (input) { return input.checked; });
+        return checked ? checked.value : "fixed";
+    }
+
+    function getGeneralDiscountType() {
+        const checked = generalDiscountRadios.find(function (input) { return input.checked; });
+        return checked ? checked.value : "fixed";
+    }
+
+    function setMode(mode) {
+        const isGeneral = mode === "general";
+        couponType.value = isGeneral ? "general" : "batch_specific";
+        batchWorkspace.classList.toggle("hidden", isGeneral);
+        generalWorkspace.classList.toggle("hidden", !isGeneral);
+
+        pageTitle.textContent = isGeneral ? "Create General Coupon" : "Create Batch-wise Coupon";
+        breadcrumbType.textContent = isGeneral ? "General Coupon" : "Batch-wise Coupon";
+        pageSubtitle.textContent = isGeneral
+            ? "Create a coupon that can be applied to multiple batches."
+            : "Create a coupon for a specific batch only. The coupon value must be less than or equal to the current selling price of the batch.";
+
+        modeButtons.forEach(function (button) {
+            const active = button.dataset.mode === mode;
+            button.classList.toggle("is-active", active);
+            button.setAttribute("aria-selected", active ? "true" : "false");
+        });
+
+        if (isGeneral) {
+            syncGeneralFieldValues();
+            refreshGeneralTable();
+        } else {
+            refreshBatchPreview();
+        }
+    }
+
+    function syncGeneralFieldValues() {
+        const sourceByName = {
+            code: document.getElementById("couponCodeBS"),
+            description: document.getElementById("descriptionBS"),
+            discount_value: document.getElementById("discountValueBS"),
+            minimum_order_amount: minimumOrderGeneral,
+            maximum_order_amount: maximumOrderGeneral,
+            usage_limit: document.getElementById("usageLimitBS"),
+            per_user_limit: document.getElementById("perUserBS"),
+            valid_from: document.getElementById("validFromBS"),
+            valid_until: document.getElementById("validUntilBS")
+        };
+
+        Object.keys(sourceByName).forEach(function (key) {
+            const source = sourceByName[key];
+            const target = document.querySelector('[data-shared-field="' + key + '"]');
+            if (source && target && target.value === "") {
+                target.value = source.value;
+            }
+        });
+    }
+
+    function updateDiscountUI() {
+        const type = getBatchDiscountType();
+        const percentage = type === "percentage";
+        calculationTypeBS.textContent = percentage ? "(Percentage)" : "(Fixed Amount)";
+        discountValueLabelBS.childNodes[0].nodeValue = percentage ? "Discount Value (%) " : "Discount Value (₹) ";
+        discountHelperBS.textContent = percentage ? "Percentage discount from 1% to 100%." : "Flat discount amount in rupees.";
+
+        // Percentage coupons are capped at 100.
+        // Fixed coupons have no cap.
+        if (percentage) {
+            discountValueBS.setAttribute("max", "100");
+        } else {
+            discountValueBS.removeAttribute("max");
+        }
+
+        refreshBatchPreview();
+    }
+
+    function updateGeneralDiscountUI() {
+        const type = getGeneralDiscountType();
+        const percentage = type === "percentage";
+        generalDiscountLabel.childNodes[0].nodeValue = percentage ? "Discount Value (%) " : "Discount Value (₹) ";
+        generalDiscountHelp.textContent = percentage ? "Percentage discount from 1% to 100%." : "Flat discount amount in rupees.";
+
+        // Percentage coupons are capped at 100.
+        // Fixed coupons have no cap.
+        if (percentage) {
+            generalDiscountValue.setAttribute("max", "100");
+        } else {
+            generalDiscountValue.removeAttribute("max");
+        }
+
+        refreshGeneralTable();
+    }
+
+    function refreshBatchPreview() {
+        const option = batchSelect.options[batchSelect.selectedIndex];
+        if (!option || !option.value) {
+            selectedBatchNameBS.textContent = "Select a batch";
+            selectedBatchDescriptionBS.textContent = "Selected marketplace batch";
+            selectedBatchThumbBS.classList.add("hidden");
+            selectedBatchIconBS.classList.remove("hidden");
+            previewOriginalBS.textContent = "—";
+            previewExistingBS.textContent = "—";
+            previewCurrentBS.textContent = "—";
+            calcCurrentBS.textContent = "—";
+            calcDiscountBS.textContent = "—";
+            calcFinalBS.textContent = "—";
+            infoNameBS.textContent = "—";
+            infoDescriptionBS.textContent = "—";
+            selectedSubjectCountBS.textContent = "0";
+            selectedTeacherCountBS.textContent = "0";
+            selectedStudentCountBS.textContent = "0";
+            selectedBatchStatusBS.textContent = "—";
+            infoSubjectsBS.textContent = "0 Subjects";
+            infoTeachersBS.textContent = "0 Teachers";
+            infoStudentsBS.textContent = "0 Enrolled";
+            infoStatusBS.textContent = "—";
+            infoStatusBS.className = "inline-flex w-fit items-center rounded-md border border-slate-400/30 bg-slate-400/10 px-2 py-1 text-[8px] font-black text-slate-300";
+            calcMessageBS.textContent = "Select a batch to preview its current price.";
+            calcMessageBS.className = "mt-3 rounded-lg border border-emerald-400/20 bg-emerald-400/[0.04] px-3 py-2 text-[9px] leading-4 text-emerald-200";
+            return;
+        }
+
+        const original = Number(option.dataset.original || 0);
+        const current = Number(option.dataset.current || 0);
+        const existingType = option.dataset.existingType || "none";
+        const existingValue = Number(option.dataset.existingValue || 0);
+        const name = option.dataset.name || "";
+        const description = option.dataset.description || "";
+        const thumbnail = option.dataset.thumbnail || "";
+        const subjectCount = Number(option.dataset.subjectCount || 0);
+        const teacherCount = Number(option.dataset.teacherCount || 0);
+        const studentCount = Number(option.dataset.studentCount || 0);
+        const batchStatus = option.dataset.status || "—";
+
+        selectedBatchNameBS.textContent = name;
+        selectedBatchDescriptionBS.textContent = description || "Selected marketplace batch";
+        infoNameBS.textContent = name;
+        infoDescriptionBS.textContent = description || "—";
+
+        selectedSubjectCountBS.textContent = String(subjectCount);
+        selectedTeacherCountBS.textContent = String(teacherCount);
+        selectedStudentCountBS.textContent = String(studentCount);
+        selectedBatchStatusBS.textContent = batchStatus ? batchStatus.charAt(0).toUpperCase() + batchStatus.slice(1) : "—";
+        infoSubjectsBS.textContent = `${subjectCount} Subjects`;
+        infoTeachersBS.textContent = `${teacherCount} Teachers`;
+        infoStudentsBS.textContent = `${studentCount} Enrolled`;
+        infoStatusBS.textContent = batchStatus ? batchStatus.charAt(0).toUpperCase() + batchStatus.slice(1) : "—";
+
+        if (thumbnail) {
+            selectedBatchThumbBS.src = thumbnail;
+            selectedBatchThumbBS.classList.remove("hidden");
+            selectedBatchIconBS.classList.add("hidden");
+        } else {
+            selectedBatchThumbBS.classList.add("hidden");
+            selectedBatchIconBS.classList.remove("hidden");
+        }
+
+        const normalizedStatus = (batchStatus || "").toLowerCase();
+        if (normalizedStatus === "published") {
+            selectedBatchStatusBS.className = "inline-flex shrink-0 items-center rounded-md border border-emerald-400/30 bg-emerald-400/10 px-2 py-1 text-[8px] font-black text-emerald-300";
+            infoStatusBS.className = "inline-flex w-fit items-center rounded-md border border-emerald-400/30 bg-emerald-400/10 px-2 py-1 text-[8px] font-black text-emerald-300";
+        } else {
+            selectedBatchStatusBS.className = "inline-flex shrink-0 items-center rounded-md border border-slate-400/30 bg-slate-400/10 px-2 py-1 text-[8px] font-black text-slate-300";
+            infoStatusBS.className = "inline-flex w-fit items-center rounded-md border border-slate-400/30 bg-slate-400/10 px-2 py-1 text-[8px] font-black text-slate-300";
+        }
+
+        previewOriginalBS.textContent = formatINR(original);
+        previewExistingBS.textContent = existingType === "percentage"
+            ? "- " + existingValue + "%"
+            : existingType === "fixed"
+                ? "- " + formatINR(existingValue)
+                : "—";
+        previewCurrentBS.textContent = formatINR(current);
+        calcCurrentBS.textContent = formatINR(current);
+
+        const discountType = getBatchDiscountType();
+        const entered = Number(discountValueBS.value || 0);
+        let discount = 0;
+        let finalPrice = current;
+        let validPreview = true;
+        let reason = "";
+
+        if (entered > 0) {
+            if (discountType === "fixed") {
+                discount = Math.min(entered, current);
+                if (entered > current) {
+                    validPreview = false;
+                    reason = "Fixed discount cannot exceed the current selling price.";
+                }
+            } else {
+                if (entered > 100) {
+                    validPreview = false;
+                    reason = "Percentage discount cannot exceed 100%.";
+                } else if (entered < 1) {
+                    validPreview = false;
+                    reason = "Percentage discount must be between 1% and 100%.";
+                } else {
+                    discount = Math.min(current * (entered / 100), current);
+                }
+            }
+            finalPrice = Math.max(current - discount, 0);
+        }
+
+        calcDiscountBS.textContent = entered > 0 ? "- " + formatINR(discount) : "—";
+        calcFinalBS.textContent = entered > 0 ? formatINR(finalPrice) : "—";
+
+        if (!entered) {
+            calcMessageBS.textContent = "Enter a discount value to preview the coupon calculation.";
+            calcMessageBS.className = "mt-3 rounded-lg border border-cyan-400/20 bg-cyan-400/[0.035] px-3 py-2 text-[9px] leading-4 text-cyan-200";
+        } else if (!validPreview) {
+            calcMessageBS.textContent = reason;
+            calcMessageBS.className = "mt-3 rounded-lg border border-rose-400/20 bg-rose-400/[0.05] px-3 py-2 text-[9px] leading-4 text-rose-200";
+        } else {
+            const discountText = discountType === "percentage"
+                ? `${entered}%`
+                : `₹${discount.toLocaleString("en-IN")}`;
+            calcMessageBS.textContent = `This coupon will give ${discountText} off on ${name} batch.`;
+            calcMessageBS.className = "mt-3 rounded-lg border border-emerald-400/20 bg-emerald-400/[0.04] px-3 py-2 text-[9px] leading-4 text-emerald-200";
+        }
+    }
+
+    function calculateGeneral(row) {
+        const minimum = Number(minimumOrderGeneral.value || 0);
+        const maximumRaw = maximumOrderGeneral.value.trim();
+        const maximum = maximumRaw === "" ? null : Number(maximumRaw);
+        const discountType = getGeneralDiscountType();
+        const discountValue = Number(generalDiscountValue.value || 0);
+
+        if (row.current < minimum) {
+            return { eligible: false, reason: `Below minimum order amount (${formatINR(minimum)})`, discount: 0, final: row.current };
+        }
+
+        if (maximum !== null && row.current > maximum) {
+            return { eligible: false, reason: `Above maximum order amount (${formatINR(maximum)})`, discount: 0, final: row.current };
+        }
+
+        if (discountValue > 0 && discountType === "fixed" && discountValue > row.current) {
+            return { eligible: false, reason: "Fixed discount exceeds current selling price.", discount: 0, final: row.current };
+        }
+
+        if (discountValue > 100 && discountType === "percentage") {
+            return { eligible: false, reason: "Percentage discount cannot exceed 100%.", discount: 0, final: row.current };
+        }
+
+        let discount = 0;
+        if (discountValue > 0) {
+            discount = discountType === "fixed"
+                ? Math.min(discountValue, row.current)
+                : Math.min(row.current * (discountValue / 100), row.current);
+        }
+
+        return {
+            eligible: true,
+            reason: "",
+            discount: discount,
+            final: Math.max(row.current - discount, 0)
+        };
+    }
+
+    function switchHTML(checked, id, batchId) {
+        return `
+            <label class="coupon-switch table-switch cursor-pointer">
+                <input type="checkbox" class="general-apply-input" id="${id}" value="${batchId}" ${checked ? "checked" : ""}>
+                <span class="coupon-switch-track"></span>
+                <span class="coupon-switch-thumb"></span>
+            </label>
+        `;
+    }
+
+    function getRowMatch(row, result) {
+        const query = (generalSearch.value || "").trim().toLowerCase();
+        const filter = generalFilter.value;
+        const enabled = row.__enabled === true;
+        const nameMatch = !query || row.name.toLowerCase().includes(query);
+        const filterMatch = filter === "all" || (filter === "enabled" ? enabled : !enabled);
+        return nameMatch && filterMatch && Boolean(result);
+    }
+
+    function renderGeneralEmptyState(targetBody, type, message) {
+        const isEligible = type === "eligible";
+        const tr = document.createElement("tr");
+        tr.className = "general-table-empty";
+        tr.innerHTML = `
+            <td colspan="${isEligible ? "7" : "4"}" class="p-0">
+                <div class="general-empty-state">
+                    <div>
+                        <div class="general-empty-icon mx-auto ${isEligible ? "border border-emerald-400/15 bg-emerald-400/[0.06] text-emerald-300" : "border border-rose-400/15 bg-rose-400/[0.06] text-rose-300"}">
+                            <i class="${isEligible ? "ri-checkbox-circle-line" : "ri-close-circle-line"} text-2xl"></i>
+                        </div>
+                        <h4>${message}</h4>
+                        <p>${isEligible
+                            ? "Batches meeting the configured minimum and maximum order rules will appear here."
+                            : "Batches outside the configured order amount or discount rules will appear here."}
+                        </p>
+                    </div>
+                </div>
+            </td>
+        `;
+        targetBody.appendChild(tr);
+    }
+
+    function refreshGeneralTable() {
+        if (couponType.value !== "general") return;
+
+        eligibleBody.innerHTML = "";
+        ineligibleBody.innerHTML = "";
+
+        let eligibleCount = 0;
+        let notEligibleCount = 0;
+        let visibleEligibleCount = 0;
+        let visibleNotEligibleCount = 0;
+
+        generalRows.forEach(function (row) {
+            const result = calculateGeneral(row);
+            const existingEnabled = typeof row.__enabled === "boolean" ? row.__enabled : true;
+            if (!result.eligible) row.__enabled = false;
+            else row.__enabled = existingEnabled;
+
+            if (result.eligible) {
+                eligibleCount += 1;
+                if (!getRowMatch(row, result)) return;
+
+                visibleEligibleCount += 1;
+
+                const tr = document.createElement("tr");
+                tr.dataset.rowId = row.id;
+                tr.innerHTML = `
+                    <td>
+                        <div class="flex items-center gap-2">
+                            ${row.thumbnail
+                                ? `<img src="${row.thumbnail}" alt="${row.name}" class="batch-thumb">`
+                                : `<div class="batch-thumb flex items-center justify-center bg-cyan-400/10 text-cyan-300"><i class="ri-stack-line text-sm"></i></div>`}
+                            <div class="min-w-0">
+                                <p class="truncate text-[10px] font-black text-white">${row.name}</p>
+                                <p class="truncate text-[8px] text-slate-500">${row.description || ""}</p>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="text-center font-medium text-slate-100">${formatINR(row.original)}</td>
+                    <td class="text-center text-rose-300">${row.existingType === "fixed" ? "- " + formatINR(row.existingValue) : row.existingType === "percentage" ? "- " + row.existingValue + "%" : "—"}</td>
+                    <td class="text-center font-bold text-slate-100">${formatINR(row.current)}</td>
+                    <td class="text-center font-bold text-rose-300">${result.discount > 0 ? "- " + formatINR(result.discount) : "—"}</td>
+                    <td class="text-center font-black text-cyan-300">${formatINR(result.final)}</td>
+                    <td class="text-center">${switchHTML(row.__enabled, "apply-" + row.id, row.id)}</td>
+                `;
+                eligibleBody.appendChild(tr);
+            } else {
+                notEligibleCount += 1;
+                const query = (generalSearch.value || "").trim().toLowerCase();
+                if (query && !row.name.toLowerCase().includes(query)) return;
+
+                const filter = generalFilter.value;
+                if (filter === "enabled") return;
+
+                visibleNotEligibleCount += 1;
+
+                const tr = document.createElement("tr");
+                tr.dataset.rowId = row.id;
+                tr.innerHTML = `
+                    <td>
+                        <div class="flex items-center gap-2">
+                            ${row.thumbnail
+                                ? `<img src="${row.thumbnail}" alt="${row.name}" class="batch-thumb">`
+                                : `<div class="batch-thumb flex items-center justify-center bg-rose-400/10 text-rose-300"><i class="ri-stack-line text-sm"></i></div>`}
+                            <div class="min-w-0">
+                                <p class="truncate text-[10px] font-black text-white">${row.name}</p>
+                                <p class="truncate text-[8px] text-slate-500">${row.description || ""}</p>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="text-center font-medium text-slate-100">${formatINR(row.current)}</td>
+                    <td class="text-left text-[9px] text-slate-200">${result.reason}</td>
+                    <td class="text-center">${switchHTML(false, "disabled-" + row.id, row.id)}</td>
+                `;
+                const input = tr.querySelector("input");
+                input.disabled = true;
+                ineligibleBody.appendChild(tr);
+            }
+        });
+
+        if (visibleEligibleCount === 0) {
+            const query = (generalSearch.value || "").trim();
+            renderGeneralEmptyState(
+                eligibleBody,
+                "eligible",
+                eligibleCount === 0
+                    ? "No eligible batches"
+                    : query || generalFilter.value !== "all"
+                        ? "No matching eligible batches"
+                        : "No eligible batches"
+            );
+        }
+
+        if (visibleNotEligibleCount === 0) {
+            const query = (generalSearch.value || "").trim();
+            renderGeneralEmptyState(
+                ineligibleBody,
+                "ineligible",
+                notEligibleCount === 0
+                    ? "No not-eligible batches"
+                    : query || generalFilter.value === "enabled"
+                        ? "No matching not-eligible batches"
+                        : "No not-eligible batches"
+            );
+        }
+
+        generalTotalCount.textContent = String(generalRows.length);
+        generalEligibleCount.textContent = String(eligibleCount);
+        generalNotEligibleCount.textContent = String(notEligibleCount);
+        eligibleSectionCount.textContent = String(eligibleCount);
+        ineligibleSectionCount.textContent = String(notEligibleCount);
+
+        document.querySelectorAll(".general-apply-input:not(:disabled)").forEach(function (input) {
+            input.addEventListener("change", function () {
+                const row = generalRows.find(function (item) { return String(item.id) === String(input.value); });
+                if (row) row.__enabled = input.checked;
+                refreshGeneralTable();
+            });
+        });
+    }
+
+    function updateStatus(control, label) {
+        if (!control || !label) return;
+        label.textContent = control.checked ? "Active" : "Inactive";
+        label.className = control.checked
+            ? "mt-0.5 text-[10px] font-bold text-white"
+            : "mt-0.5 text-[10px] font-bold text-slate-400";
+    }
+
+    modeButtons.forEach(function (button) {
+        button.addEventListener("click", function () {
+            setMode(button.dataset.mode);
+        });
+    });
+
+    batchSelect.addEventListener("change", refreshBatchPreview);
+    discountValueBS.addEventListener("input", refreshBatchPreview);
+    batchDiscountRadios.forEach(function (input) { input.addEventListener("change", updateDiscountUI); });
+
+    generalDiscountValue.addEventListener("input", refreshGeneralTable);
+    minimumOrderGeneral.addEventListener("input", refreshGeneralTable);
+    maximumOrderGeneral.addEventListener("input", refreshGeneralTable);
+    generalDiscountRadios.forEach(function (input) { input.addEventListener("change", updateGeneralDiscountUI); });
+    generalSearch.addEventListener("input", refreshGeneralTable);
+    generalFilter.addEventListener("change", refreshGeneralTable);
+
+    statusBS.addEventListener("change", function () { updateStatus(statusBS, statusLabelBS); });
+    statusGeneral.addEventListener("change", function () { updateStatus(statusGeneral, statusLabelGeneral); });
+
+    thumbnailInput.addEventListener("change", function () {
+        const file = thumbnailInput.files && thumbnailInput.files[0];
+        if (!file) return;
+
+        const url = URL.createObjectURL(file);
+
+        const previewBS = document.getElementById("thumbnailPreviewBS");
+        const previewBoxBS = document.getElementById("thumbnailPreviewBoxBS");
+        const previewGeneral = document.getElementById("thumbnailPreviewGeneral");
+        const previewBoxGeneral = document.getElementById("thumbnailPreviewBoxGeneral");
+
+        previewBS.src = url;
+        previewBoxBS.classList.remove("hidden");
+
+        previewGeneral.src = url;
+        previewBoxGeneral.classList.remove("hidden");
+    });
+
+    generalThumbnailTrigger.addEventListener("change", function () {
+        const file = generalThumbnailTrigger.files && generalThumbnailTrigger.files[0];
+        if (!file) return;
+        const dataTransfer = new DataTransfer();
+        dataTransfer.items.add(file);
+        thumbnailInput.files = dataTransfer.files;
+        thumbnailInput.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+
+    form.addEventListener("submit", function () {
+        if (couponType.value === "general") {
+            const generalCode = document.getElementById("couponCodeGeneral");
+            const generalDescription = document.getElementById("descriptionGeneral");
+            const sharedCode = document.getElementById("couponCodeBS");
+            const sharedDescription = document.getElementById("descriptionBS");
+
+            sharedCode.value = generalCode.value;
+            sharedDescription.value = generalDescription.value;
+            discountValueBS.value = generalDiscountValue.value;
+            document.getElementById("usageLimitBS").value = document.getElementById("generalUsage").value;
+            document.getElementById("perUserBS").value = document.getElementById("generalPerUser").value;
+            document.getElementById("validFromBS").value = document.getElementById("generalValidFrom").value;
+            document.getElementById("validUntilBS").value = document.getElementById("generalValidUntil").value;
+
+            const selectedType = getGeneralDiscountType();
+            batchDiscountRadios.forEach(function (input) { input.checked = input.value === selectedType; });
+
+            const minimum = minimumOrderGeneral.value;
+            const maximum = maximumOrderGeneral.value;
+            let hiddenMin = document.getElementById("hiddenGeneralMinimum");
+            let hiddenMax = document.getElementById("hiddenGeneralMaximum");
+            if (!hiddenMin) {
+                hiddenMin = document.createElement("input");
+                hiddenMin.type = "hidden";
+                hiddenMin.name = "minimum_order_amount";
+                hiddenMin.id = "hiddenGeneralMinimum";
+                form.appendChild(hiddenMin);
+            }
+            if (!hiddenMax) {
+                hiddenMax = document.createElement("input");
+                hiddenMax.type = "hidden";
+                hiddenMax.name = "maximum_order_amount";
+                hiddenMax.id = "hiddenGeneralMaximum";
+                form.appendChild(hiddenMax);
+            }
+
+            hiddenMin.value = minimum;
+            hiddenMax.value = maximum;
+            const usage = document.getElementById("usageLimitBS");
+            usage.name = "usage_limit";
+        }
+
+        document.querySelectorAll("#generalWorkspace [data-shared-field]").forEach(function () {
+            // Visible General controls are mirrored into canonical hidden/visible form controls above.
+        });
+
+        if (couponType.value === "general") {
+            generalRows.forEach(function (row) {
+                if (row.__enabled) {
+                    const input = document.createElement("input");
+                    input.type = "hidden";
+                    input.name = "enabled_batch_ids";
+                    input.value = row.id;
+                    form.appendChild(input);
+                }
+            });
+        }
+    });
+
+    updateStatus(statusBS, statusLabelBS);
+    updateStatus(statusGeneral, statusLabelGeneral);
+    updateDiscountUI();
+    updateGeneralDiscountUI();
+
+    const initialMode = couponType.value === "general"
+        ? "general"
+        : "batch_specific";
+
+    setMode(initialMode);
+
+    if (initialMode === "general") {
+        refreshGeneralTable();
+    } else {
+        refreshBatchPreview();
+    }
+})();
+</script>
+{% endblock %}

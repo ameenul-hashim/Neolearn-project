@@ -1,18 +1,14 @@
-from django.db import models
+from decimal import Decimal
+from datetime import timedelta
+
+from django.conf import settings
 from django.contrib.auth.models import User
-from cloudinary.models import CloudinaryField
-from decimal import Decimal
 from django.core.exceptions import ValidationError
-from datetime import timedelta
-from django.utils import timezone
-
-
 from django.db import models
-from django.core.exceptions import ValidationError
+from django.db.models import Q
 from django.utils import timezone
-from decimal import Decimal
+
 from cloudinary.models import CloudinaryField
-from datetime import timedelta
 
 class Batch(models.Model):
 
@@ -436,3 +432,623 @@ class TeacherSubject(models.Model):
 
     def __str__(self):
         return (f"{self.teacher.full_name} → " f"{self.subject.subject_name}")
+    
+# =========================================================
+# COUPON MANAGEMENT
+# =========================================================
+
+
+class Coupon(models.Model):
+
+    # -----------------------------------------------------
+    # Coupon Type
+    # -----------------------------------------------------
+
+    COUPON_TYPE_CHOICES = [
+        ("general", "General Coupon"),
+        ("batch_specific", "Batch-Specific Coupon"),
+    ]
+
+    # -----------------------------------------------------
+    # Discount Type
+    # -----------------------------------------------------
+
+    DISCOUNT_TYPE_CHOICES = [
+        ("percentage", "Percentage"),
+        ("fixed", "Fixed Amount"),
+    ]
+
+    # -----------------------------------------------------
+    # Status
+    # -----------------------------------------------------
+
+    STATUS_CHOICES = [
+        ("active", "Active"),
+        ("inactive", "Inactive"),
+    ]
+
+    # -----------------------------------------------------
+    # Basic Information
+    # -----------------------------------------------------
+
+    code = models.CharField(
+        max_length=50,
+        unique=True,
+        db_index=True,
+        help_text="Unique coupon code, for example NEO30.",
+    )
+
+    description = models.TextField(
+        blank=True,
+        help_text="Internal description of this coupon.",
+    )
+
+    coupon_thumbnail = CloudinaryField(
+        "coupon_thumbnail",
+        blank=True,
+        null=True,
+        help_text="Promotional image for this coupon.",
+    )
+
+    # -----------------------------------------------------
+    # Coupon Type
+    # -----------------------------------------------------
+
+    coupon_type = models.CharField(
+        max_length=20,
+        choices=COUPON_TYPE_CHOICES,
+        default="general",
+        db_index=True,
+    )
+
+    # -----------------------------------------------------
+    # Discount Settings
+    # -----------------------------------------------------
+
+    discount_type = models.CharField(
+        max_length=20,
+        choices=DISCOUNT_TYPE_CHOICES,
+        default="percentage",
+    )
+
+    discount_value = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=Decimal("0.00"),
+        help_text="Percentage value or fixed discount amount.",
+    )
+
+    # -----------------------------------------------------
+    # General Coupon Order Restrictions
+    # -----------------------------------------------------
+
+    minimum_order_amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=Decimal("0.00"),
+        help_text=(
+            "Minimum current selling price required "
+            "for a general coupon."
+        ),
+    )
+
+    maximum_order_amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        blank=True,
+        null=True,
+        help_text=(
+            "Maximum current selling price allowed "
+            "for a general coupon."
+        ),
+    )
+
+    # -----------------------------------------------------
+    # Percentage Coupon Maximum Discount
+    # -----------------------------------------------------
+    #
+    # This field is retained on the model for schema
+    # stability, but it is no longer used anywhere:
+    # not in validation, not in discount calculation,
+    # and not on the coupon create/edit pages.
+    #
+    # It is stored as NULL for every coupon.
+
+    maximum_discount_amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        blank=True,
+        null=True,
+        help_text=(
+            "Legacy field — no longer used."
+        ),
+    )
+
+    # -----------------------------------------------------
+    # Validity
+    # -----------------------------------------------------
+
+    valid_from = models.DateTimeField(
+        help_text=(
+            "Date and time from which the coupon becomes valid."
+        ),
+    )
+
+    valid_until = models.DateTimeField(
+        help_text=(
+            "Date and time after which the coupon expires."
+        ),
+    )
+
+    # -----------------------------------------------------
+    # Usage Limits
+    # -----------------------------------------------------
+
+    usage_limit = models.PositiveIntegerField(
+        blank=True,
+        null=True,
+        help_text=(
+            "Maximum total number of successful uses. "
+            "Leave blank for unlimited usage."
+        ),
+    )
+
+    per_user_limit = models.PositiveIntegerField(
+        blank=True,
+        null=True,
+        help_text=(
+            "Maximum successful uses per student. "
+            "Leave blank for unlimited usage."
+        ),
+    )
+
+    used_count = models.PositiveIntegerField(
+        default=0,
+        editable=False,
+        help_text="Number of successful coupon uses.",
+    )
+
+    # -----------------------------------------------------
+    # Status Fields
+    # -----------------------------------------------------
+
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default="active",
+        db_index=True,
+    )
+
+    # Kept for compatibility with existing code
+    is_active = models.BooleanField(
+        default=True,
+        db_index=True,
+    )
+
+    # -----------------------------------------------------
+    # Timestamps
+    # -----------------------------------------------------
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+    )
+
+    # -----------------------------------------------------
+    # Meta
+    # -----------------------------------------------------
+
+    class Meta:
+        ordering = ["-created_at"]
+
+        verbose_name = "Coupon"
+        verbose_name_plural = "Coupons"
+
+        indexes = [
+            models.Index(
+                fields=["coupon_type"],
+                name="coupon_type_idx",
+            ),
+            models.Index(
+                fields=["status"],
+                name="coupon_status_idx",
+            ),
+            models.Index(
+                fields=["is_active"],
+                name="coupon_active_idx",
+            ),
+            models.Index(
+                fields=["valid_from"],
+                name="coupon_valid_from_idx",
+            ),
+            models.Index(
+                fields=["valid_until"],
+                name="coupon_valid_until_idx",
+            ),
+        ]
+
+    # -----------------------------------------------------
+    # String Representation
+    # -----------------------------------------------------
+
+    def __str__(self):
+        return self.code
+
+    # -----------------------------------------------------
+    # Helper Properties
+    # -----------------------------------------------------
+
+    @property
+    def is_expired(self):
+        """
+        Returns True when the coupon validity period has ended.
+        """
+
+        return timezone.now() > self.valid_until
+
+    @property
+    def is_started(self):
+        """
+        Returns True when the coupon validity period has started.
+        """
+
+        return timezone.now() >= self.valid_from
+
+    @property
+    def usage_limit_reached(self):
+        """
+        Returns True when the total usage limit has been reached.
+        """
+
+        if self.usage_limit is None:
+            return False
+
+        return self.used_count >= self.usage_limit
+
+    @property
+    def is_valid_now(self):
+        """
+        Returns True when the coupon is active,
+        within the validity period, and usable.
+        """
+
+        now = timezone.now()
+
+        return (
+            self.status == "active"
+            and self.is_active
+            and self.valid_from <= now <= self.valid_until
+            and not self.usage_limit_reached
+        )
+
+    # -----------------------------------------------------
+    # Validation
+    # -----------------------------------------------------
+
+    def clean(self):
+        """
+        Validate coupon information before saving.
+
+        Note:
+        ``maximum_discount_amount`` is no longer validated.
+        It is a legacy field kept only for schema stability.
+        """
+
+        # -------------------------------------------------
+        # Normalize Coupon Code
+        # -------------------------------------------------
+
+        if self.code:
+            self.code = self.code.strip().upper()
+
+        # -------------------------------------------------
+        # Discount Value
+        # -------------------------------------------------
+
+        if self.discount_value is None:
+            raise ValidationError(
+                {
+                    "discount_value": (
+                        "Discount value is required."
+                    )
+                }
+            )
+
+        if self.discount_value <= Decimal("0.00"):
+            raise ValidationError(
+                {
+                    "discount_value": (
+                        "Discount value must be greater than zero."
+                    )
+                }
+            )
+
+        # -------------------------------------------------
+        # Percentage Discount Validation
+        # -------------------------------------------------
+
+        if (
+            self.discount_type == "percentage"
+            and self.discount_value > Decimal("100.00")
+        ):
+            raise ValidationError(
+                {
+                    "discount_value": (
+                        "Percentage discount cannot exceed 100%."
+                    )
+                }
+            )
+
+        # -------------------------------------------------
+        # Minimum Order Amount
+        # -------------------------------------------------
+
+        if self.minimum_order_amount is None:
+            self.minimum_order_amount = Decimal("0.00")
+
+        if self.minimum_order_amount < Decimal("0.00"):
+            raise ValidationError(
+                {
+                    "minimum_order_amount": (
+                        "Minimum order amount cannot be negative."
+                    )
+                }
+            )
+
+        # -------------------------------------------------
+        # Maximum Order Amount
+        # -------------------------------------------------
+
+        if (
+            self.maximum_order_amount is not None
+            and self.maximum_order_amount < Decimal("0.00")
+        ):
+            raise ValidationError(
+                {
+                    "maximum_order_amount": (
+                        "Maximum order amount cannot be negative."
+                    )
+                }
+            )
+
+        # -------------------------------------------------
+        # Minimum / Maximum Order Relationship
+        # -------------------------------------------------
+
+        if (
+            self.maximum_order_amount is not None
+            and self.maximum_order_amount
+            < self.minimum_order_amount
+        ):
+            raise ValidationError(
+                {
+                    "maximum_order_amount": (
+                        "Maximum order amount cannot be less "
+                        "than minimum order amount."
+                    )
+                }
+            )
+
+        # -------------------------------------------------
+        # Batch-Specific Restrictions
+        # -------------------------------------------------
+
+        if self.coupon_type == "batch_specific":
+
+            if self.minimum_order_amount != Decimal("0.00"):
+                raise ValidationError(
+                    {
+                        "minimum_order_amount": (
+                            "Minimum order amount is not applicable "
+                            "to batch-specific coupons."
+                        )
+                    }
+                )
+
+            if self.maximum_order_amount is not None:
+                raise ValidationError(
+                    {
+                        "maximum_order_amount": (
+                            "Maximum order amount is not applicable "
+                            "to batch-specific coupons."
+                        )
+                    }
+                )
+
+        # -------------------------------------------------
+        # Validity Dates
+        # -------------------------------------------------
+
+        if self.valid_from is None:
+            raise ValidationError(
+                {
+                    "valid_from": (
+                        "Valid from date and time is required."
+                    )
+                }
+            )
+
+        if self.valid_until is None:
+            raise ValidationError(
+                {
+                    "valid_until": (
+                        "Valid until date and time is required."
+                    )
+                }
+            )
+
+        if self.valid_until <= self.valid_from:
+            raise ValidationError(
+                {
+                    "valid_until": (
+                        "Coupon expiry date must be after "
+                        "the start date."
+                    )
+                }
+            )
+
+        # -------------------------------------------------
+        # Usage Limits
+        # -------------------------------------------------
+
+        if (
+            self.usage_limit is not None
+            and self.usage_limit == 0
+        ):
+            raise ValidationError(
+                {
+                    "usage_limit": (
+                        "Usage limit must be greater than zero "
+                        "or left blank for unlimited usage."
+                    )
+                }
+            )
+
+        if (
+            self.per_user_limit is not None
+            and self.per_user_limit == 0
+        ):
+            raise ValidationError(
+                {
+                    "per_user_limit": (
+                        "Per-student usage limit must be "
+                        "greater than zero or left blank "
+                        "for unlimited usage."
+                    )
+                }
+            )
+
+        if (
+            self.usage_limit is not None
+            and self.per_user_limit is not None
+            and self.per_user_limit > self.usage_limit
+        ):
+            raise ValidationError(
+                {
+                    "per_user_limit": (
+                        "Per-student usage limit cannot exceed "
+                        "the total usage limit."
+                    )
+                }
+            )
+
+    # -----------------------------------------------------
+    # Save
+    # -----------------------------------------------------
+
+    def save(self, *args, **kwargs):
+        """
+        Normalize code and keep status fields synchronized.
+        """
+
+        if self.code:
+            self.code = self.code.strip().upper()
+
+        if self.status == "inactive":
+            self.is_active = False
+        else:
+            self.status = "active"
+            self.is_active = True
+
+        super().save(*args, **kwargs)
+
+
+# =========================================================
+# COUPON BATCH RULE
+# =========================================================
+
+
+class CouponBatchRule(models.Model):
+    """
+    Connects coupons with batches.
+
+    General coupon:
+        Can connect to multiple batches.
+
+    Batch-specific coupon:
+        Can connect to only one batch.
+
+    This model is used for admin coupon configuration.
+    Student coupon application will be added later.
+    """
+
+    coupon = models.ForeignKey(
+        Coupon,
+        on_delete=models.CASCADE,
+        related_name="batch_rules",
+    )
+
+    batch = models.ForeignKey(
+        "Batch",
+        on_delete=models.CASCADE,
+        related_name="coupon_rules",
+    )
+
+    is_enabled = models.BooleanField(
+        default=True,
+        help_text=(
+            "Enable or disable this coupon for this batch."
+        ),
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+    )
+
+    class Meta:
+        ordering = ["-created_at"]
+
+        verbose_name = "Coupon Batch Rule"
+        verbose_name_plural = "Coupon Batch Rules"
+
+        constraints = [
+            models.UniqueConstraint(
+                fields=["coupon", "batch"],
+                name="unique_coupon_batch_rule",
+            ),
+        ]
+
+    def __str__(self):
+        return (
+            f"{self.coupon.code} - "
+            f"{self.batch.batch_name}"
+        )
+
+    def clean(self):
+        """
+        A batch-specific coupon can be connected
+        to only one batch.
+
+        General coupons can be connected
+        to multiple batches.
+        """
+
+        if not self.coupon_id or not self.batch_id:
+            return
+
+        if self.coupon.coupon_type == "batch_specific":
+
+            existing_rule = (
+                CouponBatchRule.objects
+                .filter(coupon=self.coupon)
+                .exclude(pk=self.pk)
+            )
+
+            if existing_rule.exists():
+                raise ValidationError(
+                    (
+                        "A batch-specific coupon can be "
+                        "connected to only one batch."
+                    )
+                )
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)

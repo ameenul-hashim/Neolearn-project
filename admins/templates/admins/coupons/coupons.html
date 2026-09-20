@@ -1,0 +1,2162 @@
+{% extends "admins/admin_base.html" %}
+{% load static %}
+
+{% block title %}
+    Coupons | NeoLearn Admin
+{% endblock %}
+
+{% block admin_content %}
+
+<div class="min-h-full space-y-5 pb-10">
+
+    <!-- ==========================================================
+         PAGE HEADER
+    =========================================================== -->
+    <section class="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+
+        <div class="flex min-w-0 items-center gap-4">
+
+            <div
+                class="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl
+                       border border-cyan-400/25 bg-cyan-400/10
+                       text-cyan-300 shadow-lg shadow-cyan-500/10
+                       sm:h-16 sm:w-16"
+            >
+                <i class="ri-coupon-3-fill text-3xl sm:text-4xl"></i>
+            </div>
+
+            <div class="min-w-0">
+
+                <h1 class="text-2xl font-black tracking-tight text-white sm:text-4xl">
+                    Coupons
+                </h1>
+
+                <p class="mt-1 max-w-xl text-xs text-slate-400 sm:text-sm">
+                    Create and manage discount coupons for your marketplace.
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <!-- CREATE COUPON -->
+        <a
+            href="{% url 'create_coupon' %}"
+            class="
+                inline-flex h-12 w-full items-center justify-center gap-2
+                rounded-xl
+                bg-gradient-to-r from-cyan-400 to-violet-500
+                px-6
+                text-sm font-black text-slate-950
+                shadow-lg shadow-cyan-500/10
+                transition-all duration-200
+                hover:-translate-y-0.5
+                hover:shadow-cyan-500/20
+                xl:w-auto
+            "
+        >
+            <i class="ri-add-line text-xl"></i>
+            Create Coupon
+        </a>
+
+    </section>
+
+
+    <!-- ==========================================================
+         STATISTICS
+    =========================================================== -->
+    <section class="grid grid-cols-1 gap-4 sm:grid-cols-2 2xl:grid-cols-4">
+
+        <!-- TOTAL -->
+        <div
+            class="
+                rounded-2xl
+                border border-emerald-400/35
+                bg-emerald-400/[0.04]
+                p-4
+                shadow-xl shadow-emerald-500/5
+                sm:p-5
+            "
+        >
+            <div class="flex items-center justify-between gap-4">
+
+                <div class="min-w-0">
+
+                    <p class="text-[10px] font-black uppercase tracking-[0.15em] text-slate-500">
+                        Total Coupons
+                    </p>
+
+                    <p class="mt-2 text-3xl font-black text-white">
+                        {{ total_coupons }}
+                    </p>
+
+                    <p class="mt-1 text-xs font-semibold text-emerald-400">
+                        All created coupons
+                    </p>
+
+                </div>
+
+                <div
+                    class="
+                        flex h-12 w-12 shrink-0 items-center justify-center
+                        rounded-2xl bg-emerald-400/10 text-emerald-400
+                    "
+                >
+                    <i class="ri-price-tag-3-fill text-2xl"></i>
+                </div>
+
+            </div>
+        </div>
+
+
+        <!-- ACTIVE -->
+        <div
+            class="
+                rounded-2xl
+                border border-blue-400/35
+                bg-blue-400/[0.04]
+                p-4
+                shadow-xl shadow-blue-500/5
+                sm:p-5
+            "
+        >
+            <div class="flex items-center justify-between gap-4">
+
+                <div class="min-w-0">
+
+                    <p class="text-[10px] font-black uppercase tracking-[0.15em] text-slate-500">
+                        Active Coupons
+                    </p>
+
+                    <p class="mt-2 text-3xl font-black text-white">
+                        {{ active_coupons }}
+                    </p>
+
+                    <p class="mt-1 text-xs font-semibold text-cyan-400">
+                        Currently enabled
+                    </p>
+
+                </div>
+
+                <div
+                    class="
+                        flex h-12 w-12 shrink-0 items-center justify-center
+                        rounded-2xl bg-blue-400/10 text-blue-300
+                    "
+                >
+                    <i class="ri-database-2-fill text-2xl"></i>
+                </div>
+
+            </div>
+        </div>
+
+
+        <!-- USAGE -->
+        <div
+            class="
+                rounded-2xl
+                border border-violet-400/35
+                bg-violet-400/[0.04]
+                p-4
+                shadow-xl shadow-violet-500/5
+                sm:p-5
+            "
+        >
+            <div class="flex items-center justify-between gap-4">
+
+                <div class="min-w-0">
+
+                    <p class="text-[10px] font-black uppercase tracking-[0.15em] text-slate-500">
+                        Total Usage
+                    </p>
+
+                    <p class="mt-2 text-3xl font-black text-white">
+                        {{ total_usage }}
+                    </p>
+
+                    <p class="mt-1 text-xs font-semibold text-violet-400">
+                        Successful uses
+                    </p>
+
+                </div>
+
+                <div
+                    class="
+                        flex h-12 w-12 shrink-0 items-center justify-center
+                        rounded-2xl bg-violet-400/10 text-violet-300
+                    "
+                >
+                    <i class="ri-team-fill text-2xl"></i>
+                </div>
+
+            </div>
+        </div>
+
+
+        <!-- DISCOUNT -->
+        <div
+            class="
+                rounded-2xl
+                border border-rose-400/35
+                bg-rose-400/[0.04]
+                p-4
+                shadow-xl shadow-rose-500/5
+                sm:p-5
+            "
+        >
+            <div class="flex items-center justify-between gap-4">
+
+                <div class="min-w-0">
+
+                    <p class="text-[10px] font-black uppercase tracking-[0.15em] text-slate-500">
+                        Total Discount Given
+                    </p>
+
+                    <p class="mt-2 truncate text-2xl font-black text-white sm:text-3xl">
+                        ₹{{ total_discount_given|floatformat:0 }}
+                    </p>
+
+                    <p class="mt-1 text-xs font-semibold text-rose-300">
+                        Based on recorded usage
+                    </p>
+
+                </div>
+
+                <div
+                    class="
+                        flex h-12 w-12 shrink-0 items-center justify-center
+                        rounded-2xl bg-rose-400/10 text-rose-300
+                    "
+                >
+                    <i class="ri-bar-chart-grouped-fill text-2xl"></i>
+                </div>
+
+            </div>
+        </div>
+
+    </section>
+
+
+    <!-- ==========================================================
+         TABS / SEARCH / FILTER
+    =========================================================== -->
+    <section
+        class="
+            rounded-2xl
+            border border-white/10
+            bg-slate-900/65
+            p-2.5
+            shadow-xl
+        "
+    >
+
+        <div class="flex flex-col gap-2.5 2xl:flex-row 2xl:items-center">
+
+            <!-- ======================================================
+                 TYPE TABS
+            ======================================================= -->
+            <nav
+                class="flex min-w-0 flex-wrap items-center gap-1.5"
+                aria-label="Coupon type"
+            >
+
+                <!-- ALL -->
+                <a
+                    href="{% querystring page=None type=None status=None sort=None %}"
+                    class="
+                        inline-flex h-10 items-center justify-center
+                        rounded-xl px-4
+                        text-xs font-black
+                        transition
+                        sm:px-5 sm:text-sm
+
+                        {% if not coupon_type %}
+                            bg-cyan-400 text-slate-950
+                            shadow-lg shadow-cyan-400/10
+                        {% else %}
+                            border border-white/10
+                            bg-white/[0.03]
+                            text-slate-300
+                            hover:bg-white/[0.07]
+                            hover:text-white
+                        {% endif %}
+                    "
+                >
+                    All
+                    <span class="ml-1.5 opacity-70">
+                        ({{ total_coupons }})
+                    </span>
+                </a>
+
+
+                <!-- GENERAL -->
+                <a
+                    href="{% querystring page=None type='general' status=None sort=None %}"
+                    class="
+                        inline-flex h-10 items-center justify-center
+                        rounded-xl px-4
+                        text-xs font-black
+                        transition
+                        sm:px-5 sm:text-sm
+
+                        {% if coupon_type == 'general' %}
+                            bg-cyan-400 text-slate-950
+                            shadow-lg shadow-cyan-400/10
+                        {% else %}
+                            border border-white/10
+                            bg-white/[0.03]
+                            text-slate-300
+                            hover:bg-white/[0.07]
+                            hover:text-white
+                        {% endif %}
+                    "
+                >
+                    General
+
+                    {% if general_coupon_count is not None %}
+                        <span class="ml-1.5 opacity-70">
+                            ({{ general_coupon_count }})
+                        </span>
+                    {% endif %}
+                </a>
+
+
+                <!-- BATCH SPECIFIC -->
+                <a
+                    href="{% querystring page=None type='batch_specific' status=None sort=None %}"
+                    class="
+                        inline-flex h-10 items-center justify-center
+                        rounded-xl px-4
+                        text-xs font-black
+                        transition
+                        sm:px-5 sm:text-sm
+
+                        {% if coupon_type == 'batch_specific' %}
+                            bg-cyan-400 text-slate-950
+                            shadow-lg shadow-cyan-400/10
+                        {% else %}
+                            border border-white/10
+                            bg-white/[0.03]
+                            text-slate-300
+                            hover:bg-white/[0.07]
+                            hover:text-white
+                        {% endif %}
+                    "
+                >
+                    Batch Specific
+
+                    {% if batch_specific_coupon_count is not None %}
+                        <span class="ml-1.5 opacity-70">
+                            ({{ batch_specific_coupon_count }})
+                        </span>
+                    {% endif %}
+                </a>
+
+            </nav>
+
+
+            <!-- ======================================================
+                 RIGHT CONTROLS
+            ======================================================= -->
+            <div
+                class="
+                    flex min-w-0 flex-1 flex-col gap-2.5
+                    sm:flex-row sm:items-center
+                    2xl:justify-end
+                "
+            >
+
+                <!-- SEARCH -->
+                <form
+                    method="get"
+                    action="{% url 'admin_coupons' %}"
+                    class="relative min-w-0 flex-1 2xl:max-w-md"
+                >
+
+                    {% if coupon_type %}
+                        <input
+                            type="hidden"
+                            name="type"
+                            value="{{ coupon_type }}"
+                        >
+                    {% endif %}
+
+                    {% if status %}
+                        <input
+                            type="hidden"
+                            name="status"
+                            value="{{ status }}"
+                        >
+                    {% endif %}
+
+                    {% if sort %}
+                        <input
+                            type="hidden"
+                            name="sort"
+                            value="{{ sort }}"
+                        >
+                    {% endif %}
+
+                    <i
+                        class="
+                            ri-search-line
+                            pointer-events-none
+                            absolute left-4 top-1/2
+                            -translate-y-1/2
+                            text-lg text-slate-500
+                        "
+                    ></i>
+
+                    <input
+                        type="search"
+                        name="search"
+                        value="{{ search }}"
+                        autocomplete="off"
+                        placeholder="Search coupons..."
+                        aria-label="Search coupons"
+                        class="
+                            h-10 w-full
+                            rounded-xl
+                            border border-white/10
+                            bg-white/[0.03]
+                            pl-11 pr-10
+                            text-sm font-medium text-white
+                            outline-none
+                            placeholder:text-slate-600
+                            focus:border-cyan-400/40
+                            focus:ring-2
+                            focus:ring-cyan-400/10
+                        "
+                    >
+
+                    {% if search %}
+                        <a
+                            href="{% querystring page=None search=None %}"
+                            class="
+                                absolute right-2 top-1/2
+                                inline-flex h-7 w-7
+                                -translate-y-1/2
+                                items-center justify-center
+                                rounded-lg
+                                text-slate-500
+                                transition
+                                hover:bg-white/[0.06]
+                                hover:text-white
+                            "
+                            aria-label="Clear search"
+                            title="Clear search"
+                        >
+                            <i class="ri-close-line"></i>
+                        </a>
+                    {% endif %}
+
+                </form>
+
+
+                <!-- FILTER BUTTON -->
+                <div class="relative shrink-0">
+
+                    <button
+                        type="button"
+                        id="couponFilterButton"
+                        class="
+                            inline-flex h-10 w-full
+                            items-center justify-center gap-2
+                            rounded-xl
+                            border border-white/10
+                            bg-white/[0.03]
+                            px-4
+                            text-sm font-black text-slate-300
+                            transition
+                            hover:bg-white/[0.08]
+                            hover:text-white
+                            sm:w-auto
+                        "
+                        aria-expanded="false"
+                        aria-controls="couponFilterPanel"
+                    >
+
+                        <i class="ri-filter-3-line text-base"></i>
+
+                        Filter
+
+                        {% if status or sort == 'oldest' or sort == 'a_z' or sort == 'z_a' or sort == 'expiry_soon' or sort == 'most_used' %}
+                            <span class="h-1.5 w-1.5 rounded-full bg-cyan-400"></span>
+                        {% endif %}
+
+                        <i
+                            id="couponFilterChevron"
+                            class="
+                                ri-arrow-down-s-line
+                                ml-1 text-base
+                                transition-transform
+                            "
+                        ></i>
+
+                    </button>
+
+
+                    <!-- FILTER PANEL -->
+                    <div
+                        id="couponFilterPanel"
+                        class="
+                            absolute right-0 top-12 z-50 hidden
+                            w-[290px]
+                            max-w-[calc(100vw-2rem)]
+                            overflow-hidden
+                            rounded-2xl
+                            border border-white/10
+                            bg-slate-950
+                            shadow-2xl
+                        "
+                    >
+
+                        <form
+                            method="get"
+                            action="{% url 'admin_coupons' %}"
+                            class="p-4"
+                        >
+
+                            {% if coupon_type %}
+                                <input
+                                    type="hidden"
+                                    name="type"
+                                    value="{{ coupon_type }}"
+                                >
+                            {% endif %}
+
+                            {% if search %}
+                                <input
+                                    type="hidden"
+                                    name="search"
+                                    value="{{ search }}"
+                                >
+                            {% endif %}
+
+
+                            <div class="space-y-4">
+
+                                <!-- STATUS -->
+                                <div>
+
+                                    <label
+                                        for="couponStatusFilter"
+                                        class="
+                                            mb-2 block
+                                            text-[10px]
+                                            font-black
+                                            uppercase
+                                            tracking-[0.14em]
+                                            text-slate-500
+                                        "
+                                    >
+                                        Status
+                                    </label>
+
+                                    <select
+                                        id="couponStatusFilter"
+                                        name="status"
+                                        class="
+                                            h-10 w-full
+                                            rounded-xl
+                                            border border-white/10
+                                            bg-slate-900
+                                            px-3
+                                            text-sm font-bold
+                                            text-slate-200
+                                            outline-none
+                                            focus:border-cyan-400/40
+                                        "
+                                    >
+
+                                        <option
+                                            value=""
+                                            {% if not status %}selected{% endif %}
+                                        >
+                                            All Status
+                                        </option>
+
+                                        <option
+                                            value="active"
+                                            {% if status == 'active' %}selected{% endif %}
+                                        >
+                                            Active
+                                        </option>
+
+                                        <option
+                                            value="inactive"
+                                            {% if status == 'inactive' %}selected{% endif %}
+                                        >
+                                            Inactive
+                                        </option>
+
+                                        <option
+                                            value="upcoming"
+                                            {% if status == 'upcoming' %}selected{% endif %}
+                                        >
+                                            Upcoming
+                                        </option>
+
+                                        <option
+                                            value="expired"
+                                            {% if status == 'expired' %}selected{% endif %}
+                                        >
+                                            Expired
+                                        </option>
+
+                                    </select>
+
+                                </div>
+
+
+                                <!-- SORT -->
+                                <div>
+
+                                    <label
+                                        for="couponSortFilter"
+                                        class="
+                                            mb-2 block
+                                            text-[10px]
+                                            font-black
+                                            uppercase
+                                            tracking-[0.14em]
+                                            text-slate-500
+                                        "
+                                    >
+                                        Sort By
+                                    </label>
+
+                                    <select
+                                        id="couponSortFilter"
+                                        name="sort"
+                                        class="
+                                            h-10 w-full
+                                            rounded-xl
+                                            border border-white/10
+                                            bg-slate-900
+                                            px-3
+                                            text-sm font-bold
+                                            text-slate-200
+                                            outline-none
+                                            focus:border-cyan-400/40
+                                        "
+                                    >
+
+                                        <option
+                                            value="newest"
+                                            {% if sort == 'newest' or not sort %}
+                                                selected
+                                            {% endif %}
+                                        >
+                                            Newest
+                                        </option>
+
+                                        <option
+                                            value="oldest"
+                                            {% if sort == 'oldest' %}selected{% endif %}
+                                        >
+                                            Oldest
+                                        </option>
+
+                                        <option
+                                            value="a_z"
+                                            {% if sort == 'a_z' %}selected{% endif %}
+                                        >
+                                            A – Z
+                                        </option>
+
+                                        <option
+                                            value="z_a"
+                                            {% if sort == 'z_a' %}selected{% endif %}
+                                        >
+                                            Z – A
+                                        </option>
+
+                                        <option
+                                            value="expiry_soon"
+                                            {% if sort == 'expiry_soon' %}selected{% endif %}
+                                        >
+                                            Expiry Soon
+                                        </option>
+
+                                        <option
+                                            value="most_used"
+                                            {% if sort == 'most_used' %}selected{% endif %}
+                                        >
+                                            Most Used
+                                        </option>
+
+                                    </select>
+
+                                </div>
+
+
+                                <!-- ACTIONS -->
+                                <div class="flex gap-2 pt-1">
+
+                                    <a
+                                        href="{% querystring page=None status=None sort='newest' %}"
+                                        class="
+                                            inline-flex h-10 flex-1
+                                            items-center justify-center
+                                            rounded-xl
+                                            border border-white/10
+                                            bg-white/[0.03]
+                                            px-3
+                                            text-xs font-bold
+                                            text-slate-400
+                                            transition
+                                            hover:bg-white/[0.08]
+                                            hover:text-white
+                                        "
+                                    >
+                                        Reset
+                                    </a>
+
+                                    <button
+                                        type="submit"
+                                        class="
+                                            inline-flex h-10 flex-1
+                                            items-center justify-center
+                                            rounded-xl
+                                            bg-cyan-400
+                                            px-3
+                                            text-xs font-black
+                                            text-slate-950
+                                            transition
+                                            hover:bg-cyan-300
+                                        "
+                                    >
+                                        Apply Filter
+                                    </button>
+
+                                </div>
+
+                            </div>
+
+                        </form>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </section>
+
+
+    <!-- ==========================================================
+         COUPON GRID
+    =========================================================== -->
+    {% if coupons %}
+
+        <section
+            class="
+                grid grid-cols-1 gap-4
+                lg:grid-cols-2
+                xl:grid-cols-3
+            "
+        >
+
+            {% for coupon in coupons %}
+
+                <article
+                    class="
+                        group
+                        overflow-visible
+                        rounded-2xl
+                        border border-white/10
+                        bg-slate-900/90
+                        shadow-xl
+                        transition-all duration-200
+                        hover:-translate-y-0.5
+                        hover:border-cyan-400/30
+                    "
+                >
+
+                    <!-- ==================================================
+                         COUPON HERO
+                    =================================================== -->
+                    <div
+                        class="
+                            relative h-[128px]
+                            overflow-hidden
+                            rounded-t-2xl
+                        "
+                    >
+
+                        {% if coupon.coupon_thumbnail %}
+
+                            <img
+                                src="{{ coupon.coupon_thumbnail.url }}"
+                                alt="{{ coupon.code }} coupon"
+                                class="
+                                    absolute inset-0
+                                    h-full w-full
+                                    object-cover
+                                    transition duration-500
+                                    group-hover:scale-[1.03]
+                                "
+                            >
+
+                            <div
+                                class="
+                                    absolute inset-0
+                                    bg-gradient-to-t
+                                    from-slate-950/85
+                                    via-slate-950/15
+                                    to-transparent
+                                "
+                            ></div>
+
+                        {% else %}
+
+                            {% if coupon.coupon_type == 'general' %}
+
+                                <div
+                                    class="
+                                        absolute inset-0
+                                        bg-gradient-to-br
+                                        from-fuchsia-500/85
+                                        via-rose-400/70
+                                        to-orange-300/65
+                                    "
+                                ></div>
+
+                            {% else %}
+
+                                <div
+                                    class="
+                                        absolute inset-0
+                                        bg-gradient-to-br
+                                        from-cyan-500/85
+                                        via-blue-500/65
+                                        to-violet-500/75
+                                    "
+                                ></div>
+
+                            {% endif %}
+
+
+                            <div
+                                class="
+                                    absolute -right-8 -top-10
+                                    h-32 w-32
+                                    rounded-full
+                                    bg-white/10
+                                    blur-2xl
+                                "
+                            ></div>
+
+                            <div
+                                class="
+                                    absolute -bottom-12 -left-8
+                                    h-28 w-28
+                                    rounded-full
+                                    bg-white/10
+                                    blur-2xl
+                                "
+                            ></div>
+
+
+                            <div
+                                class="
+                                    absolute right-4 bottom-0
+                                    text-white/15
+                                "
+                            >
+                                {% if coupon.discount_type == 'percentage' %}
+                                    <i class="ri-percent-line text-8xl"></i>
+                                {% else %}
+                                    <i class="ri-price-tag-3-fill text-8xl"></i>
+                                {% endif %}
+                            </div>
+
+
+                            <div
+                                class="
+                                    absolute inset-0
+                                    bg-gradient-to-t
+                                    from-slate-950/60
+                                    via-transparent
+                                    to-transparent
+                                "
+                            ></div>
+
+                        {% endif %}
+
+
+                        <!-- ==================================================
+                             BADGES
+                        =================================================== -->
+                        <div
+                            class="
+                                absolute left-3 right-3 top-3
+                                flex items-center justify-between gap-2
+                            "
+                        >
+
+                            <!-- TYPE -->
+                            {% if coupon.coupon_type == 'general' %}
+
+                                <span
+                                    class="
+                                        inline-flex items-center
+                                        rounded-lg
+                                        border border-pink-300/20
+                                        bg-pink-500/95
+                                        px-2.5 py-1
+                                        text-[9px]
+                                        font-black
+                                        uppercase
+                                        tracking-wide
+                                        text-white
+                                        shadow-lg
+                                    "
+                                >
+                                    General
+                                </span>
+
+                            {% else %}
+
+                                <span
+                                    class="
+                                        inline-flex items-center
+                                        rounded-lg
+                                        border border-cyan-300/20
+                                        bg-cyan-400/95
+                                        px-2.5 py-1
+                                        text-[9px]
+                                        font-black
+                                        uppercase
+                                        tracking-wide
+                                        text-slate-950
+                                        shadow-lg
+                                    "
+                                >
+                                    Batch Specific
+                                </span>
+
+                            {% endif %}
+
+
+                            <!-- STATUS -->
+                            {% if not coupon.is_active %}
+
+                                <span
+                                    class="
+                                        inline-flex items-center gap-1.5
+                                        rounded-lg
+                                        border border-rose-300/25
+                                        bg-rose-500/90
+                                        px-2.5 py-1
+                                        text-[9px]
+                                        font-black
+                                        text-white
+                                        shadow-lg
+                                    "
+                                >
+                                    <span class="h-1.5 w-1.5 rounded-full bg-white"></span>
+                                    Inactive
+                                </span>
+
+                            {% elif coupon.is_expired %}
+
+                                <span
+                                    class="
+                                        inline-flex items-center gap-1.5
+                                        rounded-lg
+                                        border border-rose-300/25
+                                        bg-rose-500/90
+                                        px-2.5 py-1
+                                        text-[9px]
+                                        font-black
+                                        text-white
+                                        shadow-lg
+                                    "
+                                >
+                                    <span class="h-1.5 w-1.5 rounded-full bg-white"></span>
+                                    Expired
+                                </span>
+
+                            {% elif not coupon.is_started %}
+
+                                <span
+                                    class="
+                                        inline-flex items-center gap-1.5
+                                        rounded-lg
+                                        border border-amber-300/25
+                                        bg-amber-400/90
+                                        px-2.5 py-1
+                                        text-[9px]
+                                        font-black
+                                        text-slate-950
+                                        shadow-lg
+                                    "
+                                >
+                                    <span class="h-1.5 w-1.5 rounded-full bg-slate-950"></span>
+                                    Upcoming
+                                </span>
+
+                            {% else %}
+
+                                <span
+                                    class="
+                                        inline-flex items-center gap-1.5
+                                        rounded-lg
+                                        border border-emerald-300/25
+                                        bg-emerald-500/90
+                                        px-2.5 py-1
+                                        text-[9px]
+                                        font-black
+                                        text-white
+                                        shadow-lg
+                                    "
+                                >
+                                    <span class="h-1.5 w-1.5 rounded-full bg-white"></span>
+                                    Active
+                                </span>
+
+                            {% endif %}
+
+                        </div>
+
+
+                    </div>
+
+
+                    <!-- ==================================================
+                         COUPON NAME / CODE / DISCOUNT
+                    =================================================== -->
+                    <div
+                        class="
+                            border-b border-white/10
+                            bg-slate-900/95
+                            px-3.5 py-3
+                        "
+                    >
+
+                        <div class="flex items-start justify-between gap-3">
+
+                            <div class="min-w-0 flex-1">
+
+                                <div class="flex min-w-0 items-center gap-2">
+
+                                    <h2
+                                        class="
+                                            min-w-0
+                                            truncate
+                                            text-sm
+                                            font-black
+                                            tracking-tight
+                                            text-white
+                                            sm:text-base
+                                        "
+                                    >
+                                        {{ coupon.code }}
+                                    </h2>
+
+                                    <button
+                                        type="button"
+                                        class="
+                                            copyCouponButton
+                                            inline-flex h-7 w-7
+                                            shrink-0
+                                            items-center justify-center
+                                            rounded-lg
+                                            border border-white/10
+                                            bg-white/[0.03]
+                                            text-slate-400
+                                            transition
+                                            hover:border-cyan-400/30
+                                            hover:bg-cyan-400/10
+                                            hover:text-cyan-300
+                                        "
+                                        data-code="{{ coupon.code }}"
+                                        aria-label="Copy coupon code {{ coupon.code }}"
+                                        title="Copy coupon code"
+                                    >
+                                        <i class="ri-file-copy-line text-sm"></i>
+                                    </button>
+
+                                </div>
+
+                                <p class="mt-0.5 text-[9px] font-semibold text-slate-500">
+                                    Marketplace coupon
+                                </p>
+
+                            </div>
+
+
+                            <div class="shrink-0 text-right">
+
+                                <p class="text-lg font-black tracking-tight text-white sm:text-xl">
+
+                                    {% if coupon.discount_type == 'percentage' %}
+
+                                        {{ coupon.discount_value|floatformat:0 }}% OFF
+
+                                    {% else %}
+
+                                        ₹{{ coupon.discount_value|floatformat:0 }} OFF
+
+                                    {% endif %}
+
+                                </p>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- ==================================================
+                         COUPON DETAILS
+                    =================================================== -->
+                    <div class="rounded-b-2xl bg-slate-950/85">
+
+
+                        <!-- ==================================================
+                             SCOPE / BATCH
+                        =================================================== -->
+                        <div
+                            class="
+                                border-b border-white/10
+                                px-3.5 py-2.5
+                            "
+                        >
+
+                            {% if coupon.coupon_type == 'batch_specific' %}
+
+                                <div class="flex items-center gap-2">
+
+                                    <i
+                                        class="
+                                            ri-stack-line
+                                            shrink-0
+                                            text-sm
+                                            text-cyan-300
+                                        "
+                                    ></i>
+
+                                    <div class="min-w-0">
+
+                                        <p
+                                            class="
+                                                text-[8px]
+                                                font-black
+                                                uppercase
+                                                tracking-[0.14em]
+                                                text-slate-600
+                                            "
+                                        >
+                                            Applicable Batch
+                                        </p>
+
+                                        <p
+                                            class="
+                                                truncate
+                                                text-[11px]
+                                                font-black
+                                                text-slate-200
+                                            "
+                                        >
+
+                                            {% for rule in coupon.batch_rules.all %}
+
+                                                {% if rule.is_enabled %}
+
+                                                    {{ rule.batch.batch_name }}
+
+                                                    {% if not forloop.last %}
+                                                        ,
+                                                    {% endif %}
+
+                                                {% endif %}
+
+                                            {% empty %}
+
+                                                No batch selected
+
+                                            {% endfor %}
+
+                                        </p>
+
+                                    </div>
+
+                                </div>
+
+                            {% else %}
+
+                                <div class="flex items-center gap-2">
+
+                                    <i
+                                        class="
+                                            ri-global-line
+                                            shrink-0
+                                            text-sm
+                                            text-pink-300
+                                        "
+                                    ></i>
+
+                                    <div class="min-w-0">
+
+                                        <p
+                                            class="
+                                                text-[8px]
+                                                font-black
+                                                uppercase
+                                                tracking-[0.14em]
+                                                text-slate-600
+                                            "
+                                        >
+                                            Coupon Scope
+                                        </p>
+
+                                        <p
+                                            class="
+                                                truncate
+                                                text-[11px]
+                                                font-black
+                                                text-slate-200
+                                            "
+                                        >
+                                            All eligible marketplace batches
+                                        </p>
+
+                                    </div>
+
+                                </div>
+
+                            {% endif %}
+
+                        </div>
+
+
+                        <!-- ==================================================
+                             INFO STRIP
+                        =================================================== -->
+                        <div
+                            class="
+                                grid grid-cols-3
+                                divide-x divide-white/10
+                            "
+                        >
+
+                            <!-- CREATED AT -->
+                            <div class="px-3 py-2.5">
+
+                                <div
+                                    class="
+                                        flex items-center gap-1.5
+                                        text-[9px] text-slate-600
+                                    "
+                                >
+                                    <i class="ri-time-line"></i>
+                                    <span>Created At</span>
+                                </div>
+
+                                <p
+                                    class="
+                                        mt-1
+                                        truncate
+                                        text-[11px]
+                                        font-black
+                                        text-white
+                                    "
+                                >
+
+                                    {% if coupon.created_at %}
+
+                                        {{ coupon.created_at|date:"d M Y" }}
+
+                                    {% else %}
+
+                                        —
+
+                                    {% endif %}
+
+                                </p>
+
+                            </div>
+
+
+                            <!-- VALID TILL -->
+                            <div class="px-3 py-2.5">
+
+                                <div
+                                    class="
+                                        flex items-center gap-1.5
+                                        text-[9px] text-slate-600
+                                    "
+                                >
+                                    <i class="ri-calendar-event-line"></i>
+                                    <span>Valid Till</span>
+                                </div>
+
+                                <p
+                                    class="
+                                        mt-1
+                                        truncate
+                                        text-[11px]
+                                        font-black
+                                        text-white
+                                    "
+                                >
+
+                                    {% if coupon.valid_until %}
+
+                                        {{ coupon.valid_until|date:"d M Y" }}
+
+                                    {% else %}
+
+                                        Unlimited
+
+                                    {% endif %}
+
+                                </p>
+
+                            </div>
+
+
+                            <!-- USAGE -->
+                            <div class="px-3 py-2.5">
+
+                                <div
+                                    class="
+                                        flex items-center gap-1.5
+                                        text-[9px] text-slate-600
+                                    "
+                                >
+                                    <i class="ri-group-line"></i>
+                                    <span>Usage</span>
+                                </div>
+
+                                <p
+                                    class="
+                                        mt-1
+                                        truncate
+                                        text-[11px]
+                                        font-black
+                                        text-white
+                                    "
+                                >
+
+                                    {{ coupon.used_count }}
+
+                                    {% if coupon.usage_limit %}
+
+                                        / {{ coupon.usage_limit }}
+
+                                    {% else %}
+
+                                        / ∞
+
+                                    {% endif %}
+
+                                </p>
+
+                            </div>
+
+                        </div>
+
+
+                        <!-- ==================================================
+                             USAGE PROGRESS
+                        =================================================== -->
+                        <div class="px-3.5 pb-3">
+
+                            {% if coupon.usage_limit %}
+
+                                {% widthratio coupon.used_count coupon.usage_limit 100 as usage_percent %}
+
+                                <div
+                                    class="
+                                        mb-1.5
+                                        flex items-center justify-between
+                                    "
+                                >
+
+                                    <span
+                                        class="
+                                            text-[8px]
+                                            font-black
+                                            uppercase
+                                            tracking-[0.12em]
+                                            text-slate-700
+                                        "
+                                    >
+                                        Usage
+                                    </span>
+
+                                    <span
+                                        class="
+                                            text-[9px]
+                                            font-black
+                                            text-slate-500
+                                        "
+                                    >
+                                        {{ usage_percent }}%
+                                    </span>
+
+                                </div>
+
+
+                                <div
+                                    class="
+                                        h-1.5
+                                        overflow-hidden
+                                        rounded-full
+                                        bg-slate-800
+                                    "
+                                >
+
+                                    <div
+                                        class="
+                                            h-full
+                                            rounded-full
+
+                                            {% if coupon.is_expired or coupon.used_count >= coupon.usage_limit %}
+                                                bg-rose-400
+                                            {% else %}
+                                                bg-gradient-to-r
+                                                from-cyan-400
+                                                to-emerald-400
+                                            {% endif %}
+                                        "
+                                        style="width: min({{ usage_percent }}%, 100%);"
+                                    ></div>
+
+                                </div>
+
+                            {% else %}
+
+                                <div
+                                    class="
+                                        mb-1.5
+                                        flex items-center justify-between
+                                    "
+                                >
+
+                                    <span
+                                        class="
+                                            text-[8px]
+                                            font-black
+                                            uppercase
+                                            tracking-[0.12em]
+                                            text-slate-700
+                                        "
+                                    >
+                                        Usage
+                                    </span>
+
+                                    <span
+                                        class="
+                                            text-[9px]
+                                            font-black
+                                            text-slate-600
+                                        "
+                                    >
+                                        Unlimited
+                                    </span>
+
+                                </div>
+
+
+                                <div
+                                    class="
+                                        h-1.5
+                                        overflow-hidden
+                                        rounded-full
+                                        bg-slate-800
+                                    "
+                                >
+
+                                    <div
+                                        class="
+                                            h-full
+                                            w-1/4
+                                            rounded-full
+                                            bg-gradient-to-r
+                                            from-cyan-400
+                                            to-violet-500
+                                        "
+                                    ></div>
+
+                                </div>
+
+                            {% endif %}
+
+                        </div>
+
+
+                        <!-- ==================================================
+                             ACTIONS
+                        =================================================== -->
+                        <div
+                            class="
+                                flex items-center gap-2
+                                border-t border-white/10
+                                p-2.5
+                            "
+                        >
+
+                            <!-- EDIT -->
+                            <a
+                                href="{% url 'edit_coupon' coupon.id %}"
+                                class="
+                                    inline-flex h-9 flex-1
+                                    items-center justify-center gap-1.5
+                                    rounded-xl
+                                    border border-white/10
+                                    bg-white/[0.03]
+                                    px-3
+                                    text-[11px]
+                                    font-black
+                                    text-slate-300
+                                    transition
+                                    hover:border-cyan-400/30
+                                    hover:bg-cyan-400/10
+                                    hover:text-cyan-300
+                                "
+                            >
+                                <i class="ri-edit-line text-sm"></i>
+                                Edit
+                            </a>
+
+
+                            <!-- MORE MENU -->
+                            <div class="relative shrink-0">
+
+                                <button
+                                    type="button"
+                                    class="
+                                        couponMenuButton
+                                        inline-flex h-9 w-9
+                                        items-center justify-center
+                                        rounded-xl
+                                        border border-white/10
+                                        bg-white/[0.03]
+                                        text-slate-300
+                                        transition
+                                        hover:bg-white/[0.08]
+                                        hover:text-white
+                                    "
+                                    aria-label="Coupon actions"
+                                    aria-expanded="false"
+                                    aria-controls="coupon-menu-{{ coupon.id }}"
+                                >
+                                    <i class="ri-more-2-fill text-base"></i>
+                                </button>
+
+
+                                <!-- ACTION MENU -->
+                                <div
+                                    id="coupon-menu-{{ coupon.id }}"
+                                    class="
+                                        couponActionMenu
+                                        absolute bottom-11 right-0
+                                        z-40 hidden
+                                        min-w-[180px]
+                                        overflow-hidden
+                                        rounded-xl
+                                        border border-white/10
+                                        bg-slate-950
+                                        p-1.5
+                                        shadow-2xl
+                                        shadow-black/40
+                                    "
+                                >
+
+                                    <!-- TOGGLE -->
+                                    <form
+                                        method="post"
+                                        action="{% url 'toggle_coupon_status' coupon.id %}"
+                                    >
+
+                                        {% csrf_token %}
+
+                                        <button
+                                            type="submit"
+                                            class="
+                                                flex w-full
+                                                items-center gap-3
+                                                rounded-lg
+                                                px-3 py-2.5
+                                                text-left
+                                                text-xs
+                                                font-bold
+                                                transition
+
+                                                {% if coupon.is_active %}
+                                                    text-amber-300
+                                                    hover:bg-amber-400/10
+                                                {% else %}
+                                                    text-emerald-300
+                                                    hover:bg-emerald-400/10
+                                                {% endif %}
+                                            "
+                                        >
+
+                                            {% if coupon.is_active %}
+
+                                                <i class="ri-pause-circle-line text-base"></i>
+                                                Deactivate
+
+                                            {% else %}
+
+                                                <i class="ri-play-circle-line text-base"></i>
+                                                Activate
+
+                                            {% endif %}
+
+                                        </button>
+
+                                    </form>
+
+
+                                    <!-- DELETE -->
+                                    <button
+                                        type="button"
+                                        class="
+                                            deleteCouponButton
+                                            flex w-full
+                                            items-center gap-3
+                                            rounded-lg
+                                            px-3 py-2.5
+                                            text-left
+                                            text-xs
+                                            font-bold
+                                            text-rose-300
+                                            transition
+                                            hover:bg-rose-400/10
+                                        "
+                                        data-delete-url="{% url 'delete_coupon' coupon.id %}"
+                                        data-coupon-code="{{ coupon.code }}"
+                                    >
+                                        <i class="ri-delete-bin-line text-base"></i>
+                                        Delete Coupon
+                                    </button>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </article>
+
+            {% endfor %}
+
+        </section>
+
+
+        <!-- ==========================================================
+             PAGINATION
+        =========================================================== -->
+        <section
+            class="
+                flex flex-col gap-4 pt-1
+                sm:flex-row
+                sm:items-center
+                sm:justify-between
+            "
+        >
+
+            <!-- RESULT COUNT -->
+            <p class="text-xs font-medium text-slate-500 sm:text-sm">
+
+                Showing
+
+                <span class="font-black text-slate-300">
+                    {{ page_obj.start_index }}
+                </span>
+
+                to
+
+                <span class="font-black text-slate-300">
+                    {{ page_obj.end_index }}
+                </span>
+
+                of
+
+                <span class="font-black text-slate-300">
+                    {{ page_obj.paginator.count }}
+                </span>
+
+                coupons
+
+            </p>
+
+
+            {% if page_obj.paginator.num_pages > 1 %}
+
+                <div class="flex items-center gap-1.5">
+
+                    <!-- PREVIOUS -->
+                    {% if page_obj.has_previous %}
+
+                        <a
+                            href="{% querystring page=page_obj.previous_page_number %}"
+                            class="
+                                inline-flex h-9 w-9
+                                items-center justify-center
+                                rounded-xl
+                                border border-white/10
+                                bg-white/[0.03]
+                                text-slate-300
+                                transition
+                                hover:bg-white/[0.08]
+                                hover:text-white
+                            "
+                            aria-label="Previous page"
+                        >
+                            <i class="ri-arrow-left-s-line text-lg"></i>
+                        </a>
+
+                    {% else %}
+
+                        <span
+                            class="
+                                inline-flex h-9 w-9
+                                items-center justify-center
+                                rounded-xl
+                                border border-white/5
+                                bg-white/[0.02]
+                                text-slate-700
+                            "
+                        >
+                            <i class="ri-arrow-left-s-line text-lg"></i>
+                        </span>
+
+                    {% endif %}
+
+
+                    <!-- PAGE NUMBERS -->
+                    {% for page_number in page_obj.paginator.page_range %}
+
+                        {% if page_number == page_obj.number %}
+
+                            <span
+                                class="
+                                    inline-flex h-9 w-9
+                                    items-center justify-center
+                                    rounded-xl
+                                    bg-cyan-400
+                                    text-xs
+                                    font-black
+                                    text-slate-950
+                                "
+                                aria-current="page"
+                            >
+                                {{ page_number }}
+                            </span>
+
+                        {% elif page_obj.paginator.num_pages <= 5 %}
+
+                            <a
+                                href="{% querystring page=page_number %}"
+                                class="
+                                    inline-flex h-9 w-9
+                                    items-center justify-center
+                                    rounded-xl
+                                    border border-white/10
+                                    bg-white/[0.03]
+                                    text-xs
+                                    font-bold
+                                    text-slate-400
+                                    transition
+                                    hover:bg-white/[0.08]
+                                    hover:text-white
+                                "
+                            >
+                                {{ page_number }}
+                            </a>
+
+                        {% elif page_number == 1 or page_number == page_obj.paginator.num_pages or page_number == page_obj.number|add:"-1" or page_number == page_obj.number|add:"1" %}
+
+                            <a
+                                href="{% querystring page=page_number %}"
+                                class="
+                                    inline-flex h-9 w-9
+                                    items-center justify-center
+                                    rounded-xl
+                                    border border-white/10
+                                    bg-white/[0.03]
+                                    text-xs
+                                    font-bold
+                                    text-slate-400
+                                    transition
+                                    hover:bg-white/[0.08]
+                                    hover:text-white
+                                "
+                            >
+                                {{ page_number }}
+                            </a>
+
+                        {% endif %}
+
+                    {% endfor %}
+
+
+                    <!-- NEXT -->
+                    {% if page_obj.has_next %}
+
+                        <a
+                            href="{% querystring page=page_obj.next_page_number %}"
+                            class="
+                                inline-flex h-9 w-9
+                                items-center justify-center
+                                rounded-xl
+                                border border-white/10
+                                bg-white/[0.03]
+                                text-slate-300
+                                transition
+                                hover:bg-white/[0.08]
+                                hover:text-white
+                            "
+                            aria-label="Next page"
+                        >
+                            <i class="ri-arrow-right-s-line text-lg"></i>
+                        </a>
+
+                    {% else %}
+
+                        <span
+                            class="
+                                inline-flex h-9 w-9
+                                items-center justify-center
+                                rounded-xl
+                                border border-white/5
+                                bg-white/[0.02]
+                                text-slate-700
+                            "
+                        >
+                            <i class="ri-arrow-right-s-line text-lg"></i>
+                        </span>
+
+                    {% endif %}
+
+                </div>
+
+            {% endif %}
+
+        </section>
+
+
+    {% else %}
+
+
+        <!-- ==========================================================
+             EMPTY STATE
+        =========================================================== -->
+        <section
+            class="
+                flex min-h-[380px]
+                flex-col items-center justify-center
+                rounded-2xl
+                border border-dashed border-white/10
+                bg-slate-900/50
+                px-6
+                text-center
+            "
+        >
+
+            <div
+                class="
+                    flex h-20 w-20
+                    items-center justify-center
+                    rounded-3xl
+                    border border-cyan-400/10
+                    bg-cyan-400/10
+                    text-cyan-300
+                "
+            >
+                <i class="ri-coupon-3-line text-4xl"></i>
+            </div>
+
+
+            <h2 class="mt-5 text-xl font-black text-white">
+                No coupons found
+            </h2>
+
+
+            <p
+                class="
+                    mt-2 max-w-md
+                    text-sm
+                    leading-relaxed
+                    text-slate-500
+                "
+            >
+
+                {% if search or coupon_type or status %}
+
+                    No coupons match your current search or filters.
+                    Try changing the filters.
+
+                {% else %}
+
+                    You have not created any coupons yet.
+                    Create your first marketplace coupon.
+
+                {% endif %}
+
+            </p>
+
+
+            <div class="mt-6 flex flex-col gap-2 sm:flex-row">
+
+                <a
+                    href="{% url 'create_coupon' %}"
+                    class="
+                        inline-flex h-11
+                        items-center justify-center gap-2
+                        rounded-xl
+                        bg-gradient-to-r
+                        from-cyan-400
+                        to-violet-500
+                        px-5
+                        text-sm
+                        font-black
+                        text-slate-950
+                        shadow-lg
+                        shadow-cyan-500/10
+                        transition
+                        hover:-translate-y-0.5
+                    "
+                >
+                    <i class="ri-add-line text-lg"></i>
+                    Create Coupon
+                </a>
+
+
+                {% if search or coupon_type or status %}
+
+                    <a
+                        href="{% url 'admin_coupons' %}"
+                        class="
+                            inline-flex h-11
+                            items-center justify-center
+                            rounded-xl
+                            border border-white/10
+                            bg-white/[0.03]
+                            px-5
+                            text-sm
+                            font-bold
+                            text-slate-300
+                            transition
+                            hover:bg-white/[0.08]
+                            hover:text-white
+                        "
+                    >
+                        Clear Filters
+                    </a>
+
+                {% endif %}
+
+            </div>
+
+        </section>
+
+    {% endif %}
+
+</div>
+
+
+<!-- ==============================================================
+     DELETE CONFIRMATION MODAL
+================================================================ -->
+<div
+    id="deleteCouponModal"
+    class="
+        fixed inset-0 z-[120]
+        hidden
+        items-center justify-center
+        bg-slate-950/85
+        p-4
+        backdrop-blur-md
+    "
+    aria-hidden="true"
+>
+
+    <div
+        class="
+            w-full max-w-md
+            overflow-hidden
+            rounded-2xl
+            border border-white/10
+            bg-slate-950
+            shadow-2xl
+            shadow-black/50
+        "
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="deleteCouponModalTitle"
+    >
+
+        <!-- CONTENT -->
+        <div class="p-6">
+
+            <div
+                class="
+                    flex h-14 w-14
+                    items-center justify-center
+                    rounded-2xl
+                    bg-rose-400/10
+                    text-rose-400
+                "
+            >
+                <i class="ri-delete-bin-line text-2xl"></i>
+            </div>
+
+
+            <h2
+                id="deleteCouponModalTitle"
+                class="mt-5 text-xl font-black text-white"
+            >
+                Delete Coupon?
+            </h2>
+
+
+            <p
+                class="
+                    mt-2
+                    text-sm
+                    leading-relaxed
+                    text-slate-500
+                "
+            >
+
+                You are about to permanently delete
+
+                <span
+                    id="deleteCouponCode"
+                    class="font-black text-slate-300"
+                >
+                    —
+                </span>.
+
+                This action cannot be reversed.
+
+            </p>
+
+
+            <div
+                class="
+                    mt-4
+                    rounded-xl
+                    border border-amber-400/20
+                    bg-amber-400/10
+                    px-4 py-3
+                "
+            >
+
+                <div class="flex items-start gap-3">
+
+                    <i
+                        class="
+                            ri-information-line
+                            mt-0.5
+                            text-amber-300
+                        "
+                    ></i>
+
+                    <p
+                        class="
+                            text-xs
+                            font-medium
+                            leading-relaxed
+                            text-amber-200/80
+                        "
+                    >
+                        Coupons that have already been used are protected
+                        by the server and cannot be permanently deleted.
+                    </p>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- FOOTER -->
+        <div
+            class="
+                flex flex-col-reverse gap-3
+                border-t border-white/10
+                bg-slate-900/70
+                px-6 py-4
+                sm:flex-row
+                sm:justify-end
+            "
+        >
+
+            <button
+                type="button"
+                id="cancelDeleteCoupon"
+                class="
+                    inline-flex h-11
+                    items-center justify-center
+                    rounded-xl
+                    border border-white/10
+                    bg-white/[0.03]
+                    px-5
+                    text-sm
+                    font-bold
+                    text-slate-300
+                    transition
+                    hover:bg-white/[0.08]
+                    hover:text-white
+                "
+            >
+                Cancel
+            </button>
+
+
+            <form
+                id="deleteCouponConfirmForm"
+                method="post"
+                action="#"
+            >
+
+                {% csrf_token %}
+
+                <button
+                    type="submit"
+                    class="
+                        inline-flex h-11 w-full
+                        items-center justify-center gap-2
+                        rounded-xl
+                        bg-rose-500
+                        px-5
+                        text-sm
+                        font-black
+                        text-white
+                        shadow-lg
+                        shadow-rose-500/10
+                        transition
+                        hover:bg-rose-400
+                        sm:w-auto
+                    "
+                >
+                    <i class="ri-delete-bin-line"></i>
+                    Delete Coupon
+                </button>
+
+            </form>
+
+        </div>
+
+    </div>
+
+</div>
+<script src="{% static 'admins/js/coupons.js' %}"></script>
+{% endblock admin_content %}

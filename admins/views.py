@@ -9,29 +9,40 @@ from django.core.exceptions import ValidationError
 from django.contrib.auth.models import User
 from django.core.paginator import Paginator
 from django.db.models import Q
-
 from .decorators import admin_required
+from .helpers import (
+    create_batch,
+    update_batch,
+    build_batch_context,
+    can_delete_batch,
+    can_archive_batch,
+    can_publish_batch,
+    can_edit_batch,
+
+    # Coupon helpers
+    build_coupon_form_context,
+    parse_and_validate_coupon,
+    save_coupon_batch_rules,
+    create_coupon_instance,
+    update_coupon_instance,
+    add_coupon_errors_to_messages,
+    get_coupon_listing_context,
+    toggle_coupon_status,
+    can_delete_coupon,
+    delete_coupon,
+)
 
 from django.shortcuts import get_object_or_404
-
 from django.core.mail import send_mail
-from admins.models import (
-    Batch,
-    Subject,
-)
-
-from teachers.models import (
-    Teacher,
-    TeacherBatch,
-    TeacherSubject,
-)
-
+from admins.models import (Batch,Subject,Coupon)
+from django.db import models,transaction
+from teachers.models import (Teacher,TeacherBatch,TeacherSubject,)
+from decimal import Decimal
 from django.http import JsonResponse
-
-
+from django.utils import timezone
 from .validators import (validate_create_batch,validate_edit_batch,)
-from .helpers import (create_batch,update_batch,build_batch_context,can_delete_batch,can_archive_batch,can_publish_batch,can_edit_batch,)
 from cloudinary.uploader import destroy
+
 
 
 @cache_control(no_cache=True,must_revalidate=True,no_store=True)
@@ -1586,4 +1597,535 @@ def admin_course_builder_entry_view(request, batch_id, subject_id):
         request,
         "courses/course_builder.html",
         context,
+    )
+
+# ==========================================================
+# COUPON MANAGEMENT
+# ==========================================================
+
+
+# ==========================================================
+# COUPON LISTING
+# ==========================================================
+
+@login_required(login_url="admin_signin")
+@admin_required
+@cache_control(
+    no_cache=True,
+    must_revalidate=True,
+    no_store=True,
+)
+def admin_coupons_view(request):
+    """
+    Display the Admin Coupons page.
+
+    Search, filtering, sorting, pagination and statistics
+    are handled by helpers.py.
+    """
+
+    context = get_coupon_listing_context(
+        request
+    )
+
+    return render(
+        request,
+        "admins/coupons/coupons.html",
+        context,
+    )
+
+
+# ==========================================================
+# CREATE COUPON
+# ==========================================================
+
+@login_required(login_url="admin_signin")
+@admin_required
+@cache_control(
+    no_cache=True,
+    must_revalidate=True,
+    no_store=True,
+)
+def create_coupon_view(request):
+    """
+    Create a new coupon.
+
+    Validation and data preparation are handled by
+    helpers.py.
+    """
+
+    # ------------------------------------------------------
+    # GET
+    # ------------------------------------------------------
+
+    if request.method == "GET":
+
+        context = build_coupon_form_context(
+            request=request,
+            coupon=None,
+            form_data=None,
+        )
+
+        return render(
+            request,
+            "admins/coupons/create_coupon.html",
+            context,
+        )
+
+    # ------------------------------------------------------
+    # POST VALIDATION
+    # ------------------------------------------------------
+
+    data, errors = parse_and_validate_coupon(
+        request=request,
+        coupon=None,
+    )
+
+    # ------------------------------------------------------
+    # VALIDATION ERRORS
+    # ------------------------------------------------------
+
+    if errors:
+
+        add_coupon_errors_to_messages(
+            request,
+            errors,
+        )
+
+        context = build_coupon_form_context(
+            request=request,
+            coupon=None,
+            form_data=request.POST,
+        )
+
+        return render(
+            request,
+            "admins/coupons/create_coupon.html",
+            context,
+        )
+
+    # ------------------------------------------------------
+    # SAVE
+    # ------------------------------------------------------
+
+    try:
+
+        with transaction.atomic():
+
+            coupon = create_coupon_instance(
+                data
+            )
+
+            save_coupon_batch_rules(
+                coupon=coupon,
+                coupon_type=data["coupon_type"],
+                selected_batch=data.get(
+                    "selected_batch"
+                ),
+                enabled_batch_ids=data.get(
+                    "enabled_batch_ids"
+                ),
+            )
+
+        messages.success(
+            request,
+            f"Coupon {coupon.code} created successfully.",
+        )
+
+        return redirect(
+            "admin_coupons"
+        )
+
+    except ValidationError as exc:
+
+        add_coupon_errors_to_messages(
+            request,
+            exc.messages,
+        )
+
+    except Exception:
+
+        import traceback
+
+        traceback.print_exc()
+
+        messages.error(
+            request,
+            "Unable to create coupon. Please try again.",
+        )
+
+    # ------------------------------------------------------
+    # RE-RENDER AFTER SAVE ERROR
+    # ------------------------------------------------------
+
+    context = build_coupon_form_context(
+        request=request,
+        coupon=None,
+        form_data=request.POST,
+    )
+
+    return render(
+        request,
+        "admins/coupons/create_coupon.html",
+        context,
+    )
+
+
+# ==========================================================
+# EDIT COUPON
+# ==========================================================
+
+@login_required(login_url="admin_signin")
+@admin_required
+@cache_control(
+    no_cache=True,
+    must_revalidate=True,
+    no_store=True,
+)
+def edit_coupon_view(request, coupon_id):
+    """
+    Edit an existing coupon.
+
+    Existing usage information is preserved.
+    """
+
+    # ------------------------------------------------------
+    # GET COUPON
+    # ------------------------------------------------------
+
+    coupon = get_object_or_404(
+        Coupon,
+        id=coupon_id,
+    )
+
+    # ------------------------------------------------------
+    # GET
+    # ------------------------------------------------------
+
+    if request.method == "GET":
+
+        context = build_coupon_form_context(
+            request=request,
+            coupon=coupon,
+            form_data=None,
+        )
+
+        return render(
+            request,
+            "admins/coupons/edit_coupon.html",
+            context,
+        )
+
+    # ------------------------------------------------------
+    # POST VALIDATION
+    # ------------------------------------------------------
+
+    data, errors = parse_and_validate_coupon(
+        request=request,
+        coupon=coupon,
+    )
+
+    # ------------------------------------------------------
+    # VALIDATION ERRORS
+    # ------------------------------------------------------
+
+    if errors:
+
+        add_coupon_errors_to_messages(
+            request,
+            errors,
+        )
+
+        context = build_coupon_form_context(
+            request=request,
+            coupon=coupon,
+            form_data=request.POST,
+        )
+
+        return render(
+            request,
+            "admins/coupons/edit_coupon.html",
+            context,
+        )
+
+    # ------------------------------------------------------
+    # UPDATE
+    # ------------------------------------------------------
+
+    try:
+
+        with transaction.atomic():
+
+            locked_coupon = (
+                Coupon.objects
+                .select_for_update()
+                .get(
+                    id=coupon.id
+                )
+            )
+
+            update_coupon_instance(
+                locked_coupon,
+                data,
+            )
+
+            save_coupon_batch_rules(
+                coupon=locked_coupon,
+                coupon_type=data["coupon_type"],
+                selected_batch=data.get(
+                    "selected_batch"
+                ),
+                enabled_batch_ids=data.get(
+                    "enabled_batch_ids"
+                ),
+            )
+
+            coupon = locked_coupon
+
+        messages.success(
+            request,
+            f"Coupon {coupon.code} updated successfully.",
+        )
+
+        return redirect(
+            "admin_coupons"
+        )
+
+    except ValidationError as exc:
+
+        add_coupon_errors_to_messages(
+            request,
+            exc.messages,
+        )
+
+    except Exception:
+
+        import traceback
+
+        traceback.print_exc()
+
+        messages.error(
+            request,
+            "Unable to update coupon. Please try again.",
+        )
+
+    # ------------------------------------------------------
+    # RE-RENDER AFTER UPDATE ERROR
+    # ------------------------------------------------------
+
+    context = build_coupon_form_context(
+        request=request,
+        coupon=coupon,
+        form_data=request.POST,
+    )
+
+    return render(
+        request,
+        "admins/coupons/edit_coupon.html",
+        context,
+    )
+
+
+# ==========================================================
+# ACTIVATE / DEACTIVATE COUPON
+# ==========================================================
+
+@login_required(login_url="admin_signin")
+@admin_required
+@require_POST
+@cache_control(
+    no_cache=True,
+    must_revalidate=True,
+    no_store=True,
+)
+def toggle_coupon_status_view(
+    request,
+    coupon_id,
+):
+    """
+    Activate or deactivate a coupon.
+
+    POST only.
+    """
+
+    try:
+
+        with transaction.atomic():
+
+            coupon = (
+                Coupon.objects
+                .select_for_update()
+                .get(
+                    id=coupon_id
+                )
+            )
+
+            toggle_coupon_status(
+                coupon
+            )
+
+            coupon.refresh_from_db()
+
+        if coupon.is_active:
+
+            messages.success(
+                request,
+                f"Coupon {coupon.code} activated successfully.",
+            )
+
+        else:
+
+            messages.success(
+                request,
+                f"Coupon {coupon.code} deactivated successfully.",
+            )
+
+    except Coupon.DoesNotExist:
+
+        messages.error(
+            request,
+            "Coupon not found.",
+        )
+
+    except ValidationError as exc:
+
+        add_coupon_errors_to_messages(
+            request,
+            exc.messages,
+        )
+
+    except Exception:
+
+        import traceback
+
+        traceback.print_exc()
+
+        messages.error(
+            request,
+            "Unable to change coupon status.",
+        )
+
+    return redirect(
+        "admin_coupons"
+    )
+
+
+# ==========================================================
+# DELETE COUPON
+# ==========================================================
+
+@login_required(login_url="admin_signin")
+@admin_required
+@require_POST
+@cache_control(
+    no_cache=True,
+    must_revalidate=True,
+    no_store=True,
+)
+def delete_coupon_view(
+    request,
+    coupon_id,
+):
+    """
+    Permanently delete a coupon only when it has never
+    been used.
+
+    Used coupons are retained for historical integrity.
+    """
+
+    coupon = get_object_or_404(
+        Coupon,
+        id=coupon_id,
+    )
+
+    # ------------------------------------------------------
+    # DELETE PERMISSION CHECK
+    # ------------------------------------------------------
+
+    if not can_delete_coupon(
+        coupon
+    ):
+
+        messages.error(
+            request,
+            (
+                f"Coupon {coupon.code} has already been "
+                f"used {coupon.used_count} time(s) and "
+                "cannot be deleted. Deactivate it instead."
+            ),
+        )
+
+        return redirect(
+            "admin_coupons"
+        )
+
+    coupon_code = coupon.code
+
+    # ------------------------------------------------------
+    # DELETE WITH ROW LOCK
+    # ------------------------------------------------------
+
+    try:
+
+        with transaction.atomic():
+
+            locked_coupon = (
+                Coupon.objects
+                .select_for_update()
+                .get(
+                    id=coupon.id
+                )
+            )
+
+            if not can_delete_coupon(
+                locked_coupon
+            ):
+
+                messages.error(
+                    request,
+                    (
+                        f"Coupon {locked_coupon.code} has "
+                        "already been used and cannot be deleted."
+                    ),
+                )
+
+                return redirect(
+                    "admin_coupons"
+                )
+
+            delete_coupon(
+                locked_coupon
+            )
+
+        messages.success(
+            request,
+            f"Coupon {coupon_code} deleted successfully.",
+        )
+
+    except Coupon.DoesNotExist:
+
+        messages.error(
+            request,
+            "Coupon not found.",
+        )
+
+    except ValidationError as exc:
+
+        add_coupon_errors_to_messages(
+            request,
+            exc.messages,
+        )
+
+    except Exception:
+
+        import traceback
+
+        traceback.print_exc()
+
+        messages.error(
+            request,
+            "Unable to delete coupon. Please try again.",
+        )
+
+    return redirect(
+        "admin_coupons"
     )

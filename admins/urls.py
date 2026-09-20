@@ -1,5 +1,67 @@
 from django.urls import path
-from .views import *
+
+from .views import (
+    # ==========================================================
+    # AUTH
+    # ==========================================================
+    admin_signin_view,
+    admin_dashboard_view,
+    admin_logout_view,
+
+    # ==========================================================
+    # STUDENTS
+    # ==========================================================
+    admin_students_view,
+    block_student_view,
+    unblock_student_view,
+    delete_student_view,
+
+    # ==========================================================
+    # BATCHES
+    # ==========================================================
+    admin_batches_view,
+    create_batch_view,
+    edit_batch_view,
+    delete_batch_view,
+    batch_subjects,
+
+    # ==========================================================
+    # SUBJECTS
+    # ==========================================================
+    admin_subjects_view,
+    create_subject_view,
+    edit_subject_view,
+    delete_subject_view,
+
+    # ==========================================================
+    # TEACHERS
+    # ==========================================================
+    admin_teachers,
+    create_teacher_view,
+    admin_assign_teacher_batch,
+    admin_teacher_assignments,
+    admin_view_teacher_subjects,
+    admin_remove_teacher_batch,
+    admin_remove_teacher_subject,
+    admin_block_teacher,
+    admin_unblock_teacher,
+    admin_delete_teacher,
+    get_teacher_batches_data,
+
+    # ==========================================================
+    # COUPONS
+    # ==========================================================
+    admin_coupons_view,
+    create_coupon_view,
+    edit_coupon_view,
+    toggle_coupon_status_view,
+    delete_coupon_view,
+
+    # ==========================================================
+    # ADMIN COURSE BUILDER
+    # ==========================================================
+    admin_course_builder_entry_view,
+)
 
 
 urlpatterns = [
@@ -118,6 +180,8 @@ urlpatterns = [
         delete_subject_view,
         name="delete_subject",
     ),
+
+
     # ==========================================================
     # TEACHERS
     # ==========================================================
@@ -187,9 +251,56 @@ urlpatterns = [
         get_teacher_batches_data,
         name="get_teacher_batches_data",
     ),
-        path(
+
+
+    # ==========================================================
+# COUPONS
+# ==========================================================
+
+# Coupon listing page
+path(
+    "coupons/",
+    admin_coupons_view,
+    name="admin_coupons",
+),
+
+# Create coupon page
+path(
+    "coupons/create/",
+    create_coupon_view,
+    name="create_coupon",
+),
+
+# Edit coupon page
+path(
+    "coupons/edit/<int:coupon_id>/",
+    edit_coupon_view,
+    name="edit_coupon",
+),
+
+# Activate / Deactivate coupon
+path(
+    "coupons/<int:coupon_id>/toggle/",
+    toggle_coupon_status_view,
+    name="toggle_coupon_status",
+),
+
+# Delete coupon
+path(
+    "coupons/<int:coupon_id>/delete/",
+    delete_coupon_view,
+    name="delete_coupon",
+),
+
+
+    # ==========================================================
+    # ADMIN COURSE BUILDER
+    # ==========================================================
+
+    path(
         "batches/<int:batch_id>/subjects/<int:subject_id>/course-builder/",
         admin_course_builder_entry_view,
         name="admin_course_builder_entry",
     ),
+
 ]
