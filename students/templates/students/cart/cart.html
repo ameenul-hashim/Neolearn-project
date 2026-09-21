@@ -7,44 +7,19 @@
 
 {% block student_content %}
 
-<div class="mx-auto w-full max-w-[1450px]">
+<div class="mx-auto w-full max-w-[1380px]">
 
     <!-- =========================================================
          CART HEADER
     ========================================================== -->
 
-    <section class="mb-6">
+    <section class="mb-5">
 
         <div class="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
 
             <!-- LEFT -->
 
             <div class="flex items-center gap-4">
-
-                <a
-                    href="{% url 'marketplace' %}"
-                    class="
-                        inline-flex
-                        h-11
-                        items-center
-                        gap-2
-                        rounded-xl
-                        border
-                        border-cyan-400/20
-                        bg-cyan-400/[0.04]
-                        px-4
-                        text-sm
-                        font-semibold
-                        text-cyan-300
-                        transition-all
-                        hover:border-cyan-400/40
-                        hover:bg-cyan-400/10
-                        hover:text-cyan-200
-                    "
-                >
-                    <i class="ri-arrow-left-line text-lg"></i>
-                    Back to Marketplace
-                </a>
 
                 <div class="hidden h-10 w-px bg-white/10 sm:block"></div>
 
@@ -53,8 +28,8 @@
                     <div
                         class="
                             flex
-                            h-[58px]
-                            w-[58px]
+                            h-12
+                            w-12
                             shrink-0
                             items-center
                             justify-center
@@ -66,7 +41,7 @@
                             shadow-[0_0_30px_rgba(0,245,212,0.08)]
                         "
                     >
-                        <i class="ri-shopping-cart-2-line text-[28px]"></i>
+                        <i class="ri-shopping-cart-2-line text-2xl"></i>
                     </div>
 
                     <div>
@@ -77,7 +52,7 @@
                                 font-black
                                 tracking-tight
                                 text-white
-                                sm:text-4xl
+                                sm:text-3xl
                             "
                         >
                             Your
@@ -86,7 +61,7 @@
                             </span>
                         </h1>
 
-                        <p class="mt-1 text-sm text-slate-400 sm:text-base">
+                        <p class="mt-1 text-xs text-slate-400 sm:text-sm">
                             {% if cart_items %}
                                 {{ cart_items|length }}
                                 {% if cart_items|length == 1 %}
@@ -170,12 +145,12 @@
 
         <section
             class="
-                rounded-3xl
+                rounded-2xl
                 border
                 border-white/10
                 bg-[#071224]/80
                 px-6
-                py-16
+                py-12 sm:py-14
                 text-center
                 shadow-2xl
                 shadow-black/20
@@ -186,8 +161,8 @@
                 class="
                     mx-auto
                     flex
-                    h-24
-                    w-24
+                    h-20
+                    w-20 sm:h-24 sm:w-24
                     items-center
                     justify-center
                     rounded-full
@@ -197,10 +172,10 @@
                     text-cyan-400
                 "
             >
-                <i class="ri-shopping-cart-2-line text-5xl"></i>
+                <i class="ri-shopping-cart-2-line text-4xl"></i>
             </div>
 
-            <h2 class="mt-6 text-2xl font-black text-white">
+            <h2 class="mt-6 text-xl font-black text-white">
                 Your cart is empty
             </h2>
 
@@ -310,7 +285,7 @@
                             <div
                                 class="
                                     relative
-                                    h-[145px]
+                                    h-[120px]
                                     w-full
                                     shrink-0
                                     overflow-hidden
@@ -318,9 +293,9 @@
                                     border
                                     border-white/10
                                     bg-[#0b1424]
-                                    sm:h-[160px]
-                                    lg:h-[112px]
-                                    lg:w-[180px]
+                                    sm:h-[135px]
+                                    lg:h-[104px]
+                                    lg:w-[168px]
                                 "
                             >
 
@@ -415,7 +390,7 @@
                                                 text-white
                                                 transition-colors
                                                 group-hover:text-cyan-100
-                                                sm:text-xl
+                                                sm:text-lg
                                             "
                                         >
                                             {{ batch.batch_name }}
@@ -568,7 +543,7 @@
                                     sm:justify-end
                                     sm:border-t-0
                                     sm:pt-0
-                                    lg:w-[220px]
+                                    lg:w-[190px]
                                 "
                             >
 
@@ -958,344 +933,269 @@
         </div>
 
 
+
         <!-- =====================================================
-             COUPON SECTION
-             UI ONLY FOR NOW
-             ADMIN COUPON SYSTEM WILL BE CONNECTED NEXT
+             COUPON + ORDER SUMMARY
         ====================================================== -->
 
-        <section
-            class="
-                mt-5
-                overflow-hidden
-                rounded-2xl
-                border
-                border-cyan-400/15
-                bg-gradient-to-r
-                from-cyan-400/[0.05]
-                via-[#071224]
-                to-sky-400/[0.04]
-            "
-        >
+        <section class="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.05fr)_minmax(320px,0.95fr)]">
 
-            <div
-                class="
-                    flex
-                    flex-col
-                    gap-5
-                    p-5
-                    lg:flex-row
-                    lg:items-center
-                    lg:justify-between
-                    lg:p-6
-                "
-            >
+            <!-- APPLY COUPON -->
 
-                <!-- COUPON INFO -->
+            <section class="overflow-hidden rounded-2xl border border-cyan-400/15 bg-[#071224]/90 shadow-2xl shadow-black/10">
 
-                <div class="flex items-center gap-4">
+                <div class="flex items-center justify-between gap-4 border-b border-white/5 px-5 py-4">
+                    <div class="flex min-w-0 items-center gap-3">
+                        <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-cyan-400/25 bg-cyan-400/[0.06] text-cyan-400">
+                            <i class="ri-price-tag-3-line text-xl"></i>
+                        </div>
 
-                    <div
-                        class="
-                            flex
-                            h-12
-                            w-12
-                            shrink-0
-                            items-center
-                            justify-center
-                            rounded-xl
-                            border
-                            border-cyan-400/20
-                            bg-cyan-400/[0.06]
-                            text-cyan-400
-                        "
-                    >
-                        <i class="ri-coupon-3-line text-2xl"></i>
+                        <div class="min-w-0">
+                            <h2 class="text-lg font-black text-white">Apply Coupon</h2>
+                            <p class="mt-0.5 text-xs text-slate-500">Save more on your learning journey.</p>
+                        </div>
                     </div>
 
-                    <div>
+                    {% if available_coupons %}
+                        <span class="hidden shrink-0 text-xs font-bold text-cyan-400 sm:block">
+                            {{ available_coupons|length }} available
+                        </span>
+                    {% endif %}
+                </div>
 
-                        <h3 class="text-base font-black text-cyan-300">
-                            Have a coupon code?
-                        </h3>
+                <!-- AVAILABLE COUPONS: ONLY THIS AREA SCROLLS -->
 
-                        <p class="mt-1 text-xs text-slate-400">
-                            Enter your coupon code to get a discount on your order.
+                <div class="px-4 pt-3">
+                    {% if available_coupons %}
+                        <div class="max-h-[190px] space-y-2 overflow-y-auto overscroll-contain pr-1 [scrollbar-color:rgba(34,211,238,.45)_transparent] [scrollbar-width:thin]">
+
+                            {% for coupon in available_coupons %}
+
+                                <div class="flex min-h-12 items-center gap-3 rounded-xl border border-white/10 bg-[#08182b]/80 px-3 py-2.5 transition hover:border-cyan-400/20 hover:bg-cyan-400/[0.03]">
+
+                                    <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-cyan-400/20 bg-cyan-400/[0.05] text-cyan-400">
+                                        <i class="ri-coupon-3-line text-lg"></i>
+                                    </div>
+
+                                    <div class="min-w-0 flex-1">
+                                        <div class="flex flex-wrap items-center gap-2">
+                                            <p class="truncate text-xs font-black uppercase tracking-wide text-white">
+                                                {{ coupon.coupon.code }}
+                                            </p>
+
+                                            <span class="rounded-md bg-cyan-400/10 px-2 py-0.5 text-[10px] font-bold text-cyan-300">
+                                                {% if coupon.coupon.coupon_type == "batch_specific" %}
+                                                    Batch
+                                                {% else %}
+                                                    General
+                                                {% endif %}
+                                            </span>
+                                        </div>
+
+                                        <p class="mt-0.5 text-[11px] text-slate-400">
+                                            {% if coupon.coupon.discount_type == "percentage" %}
+                                                {{ coupon.coupon.discount_value|floatformat:0 }}% OFF
+                                            {% else %}
+                                                ₹{{ coupon.coupon.discount_value|floatformat:0 }} OFF
+                                            {% endif %}
+                                            {% if coupon.batch %}
+                                                <span class="text-slate-600"> · {{ coupon.batch.batch_name }}</span>
+                                            {% endif %}
+                                        </p>
+                                    </div>
+
+                                    <form method="post" action="{% url 'apply_coupon' %}" class="w-full shrink-0 sm:w-auto">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="coupon_code" value="{{ coupon.coupon.code }}">
+
+                                        <button
+                                            type="submit"
+                                            class="inline-flex h-9 w-full min-w-[78px] sm:w-auto items-center justify-center gap-1.5 rounded-lg bg-gradient-to-r from-cyan-400 to-sky-400 px-3 text-xs font-black text-slate-950 transition hover:-translate-y-0.5 hover:shadow-lg hover:shadow-cyan-500/10"
+                                        >
+                                            <i class="ri-price-tag-3-line"></i>
+                                            Apply
+                                        </button>
+                                    </form>
+
+                                </div>
+
+                            {% endfor %}
+
+                        </div>
+                    {% else %}
+                        <div class="flex h-[118px] flex-col items-center justify-center rounded-xl border border-white/5 bg-white/[0.015] text-center">
+                            <i class="ri-coupon-3-line text-2xl text-slate-700"></i>
+                            <p class="mt-2 text-xs font-bold text-slate-500">No available coupons</p>
+                            <p class="mt-1 text-[11px] text-slate-600">Enter a coupon code below if you have one.</p>
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="flex items-center gap-3 px-4 py-3">
+                    <div class="h-px flex-1 bg-white/10"></div>
+                    <span class="text-[10px] font-bold uppercase tracking-widest text-slate-600">OR</span>
+                    <div class="h-px flex-1 bg-white/10"></div>
+                </div>
+
+                <!-- MANUAL CODE -->
+
+                <div class="px-4 pb-4">
+                    <p class="text-sm font-black text-cyan-300">Have a different coupon code?</p>
+
+                    <form
+                        method="post"
+                        action="{% url 'apply_coupon' %}"
+                        id="couponApplyForm"
+                        class="mt-2 flex flex-col gap-2 sm:flex-row"
+                    >
+                        {% csrf_token %}
+
+                        <label for="couponCode" class="sr-only">Coupon code</label>
+
+                        <input
+                            type="text"
+                            id="couponCode"
+                            name="coupon_code"
+                            maxlength="50"
+                            autocomplete="off"
+                            placeholder="Enter coupon code"
+                            class="h-11 min-w-0 flex-1 rounded-xl border border-white/10 bg-[#020817]/70 px-4 text-sm font-bold uppercase tracking-wider text-white outline-none placeholder:normal-case placeholder:tracking-normal placeholder:text-slate-600 focus:border-cyan-400/40 focus:ring-2 focus:ring-cyan-400/10"
+                        >
+
+                        <button
+                            type="submit"
+                            id="couponApplyButton"
+                            class="inline-flex h-11 w-full shrink-0 items-center justify-center gap-2 sm:w-auto rounded-xl bg-gradient-to-r from-cyan-400 to-sky-400 px-5 text-sm font-black text-slate-950 transition-all hover:-translate-y-0.5 hover:shadow-lg hover:shadow-cyan-500/10 focus:outline-none focus:ring-2 focus:ring-cyan-300/30"
+                        >
+                            <i class="ri-price-tag-3-line"></i>
+                            Apply Code
+                        </button>
+                    </form>
+                </div>
+
+                <!-- APPLIED COUPONS -->
+
+                {% if applied_coupons %}
+                    <div class="border-t border-emerald-400/10 px-4 py-3">
+                        <p class="mb-2 text-xs font-bold uppercase tracking-wider text-emerald-300">
+                            Applied Coupons
                         </p>
 
+                        <div class="max-h-[105px] space-y-2 overflow-y-auto pr-1 [scrollbar-color:rgba(16,185,129,.45)_transparent] [scrollbar-width:thin]">
+
+                            {% for applied in applied_coupons %}
+
+                                <div class="flex items-center justify-between gap-3 rounded-xl border border-emerald-400/20 bg-emerald-400/[0.04] px-3 py-2.5">
+
+                                    <div class="min-w-0">
+                                        <p class="truncate text-xs font-black uppercase tracking-wide text-white">
+                                            {{ applied.coupon.code }}
+                                        </p>
+
+                                        <p class="mt-0.5 text-[11px] text-emerald-300">
+                                            {% if applied.batch %}
+                                                {{ applied.batch.batch_name }} ·
+                                            {% else %}
+                                                General coupon ·
+                                            {% endif %}
+                                            ₹{{ applied.discount_amount|floatformat:2 }} discount
+                                        </p>
+                                    </div>
+
+                                    <form method="post" action="{% url 'remove_coupon' applied.coupon.id %}" class="shrink-0">
+                                        {% csrf_token %}
+                                        <button
+                                            type="submit"
+                                            class="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-red-400/20 bg-red-400/[0.05] px-3 text-xs font-bold text-red-300 transition hover:border-red-400/40 hover:bg-red-400/10"
+                                        >
+                                            <i class="ri-delete-bin-6-line"></i>
+                                            Remove
+                                        </button>
+                                    </form>
+
+                                </div>
+
+                            {% endfor %}
+
+                        </div>
+                    </div>
+                {% endif %}
+
+            </section>
+
+
+            <!-- ORDER SUMMARY -->
+
+            <section class="overflow-hidden rounded-2xl border border-cyan-400/15 bg-[#071224]/90 shadow-2xl shadow-black/10">
+
+                <div class="flex h-full flex-col p-5">
+
+                    <div class="flex items-center gap-3">
+                        <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-cyan-400/25 bg-cyan-400/[0.06] text-cyan-400">
+                            <i class="ri-bill-line text-xl"></i>
+                        </div>
+
+                        <div>
+                            <h2 class="text-lg font-black text-white">Order Summary</h2>
+                            <p class="mt-0.5 text-xs text-slate-500">Review your items and proceed to checkout.</p>
+                        </div>
+                    </div>
+
+                    <div class="mt-6 space-y-3.5">
+
+                        <div class="flex items-center justify-between gap-4">
+                            <div>
+                                <p class="text-sm font-semibold text-slate-300">Batch Fees</p>
+                                <p class="mt-0.5 text-[11px] text-slate-600">({{ cart_items|length }} batches)</p>
+                            </div>
+
+                            <p class="text-base font-black text-white">
+                                ₹{{ subtotal|floatformat:2 }}
+                            </p>
+                        </div>
+
+                        <div class="flex items-center justify-between gap-4">
+                            <p class="text-sm font-semibold text-slate-300">Coupon Discount</p>
+
+                            <p class="text-base font-black text-emerald-400">
+                                - ₹{{ discount_total|floatformat:2 }}
+                            </p>
+                        </div>
+
+                    </div>
+
+                    <div class="my-4 h-px bg-white/10"></div>
+
+                    <div class="flex items-end justify-between gap-4">
+                        <p class="text-lg font-black text-white">Total Amount</p>
+
+                        <p class="text-2xl sm:text-3xl font-black text-cyan-400">
+                            ₹{{ total|floatformat:2 }}
+                        </p>
+                    </div>
+
+                    <div class="mt-5">
+                        <button
+                            type="button"
+                            id="checkoutButton"
+                            disabled
+                            title="Checkout will be enabled after the checkout flow is connected."
+                            class="flex h-12 w-full cursor-not-allowed items-center justify-center gap-3 rounded-xl bg-gradient-to-r from-cyan-400 to-sky-400 px-5 text-sm font-black text-slate-950 opacity-60"
+                        >
+                            <i class="ri-lock-line text-lg"></i>
+                            Proceed to Checkout
+                            <i class="ri-arrow-right-line text-lg"></i>
+                        </button>
+
+                        <div class="mt-2 flex items-center justify-center gap-2 text-[11px] text-slate-500">
+                            <i class="ri-shield-check-line text-emerald-400"></i>
+                            Secure and Encrypted Payment
+                        </div>
                     </div>
 
                 </div>
 
-
-                <!-- COUPON INPUT -->
-
-                <div
-                    class="
-                        flex
-                        w-full
-                        flex-col
-                        gap-3
-                        sm:flex-row
-                        lg:max-w-[470px]
-                    "
-                >
-
-                    <input
-                        type="text"
-                        id="couponCode"
-                        name="coupon_code"
-                        maxlength="50"
-                        autocomplete="off"
-                        placeholder="Enter coupon code"
-                        class="
-                            h-12
-                            min-w-0
-                            flex-1
-                            rounded-xl
-                            border
-                            border-white/10
-                            bg-[#020817]/60
-                            px-4
-                            text-sm
-                            font-medium
-                            text-white
-                            outline-none
-                            placeholder:text-slate-600
-                            focus:border-cyan-400/40
-                            focus:ring-2
-                            focus:ring-cyan-400/10
-                        "
-                    >
-
-                    <button
-                        type="button"
-                        id="couponApplyButton"
-                        class="
-                            h-12
-                            rounded-xl
-                            bg-gradient-to-r
-                            from-cyan-400
-                            to-sky-400
-                            px-6
-                            text-sm
-                            font-black
-                            text-slate-950
-                            transition-all
-                            hover:-translate-y-0.5
-                            hover:shadow-lg
-                            hover:shadow-cyan-500/10
-                        "
-                    >
-                        Apply
-                    </button>
-
-                </div>
-
-            </div>
-
-        </section>
-
-
-        <!-- =====================================================
-             ORDER SUMMARY
-        ====================================================== -->
-
-        <section
-            class="
-                mt-5
-                overflow-hidden
-                rounded-2xl
-                border
-                border-white/10
-                bg-[#071224]/90
-                shadow-2xl
-                shadow-black/10
-            "
-        >
-
-            <div
-                class="
-                    grid
-                    gap-6
-                    p-5
-                    md:p-6
-                    xl:grid-cols-[1.1fr_0.8fr_0.8fr_1fr_auto]
-                    xl:items-center
-                    xl:gap-0
-                "
-            >
-
-                <!-- SUMMARY TITLE -->
-
-                <div>
-
-                    <h2 class="text-xl font-black text-white">
-                        Order Summary
-                    </h2>
-
-                    <p class="mt-1 text-sm text-slate-500">
-                        Review your items and proceed to checkout.
-                    </p>
-
-                </div>
-
-
-                <!-- SUBTOTAL -->
-
-                <div
-                    class="
-                        border-t
-                        border-white/5
-                        pt-5
-                        xl:border-l
-                        xl:border-t-0
-                        xl:pl-7
-                        xl:pt-0
-                    "
-                >
-
-                    <p class="text-xs font-semibold text-slate-400">
-                        Subtotal
-                    </p>
-
-                    <p class="mt-1 text-xs text-slate-600">
-                        ({{ cart_items|length }} batches)
-                    </p>
-
-                    <p class="mt-1 text-xl font-black text-white">
-                        ₹{{ subtotal|floatformat:2 }}
-                    </p>
-
-                </div>
-
-
-                <!-- DISCOUNT -->
-
-                <div
-                    class="
-                        border-t
-                        border-white/5
-                        pt-5
-                        xl:border-l
-                        xl:border-t-0
-                        xl:pl-7
-                        xl:pt-0
-                    "
-                >
-
-                    <p class="text-xs font-semibold text-slate-400">
-                        Discount
-                    </p>
-
-                    <p class="mt-2 text-xl font-black text-emerald-400">
-                        - ₹0.00
-                    </p>
-
-                </div>
-
-
-                <!-- TOTAL -->
-
-                <div
-                    class="
-                        border-t
-                        border-white/5
-                        pt-5
-                        xl:border-l
-                        xl:border-t-0
-                        xl:pl-7
-                        xl:pt-0
-                    "
-                >
-
-                    <p class="text-xs font-semibold text-slate-400">
-                        Total
-                    </p>
-
-                    <p
-                        class="
-                            mt-1
-                            text-2xl
-                            font-black
-                            text-cyan-400
-                            sm:text-3xl
-                        "
-                    >
-                        ₹{{ subtotal|floatformat:2 }}
-                    </p>
-
-                </div>
-
-
-                <!-- CHECKOUT -->
-
-                <div
-                    class="
-                        border-t
-                        border-white/5
-                        pt-5
-                        xl:border-l
-                        xl:border-t-0
-                        xl:pl-7
-                        xl:pt-0
-                    "
-                >
-
-                    <!--
-                        Checkout route will be connected after
-                        the coupon + checkout backend is ready.
-                    -->
-
-                    <button
-                        type="button"
-                        id="checkoutButton"
-                        disabled
-                        title="Checkout will be enabled after the checkout flow is connected."
-                        class="
-                            flex
-                            h-14
-                            w-full
-                            min-w-[230px]
-                            cursor-not-allowed
-                            items-center
-                            justify-center
-                            gap-3
-                            rounded-xl
-                            bg-gradient-to-r
-                            from-cyan-400
-                            to-sky-400
-                            px-6
-                            text-sm
-                            font-black
-                            text-slate-950
-                            opacity-60
-                            xl:w-auto
-                        "
-                    >
-                        <i class="ri-lock-line text-lg"></i>
-                        Proceed to Checkout
-                        <i class="ri-arrow-right-line text-lg"></i>
-                    </button>
-
-                    <div
-                        class="
-                            mt-2
-                            flex
-                            items-center
-                            justify-center
-                            gap-2
-                            text-[11px]
-                            text-slate-500
-                        "
-                    >
-                        <i class="ri-shield-check-line text-emerald-400"></i>
-                        Secure and Encrypted Payment
-                    </div>
-
-                </div>
-
-            </div>
+            </section>
 
         </section>
 
@@ -1354,7 +1254,7 @@
                 <div>
 
                     <p class="text-sm font-bold text-white">
-                        30-Day Money-Back Guarantee
+                        7-Day Money-Back Guarantee
                     </p>
 
                     <p class="mt-1 text-xs text-slate-500">
@@ -1466,8 +1366,8 @@
                 class="
                     flex
                     items-center
-                    gap-4
-                    p-5
+                    gap-3
+                    p-4 sm:p-5
                 "
             >
 

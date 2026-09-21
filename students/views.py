@@ -5,10 +5,27 @@ from django.contrib import messages
 from django.http import JsonResponse
 from django.db.models import Q
 from django.utils import timezone
+from admins.models import (
+    Batch,
+    Subject,
+    Coupon,
+)
 
+from admins.helpers import (
+    normalize_coupon_code,
+    calculate_student_cart_totals,
+    calculate_general_cart_coupon,
+    calculate_batch_coupon_for_cart,
+    get_available_student_coupons,
+)
+from .models import (
+    StudentProfile,
+    StudentWishlist,
+    Cart,
+    CartItem,
+    CartCoupon,
+)
 import cloudinary.uploader
-
-from admins.models import Batch, Subject
 
 from .models import (
     StudentProfile,
@@ -1081,15 +1098,11 @@ def add_to_cart_view(request, batch_id):
     return redirect('marketplace')
 
 
-# ============================================================
-# CART PAGE
-# ============================================================
-
-@login_required(login_url='signin')
+@login_required(login_url="signin")
 @cache_control(
     no_cache=True,
     must_revalidate=True,
-    no_store=True
+    no_store=True,
 )
 def cart_view(request):
 
@@ -1097,79 +1110,79 @@ def cart_view(request):
 
         messages.error(
             request,
-            'Admin login is not allowed here. Please use the admin login area.'
+            "Student access required."
         )
 
-        return redirect('signin')
-
-
-    # ========================================================
-    # GET / CREATE STUDENT CART
-    # ========================================================
+        return redirect("signin")
 
     cart, created = Cart.objects.get_or_create(
         student=request.user
     )
 
-
-    # ========================================================
-    # CART ITEMS
-    #
-    # Fetch the Batch together with:
-    # - Subjects
-    # - Assigned Teachers
-    # - Teacher profile information
-    # ========================================================
-
-    cart_items = (
+    cart_items = list(
         cart.items
-        .select_related('batch')
+        .select_related("batch")
         .prefetch_related(
-            'batch__subjects',
-            'batch__assigned_teachers__teacher',
+            "batch__subjects",
+            "batch__assigned_teachers__teacher",
         )
     )
 
+    # --------------------------------------------------------
+    # CALCULATE CURRENT CART TOTALS
+    # --------------------------------------------------------
 
-    # ========================================================
-    # SUBTOTAL
-    #
-    # Batch.final_price already contains the Batch-level
-    # discount calculated by the Batch model.
-    #
-    # Coupon discount will be added later.
-    # ========================================================
-
-    subtotal = sum(
-        item.batch.final_price
-        for item in cart_items
+    totals = calculate_student_cart_totals(
+        cart,
+        cart_items,
+        request.user,
     )
 
+    # --------------------------------------------------------
+    # SHOW MESSAGES FOR INVALID COUPONS
+    # --------------------------------------------------------
 
-    # ========================================================
-    # CART COUNT
-    #
-    # Used by the Student Navbar.
-    # ========================================================
+    for invalid in totals["invalid_coupons"]:
 
-    cart_count = cart.items.count()
+        messages.warning(
+            request,
+            (
+                f"Coupon removed: "
+                f"{invalid['reason']}"
+            )
+        )
 
+    # --------------------------------------------------------
+    # AVAILABLE COUPONS
+    # --------------------------------------------------------
 
-    # ========================================================
-    # RENDER
-    # ========================================================
+    available_coupons = get_available_student_coupons(
+        cart_items,
+        request.user,
+    )
+
+    cart_count = len(cart_items)
 
     return render(
         request,
-        'students/cart/cart.html',
+        "students/cart/cart.html",
         {
-            'cart': cart,
-            'cart_items': cart_items,
-            'subtotal': subtotal,
-            'cart_count': cart_count,
+            "cart": cart,
+            "cart_items": cart_items,
+            "cart_count": cart_count,
+
+            "subtotal": totals["subtotal"],
+            "discount_total": totals["discount_total"],
+            "total": totals["total"],
+
+            "applied_coupons": totals[
+                "applied_coupons"
+            ],
+
+            "available_coupons": available_coupons,
         },
     )
-
+    
 # ============================================================
 # REMOVE FROM CART
 # ============================================================
@@ -1292,6 +1305,16 @@ def clear_cart_view(request):
 
         return redirect('cart')
 
+    # --------------------------------------------------------
+    # REMOVE TEMPORARY APPLIED COUPONS
+    # --------------------------------------------------------
+
+    cart.cart_coupons.all().delete()
+
+    # --------------------------------------------------------
+    # REMOVE CART ITEMS
+    # --------------------------------------------------------
+
     deleted_count, _ = cart.items.all().delete()
 
     if deleted_count:
@@ -1309,3 +1332,257 @@ def clear_cart_view(request):
         )
 
     return redirect('cart')
+
+# ============================================================
+# APPLY COUPON
+# ============================================================
+
+@login_required(login_url="signin")
+@cache_control(
+    no_cache=True,
+    must_revalidate=True,
+    no_store=True,
+)
+def apply_coupon_view(request):
+
+    if not is_student_user(request.user):
+
+        messages.error(
+            request,
+            "Student access required."
+        )
+
+        return redirect("signin")
+
+    if request.method != "POST":
+
+        messages.error(
+            request,
+            "Invalid coupon request."
+        )
+
+        return redirect("cart")
+
+    cart, created = Cart.objects.get_or_create(
+        student=request.user
+    )
+
+    code = normalize_coupon_code(
+        request.POST.get("coupon_code")
+    )
+
+    if not code:
+
+        messages.error(
+            request,
+            "Please enter a coupon code."
+        )
+
+        return redirect("cart")
+
+    coupon = (
+        Coupon.objects
+        .filter(code__iexact=code)
+        .first()
+    )
+
+    if coupon is None:
+
+        messages.error(
+            request,
+            "Invalid coupon code."
+        )
+
+        return redirect("cart")
+
+    cart_items = list(
+        cart.items
+        .select_related("batch")
+    )
+
+    if not cart_items:
+
+        messages.error(
+            request,
+            "Your cart is empty."
+        )
+
+        return redirect("cart")
+
+    # --------------------------------------------------------
+    # Already applied
+    # --------------------------------------------------------
+
+    if cart.cart_coupons.filter(
+        coupon=coupon
+    ).exists():
+
+        messages.info(
+            request,
+            "This coupon is already applied."
+        )
+
+        return redirect("cart")
+
+    # --------------------------------------------------------
+    # Existing mode
+    # --------------------------------------------------------
+
+    existing_coupon = (
+        cart.cart_coupons
+        .select_related("coupon")
+        .first()
+    )
+
+    if existing_coupon:
+
+        existing_type = (
+            existing_coupon.coupon.coupon_type
+        )
+
+        if (
+            existing_type != coupon.coupon_type
+        ):
+
+            messages.error(
+                request,
+                (
+                    "General and batch-specific "
+                    "coupons cannot be combined."
+                )
+            )
+
+            return redirect("cart")
+
+        if coupon.coupon_type == "general":
+
+            messages.error(
+                request,
+                "Only one general coupon can be applied."
+            )
+
+            return redirect("cart")
+
+    # --------------------------------------------------------
+    # Validate coupon
+    # --------------------------------------------------------
+
+    if coupon.coupon_type == "general":
+
+        result = calculate_general_cart_coupon(
+            coupon,
+            cart_items,
+            student=request.user,
+        )
+
+    else:
+
+        result = calculate_batch_coupon_for_cart(
+            coupon,
+            cart_items,
+            student=request.user,
+        )
+
+    if not result["eligible"]:
+
+        messages.error(
+            request,
+            result["reason"]
+        )
+
+        return redirect("cart")
+
+    # --------------------------------------------------------
+    # Save cart coupon
+    # --------------------------------------------------------
+
+    CartCoupon.objects.create(
+        cart=cart,
+        coupon=coupon,
+    )
+
+    messages.success(
+        request,
+        (
+            f"Coupon {coupon.code} applied successfully."
+        )
+    )
+
+    return redirect("cart")
+
+
+# ============================================================
+# REMOVE COUPON
+# ============================================================
+
+@login_required(login_url="signin")
+@cache_control(
+    no_cache=True,
+    must_revalidate=True,
+    no_store=True,
+)
+def remove_coupon_view(request, coupon_id):
+
+    if not is_student_user(request.user):
+
+        messages.error(
+            request,
+            "Student access required."
+        )
+
+        return redirect("signin")
+
+    if request.method != "POST":
+
+        messages.error(
+            request,
+            "Invalid coupon request."
+        )
+
+        return redirect("cart")
+
+    try:
+
+        cart = Cart.objects.get(
+            student=request.user
+        )
+
+    except Cart.DoesNotExist:
+
+        messages.info(
+            request,
+            "Your cart is empty."
+        )
+
+        return redirect("cart")
+
+    cart_coupon = (
+        CartCoupon.objects
+        .filter(
+            cart=cart,
+            coupon_id=coupon_id,
+        )
+        .select_related("coupon")
+        .first()
+    )
+
+    if not cart_coupon:
+
+        messages.warning(
+            request,
+            "This coupon is not applied."
+        )
+
+        return redirect("cart")
+
+    code = cart_coupon.coupon.code
+
+    cart_coupon.delete()
+
+    messages.success(
+        request,
+        f"Coupon {code} removed successfully."
+    )
+
+    return redirect("cart")
+

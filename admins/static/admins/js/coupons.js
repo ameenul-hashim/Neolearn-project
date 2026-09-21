@@ -23,10 +23,15 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         filterPanel.classList.add("hidden");
-        filterButton.setAttribute("aria-expanded", "false");
+        filterButton.setAttribute(
+            "aria-expanded",
+            "false"
+        );
 
         if (filterChevron) {
-            filterChevron.classList.remove("rotate-180");
+            filterChevron.classList.remove(
+                "rotate-180"
+            );
         }
     }
 
@@ -37,27 +42,38 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         filterPanel.classList.remove("hidden");
-        filterButton.setAttribute("aria-expanded", "true");
+
+        filterButton.setAttribute(
+            "aria-expanded",
+            "true"
+        );
 
         if (filterChevron) {
-            filterChevron.classList.add("rotate-180");
+            filterChevron.classList.add(
+                "rotate-180"
+            );
         }
     }
 
 
-    filterButton?.addEventListener("click", (event) => {
-        event.stopPropagation();
+    filterButton?.addEventListener(
+        "click",
+        (event) => {
+            event.stopPropagation();
 
-        const isOpen =
-            filterButton.getAttribute("aria-expanded") === "true";
+            const isOpen =
+                filterButton.getAttribute(
+                    "aria-expanded"
+                ) === "true";
 
-        if (isOpen) {
-            closeFilterPanel();
-        } else {
-            closeAllMenus();
-            openFilterPanel();
+            if (isOpen) {
+                closeFilterPanel();
+            } else {
+                closeAllMenus();
+                openFilterPanel();
+            }
         }
-    });
+    );
 
 
     /* ==========================================================
@@ -66,7 +82,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function closeAllMenus(except = null) {
         menuButtons.forEach((button) => {
-            const menuId = button.getAttribute("aria-controls");
+            const menuId =
+                button.getAttribute(
+                    "aria-controls"
+                );
+
             const menu = menuId
                 ? document.getElementById(menuId)
                 : null;
@@ -76,36 +96,55 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
             menu.classList.add("hidden");
-            button.setAttribute("aria-expanded", "false");
+
+            button.setAttribute(
+                "aria-expanded",
+                "false"
+            );
         });
     }
 
 
     menuButtons.forEach((button) => {
-        button.addEventListener("click", (event) => {
-            event.stopPropagation();
+        button.addEventListener(
+            "click",
+            (event) => {
+                event.stopPropagation();
 
-            const menuId = button.getAttribute("aria-controls");
+                const menuId =
+                    button.getAttribute(
+                        "aria-controls"
+                    );
 
-            const menu = menuId
-                ? document.getElementById(menuId)
-                : null;
+                const menu = menuId
+                    ? document.getElementById(menuId)
+                    : null;
 
-            if (!menu) {
-                return;
+                if (!menu) {
+                    return;
+                }
+
+                const isOpen =
+                    !menu.classList.contains(
+                        "hidden"
+                    );
+
+                closeAllMenus();
+
+                if (!isOpen) {
+                    closeFilterPanel();
+
+                    menu.classList.remove(
+                        "hidden"
+                    );
+
+                    button.setAttribute(
+                        "aria-expanded",
+                        "true"
+                    );
+                }
             }
-
-            const isOpen = !menu.classList.contains("hidden");
-
-            closeAllMenus();
-
-            if (!isOpen) {
-                closeFilterPanel();
-
-                menu.classList.remove("hidden");
-                button.setAttribute("aria-expanded", "true");
-            }
-        });
+        );
     });
 
 
@@ -114,46 +153,61 @@ document.addEventListener("DOMContentLoaded", () => {
     ========================================================== */
 
     copyButtons.forEach((button) => {
-        button.addEventListener("click", async () => {
-            const code = button.dataset.code || "";
+        button.addEventListener(
+            "click",
+            async () => {
+                const code =
+                    button.dataset.code || "";
 
-            if (!code) {
-                return;
-            }
-
-            try {
-                await navigator.clipboard.writeText(code);
-
-                const icon = button.querySelector("i");
-
-                if (icon) {
-                    icon.className = "ri-check-line text-sm";
+                if (!code) {
+                    return;
                 }
 
-                button.setAttribute("title", "Copied");
+                try {
+                    await navigator.clipboard.writeText(
+                        code
+                    );
 
-                window.setTimeout(() => {
+                    const icon =
+                        button.querySelector("i");
+
                     if (icon) {
-                        icon.className = "ri-file-copy-line text-sm";
+                        icon.className =
+                            "ri-check-line text-sm";
                     }
 
                     button.setAttribute(
                         "title",
-                        "Copy coupon code"
+                        "Copied"
                     );
-                }, 1200);
 
-            } catch (error) {
-                /*
-                 * Clipboard API can be unavailable when the page is
-                 * not in a secure browser context.
-                 */
-                window.prompt(
-                    "Copy coupon code:",
-                    code
-                );
+                    window.setTimeout(() => {
+                        if (icon) {
+                            icon.className =
+                                "ri-file-copy-line text-sm";
+                        }
+
+                        button.setAttribute(
+                            "title",
+                            "Copy coupon code"
+                        );
+                    }, 1200);
+
+                } catch (error) {
+
+                    /*
+                     * Clipboard API can be unavailable
+                     * when the page is not running in
+                     * a secure browser context.
+                     */
+
+                    window.prompt(
+                        "Copy coupon code:",
+                        code
+                    );
+                }
             }
-        });
+        );
     });
 
 
@@ -162,7 +216,11 @@ document.addEventListener("DOMContentLoaded", () => {
     ========================================================== */
 
     function openDeleteModal(button) {
-        if (!deleteModal || !deleteForm || !deleteCode) {
+        if (
+            !deleteModal ||
+            !deleteForm ||
+            !deleteCode
+        ) {
             return;
         }
 
@@ -170,7 +228,8 @@ document.addEventListener("DOMContentLoaded", () => {
             button.dataset.deleteUrl || "#";
 
         const couponCode =
-            button.dataset.couponCode || "this coupon";
+            button.dataset.couponCode ||
+            "this coupon";
 
         deleteForm.setAttribute(
             "action",
@@ -180,8 +239,13 @@ document.addEventListener("DOMContentLoaded", () => {
         deleteCode.textContent =
             couponCode;
 
-        deleteModal.classList.remove("hidden");
-        deleteModal.classList.add("flex");
+        deleteModal.classList.remove(
+            "hidden"
+        );
+
+        deleteModal.classList.add(
+            "flex"
+        );
 
         deleteModal.setAttribute(
             "aria-hidden",
@@ -199,12 +263,21 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
     function closeDeleteModal() {
-        if (!deleteModal || !deleteForm || !deleteCode) {
+        if (
+            !deleteModal ||
+            !deleteForm ||
+            !deleteCode
+        ) {
             return;
         }
 
-        deleteModal.classList.add("hidden");
-        deleteModal.classList.remove("flex");
+        deleteModal.classList.add(
+            "hidden"
+        );
+
+        deleteModal.classList.remove(
+            "flex"
+        );
 
         deleteModal.setAttribute(
             "aria-hidden",
@@ -216,7 +289,8 @@ document.addEventListener("DOMContentLoaded", () => {
             "#"
         );
 
-        deleteCode.textContent = "—";
+        deleteCode.textContent =
+            "—";
 
         document.body.classList.remove(
             "overflow-hidden"
@@ -225,10 +299,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
     deleteButtons.forEach((button) => {
-        button.addEventListener("click", () => {
-            closeAllMenus();
-            openDeleteModal(button);
-        });
+        button.addEventListener(
+            "click",
+            () => {
+                closeAllMenus();
+                openDeleteModal(button);
+            }
+        );
     });
 
 
@@ -241,7 +318,9 @@ document.addEventListener("DOMContentLoaded", () => {
     deleteModal?.addEventListener(
         "click",
         (event) => {
-            if (event.target === deleteModal) {
+            if (
+                event.target === deleteModal
+            ) {
                 closeDeleteModal();
             }
         }
@@ -256,15 +335,29 @@ document.addEventListener("DOMContentLoaded", () => {
         "click",
         (event) => {
 
+            /*
+             * Close filter panel when clicking
+             * outside the filter area.
+             */
+
             if (
                 filterPanel &&
                 filterButton &&
-                !filterPanel.contains(event.target) &&
-                !filterButton.contains(event.target)
+                !filterPanel.contains(
+                    event.target
+                ) &&
+                !filterButton.contains(
+                    event.target
+                )
             ) {
                 closeFilterPanel();
             }
 
+
+            /*
+             * Detect coupon action menu
+             * interactions.
+             */
 
             const clickedMenuButton =
                 event.target.closest(
@@ -276,6 +369,11 @@ document.addEventListener("DOMContentLoaded", () => {
                     ".couponActionMenu"
                 );
 
+
+            /*
+             * Close all menus when clicking
+             * anywhere outside them.
+             */
 
             if (
                 !clickedMenuButton &&
@@ -300,11 +398,19 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
             closeFilterPanel();
+
             closeAllMenus();
+
+
+            /*
+             * Close delete modal with ESC.
+             */
 
             if (
                 deleteModal &&
-                !deleteModal.classList.contains("hidden")
+                !deleteModal.classList.contains(
+                    "hidden"
+                )
             ) {
                 closeDeleteModal();
             }

@@ -1,93 +1,34 @@
 document.addEventListener("DOMContentLoaded", function () {
-    "use strict";
+    // ============================================================
+    // CLEAR CART MODAL
+    // ============================================================
 
-    /*
-     * =========================================================
-     * NeoLearn Cart
-     * =========================================================
-     *
-     * JavaScript is intentionally minimal.
-     *
-     * Django handles:
-     * - cart data
-     * - add/remove
-     * - clear cart
-     * - pricing
-     * - coupon validation
-     * - checkout amount
-     *
-     * JavaScript only handles:
-     * - Clear Cart confirmation modal
-     * - small coupon placeholder interaction
-     *
-     * The cart is always cleared by Django.
-     */
-
-
-    // =========================================================
-    // CLEAR CART CONFIRMATION MODAL
-    // =========================================================
-
-    const clearCartForm = document.getElementById("clearCartForm");
     const clearCartButton = document.getElementById("clearCartButton");
-
     const clearCartModal = document.getElementById("clearCartModal");
-
     const cancelClearCartButton = document.getElementById(
         "cancelClearCartButton"
     );
-
     const confirmClearCartButton = document.getElementById(
         "confirmClearCartButton"
     );
+    const clearCartForm = document.getElementById("clearCartForm");
 
+    function openClearCartModal() {
+        if (!clearCartModal) {
+            return;
+        }
 
-    // =========================================================
-    // OPEN CLEAR CART MODAL
-    // =========================================================
+        clearCartModal.classList.remove("hidden");
+        clearCartModal.classList.add("flex");
 
-    if (
-        clearCartForm &&
-        clearCartButton &&
-        clearCartModal
-    ) {
-        clearCartButton.addEventListener("click", function (event) {
+        document.body.classList.add("overflow-hidden");
 
-            /*
-             * Prevent the original form submission.
-             *
-             * We want the user to confirm first.
-             */
-
-            event.preventDefault();
-
-            clearCartModal.classList.remove("hidden");
-            clearCartModal.classList.add("flex");
-
-            /*
-             * Prevent background page scrolling while
-             * the confirmation modal is open.
-             */
-
-            document.body.classList.add("overflow-hidden");
-
-            /*
-             * Put keyboard focus on Cancel.
-             */
-
-            if (cancelClearCartButton) {
-                cancelClearCartButton.focus();
-            }
-        });
+        if (cancelClearCartButton) {
+            cancelClearCartButton.focus();
+        }
     }
 
-
-    // =========================================================
-    // CLOSE CLEAR CART MODAL
-    // =========================================================
-
     function closeClearCartModal() {
-
         if (!clearCartModal) {
             return;
         }
@@ -99,84 +40,48 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
 
-    // =========================================================
-    // CANCEL BUTTON
-    // =========================================================
+    // ============================================================
+    // OPEN CLEAR CART MODAL
+    // ============================================================
+
+    if (clearCartButton) {
+        clearCartButton.addEventListener("click", function (event) {
+            event.preventDefault();
+
+            openClearCartModal();
+        });
+    }
+
+
+    // ============================================================
+    // CANCEL CLEAR CART
+    // ============================================================
 
     if (cancelClearCartButton) {
+        cancelClearCartButton.addEventListener("click", function (event) {
+            event.preventDefault();
 
-        cancelClearCartButton.addEventListener(
-            "click",
-            function () {
-
-                closeClearCartModal();
-            }
-        );
+            closeClearCartModal();
+        });
     }
 
 
-    // =========================================================
-    // CLICK OUTSIDE MODAL
-    // =========================================================
-
-    if (clearCartModal) {
-
-        clearCartModal.addEventListener(
-            "click",
-            function (event) {
-
-                /*
-                 * Only close when the actual backdrop is clicked.
-                 *
-                 * Clicking inside the modal should do nothing.
-                 */
-
-                if (event.target === clearCartModal) {
-                    closeClearCartModal();
-                }
-            }
-        );
-    }
-
-
-    // =========================================================
+    // ============================================================
     // CONFIRM CLEAR CART
-    // =========================================================
+    // ============================================================
 
-    if (
-        confirmClearCartButton &&
-        clearCartForm
-    ) {
-
+    if (confirmClearCartButton && clearCartForm) {
         confirmClearCartButton.addEventListener(
             "click",
-            function () {
-
-                /*
-                 * Prevent accidental double-click submission.
-                 */
+            function (event) {
+                event.preventDefault();
 
                 confirmClearCartButton.disabled = true;
 
                 confirmClearCartButton.classList.add(
-                    "opacity-70",
+                    "opacity-60",
                     "cursor-not-allowed"
                 );
-
-
-                /*
-                 * IMPORTANT:
-                 *
-                 * JavaScript does NOT delete anything.
-                 *
-                 * It simply submits the existing Django form.
-                 *
-                 * Django handles:
-                 * - cart lookup
-                 * - deleting cart items
-                 * - success/error messages
-                 * - redirect
-                 */
 
                 clearCartForm.submit();
             }
@@ -184,75 +89,94 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
 
-    // =========================================================
-    // ESC KEY
-    // =========================================================
+    // ============================================================
+    // CLOSE MODAL WHEN CLICKING BACKDROP
+    // ============================================================
 
-    document.addEventListener(
-        "keydown",
-        function (event) {
-
-            if (
-                event.key === "Escape" &&
-                clearCartModal &&
-                !clearCartModal.classList.contains("hidden")
-            ) {
+    if (clearCartModal) {
+        clearCartModal.addEventListener("click", function (event) {
+            if (event.target === clearCartModal) {
                 closeClearCartModal();
             }
+        });
+    }
+
+
+    // ============================================================
+    // CLOSE MODAL WITH ESCAPE
+    // ============================================================
+
+    document.addEventListener("keydown", function (event) {
+        if (event.key === "Escape") {
+            closeClearCartModal();
         }
-    );
+    });
 
 
-    // =========================================================
-    // COUPON PLACEHOLDER
+    // ============================================================
+    // COUPON
+    // ============================================================
     //
-    // Coupon backend will be connected after the Admin
-    // Coupon Management system is implemented.
-    // =========================================================
+    // Coupon validation, eligibility checks, discount calculation,
+    // usage limits, and cart totals are handled completely by Django.
+    //
+    // JavaScript does NOT:
+    // - validate coupon codes
+    // - calculate discounts
+    // - calculate cart totals
+    // - check coupon eligibility
+    // - check minimum purchase
+    // - check usage limits
+    //
+    // All coupon rules remain server-side.
+    // ============================================================
 
-    const couponButton = document.getElementById(
+
+    // ============================================================
+    // PREVENT DOUBLE SUBMISSION
+    // FOR MANUAL COUPON CODE
+    // ============================================================
+
+    const couponForm = document.getElementById("couponApplyForm");
+    const couponApplyButton = document.getElementById(
         "couponApplyButton"
     );
 
-    const couponInput = document.getElementById(
-        "couponCode"
-    );
+    if (couponForm && couponApplyButton) {
+        couponForm.addEventListener("submit", function () {
+            couponApplyButton.disabled = true;
 
+            couponApplyButton.classList.add(
+                "opacity-60",
+                "cursor-not-allowed"
+            );
 
-    if (couponButton && couponInput) {
+            couponApplyButton.innerHTML = `
+                <svg
+                    class="h-5 w-5 animate-spin"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                    aria-hidden="true"
+                >
+                    <circle
+                        class="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        stroke-width="4"
+                    ></circle>
 
-        couponButton.addEventListener(
-            "click",
-            function () {
+                    <path
+                        class="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                    ></path>
+                </svg>
 
-                const couponCode = couponInput.value.trim();
-
-
-                if (!couponCode) {
-
-                    couponInput.focus();
-
-                    return;
-                }
-
-
-                /*
-                 * Do not validate the coupon in JavaScript.
-                 *
-                 * The real coupon validation will be handled
-                 * by Django after the Admin Coupon system is
-                 * connected.
-                 */
-
-                couponInput.setCustomValidity(
-                    "Coupon system will be connected after Admin Coupon setup."
-                );
-
-                couponInput.reportValidity();
-
-                couponInput.setCustomValidity("");
-            }
-        );
+                <span>Applying...</span>
+            `;
+        });
     }
-
 });

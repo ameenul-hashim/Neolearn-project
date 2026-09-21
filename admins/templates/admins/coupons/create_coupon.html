@@ -733,6 +733,9 @@
                     <button type="button" class="mode-button w-[118px]" data-mode="general" aria-selected="false">
                         General Coupon
                     </button>
+                    <button type="button" class="mode-button w-[118px]" data-mode="multi_checkout" aria-selected="false">
+                        Multi Checkout
+                    </button>
                 </div>
 
                 <a href="{% url 'admin_coupons' %}"
@@ -751,7 +754,12 @@
           enctype="multipart/form-data">
 
         {% csrf_token %}
-        <input type="hidden" name="coupon_type" id="couponType" value="batch_specific">
+        <input
+    type="hidden"
+    name="coupon_type"
+    id="couponType"
+    value="{{ form_data.coupon_type|default:'batch_specific' }}"
+>
 
         <!-- =========================================================
              BATCH-SPECIFIC WORKSPACE
@@ -848,7 +856,8 @@
                             <p class="mb-2 text-[10px] font-black uppercase tracking-wide text-slate-400">Discount Type</p>
                             <div class="grid grid-cols-2 gap-8">
                                 <label class="discount-option">
-                                    <input class="discount-radio sr-only" type="radio" name="discount_type" value="fixed" checked>
+                                    <input class="discount-radio sr-only" type="radio" name="discount_type" value="fixed"
+                                       {% if form_data.discount_type|default:'fixed' == 'fixed' %}checked{% endif %}>
                                     <span class="discount-dot"><span></span></span>
                                     <span>
                                         <span class="block text-[11px] font-bold text-white">Fixed Amount</span>
@@ -856,7 +865,8 @@
                                     </span>
                                 </label>
                                 <label class="discount-option">
-                                    <input class="discount-radio sr-only" type="radio" name="discount_type" value="percentage">
+                                    <input class="discount-radio sr-only" type="radio" name="discount_type" value="percentage"
+                                       {% if form_data.discount_type == 'percentage' %}checked{% endif %}>
                                     <span class="discount-dot"><span></span></span>
                                     <span>
                                         <span class="block text-[11px] font-bold text-white">Percentage</span>
@@ -916,7 +926,34 @@
                                     <p id="statusLabelBS" class="mt-0.5 text-[10px] font-bold text-white">Active</p>
                                 </div>
                                 <label class="coupon-switch cursor-pointer" title="Toggle status">
-                                    <input id="statusBS" name="status" type="checkbox" value="active" checked>
+                                    <input id="statusBS" name="status" type="checkbox" value="active"
+                                           {% if form_data.status|default:'active' == 'active' %}checked{% endif %}>
+                                    <span class="coupon-switch-track"></span>
+                                    <span class="coupon-switch-thumb"></span>
+                                </label>
+                            </div>
+
+                            <div class="flex items-center justify-between border-t border-white/5 pt-3">
+                                <div class="min-w-0 pr-4">
+                                    <p class="text-[9px] font-black uppercase tracking-wide text-slate-500">
+                                        Marketplace
+                                    </p>
+                                    <p class="mt-0.5 text-[10px] font-bold text-white">
+                                        Show this coupon in Student Marketplace
+                                    </p>
+                                    <p class="coupon-help">
+                                        When OFF, students cannot see this batch-specific coupon in their available coupon list.
+                                        Manual coupon-code entry can still work when the coupon is otherwise valid.
+                                    </p>
+                                </div>
+                                <label class="coupon-switch shrink-0 cursor-pointer" title="Show coupon in marketplace">
+                                    <input
+                                        id="marketplaceVisibleBS"
+                                        name="marketplace_visible"
+                                        type="checkbox"
+                                        value="1"
+                                        checked
+                                    >
                                     <span class="coupon-switch-track"></span>
                                     <span class="coupon-switch-thumb"></span>
                                 </label>
@@ -1121,7 +1158,8 @@
                             <p class="mb-2 text-[10px] font-black uppercase tracking-wide text-slate-400">Discount Type</p>
                             <div class="grid grid-cols-2 gap-8">
                                 <label class="discount-option">
-                                    <input class="discount-radio sr-only" type="radio" name="general_discount_type_ui" value="fixed" checked>
+                                    <input class="discount-radio sr-only" type="radio" name="general_discount_type_ui" value="fixed"
+                                           {% if form_data.discount_type|default:'fixed' == 'fixed' %}checked{% endif %}>
                                     <span class="discount-dot"><span></span></span>
                                     <span>
                                         <span class="block text-[11px] font-bold text-white">Fixed Amount</span>
@@ -1129,7 +1167,8 @@
                                     </span>
                                 </label>
                                 <label class="discount-option">
-                                    <input class="discount-radio sr-only" type="radio" name="general_discount_type_ui" value="percentage">
+                                    <input class="discount-radio sr-only" type="radio" name="general_discount_type_ui" value="percentage"
+                                           {% if form_data.discount_type == 'percentage' %}checked{% endif %}>
                                     <span class="discount-dot"><span></span></span>
                                     <span>
                                         <span class="block text-[11px] font-bold text-white">Percentage</span>
@@ -1204,7 +1243,8 @@
                                     <p id="statusLabelGeneral" class="mt-0.5 text-[10px] font-bold text-white">Active</p>
                                 </div>
                                 <label class="coupon-switch cursor-pointer">
-                                    <input id="statusGeneral" type="checkbox" value="active" checked>
+                                    <input id="statusGeneral" type="checkbox" value="active"
+                                           {% if form_data.status|default:'active' == 'active' %}checked{% endif %}>
                                     <span class="coupon-switch-track"></span>
                                     <span class="coupon-switch-thumb"></span>
                                 </label>
@@ -1337,6 +1377,392 @@
             </div>
         </div>
 
+        <!-- =========================================================
+             MULTI CHECKOUT WORKSPACE
+        ========================================================== -->
+        <div id="multiCheckoutWorkspace" class="hidden w-full">
+
+            <div class="coupon-outer-card p-1.5 shadow-[0_18px_55px_rgba(0,0,0,.18)]">
+                <div class="coupon-card-stack space-y-1.5">
+
+                    <!-- 1 DETAILS -->
+                    <section class="coupon-panel overflow-hidden">
+                        <div class="flex items-center gap-3 border-b border-white/5 px-4 py-2.5 md:px-5">
+                            <span class="coupon-step">1</span>
+                            <h2 class="text-[14px] font-black text-cyan-300">Coupon Details</h2>
+                        </div>
+
+                        <div class="grid grid-cols-1 gap-4 p-4 md:grid-cols-2 md:p-5">
+                            <div>
+                                <label class="coupon-label" for="couponCodeMulti">
+                                    Coupon Code <span class="text-rose-400">*</span>
+                                </label>
+                                <input
+                                    id="couponCodeMulti"
+                                    type="text"
+                                    maxlength="50"
+                                    autocomplete="off"
+                                    value="{{ form_data.code|default:'' }}"
+                                    name="code"
+                                    placeholder="MULTI500"
+                                    class="coupon-field uppercase"
+                                >
+                                <p class="coupon-help">Use a unique code for the combined checkout offer.</p>
+                            </div>
+
+                            <div>
+                                <label class="coupon-label" for="descriptionMulti">
+                                    Description <span class="text-rose-400">*</span>
+                                </label>
+                                <textarea
+                                    id="descriptionMulti"
+                                    name="description"
+                                    class="coupon-field coupon-textarea"
+                                    placeholder="Special discount when multiple batches are purchased together"
+                                >{{ form_data.description|default:'' }}</textarea>
+                            </div>
+
+                            <div class="md:col-span-2">
+                                <label class="coupon-label">
+                                    Coupon Banner <span class="text-rose-400">*</span>
+                                </label>
+
+                                <div class="flex flex-wrap items-center gap-3">
+                                    <div id="thumbnailPreviewBoxMulti" class="coupon-image-box hidden">
+                                        <img
+                                            id="thumbnailPreviewMulti"
+                                            class="h-full w-full object-cover"
+                                            alt="Multi checkout coupon banner preview"
+                                        >
+                                    </div>
+
+                                    <div class="min-w-0">
+                                        <p class="mb-1.5 text-[9px] font-black text-rose-300">Image required</p>
+
+                                        <label
+                                            for="couponThumbnailMultiTrigger"
+                                            class="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-lg border border-cyan-400/30 bg-cyan-400/[0.035] px-4 text-[10px] font-black text-cyan-300 transition hover:bg-cyan-400/[0.09] hover:text-cyan-200"
+                                        >
+                                            <i class="ri-image-edit-line"></i>
+                                            Select Image
+                                        </label>
+
+                                        <p class="mt-1.5 text-[8px] text-slate-500">
+                                            JPG, PNG or WEBP • Recommended size: 600 × 300px
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <input
+                                    id="couponThumbnailMultiTrigger"
+                                    type="file"
+                                    accept="image/jpeg,image/png,image/webp"
+                                    class="hidden"
+                                >
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- 2 DISCOUNT -->
+                    <section class="coupon-panel overflow-hidden">
+                        <div class="flex items-center gap-3 border-b border-white/5 px-4 py-2.5 md:px-5">
+                            <span class="coupon-step">2</span>
+                            <h2 class="text-[14px] font-black text-cyan-300">Discount Settings</h2>
+                        </div>
+
+                        <div class="p-4 md:p-5">
+                            <p class="mb-2 text-[10px] font-black uppercase tracking-wide text-slate-400">
+                                Discount Type
+                            </p>
+
+                            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-8">
+                                <label class="discount-option">
+                                    <input
+                                        class="discount-radio sr-only"
+                                        type="radio"
+                                        name="multi_discount_type_ui"
+                                        value="fixed"
+                                        {% if form_data.discount_type|default:'fixed' == 'fixed' %}checked{% endif %}
+                                    >
+                                    <span class="discount-dot"><span></span></span>
+                                    <span>
+                                        <span class="block text-[11px] font-bold text-white">Fixed Amount</span>
+                                        <span class="text-[9px] text-slate-400">(e.g. ₹500 off)</span>
+                                    </span>
+                                </label>
+
+                                <label class="discount-option">
+                                    <input
+                                        class="discount-radio sr-only"
+                                        type="radio"
+                                        name="multi_discount_type_ui"
+                                        value="percentage"
+                                        {% if form_data.discount_type == 'percentage' %}checked{% endif %}
+                                    >
+                                    <span class="discount-dot"><span></span></span>
+                                    <span>
+                                        <span class="block text-[11px] font-bold text-white">Percentage</span>
+                                        <span class="text-[9px] text-slate-400">(e.g. 10% off)</span>
+                                    </span>
+                                </label>
+                            </div>
+
+                            <div class="mt-3">
+                                <label
+                                    id="multiDiscountLabel"
+                                    class="coupon-label"
+                                    for="multiDiscountValue"
+                                >
+                                    Discount Value (₹) <span class="text-rose-400">*</span>
+                                </label>
+
+                                <div class="flex flex-wrap items-center gap-3">
+                                    <input
+                                        id="multiDiscountValue"
+                                        type="number"
+                                        min="0"
+                                        step="0.01"
+                                        value="{{ form_data.discount_value|default:'' }}"
+                                        placeholder="500"
+                                        class="coupon-field max-w-[250px]"
+                                    >
+
+                                    <span
+                                        id="multiDiscountHelp"
+                                        class="text-[9px] leading-4 text-slate-400"
+                                    >
+                                        Flat discount amount from the combined checkout total.
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- 3 CHECKOUT AMOUNT -->
+                    <section class="coupon-panel overflow-hidden">
+                        <div class="flex items-center gap-3 border-b border-white/5 px-4 py-2.5 md:px-5">
+                            <span class="coupon-step">3</span>
+                            <h2 class="text-[14px] font-black text-cyan-300">Combined Checkout Rules</h2>
+                        </div>
+
+                        <div class="p-4 md:p-5">
+                            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                <div>
+                                    <label
+                                        class="coupon-label"
+                                        for="minimumOrderMulti"
+                                    >
+                                        Minimum Checkout Amount (₹) <span class="text-rose-400">*</span>
+                                    </label>
+
+                                    <input
+                                        id="minimumOrderMulti"
+                                        type="number"
+                                        min="0"
+                                        step="0.01"
+                                        value="{{ form_data.minimum_order_amount|default:'' }}"
+                                        placeholder="5000"
+                                        class="coupon-field"
+                                    >
+
+                                    <p class="coupon-help">
+                                        Combined current selling price must reach this amount.
+                                    </p>
+                                </div>
+
+                                <div>
+                                    <label
+                                        class="coupon-label"
+                                        for="maximumOrderMulti"
+                                    >
+                                        Maximum Checkout Amount (₹) <span class="text-rose-400">*</span>
+                                    </label>
+
+                                    <input
+                                        id="maximumOrderMulti"
+                                        type="number"
+                                        min="0"
+                                        step="0.01"
+                                        value="{{ form_data.maximum_order_amount|default:'' }}"
+                                        placeholder="20000"
+                                        class="coupon-field"
+                                    >
+
+                                    <p class="coupon-help">
+                                        Combined checkout amount cannot exceed this limit.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- 4 USAGE -->
+                    <section class="coupon-panel overflow-hidden">
+                        <div class="flex items-center gap-3 border-b border-white/5 px-4 py-2.5 md:px-5">
+                            <span class="coupon-step">4</span>
+                            <h2 class="text-[14px] font-black text-cyan-300">Usage &amp; Validity</h2>
+                        </div>
+
+                        <div class="space-y-3 p-4 md:p-5">
+                            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                <div>
+                                    <label class="coupon-label" for="multiUsage">
+                                        Total Usage Limit <span class="text-rose-400">*</span>
+                                    </label>
+
+                                    <input
+                                        id="multiUsage"
+                                        type="number"
+                                        min="1"
+                                        step="1"
+                                        value="{{ form_data.usage_limit|default:'' }}"
+                                        placeholder="500"
+                                        class="coupon-field"
+                                    >
+
+                                    <p class="coupon-help">Total number of combined-checkout uses.</p>
+                                </div>
+
+                                <div>
+                                    <label class="coupon-label" for="multiPerUser">
+                                        Per Student Usage Limit
+                                    </label>
+
+                                    <input
+                                        id="multiPerUser"
+                                        type="number"
+                                        min="1"
+                                        step="1"
+                                        value="{{ form_data.per_user_limit|default:'' }}"
+                                        placeholder="1"
+                                        class="coupon-field"
+                                    >
+
+                                    <p class="coupon-help">Maximum uses by one student.</p>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                <div>
+                                    <label class="coupon-label" for="multiValidFrom">
+                                        Valid From <span class="text-rose-400">*</span>
+                                    </label>
+
+                                    <input
+                                        id="multiValidFrom"
+                                        type="datetime-local"
+                                        value="{{ form_data.valid_from|default:'' }}"
+                                        class="coupon-field"
+                                    >
+                                </div>
+
+                                <div>
+                                    <label class="coupon-label" for="multiValidUntil">
+                                        Valid Until <span class="text-rose-400">*</span>
+                                    </label>
+
+                                    <input
+                                        id="multiValidUntil"
+                                        type="datetime-local"
+                                        value="{{ form_data.valid_until|default:'' }}"
+                                        class="coupon-field"
+                                    >
+                                </div>
+                            </div>
+
+                            <div class="flex items-center justify-between border-t border-white/5 pt-2">
+                                <div>
+                                    <p class="text-[9px] font-black uppercase tracking-wide text-slate-500">
+                                        Status
+                                    </p>
+                                    <p id="statusLabelMulti" class="mt-0.5 text-[10px] font-bold text-white">
+                                        Active
+                                    </p>
+                                </div>
+
+                                <label class="coupon-switch cursor-pointer">
+                                    <input
+                                        id="statusMulti"
+                                        type="checkbox"
+                                        value="active"
+                                        {% if form_data.status|default:'active' == 'active' %}checked{% endif %}
+                                    >
+                                    <span class="coupon-switch-track"></span>
+                                    <span class="coupon-switch-thumb"></span>
+                                </label>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- 5 HOW MULTI CHECKOUT WORKS -->
+                    <section class="coupon-panel overflow-hidden">
+                        <div class="flex items-center gap-3 border-b border-cyan-400/10 bg-gradient-to-r from-cyan-400/[0.05] via-transparent to-violet-400/[0.05] px-4 py-3.5 md:px-5">
+                            <span class="coupon-step shrink-0 shadow-[0_0_22px_rgba(34,211,238,.16)]">5</span>
+
+                            <div class="min-w-0 flex-1">
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <h2 class="coupon-section-title font-black text-cyan-300">
+                                        How Multi Checkout works
+                                    </h2>
+
+                                    <span class="rounded-full border border-violet-400/20 bg-violet-400/[0.05] px-2 py-1 text-[7px] font-black uppercase tracking-wider text-violet-200">
+                                        Multi Checkout
+                                    </span>
+                                </div>
+
+                                <p class="mt-1 text-[9px] leading-4 text-slate-400">
+                                    This coupon is applied to the combined current selling price when a student checks out multiple batches together.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 gap-4 p-4 md:grid-cols-[minmax(0,1fr)_minmax(280px,0.65fr)] md:p-5">
+                            <div class="rounded-2xl border border-cyan-400/15 bg-slate-950/45 p-4 md:p-5">
+                                <div class="flex items-start gap-3">
+                                    <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-cyan-400 text-slate-950 shadow-[0_0_22px_rgba(34,211,238,.15)]">
+                                        <i class="ri-shopping-basket-2-line text-sm"></i>
+                                    </span>
+
+                                    <div class="min-w-0">
+                                        <h3 class="text-[12px] font-black text-cyan-300">
+                                            Multi Checkout Rules
+                                        </h3>
+
+                                        <ul class="mt-2 space-y-2 text-[9px] leading-4 text-slate-400">
+                                            <li>• The student must have at least two different batches in the checkout.</li>
+                                            <li>• The coupon uses the combined current selling price of the eligible batches.</li>
+                                            <li>• The combined amount must be within the configured minimum and maximum checkout limits.</li>
+                                            <li>• Only one Multi Checkout coupon is applied to a checkout, and it cannot be combined with General or Batch Specific coupons.</li>
+                                            <li>• Multi Checkout coupons are not connected to individual batches.</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="rounded-2xl border border-amber-400/20 bg-amber-400/[0.035] p-4 md:p-5">
+                                <div class="flex items-start gap-3">
+                                    <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-400/10 text-amber-300">
+                                        <i class="ri-information-line text-sm"></i>
+                                    </span>
+
+                                    <div>
+                                        <h3 class="text-[11px] font-black text-amber-300">
+                                            No Batch Selection Required
+                                        </h3>
+
+                                        <p class="mt-1.5 text-[9px] leading-4 text-slate-400">
+                                            No batch selection is required for this coupon type. The student cart determines the combined checkout amount during coupon validation.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                </div>
+            </div>
+        </div>
+
         <!-- COMMON ACTIONS -->
         <div class="mx-auto mt-2 flex w-full max-w-[1330px] justify-end gap-2">
             <a href="{% url 'admin_coupons' %}" class="inline-flex h-9 items-center justify-center rounded-lg border border-white/10 bg-white/[0.03] px-5 text-[10px] font-black text-slate-300 transition hover:bg-white/[0.07] hover:text-white">
@@ -1361,6 +1787,7 @@
     const couponType = document.getElementById("couponType");
     const batchWorkspace = document.getElementById("batchSpecificWorkspace");
     const generalWorkspace = document.getElementById("generalWorkspace");
+    const multiCheckoutWorkspace = document.getElementById("multiCheckoutWorkspace");
     const modeButtons = Array.from(document.querySelectorAll(".mode-button"));
 
     const pageTitle = document.getElementById("pageTitle");
@@ -1399,6 +1826,8 @@
     const statusLabelBS = document.getElementById("statusLabelBS");
     const statusGeneral = document.getElementById("statusGeneral");
     const statusLabelGeneral = document.getElementById("statusLabelGeneral");
+    const statusMulti = document.getElementById("statusMulti");
+    const statusLabelMulti = document.getElementById("statusLabelMulti");
 
     const generalDiscountValue = document.getElementById("generalDiscountValue");
     const generalDiscountLabel = document.getElementById("generalDiscountLabel");
@@ -1417,6 +1846,16 @@
 
     const thumbnailInput = document.getElementById("couponThumbnail");
     const generalThumbnailTrigger = document.getElementById("couponThumbnailGeneralTrigger");
+
+    const multiDiscountValue = document.getElementById("multiDiscountValue");
+    const multiDiscountLabel = document.getElementById("multiDiscountLabel");
+    const multiDiscountHelp = document.getElementById("multiDiscountHelp");
+    const minimumOrderMulti = document.getElementById("minimumOrderMulti");
+    const maximumOrderMulti = document.getElementById("maximumOrderMulti");
+    const multiPreviewMinimum = document.getElementById("multiPreviewMinimum");
+    const multiPreviewMaximum = document.getElementById("multiPreviewMaximum");
+    const multiDiscountRadios = Array.from(document.querySelectorAll('input[name="multi_discount_type_ui"]'));
+    const multiThumbnailTrigger = document.getElementById("couponThumbnailMultiTrigger");
 
     const generalDiscountRadios = Array.from(document.querySelectorAll('input[name="general_discount_type_ui"]'));
     const batchDiscountRadios = Array.from(document.querySelectorAll('input[name="discount_type"]'));
@@ -1460,15 +1899,24 @@
 
     function setMode(mode) {
         const isGeneral = mode === "general";
-        couponType.value = isGeneral ? "general" : "batch_specific";
-        batchWorkspace.classList.toggle("hidden", isGeneral);
-        generalWorkspace.classList.toggle("hidden", !isGeneral);
+        const isMulti = mode === "multi_checkout";
 
-        pageTitle.textContent = isGeneral ? "Create General Coupon" : "Create Batch-wise Coupon";
-        breadcrumbType.textContent = isGeneral ? "General Coupon" : "Batch-wise Coupon";
+        couponType.value = isGeneral ? "general" : (isMulti ? "multi_checkout" : "batch_specific");
+        batchWorkspace.classList.toggle("hidden", isGeneral || isMulti);
+        generalWorkspace.classList.toggle("hidden", !isGeneral);
+        multiCheckoutWorkspace.classList.toggle("hidden", !isMulti);
+
+        pageTitle.textContent = isGeneral
+            ? "Create General Coupon"
+            : (isMulti ? "Create Multi Checkout Coupon" : "Create Batch-wise Coupon");
+        breadcrumbType.textContent = isGeneral
+            ? "General Coupon"
+            : (isMulti ? "Multi Checkout Coupon" : "Batch-wise Coupon");
         pageSubtitle.textContent = isGeneral
             ? "Create a coupon that can be applied to multiple batches."
-            : "Create a coupon for a specific batch only. The coupon value must be less than or equal to the current selling price of the batch.";
+            : (isMulti
+                ? "Create a coupon for combined checkout purchases across multiple batches."
+                : "Create a coupon for a specific batch only. The coupon value must be less than or equal to the current selling price of the batch.");
 
         modeButtons.forEach(function (button) {
             const active = button.dataset.mode === mode;
@@ -1479,6 +1927,8 @@
         if (isGeneral) {
             syncGeneralFieldValues();
             refreshGeneralTable();
+        } else if (isMulti) {
+            refreshMultiCheckoutPreview();
         } else {
             refreshBatchPreview();
         }
@@ -1513,14 +1963,6 @@
         discountValueLabelBS.childNodes[0].nodeValue = percentage ? "Discount Value (%) " : "Discount Value (₹) ";
         discountHelperBS.textContent = percentage ? "Percentage discount from 1% to 100%." : "Flat discount amount in rupees.";
 
-        // Percentage coupons are capped at 100.
-        // Fixed coupons have no cap.
-        if (percentage) {
-            discountValueBS.setAttribute("max", "100");
-        } else {
-            discountValueBS.removeAttribute("max");
-        }
-
         refreshBatchPreview();
     }
 
@@ -1529,14 +1971,6 @@
         const percentage = type === "percentage";
         generalDiscountLabel.childNodes[0].nodeValue = percentage ? "Discount Value (%) " : "Discount Value (₹) ";
         generalDiscountHelp.textContent = percentage ? "Percentage discount from 1% to 100%." : "Flat discount amount in rupees.";
-
-        // Percentage coupons are capped at 100.
-        // Fixed coupons have no cap.
-        if (percentage) {
-            generalDiscountValue.setAttribute("max", "100");
-        } else {
-            generalDiscountValue.removeAttribute("max");
-        }
 
         refreshGeneralTable();
     }
@@ -1625,29 +2059,17 @@
 
         const discountType = getBatchDiscountType();
         const entered = Number(discountValueBS.value || 0);
+        // Preview only.
+        // Validation is handled centrally by parse_and_validate_coupon()
+        // on the Django side. JavaScript must not duplicate those rules.
         let discount = 0;
         let finalPrice = current;
-        let validPreview = true;
-        let reason = "";
 
         if (entered > 0) {
-            if (discountType === "fixed") {
-                discount = Math.min(entered, current);
-                if (entered > current) {
-                    validPreview = false;
-                    reason = "Fixed discount cannot exceed the current selling price.";
-                }
-            } else {
-                if (entered > 100) {
-                    validPreview = false;
-                    reason = "Percentage discount cannot exceed 100%.";
-                } else if (entered < 1) {
-                    validPreview = false;
-                    reason = "Percentage discount must be between 1% and 100%.";
-                } else {
-                    discount = Math.min(current * (entered / 100), current);
-                }
-            }
+            discount = discountType === "fixed"
+                ? entered
+                : current * (entered / 100);
+
             finalPrice = Math.max(current - discount, 0);
         }
 
@@ -1657,16 +2079,37 @@
         if (!entered) {
             calcMessageBS.textContent = "Enter a discount value to preview the coupon calculation.";
             calcMessageBS.className = "mt-3 rounded-lg border border-cyan-400/20 bg-cyan-400/[0.035] px-3 py-2 text-[9px] leading-4 text-cyan-200";
-        } else if (!validPreview) {
-            calcMessageBS.textContent = reason;
-            calcMessageBS.className = "mt-3 rounded-lg border border-rose-400/20 bg-rose-400/[0.05] px-3 py-2 text-[9px] leading-4 text-rose-200";
         } else {
             const discountText = discountType === "percentage"
                 ? `${entered}%`
                 : `₹${discount.toLocaleString("en-IN")}`;
-            calcMessageBS.textContent = `This coupon will give ${discountText} off on ${name} batch.`;
-            calcMessageBS.className = "mt-3 rounded-lg border border-emerald-400/20 bg-emerald-400/[0.04] px-3 py-2 text-[9px] leading-4 text-emerald-200";
+
+            calcMessageBS.textContent =
+                `Preview: ${discountText} off on ${name} batch. Final validation is handled when the coupon is submitted.`;
+
+            calcMessageBS.className = "mt-3 rounded-lg border border-cyan-400/20 bg-cyan-400/[0.035] px-3 py-2 text-[9px] leading-4 text-cyan-200";
         }
+    }
+
+    function getMultiDiscountType() {
+        const checked = multiDiscountRadios.find(function (input) { return input.checked; });
+        return checked ? checked.value : "fixed";
+    }
+
+    function updateMultiDiscountUI() {
+        const percentage = getMultiDiscountType() === "percentage";
+        multiDiscountLabel.childNodes[0].nodeValue = percentage ? "Discount Value (%) " : "Discount Value (₹) ";
+        multiDiscountHelp.textContent = percentage
+            ? "Percentage discount from 1% to 100% on the combined checkout total."
+            : "Flat discount amount from the combined checkout total.";
+        // Validation is handled by the Django helper on submit.
+    }
+
+    function refreshMultiCheckoutPreview() {
+        const minimum = Number(minimumOrderMulti.value || 0);
+        const maximum = Number(maximumOrderMulti.value || 0);
+        multiPreviewMinimum.textContent = formatINR(minimum);
+        multiPreviewMaximum.textContent = maximum > 0 ? formatINR(maximum) : "Not set";
     }
 
     function calculateGeneral(row) {
@@ -1684,19 +2127,13 @@
             return { eligible: false, reason: `Above maximum order amount (${formatINR(maximum)})`, discount: 0, final: row.current };
         }
 
-        if (discountValue > 0 && discountType === "fixed" && discountValue > row.current) {
-            return { eligible: false, reason: "Fixed discount exceeds current selling price.", discount: 0, final: row.current };
-        }
-
-        if (discountValue > 100 && discountType === "percentage") {
-            return { eligible: false, reason: "Percentage discount cannot exceed 100%.", discount: 0, final: row.current };
-        }
-
+        // Discount constraints are validated server-side.
+        // This function only calculates the visual preview for the table.
         let discount = 0;
         if (discountValue > 0) {
             discount = discountType === "fixed"
-                ? Math.min(discountValue, row.current)
-                : Math.min(row.current * (discountValue / 100), row.current);
+                ? discountValue
+                : row.current * (discountValue / 100);
         }
 
         return {
@@ -1894,8 +2331,14 @@
     generalSearch.addEventListener("input", refreshGeneralTable);
     generalFilter.addEventListener("change", refreshGeneralTable);
 
+    multiDiscountValue.addEventListener("input", refreshMultiCheckoutPreview);
+    minimumOrderMulti.addEventListener("input", refreshMultiCheckoutPreview);
+    maximumOrderMulti.addEventListener("input", refreshMultiCheckoutPreview);
+    multiDiscountRadios.forEach(function (input) { input.addEventListener("change", updateMultiDiscountUI); });
+
     statusBS.addEventListener("change", function () { updateStatus(statusBS, statusLabelBS); });
     statusGeneral.addEventListener("change", function () { updateStatus(statusGeneral, statusLabelGeneral); });
+    statusMulti.addEventListener("change", function () { updateStatus(statusMulti, statusLabelMulti); });
 
     thumbnailInput.addEventListener("change", function () {
         const file = thumbnailInput.files && thumbnailInput.files[0];
@@ -1907,12 +2350,23 @@
         const previewBoxBS = document.getElementById("thumbnailPreviewBoxBS");
         const previewGeneral = document.getElementById("thumbnailPreviewGeneral");
         const previewBoxGeneral = document.getElementById("thumbnailPreviewBoxGeneral");
+        const previewMulti = document.getElementById("thumbnailPreviewMulti");
+        const previewBoxMulti = document.getElementById("thumbnailPreviewBoxMulti");
 
-        previewBS.src = url;
-        previewBoxBS.classList.remove("hidden");
+        if (previewBS && previewBoxBS) {
+            previewBS.src = url;
+            previewBoxBS.classList.remove("hidden");
+        }
 
-        previewGeneral.src = url;
-        previewBoxGeneral.classList.remove("hidden");
+        if (previewGeneral && previewBoxGeneral) {
+            previewGeneral.src = url;
+            previewBoxGeneral.classList.remove("hidden");
+        }
+
+        if (previewMulti && previewBoxMulti) {
+            previewMulti.src = url;
+            previewBoxMulti.classList.remove("hidden");
+        }
     });
 
     generalThumbnailTrigger.addEventListener("change", function () {
@@ -1924,8 +2378,61 @@
         thumbnailInput.dispatchEvent(new Event("change", { bubbles: true }));
     });
 
+    multiThumbnailTrigger.addEventListener("change", function () {
+        const file = multiThumbnailTrigger.files && multiThumbnailTrigger.files[0];
+        if (!file) return;
+
+        const previewMulti = document.getElementById("thumbnailPreviewMulti");
+        const previewBoxMulti = document.getElementById("thumbnailPreviewBoxMulti");
+
+        if (previewMulti && previewBoxMulti) {
+            const url = URL.createObjectURL(file);
+            previewMulti.src = url;
+            previewBoxMulti.classList.remove("hidden");
+        }
+
+        const dataTransfer = new DataTransfer();
+        dataTransfer.items.add(file);
+        thumbnailInput.files = dataTransfer.files;
+        thumbnailInput.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+
     form.addEventListener("submit", function () {
-        if (couponType.value === "general") {
+        if (couponType.value === "multi_checkout") {
+            document.getElementById("couponCodeBS").value = document.getElementById("couponCodeMulti").value;
+            document.getElementById("descriptionBS").value = document.getElementById("descriptionMulti").value;
+            document.getElementById("discountValueBS").value = multiDiscountValue.value;
+            document.getElementById("usageLimitBS").value = document.getElementById("multiUsage").value;
+            document.getElementById("perUserBS").value = document.getElementById("multiPerUser").value;
+            document.getElementById("validFromBS").value = document.getElementById("multiValidFrom").value;
+            document.getElementById("validUntilBS").value = document.getElementById("multiValidUntil").value;
+            minimumOrderGeneral.value = minimumOrderMulti.value;
+            maximumOrderGeneral.value = maximumOrderMulti.value;
+
+            const selectedType = getMultiDiscountType();
+            batchDiscountRadios.forEach(function (input) { input.checked = input.value === selectedType; });
+
+            let hiddenMin = document.getElementById("hiddenMultiMinimum");
+            let hiddenMax = document.getElementById("hiddenMultiMaximum");
+            if (!hiddenMin) {
+                hiddenMin = document.createElement("input");
+                hiddenMin.type = "hidden";
+                hiddenMin.name = "minimum_order_amount";
+                hiddenMin.id = "hiddenMultiMinimum";
+                form.appendChild(hiddenMin);
+            }
+            if (!hiddenMax) {
+                hiddenMax = document.createElement("input");
+                hiddenMax.type = "hidden";
+                hiddenMax.name = "maximum_order_amount";
+                hiddenMax.id = "hiddenMultiMaximum";
+                form.appendChild(hiddenMax);
+            }
+            hiddenMin.value = minimumOrderMulti.value;
+            hiddenMax.value = maximumOrderMulti.value;
+
+            document.getElementById("statusBS").checked = statusMulti.checked;
+        } else if (couponType.value === "general") {
             const generalCode = document.getElementById("couponCodeGeneral");
             const generalDescription = document.getElementById("descriptionGeneral");
             const sharedCode = document.getElementById("couponCodeBS");
@@ -1986,17 +2493,22 @@
 
     updateStatus(statusBS, statusLabelBS);
     updateStatus(statusGeneral, statusLabelGeneral);
+    updateStatus(statusMulti, statusLabelMulti);
     updateDiscountUI();
     updateGeneralDiscountUI();
+    updateMultiDiscountUI();
 
-    const initialMode = couponType.value === "general"
-        ? "general"
+    const requestedMode = (couponType.value || "").trim().toLowerCase();
+    const initialMode = ["batch_specific", "general", "multi_checkout"].includes(requestedMode)
+        ? requestedMode
         : "batch_specific";
 
     setMode(initialMode);
 
     if (initialMode === "general") {
         refreshGeneralTable();
+    } else if (initialMode === "multi_checkout") {
+        refreshMultiCheckoutPreview();
     } else {
         refreshBatchPreview();
     }

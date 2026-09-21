@@ -16,6 +16,8 @@ from .views import (
     add_to_cart_view,
     remove_from_cart_view,
     clear_cart_view,
+    apply_coupon_view,
+    remove_coupon_view, 
 )
 
 
@@ -86,31 +88,47 @@ urlpatterns = [
         name='wishlist_count',
     ),
 
-    # ============================================================
-    # CART
-    # ============================================================
+    # ==========================================================
+# CART
+# ==========================================================
 
-    path(
-        'cart/',
-        cart_view,
-        name='cart',
-    ),
+path(
+    "cart/",
+    cart_view,
+    name="cart",
+),
 
-    path(
-        'cart/add/<int:batch_id>/',
-        add_to_cart_view,
-        name='add_to_cart',
-    ),
+path(
+    "cart/add/<int:batch_id>/",
+    add_to_cart_view,
+    name="add_to_cart",
+),
 
-    path(
-        'cart/remove/<int:batch_id>/',
-        remove_from_cart_view,
-        name='remove_from_cart',
-    ),
+path(
+    "cart/remove/<int:batch_id>/",
+    remove_from_cart_view,
+    name="remove_from_cart",
+),
 
-    path(
-        'cart/clear/',
-        clear_cart_view,
-        name='clear_cart',
-    ),
+path(
+    "cart/clear/",
+    clear_cart_view,
+    name="clear_cart",
+),
+
+# ==========================================================
+# CART COUPONS
+# ==========================================================
+
+path(
+    "cart/apply-coupon/",
+    apply_coupon_view,
+    name="apply_coupon",
+),
+
+path(
+    "cart/remove-coupon/<int:coupon_id>/",
+    remove_coupon_view,
+    name="remove_coupon",
+),
 ]

@@ -132,3 +132,44 @@ class CartItem(models.Model):
 
     def __str__(self):
         return f"{self.cart.student.username} - {self.batch.batch_name}"
+    
+class CartCoupon(models.Model):
+
+    cart = models.ForeignKey(
+        Cart,
+        on_delete=models.CASCADE,
+        related_name="cart_coupons",
+    )
+
+    coupon = models.ForeignKey(
+        "admins.Coupon",
+        on_delete=models.CASCADE,
+        related_name="cart_applications",
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True
+    )
+
+    class Meta:
+        db_table = "student_cart_coupon"
+
+        ordering = [
+            "-created_at"
+        ]
+
+        constraints = [
+            models.UniqueConstraint(
+                fields=[
+                    "cart",
+                    "coupon",
+                ],
+                name="unique_cart_coupon",
+            )
+        ]
+
+    def __str__(self):
+        return (
+            f"{self.cart.student.username} - "
+            f"{self.coupon.code}"
+        )

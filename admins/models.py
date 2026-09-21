@@ -447,6 +447,7 @@ class Coupon(models.Model):
     COUPON_TYPE_CHOICES = [
         ("general", "General Coupon"),
         ("batch_specific", "Batch-Specific Coupon"),
+        ("multi_checkout", "Multi Checkout Coupon"),
     ]
 
     # -----------------------------------------------------
@@ -502,6 +503,20 @@ class Coupon(models.Model):
     )
 
     # -----------------------------------------------------
+    # Batch-Specific Coupon Marketplace Visibility
+    # -----------------------------------------------------
+
+    marketplace_visible = models.BooleanField(
+        default=True,
+        help_text=(
+            "Controls whether a batch-specific coupon "
+            "is shown in the student's available coupon list. "
+            "Manual coupon-code entry can still be used when "
+            "the coupon is otherwise valid."
+        ),
+    )
+
+    # -----------------------------------------------------
     # Discount Settings
     # -----------------------------------------------------
 
@@ -519,7 +534,7 @@ class Coupon(models.Model):
     )
 
     # -----------------------------------------------------
-    # General Coupon Order Restrictions
+    # Order / Checkout Amount Restrictions
     # -----------------------------------------------------
 
     minimum_order_amount = models.DecimalField(
@@ -527,8 +542,9 @@ class Coupon(models.Model):
         decimal_places=2,
         default=Decimal("0.00"),
         help_text=(
-            "Minimum current selling price required "
-            "for a general coupon."
+            "For General Coupon: minimum order amount. "
+            "For Multi Checkout Coupon: minimum combined "
+            "checkout amount."
         ),
     )
 
@@ -538,30 +554,26 @@ class Coupon(models.Model):
         blank=True,
         null=True,
         help_text=(
-            "Maximum current selling price allowed "
-            "for a general coupon."
+            "For General Coupon: maximum order amount. "
+            "For Multi Checkout Coupon: maximum combined "
+            "checkout amount."
         ),
     )
 
     # -----------------------------------------------------
     # Percentage Coupon Maximum Discount
     # -----------------------------------------------------
-    #
-    # This field is retained on the model for schema
-    # stability, but it is no longer used anywhere:
-    # not in validation, not in discount calculation,
-    # and not on the coupon create/edit pages.
-    #
-    # It is stored as NULL for every coupon.
+
+    # Legacy field retained for schema compatibility.
+    # It is no longer used by coupon validation,
+    # discount calculation, create forms, or edit forms.
 
     maximum_discount_amount = models.DecimalField(
         max_digits=10,
         decimal_places=2,
         blank=True,
         null=True,
-        help_text=(
-            "Legacy field — no longer used."
-        ),
+        help_text="Legacy field — no longer used.",
     )
 
     # -----------------------------------------------------
@@ -608,6 +620,17 @@ class Coupon(models.Model):
         help_text="Number of successful coupon uses.",
     )
 
+    total_discount_given = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=Decimal("0.00"),
+        editable=False,
+        help_text=(
+            "Actual total discount granted across successful "
+            "coupon checkouts."
+        ),
+    )
+
     # -----------------------------------------------------
     # Status Fields
     # -----------------------------------------------------
@@ -619,7 +642,7 @@ class Coupon(models.Model):
         db_index=True,
     )
 
-    # Kept for compatibility with existing code
+    # Kept for compatibility with existing code.
     is_active = models.BooleanField(
         default=True,
         db_index=True,
@@ -732,9 +755,23 @@ class Coupon(models.Model):
         """
         Validate coupon information before saving.
 
-        Note:
-        ``maximum_discount_amount`` is no longer validated.
-        It is a legacy field kept only for schema stability.
+        Coupon types:
+
+        General:
+            Uses minimum_order_amount and
+            maximum_order_amount.
+
+        Batch-Specific:
+            Does not use minimum_order_amount or
+            maximum_order_amount.
+
+        Multi Checkout:
+            Uses minimum_order_amount and
+            maximum_order_amount as the combined
+            checkout amount range.
+
+        maximum_discount_amount is a legacy field
+        and is intentionally not validated.
         """
 
         # -------------------------------------------------
@@ -783,7 +820,7 @@ class Coupon(models.Model):
             )
 
         # -------------------------------------------------
-        # Minimum Order Amount
+        # Minimum Order / Checkout Amount
         # -------------------------------------------------
 
         if self.minimum_order_amount is None:
@@ -799,7 +836,7 @@ class Coupon(models.Model):
             )
 
         # -------------------------------------------------
-        # Maximum Order Amount
+        # Maximum Order / Checkout Amount
         # -------------------------------------------------
 
         if (
@@ -815,7 +852,7 @@ class Coupon(models.Model):
             )
 
         # -------------------------------------------------
-        # Minimum / Maximum Order Relationship
+        # General / Multi Checkout Amount Relationship
         # -------------------------------------------------
 
         if (
@@ -826,8 +863,8 @@ class Coupon(models.Model):
             raise ValidationError(
                 {
                     "maximum_order_amount": (
-                        "Maximum order amount cannot be less "
-                        "than minimum order amount."
+                        "Maximum amount cannot be less "
+                        "than minimum amount."
                     )
                 }
             )
@@ -854,6 +891,57 @@ class Coupon(models.Model):
                         "maximum_order_amount": (
                             "Maximum order amount is not applicable "
                             "to batch-specific coupons."
+                        )
+                    }
+                )
+
+        # -------------------------------------------------
+        # Multi Checkout Restrictions
+        # -------------------------------------------------
+
+        if self.coupon_type == "multi_checkout":
+
+            if self.minimum_order_amount <= Decimal("0.00"):
+                raise ValidationError(
+                    {
+                        "minimum_order_amount": (
+                            "Minimum checkout amount must be "
+                            "greater than zero for a "
+                            "multi-checkout coupon."
+                        )
+                    }
+                )
+
+            if self.maximum_order_amount is None:
+                raise ValidationError(
+                    {
+                        "maximum_order_amount": (
+                            "Maximum checkout amount is required "
+                            "for a multi-checkout coupon."
+                        )
+                    }
+                )
+
+            if self.maximum_order_amount <= Decimal("0.00"):
+                raise ValidationError(
+                    {
+                        "maximum_order_amount": (
+                            "Maximum checkout amount must be "
+                            "greater than zero for a "
+                            "multi-checkout coupon."
+                        )
+                    }
+                )
+
+            if (
+                self.maximum_order_amount
+                < self.minimum_order_amount
+            ):
+                raise ValidationError(
+                    {
+                        "maximum_order_amount": (
+                            "Maximum checkout amount cannot be "
+                            "less than minimum checkout amount."
                         )
                     }
                 )
@@ -941,7 +1029,7 @@ class Coupon(models.Model):
 
     def save(self, *args, **kwargs):
         """
-        Normalize code and keep status fields synchronized.
+        Normalize coupon code and keep status fields synchronized.
         """
 
         if self.code:
@@ -971,8 +1059,11 @@ class CouponBatchRule(models.Model):
     Batch-specific coupon:
         Can connect to only one batch.
 
+    Multi-checkout coupon:
+        Cannot connect to batches.
+
     This model is used for admin coupon configuration.
-    Student coupon application will be added later.
+    Student coupon application will be handled separately.
     """
 
     coupon = models.ForeignKey(
@@ -1023,15 +1114,38 @@ class CouponBatchRule(models.Model):
 
     def clean(self):
         """
-        A batch-specific coupon can be connected
-        to only one batch.
+        Validate coupon-to-batch relationships.
 
-        General coupons can be connected
-        to multiple batches.
+        Batch-specific:
+            Only one batch is allowed.
+
+        General:
+            Multiple batches are allowed.
+
+        Multi-checkout:
+            Batch rules are not allowed.
         """
 
         if not self.coupon_id or not self.batch_id:
             return
+
+        # -------------------------------------------------
+        # Multi Checkout Cannot Use Batch Rules
+        # -------------------------------------------------
+
+        if self.coupon.coupon_type == "multi_checkout":
+            raise ValidationError(
+                {
+                    "coupon": (
+                        "Multi-checkout coupons cannot be "
+                        "connected to batches."
+                    )
+                }
+            )
+
+        # -------------------------------------------------
+        # Batch-Specific Can Use Only One Batch
+        # -------------------------------------------------
 
         if self.coupon.coupon_type == "batch_specific":
 

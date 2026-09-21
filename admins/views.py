@@ -1602,6 +1602,8 @@ def admin_course_builder_entry_view(request, batch_id, subject_id):
 # ==========================================================
 # COUPON MANAGEMENT
 # ==========================================================
+# Multi Checkout pricing/eligibility is calculated in helpers.py.
+# Views only receive validated data and save/update the coupon.
 
 
 # ==========================================================
@@ -2129,3 +2131,4 @@ def delete_coupon_view(
     return redirect(
         "admin_coupons"
     )
+    
