@@ -1404,33 +1404,52 @@ def apply_coupon_view(request):
     # --------------------------------------------------------
     # Coupon already applied
     # --------------------------------------------------------
-    if any(entry.coupon_id == coupon.pk for entry in applied_entries):
-        messages.info(request, "This coupon is already applied.")
+    if any(
+        entry.coupon_id == coupon.pk
+        for entry in applied_entries
+    ):
+        messages.info(
+            request,
+            "This coupon is already applied."
+        )
         return redirect("cart")
 
+    # --------------------------------------------------------
+    # Cart batch information
+    # --------------------------------------------------------
     cart_batch_ids = {
         item.batch_id
         for item in cart_items
     }
+
     multiple_batches = len(cart_batch_ids) > 1
 
+    # --------------------------------------------------------
+    # Already applied coupon modes
+    # --------------------------------------------------------
     batch_entries = [
-        entry for entry in applied_entries
+        entry
+        for entry in applied_entries
         if entry.coupon.coupon_type == "batch_specific"
     ]
+
     multi_entries = [
-        entry for entry in applied_entries
+        entry
+        for entry in applied_entries
         if entry.coupon.coupon_type == "multi_checkout"
     ]
+
     general_entries = [
-        entry for entry in applied_entries
+        entry
+        for entry in applied_entries
         if entry.coupon.coupon_type == "general"
     ]
 
-    # --------------------------------------------------------
-    # General
-    # --------------------------------------------------------
+    # ========================================================
+    # GENERAL COUPON
+    # ========================================================
     if coupon.coupon_type == "general":
+
         if multiple_batches:
             messages.error(
                 request,
@@ -1459,7 +1478,10 @@ def apply_coupon_view(request):
         )
 
         if not result["eligible"]:
-            messages.error(request, result["reason"])
+            messages.error(
+                request,
+                result["reason"]
+            )
             return redirect("cart")
 
         CartCoupon.objects.create(
@@ -1468,10 +1490,11 @@ def apply_coupon_view(request):
             batch=None,
         )
 
-    # --------------------------------------------------------
-    # Multi Checkout
-    # --------------------------------------------------------
+    # ========================================================
+    # MULTI CHECKOUT COUPON
+    # ========================================================
     elif coupon.coupon_type == "multi_checkout":
+
         if not multiple_batches:
             messages.error(
                 request,
@@ -1507,7 +1530,10 @@ def apply_coupon_view(request):
         )
 
         if not result["eligible"]:
-            messages.error(request, result["reason"])
+            messages.error(
+                request,
+                result["reason"]
+            )
             return redirect("cart")
 
         CartCoupon.objects.create(
@@ -1516,10 +1542,11 @@ def apply_coupon_view(request):
             batch=None,
         )
 
-    # --------------------------------------------------------
-    # Batch Specific
-    # --------------------------------------------------------
+    # ========================================================
+    # BATCH SPECIFIC COUPON
+    # ========================================================
     elif coupon.coupon_type == "batch_specific":
+
         if multi_entries:
             messages.error(
                 request,
@@ -1534,12 +1561,14 @@ def apply_coupon_view(request):
             )
             return redirect("cart")
 
-        if not getattr(coupon, "marketplace_visible", False):
-            messages.error(
-                request,
-                "This coupon is not currently available in the marketplace."
-            )
-            return redirect("cart")
+        # IMPORTANT:
+        # marketplace_visible is NOT checked here.
+        #
+        # A Batch Specific coupon can be hidden from the
+        # marketplace but still be applied manually using
+        # its coupon code.
+        #
+        # The actual coupon eligibility is checked below.
 
         result = calculate_batch_coupon_for_cart(
             coupon,
@@ -1548,7 +1577,10 @@ def apply_coupon_view(request):
         )
 
         if not result["eligible"]:
-            messages.error(request, result["reason"])
+            messages.error(
+                request,
+                result["reason"]
+            )
             return redirect("cart")
 
         selected_batch = result.get("batch")
@@ -1560,7 +1592,9 @@ def apply_coupon_view(request):
             )
             return redirect("cart")
 
-        # Exactly one Batch Specific coupon per batch.
+        # ----------------------------------------------------
+        # Exactly one Batch Specific coupon per batch
+        # ----------------------------------------------------
         if any(
             entry.batch_id == selected_batch.pk
             for entry in batch_entries
@@ -1578,17 +1612,25 @@ def apply_coupon_view(request):
             batch=selected_batch,
         )
 
+    # ========================================================
+    # INVALID COUPON TYPE
+    # ========================================================
     else:
-        messages.error(request, "Invalid coupon type.")
+        messages.error(
+            request,
+            "Invalid coupon type."
+        )
         return redirect("cart")
 
+    # ========================================================
+    # SUCCESS
+    # ========================================================
     messages.success(
         request,
         f"Coupon {coupon.code} applied successfully."
     )
 
     return redirect("cart")
-
 
 # ============================================================
 # REMOVE COUPON

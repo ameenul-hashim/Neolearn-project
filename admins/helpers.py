@@ -286,11 +286,25 @@ def _integer(value):
 
 
 def _get_post_value(request, *names, default=""):
-    for name in names:
-        value = request.POST.get(name)
+    """
+    Return the first non-empty POST value for the requested field names.
 
-        if value is not None:
-            return value
+    Some coupon workspaces share the same canonical field names
+    (for example code and description). Hidden workspace inputs can
+    therefore produce multiple values for the same POST key.
+
+    Prefer the first non-empty value instead of relying on
+    QueryDict.get(), which returns the last value.
+    """
+    for name in names:
+        values = request.POST.getlist(name)
+
+        if not values:
+            continue
+
+        for value in values:
+            if value is not None and str(value).strip():
+                return value
 
     return default
 
@@ -1775,12 +1789,11 @@ def add_coupon_errors_to_messages(
 ):
     from django.contrib import messages
 
-    for error in errors:
+    if errors:
         messages.error(
             request,
-            error,
+            errors[0],
         )
-
 
 # =========================================================
 # COUPON QUERYSET
