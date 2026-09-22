@@ -16,6 +16,7 @@ from admins.helpers import (
     calculate_student_cart_totals,
     calculate_general_cart_coupon,
     calculate_batch_coupon_for_cart,
+    calculate_multi_checkout_coupon,
     get_available_student_coupons,
 )
 from .models import (
@@ -1156,9 +1157,13 @@ def cart_view(request):
     # AVAILABLE COUPONS
     # --------------------------------------------------------
 
-    available_coupons = get_available_student_coupons(
+    coupon_catalog = get_available_student_coupons(
         cart_items,
         request.user,
+        applied_entries=list(
+            cart.cart_coupons
+            .select_related("coupon", "batch")
+        ),
     )
 
     cart_count = len(cart_items)
@@ -1179,7 +1184,13 @@ def cart_view(request):
                 "applied_coupons"
             ],
 
-            "available_coupons": available_coupons,
+            # Full coupon catalog for the coupon panel.
+            # Each card contains is_available/reason so the template can
+            # keep relevant coupons visible while disabling incompatible ones.
+            "coupon_catalog": coupon_catalog,
+
+            # Backward-compatible key for any existing template code.
+            "available_coupons": coupon_catalog,
         },
     )
     
@@ -1346,21 +1357,11 @@ def clear_cart_view(request):
 def apply_coupon_view(request):
 
     if not is_student_user(request.user):
-
-        messages.error(
-            request,
-            "Student access required."
-        )
-
+        messages.error(request, "Student access required.")
         return redirect("signin")
 
     if request.method != "POST":
-
-        messages.error(
-            request,
-            "Invalid coupon request."
-        )
-
+        messages.error(request, "Invalid coupon request.")
         return redirect("cart")
 
     cart, created = Cart.objects.get_or_create(
@@ -1372,27 +1373,18 @@ def apply_coupon_view(request):
     )
 
     if not code:
-
-        messages.error(
-            request,
-            "Please enter a coupon code."
-        )
-
+        messages.error(request, "Please enter a coupon code.")
         return redirect("cart")
 
     coupon = (
         Coupon.objects
         .filter(code__iexact=code)
+        .prefetch_related("batch_rules__batch")
         .first()
     )
 
     if coupon is None:
-
-        messages.error(
-            request,
-            "Invalid coupon code."
-        )
-
+        messages.error(request, "Invalid coupon code.")
         return redirect("cart")
 
     cart_items = list(
@@ -1401,73 +1393,64 @@ def apply_coupon_view(request):
     )
 
     if not cart_items:
-
-        messages.error(
-            request,
-            "Your cart is empty."
-        )
-
+        messages.error(request, "Your cart is empty.")
         return redirect("cart")
 
-    # --------------------------------------------------------
-    # Already applied
-    # --------------------------------------------------------
-
-    if cart.cart_coupons.filter(
-        coupon=coupon
-    ).exists():
-
-        messages.info(
-            request,
-            "This coupon is already applied."
-        )
-
-        return redirect("cart")
-
-    # --------------------------------------------------------
-    # Existing mode
-    # --------------------------------------------------------
-
-    existing_coupon = (
+    applied_entries = list(
         cart.cart_coupons
-        .select_related("coupon")
-        .first()
+        .select_related("coupon", "batch")
     )
 
-    if existing_coupon:
+    # --------------------------------------------------------
+    # Coupon already applied
+    # --------------------------------------------------------
+    if any(entry.coupon_id == coupon.pk for entry in applied_entries):
+        messages.info(request, "This coupon is already applied.")
+        return redirect("cart")
 
-        existing_type = (
-            existing_coupon.coupon.coupon_type
-        )
+    cart_batch_ids = {
+        item.batch_id
+        for item in cart_items
+    }
+    multiple_batches = len(cart_batch_ids) > 1
 
-        if (
-            existing_type != coupon.coupon_type
-        ):
+    batch_entries = [
+        entry for entry in applied_entries
+        if entry.coupon.coupon_type == "batch_specific"
+    ]
+    multi_entries = [
+        entry for entry in applied_entries
+        if entry.coupon.coupon_type == "multi_checkout"
+    ]
+    general_entries = [
+        entry for entry in applied_entries
+        if entry.coupon.coupon_type == "general"
+    ]
 
+    # --------------------------------------------------------
+    # General
+    # --------------------------------------------------------
+    if coupon.coupon_type == "general":
+        if multiple_batches:
             messages.error(
                 request,
-                (
-                    "General and batch-specific "
-                    "coupons cannot be combined."
-                )
+                "General coupons are not available for multiple-batch checkout."
             )
-
             return redirect("cart")
 
-        if coupon.coupon_type == "general":
-
+        if general_entries:
             messages.error(
                 request,
                 "Only one general coupon can be applied."
             )
-
             return redirect("cart")
 
-    # --------------------------------------------------------
-    # Validate coupon
-    # --------------------------------------------------------
-
-    if coupon.coupon_type == "general":
+        if batch_entries or multi_entries:
+            messages.error(
+                request,
+                "General coupons cannot be combined with another coupon mode."
+            )
+            return redirect("cart")
 
         result = calculate_general_cart_coupon(
             coupon,
@@ -1475,7 +1458,88 @@ def apply_coupon_view(request):
             student=request.user,
         )
 
-    else:
+        if not result["eligible"]:
+            messages.error(request, result["reason"])
+            return redirect("cart")
+
+        CartCoupon.objects.create(
+            cart=cart,
+            coupon=coupon,
+            batch=None,
+        )
+
+    # --------------------------------------------------------
+    # Multi Checkout
+    # --------------------------------------------------------
+    elif coupon.coupon_type == "multi_checkout":
+        if not multiple_batches:
+            messages.error(
+                request,
+                "Multi Checkout coupons require multiple batches in the cart."
+            )
+            return redirect("cart")
+
+        if multi_entries:
+            messages.error(
+                request,
+                "Only one Multi Checkout coupon can be applied."
+            )
+            return redirect("cart")
+
+        if batch_entries:
+            messages.error(
+                request,
+                "Multi Checkout cannot be combined with Batch Specific coupons."
+            )
+            return redirect("cart")
+
+        if general_entries:
+            messages.error(
+                request,
+                "Multi Checkout cannot be combined with General coupons."
+            )
+            return redirect("cart")
+
+        result = calculate_multi_checkout_coupon(
+            coupon,
+            cart_items,
+            student=request.user,
+        )
+
+        if not result["eligible"]:
+            messages.error(request, result["reason"])
+            return redirect("cart")
+
+        CartCoupon.objects.create(
+            cart=cart,
+            coupon=coupon,
+            batch=None,
+        )
+
+    # --------------------------------------------------------
+    # Batch Specific
+    # --------------------------------------------------------
+    elif coupon.coupon_type == "batch_specific":
+        if multi_entries:
+            messages.error(
+                request,
+                "Batch Specific coupons cannot be combined with Multi Checkout."
+            )
+            return redirect("cart")
+
+        if general_entries:
+            messages.error(
+                request,
+                "Batch Specific coupons cannot be combined with General coupons."
+            )
+            return redirect("cart")
+
+        if not getattr(coupon, "marketplace_visible", False):
+            messages.error(
+                request,
+                "This coupon is not currently available in the marketplace."
+            )
+            return redirect("cart")
 
         result = calculate_batch_coupon_for_cart(
             coupon,
@@ -1483,29 +1547,44 @@ def apply_coupon_view(request):
             student=request.user,
         )
 
-    if not result["eligible"]:
+        if not result["eligible"]:
+            messages.error(request, result["reason"])
+            return redirect("cart")
 
-        messages.error(
-            request,
-            result["reason"]
+        selected_batch = result.get("batch")
+
+        if selected_batch is None:
+            messages.error(
+                request,
+                "This coupon is not connected to a cart batch."
+            )
+            return redirect("cart")
+
+        # Exactly one Batch Specific coupon per batch.
+        if any(
+            entry.batch_id == selected_batch.pk
+            for entry in batch_entries
+        ):
+            messages.error(
+                request,
+                f"Only one Batch Specific coupon can be applied to "
+                f"{selected_batch.batch_name} at a time."
+            )
+            return redirect("cart")
+
+        CartCoupon.objects.create(
+            cart=cart,
+            coupon=coupon,
+            batch=selected_batch,
         )
 
+    else:
+        messages.error(request, "Invalid coupon type.")
         return redirect("cart")
-
-    # --------------------------------------------------------
-    # Save cart coupon
-    # --------------------------------------------------------
-
-    CartCoupon.objects.create(
-        cart=cart,
-        coupon=coupon,
-    )
 
     messages.success(
         request,
-        (
-            f"Coupon {coupon.code} applied successfully."
-        )
+        f"Coupon {coupon.code} applied successfully."
     )
 
     return redirect("cart")

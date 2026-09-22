@@ -1,4 +1,5 @@
 from django.db import models
+from django.db.models import Q
 from django.contrib.auth.models import User
 from admins.models import Batch
 
@@ -132,9 +133,9 @@ class CartItem(models.Model):
 
     def __str__(self):
         return f"{self.cart.student.username} - {self.batch.batch_name}"
-    
-class CartCoupon(models.Model):
 
+
+class CartCoupon(models.Model):
     cart = models.ForeignKey(
         Cart,
         on_delete=models.CASCADE,
@@ -147,25 +148,35 @@ class CartCoupon(models.Model):
         related_name="cart_applications",
     )
 
+    # For Batch Specific coupons this records the exact cart batch
+    # occupied by the coupon. General and Multi Checkout coupons
+    # keep this field empty because they are checkout-level coupons.
+    batch = models.ForeignKey(
+        Batch,
+        on_delete=models.CASCADE,
+        related_name="cart_coupon_applications",
+        null=True,
+        blank=True,
+    )
+
     created_at = models.DateTimeField(
         auto_now_add=True
     )
 
     class Meta:
         db_table = "student_cart_coupon"
-
-        ordering = [
-            "-created_at"
-        ]
+        ordering = ["-created_at"]
 
         constraints = [
             models.UniqueConstraint(
-                fields=[
-                    "cart",
-                    "coupon",
-                ],
+                fields=["cart", "coupon"],
                 name="unique_cart_coupon",
-            )
+            ),
+            models.UniqueConstraint(
+                fields=["cart", "batch"],
+                condition=Q(batch__isnull=False),
+                name="unique_cart_coupon_batch",
+            ),
         ]
 
     def __str__(self):

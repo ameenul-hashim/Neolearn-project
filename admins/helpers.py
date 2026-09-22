@@ -2476,17 +2476,7 @@ def calculate_multi_checkout_coupon(
     cart_items,
     student=None,
 ):
-    """
-    Multi Checkout coupon:
-
-    - Cart must contain at least 2 different batches.
-    - Combined current selling price is used.
-    - Minimum checkout amount is required.
-    - Maximum checkout amount is required.
-    - One Multi Checkout coupon per checkout.
-    - Cannot mix with General or Batch Specific.
-    """
-
+    """Validate and calculate one Multi Checkout coupon."""
     zero = Decimal("0")
 
     if coupon.coupon_type != "multi_checkout":
@@ -2495,52 +2485,28 @@ def calculate_multi_checkout_coupon(
             "discount_amount": zero,
             "final_price": zero,
             "eligible_total": zero,
-            "reason": (
-                "This is not a Multi Checkout coupon."
-            ),
+            "reason": "This is not a Multi Checkout coupon.",
         }
 
-    if student is not None:
-        if student_coupon_usage_limit_reached(
-            coupon,
-            student,
-        ):
-            return {
-                "eligible": False,
-                "discount_amount": zero,
-                "final_price": zero,
-                "eligible_total": zero,
-                "reason": (
-                    "You have already reached "
-                    "this coupon's usage limit."
-                ),
-            }
-
-    unique_batch_ids = get_cart_batch_ids(
-        cart_items
-    )
-
-    if len(unique_batch_ids) < 2:
+    if student is not None and student_coupon_usage_limit_reached(coupon, student):
         return {
             "eligible": False,
             "discount_amount": zero,
             "final_price": zero,
             "eligible_total": zero,
-            "reason": (
-                "Multi Checkout coupon requires "
-                "at least two different batches."
-            ),
+            "reason": "You have already reached this coupon's usage limit.",
         }
 
-    # IMPORTANT:
-    # Multi Checkout is calculated from the COMPLETE cart
-    # selling-price total. It does not use coupon batch rules
-    # and it does not calculate from only one selected batch.
-    # General and Batch Specific coupons keep their existing
-    # selling-price based calculations separately.
-    total_cart_amount = calculate_cart_subtotal(
-        cart_items
-    )
+    if len(get_cart_batch_ids(cart_items)) < 2:
+        return {
+            "eligible": False,
+            "discount_amount": zero,
+            "final_price": zero,
+            "eligible_total": zero,
+            "reason": "Multi Checkout coupon requires at least two different batches.",
+        }
+
+    total_cart_amount = calculate_cart_subtotal(cart_items)
 
     if total_cart_amount <= zero:
         return {
@@ -2548,16 +2514,10 @@ def calculate_multi_checkout_coupon(
             "discount_amount": zero,
             "final_price": total_cart_amount,
             "eligible_total": total_cart_amount,
-            "reason": (
-                "Your checkout total must be "
-                "greater than zero."
-            ),
+            "reason": "Your checkout total must be greater than zero.",
         }
 
-    minimum_checkout = _money(
-        coupon.minimum_order_amount
-    )
-
+    minimum_checkout = _money(coupon.minimum_order_amount)
     maximum_checkout = coupon.maximum_order_amount
 
     if total_cart_amount < minimum_checkout:
@@ -2566,50 +2526,33 @@ def calculate_multi_checkout_coupon(
             "discount_amount": zero,
             "final_price": total_cart_amount,
             "eligible_total": total_cart_amount,
-            "reason": (
-                f"Minimum checkout amount is "
-                f"₹{minimum_checkout:,.0f}."
-            ),
+            "reason": f"Minimum checkout amount is ₹{minimum_checkout:,.0f}.",
         }
 
-    if (
-        maximum_checkout is not None
-        and total_cart_amount
-        > _money(maximum_checkout)
-    ):
+    if maximum_checkout is not None and total_cart_amount > _money(maximum_checkout):
         return {
             "eligible": False,
             "discount_amount": zero,
             "final_price": total_cart_amount,
             "eligible_total": total_cart_amount,
-            "reason": (
-                f"Maximum checkout amount is "
-                f"₹{_money(maximum_checkout):,.0f}."
-            ),
+            "reason": f"Maximum checkout amount is ₹{_money(maximum_checkout):,.0f}.",
         }
 
-    base_result = calculate_coupon_discount(
-        coupon,
-        total_cart_amount,
-    )
+    result = calculate_coupon_discount(coupon, total_cart_amount)
 
-    if not base_result["eligible"]:
+    if not result["eligible"]:
         return {
             "eligible": False,
             "discount_amount": zero,
             "final_price": total_cart_amount,
             "eligible_total": total_cart_amount,
-            "reason": base_result["reason"],
+            "reason": result["reason"],
         }
 
     return {
         "eligible": True,
-        "discount_amount": _money(
-            base_result["discount_amount"]
-        ),
-        "final_price": _money(
-            base_result["final_price"]
-        ),
+        "discount_amount": _money(result["discount_amount"]),
+        "final_price": _money(result["final_price"]),
         "eligible_total": total_cart_amount,
         "reason": "",
     }
@@ -2619,249 +2562,230 @@ def calculate_multi_checkout_coupon(
 # STUDENT CART TOTALS
 # =========================================================
 
-def calculate_student_cart_totals(
-    cart,
-    cart_items,
-    student,
-):
-    subtotal = calculate_cart_subtotal(
-        cart_items
-    )
+def calculate_student_cart_totals(cart, cart_items, student):
+    """
+    Authoritative temporary cart calculation.
 
+    Rules:
+      Single batch:
+        - one Batch Specific OR one General
+        - Multi Checkout is not allowed
+
+      Multiple batches:
+        - one Batch Specific coupon per batch
+        - multiple different Batch Specific coupons may coexist
+        - one Multi Checkout coupon overall
+        - General is not allowed
+        - Multi Checkout cannot coexist with Batch Specific
+    """
+    subtotal = calculate_cart_subtotal(cart_items)
     discount_total = Decimal("0")
-
     applied_coupons = []
     invalid_coupons = []
 
     entries = list(
         cart.cart_coupons
-        .select_related("coupon")
-        .prefetch_related(
-            "coupon__batch_rules__batch"
-        )
+        .select_related("coupon", "batch")
+        .prefetch_related("coupon__batch_rules__batch")
     )
 
-    # -----------------------------------------------------
-    # Determine checkout mode.
-    # -----------------------------------------------------
+    general_entries = [e for e in entries if e.coupon.coupon_type == "general"]
+    multi_entries = [e for e in entries if e.coupon.coupon_type == "multi_checkout"]
+    batch_entries = [e for e in entries if e.coupon.coupon_type == "batch_specific"]
+    batch_count = len(get_cart_batch_ids(cart_items))
 
-    general_entries = [
-        entry
-        for entry in entries
-        if entry.coupon.coupon_type
-        == "general"
-    ]
+    # ---------------------------------------------------------
+    # Single-batch rules
+    # ---------------------------------------------------------
+    if batch_count <= 1:
+        # General and Batch Specific are alternatives.
+        if general_entries:
+            selected = general_entries[0]
 
-    multi_entries = [
-        entry
-        for entry in entries
-        if entry.coupon.coupon_type
-        == "multi_checkout"
-    ]
+            for extra in general_entries[1:]:
+                invalid_coupons.append({
+                    "entry": extra,
+                    "reason": "Only one General coupon can be used in one checkout.",
+                })
+                extra.delete()
 
-    batch_entries = [
-        entry
-        for entry in entries
-        if entry.coupon.coupon_type
-        == "batch_specific"
-    ]
-
-    # -----------------------------------------------------
-    # General mode
-    # -----------------------------------------------------
-
-    if general_entries:
-
-        selected_entry = general_entries[0]
-
-        for extra_entry in general_entries[1:]:
-            invalid_coupons.append(
-                {
-                    "entry": extra_entry,
-                    "reason": (
-                        "Only one General coupon "
-                        "can be used in one checkout."
-                    ),
-                }
-            )
-
-            extra_entry.delete()
-
-        for entry in (
-            multi_entries + batch_entries
-        ):
-            invalid_coupons.append(
-                {
+            for entry in multi_entries + batch_entries:
+                invalid_coupons.append({
                     "entry": entry,
-                    "reason": (
-                        "General coupons cannot be "
-                        "combined with other coupon modes."
-                    ),
-                }
-            )
+                    "reason": "General coupons cannot be combined with other coupon modes.",
+                })
+                entry.delete()
 
-            entry.delete()
-
-        result = calculate_general_cart_coupon(
-            selected_entry.coupon,
-            cart_items,
-            student=student,
-        )
-
-        if result["eligible"]:
-
-            discount_total = _money(
-                result["discount_amount"]
-            )
-
-            applied_coupons.append(
-                {
-                    "entry": selected_entry,
-                    "coupon": selected_entry.coupon,
-                    "discount_amount": _money(
-                        result["discount_amount"]
-                    ),
-                    "eligible_total": _money(
-                        result["eligible_total"]
-                    ),
-                    "batch": None,
-                }
-            )
-
-        else:
-            invalid_coupons.append(
-                {
-                    "entry": selected_entry,
-                    "reason": result["reason"],
-                }
-            )
-
-            selected_entry.delete()
-
-    # -----------------------------------------------------
-    # Multi Checkout mode
-    # -----------------------------------------------------
-
-    elif multi_entries:
-
-        selected_entry = multi_entries[0]
-
-        for extra_entry in multi_entries[1:]:
-            invalid_coupons.append(
-                {
-                    "entry": extra_entry,
-                    "reason": (
-                        "Only one Multi Checkout coupon "
-                        "can be used in one checkout."
-                    ),
-                }
-            )
-
-            extra_entry.delete()
-
-        for entry in batch_entries:
-            invalid_coupons.append(
-                {
-                    "entry": entry,
-                    "reason": (
-                        "Multi Checkout coupons cannot "
-                        "be combined with Batch Specific coupons."
-                    ),
-                }
-            )
-
-            entry.delete()
-
-        result = calculate_multi_checkout_coupon(
-            selected_entry.coupon,
-            cart_items,
-            student=student,
-        )
-
-        if result["eligible"]:
-
-            discount_total = _money(
-                result["discount_amount"]
-            )
-
-            applied_coupons.append(
-                {
-                    "entry": selected_entry,
-                    "coupon": selected_entry.coupon,
-                    "discount_amount": _money(
-                        result["discount_amount"]
-                    ),
-                    "eligible_total": _money(
-                        result["eligible_total"]
-                    ),
-                    "batch": None,
-                }
-            )
-
-        else:
-            invalid_coupons.append(
-                {
-                    "entry": selected_entry,
-                    "reason": result["reason"],
-                }
-            )
-
-            selected_entry.delete()
-
-    # -----------------------------------------------------
-    # Batch Specific mode
-    # -----------------------------------------------------
-
-    else:
-
-        for entry in batch_entries:
-
-            result = calculate_batch_coupon_for_cart(
-                entry.coupon,
+            result = calculate_general_cart_coupon(
+                selected.coupon,
                 cart_items,
                 student=student,
             )
 
             if result["eligible"]:
+                discount_total = _money(result["discount_amount"])
+                applied_coupons.append({
+                    "entry": selected,
+                    "coupon": selected.coupon,
+                    "discount_amount": _money(result["discount_amount"]),
+                    "eligible_total": _money(result["eligible_total"]),
+                    "batch": None,
+                })
+            else:
+                invalid_coupons.append({"entry": selected, "reason": result["reason"]})
+                selected.delete()
 
-                discount_total += _money(
-                    result["discount_amount"]
+        elif batch_entries:
+            # A single batch can have only one Batch Specific coupon.
+            selected_batch_id = cart_items[0].batch_id if cart_items else None
+            selected = None
+
+            for entry in batch_entries:
+                result = calculate_batch_coupon_for_cart(
+                    entry.coupon,
+                    cart_items,
+                    student=student,
                 )
 
-                applied_coupons.append(
-                    {
+                if selected is None and result["eligible"]:
+                    selected = entry
+                    discount_total += _money(result["discount_amount"])
+                    applied_coupons.append({
                         "entry": entry,
                         "coupon": entry.coupon,
-                        "discount_amount": _money(
-                            result["discount_amount"]
-                        ),
+                        "discount_amount": _money(result["discount_amount"]),
                         "eligible_total": _money(
-                            result["final_price"]
-                            + result["discount_amount"]
+                            result["final_price"] + result["discount_amount"]
                         ),
                         "batch": result["batch"],
-                    }
-                )
-
-            else:
-
-                invalid_coupons.append(
-                    {
+                    })
+                else:
+                    invalid_coupons.append({
                         "entry": entry,
-                        "reason": result["reason"],
-                    }
-                )
+                        "reason": (
+                            "Only one Batch Specific coupon can be applied "
+                            "to the same batch."
+                            if result["eligible"]
+                            else result["reason"]
+                        ),
+                    })
+                    entry.delete()
 
+            # Multi Checkout can never be present in single-batch cart.
+            for entry in multi_entries:
+                invalid_coupons.append({
+                    "entry": entry,
+                    "reason": "Multi Checkout coupons require multiple batches.",
+                })
                 entry.delete()
 
-    discount_total = min(
-        _money(discount_total),
-        subtotal,
-    )
+        else:
+            for entry in multi_entries:
+                invalid_coupons.append({
+                    "entry": entry,
+                    "reason": "Multi Checkout coupons require multiple batches.",
+                })
+                entry.delete()
 
-    total = _money(
-        subtotal - discount_total
-    )
+    # ---------------------------------------------------------
+    # Multiple-batch rules
+    # ---------------------------------------------------------
+    else:
+        if multi_entries:
+            # Exactly one checkout-level Multi Checkout coupon.
+            selected = multi_entries[0]
+
+            for extra in multi_entries[1:]:
+                invalid_coupons.append({
+                    "entry": extra,
+                    "reason": "Only one Multi Checkout coupon can be used in one checkout.",
+                })
+                extra.delete()
+
+            # Multi Checkout and Batch Specific are mutually exclusive.
+            for entry in batch_entries:
+                invalid_coupons.append({
+                    "entry": entry,
+                    "reason": "Multi Checkout coupons cannot be combined with Batch Specific coupons.",
+                })
+                entry.delete()
+
+            for entry in general_entries:
+                invalid_coupons.append({
+                    "entry": entry,
+                    "reason": "General coupons are not available for multiple-batch checkout.",
+                })
+                entry.delete()
+
+            result = calculate_multi_checkout_coupon(
+                selected.coupon,
+                cart_items,
+                student=student,
+            )
+
+            if result["eligible"]:
+                discount_total = _money(result["discount_amount"])
+                applied_coupons.append({
+                    "entry": selected,
+                    "coupon": selected.coupon,
+                    "discount_amount": _money(result["discount_amount"]),
+                    "eligible_total": _money(result["eligible_total"]),
+                    "batch": None,
+                })
+            else:
+                invalid_coupons.append({"entry": selected, "reason": result["reason"]})
+                selected.delete()
+
+        else:
+            # Batch Specific mode: one coupon per batch.
+            for entry in batch_entries:
+                result = calculate_batch_coupon_for_cart(
+                    entry.coupon,
+                    cart_items,
+                    student=student,
+                )
+
+                if not result["eligible"]:
+                    invalid_coupons.append({"entry": entry, "reason": result["reason"]})
+                    entry.delete()
+                    continue
+
+                target_batch_id = result["batch"].pk if result["batch"] else None
+                duplicate_batch = any(
+                    item.get("batch") is not None
+                    and item["batch"].pk == target_batch_id
+                    for item in applied_coupons
+                )
+
+                if duplicate_batch:
+                    invalid_coupons.append({
+                        "entry": entry,
+                        "reason": "Only one Batch Specific coupon can be applied to the same batch.",
+                    })
+                    entry.delete()
+                    continue
+
+                discount_total += _money(result["discount_amount"])
+                applied_coupons.append({
+                    "entry": entry,
+                    "coupon": entry.coupon,
+                    "discount_amount": _money(result["discount_amount"]),
+                    "eligible_total": _money(
+                        result["final_price"] + result["discount_amount"]
+                    ),
+                    "batch": result["batch"],
+                })
+
+            # General is never allowed in a multiple-batch cart.
+            for entry in general_entries:
+                invalid_coupons.append({
+                    "entry": entry,
+                    "reason": "General coupons are not available for multiple-batch checkout.",
+                })
+                entry.delete()
+
+    discount_total = min(_money(discount_total), subtotal)
+    total = _money(subtotal - discount_total)
 
     return {
         "cart": cart,
@@ -2878,44 +2802,110 @@ def calculate_student_cart_totals(
 # AVAILABLE STUDENT COUPONS
 # =========================================================
 
-def get_available_student_coupons(
-    cart_items,
-    student,
-):
+def get_available_student_coupons(cart_items, student, applied_entries=None):
+    """
+    Build the coupon cards for the student's current cart.
+
+    Important application rules:
+
+    - Only Batch Specific coupons connected to a batch that is actually
+      present in the cart are listed.
+    - A General coupon is usable only for a single-batch cart and only
+      when no other coupon mode is already applied.
+    - Batch Specific coupons can coexist, but only one coupon may be used
+      for each cart batch.
+    - Multi Checkout is a checkout-level coupon. It is only relevant when
+      the cart contains multiple different batches and cannot coexist with
+      General or Batch Specific coupons.
+    - Coupons that are relevant to the cart but cannot currently be used
+      remain in the list with ``is_available=False`` and a reason. This
+      allows the template to show an unavailable/disabled Apply button.
+    """
+    if not cart_items:
+        return []
+
     coupons = (
         Coupon.objects
-        .filter(
-            status="active",
-            is_active=True,
-        )
-        .prefetch_related(
-            "batch_rules__batch"
-        )
-        .order_by(
-            "-created_at"
-        )
+        .filter(status="active", is_active=True)
+        .prefetch_related("batch_rules__batch")
+        .order_by("-created_at", "-pk")
     )
 
-    available = []
+    applied_entries = list(applied_entries or [])
+    applied_coupon_ids = {
+        entry.coupon_id
+        for entry in applied_entries
+    }
+
+    cart_batch_ids = get_cart_batch_ids(cart_items)
+    multiple_batches = len(cart_batch_ids) > 1
+
+    applied_batch_ids = {
+        entry.batch_id
+        for entry in applied_entries
+        if (
+            entry.coupon.coupon_type == "batch_specific"
+            and entry.batch_id is not None
+        )
+    }
+
+    has_batch_specific = any(
+        entry.coupon.coupon_type == "batch_specific"
+        for entry in applied_entries
+    )
+    has_multi_checkout = any(
+        entry.coupon.coupon_type == "multi_checkout"
+        for entry in applied_entries
+    )
+    has_general = any(
+        entry.coupon.coupon_type == "general"
+        for entry in applied_entries
+    )
+
+    catalog = []
 
     for coupon in coupons:
-
-        if not is_coupon_currently_valid(
-            coupon
-        ):
+        # Applied coupons are already rendered in the Applied section.
+        if coupon.pk in applied_coupon_ids:
             continue
 
-        if student_coupon_usage_limit_reached(
-            coupon,
-            student,
-        ):
+        # Do not list expired/upcoming/inactive/usage-exhausted coupons.
+        if not is_coupon_currently_valid(coupon):
             continue
 
-        # -------------------------------------------------
+        if student_coupon_usage_limit_reached(coupon, student):
+            continue
+
+        item = {
+            "coupon": coupon,
+            "discount_amount": _money(0),
+            "batch": None,
+            "is_available": False,
+            "reason": "",
+        }
+
+        # ---------------------------------------------------------
         # GENERAL
-        # -------------------------------------------------
-
+        # ---------------------------------------------------------
         if coupon.coupon_type == "general":
+            # General coupons belong only to the single-batch checkout mode.
+            # For a multiple-batch cart, do not display them at all.
+            if multiple_batches:
+                continue
+
+            if has_batch_specific or has_multi_checkout:
+                item["reason"] = (
+                    "Remove the currently applied coupon before using a General coupon."
+                )
+                catalog.append(item)
+                continue
+
+            if has_general:
+                item["reason"] = (
+                    "Only one General coupon can be applied at a time."
+                )
+                catalog.append(item)
+                continue
 
             result = calculate_general_cart_coupon(
                 coupon,
@@ -2923,86 +2913,137 @@ def get_available_student_coupons(
                 student=student,
             )
 
-            if result["eligible"]:
-                available.append(
-                    {
-                        "coupon": coupon,
-                        "discount_amount": _money(
-                            result["discount_amount"]
-                        ),
-                        "batch": None,
-                    }
-                )
-
-        # -------------------------------------------------
-        # BATCH SPECIFIC
-        # -------------------------------------------------
-
-        elif coupon.coupon_type == "batch_specific":
-
-            if not getattr(
-                coupon,
-                "marketplace_visible",
-                False,
-            ):
-                continue
-
-            result = None
-
-            for item in cart_items:
-
-                result = (
-                    calculate_batch_coupon_for_cart(
-                        coupon,
-                        [item],
-                        student=student,
-                    )
-                )
-
-                if result["eligible"]:
-                    available.append(
-                        {
-                            "coupon": coupon,
-                            "discount_amount": _money(
-                                result[
-                                    "discount_amount"
-                                ]
-                            ),
-                            "batch": result[
-                                "batch"
-                            ],
-                        }
-                    )
-                    break
-
-        # -------------------------------------------------
-        # MULTI CHECKOUT
-        # -------------------------------------------------
-
-        elif coupon.coupon_type == "multi_checkout":
-
-            result = (
-                calculate_multi_checkout_coupon(
-                    coupon,
-                    cart_items,
-                    student=student,
-                )
+            item["discount_amount"] = _money(
+                result.get("discount_amount", 0)
             )
 
             if result["eligible"]:
-                available.append(
-                    {
-                        "coupon": coupon,
-                        "discount_amount": _money(
-                            result[
-                                "discount_amount"
-                            ]
-                        ),
-                        "batch": None,
-                    }
+                item["is_available"] = True
+            else:
+                item["reason"] = result.get(
+                    "reason",
+                    "This coupon is not available for your cart.",
                 )
 
-    return available
+            catalog.append(item)
+            continue
+
+        # ---------------------------------------------------------
+        # BATCH SPECIFIC
+        # ---------------------------------------------------------
+        if coupon.coupon_type == "batch_specific":
+            if not getattr(coupon, "marketplace_visible", False):
+                continue
+
+            selected_batch = get_coupon_selected_batch(coupon)
+
+            # IMPORTANT: only show Batch Specific coupons whose selected
+            # batch is actually present in this student's cart.
+            if selected_batch is None:
+                continue
+
+            if selected_batch.pk not in cart_batch_ids:
+                continue
+
+            item["batch"] = selected_batch
+
+            if has_general or has_multi_checkout:
+                item["reason"] = (
+                    "Remove the currently applied coupon before using a Batch Specific coupon."
+                )
+                catalog.append(item)
+                continue
+
+            if selected_batch.pk in applied_batch_ids:
+                item["reason"] = (
+                    "A Batch Specific coupon is already applied to this batch."
+                )
+                catalog.append(item)
+                continue
+
+            result = calculate_batch_coupon_for_cart(
+                coupon,
+                cart_items,
+                student=student,
+            )
+
+            item["discount_amount"] = _money(
+                result.get("discount_amount", 0)
+            )
+
+            if result["eligible"]:
+                item["is_available"] = True
+            else:
+                item["reason"] = result.get(
+                    "reason",
+                    "This coupon is not available for this batch.",
+                )
+
+            catalog.append(item)
+            continue
+
+        # ---------------------------------------------------------
+        # MULTI CHECKOUT
+        # ---------------------------------------------------------
+        if coupon.coupon_type == "multi_checkout":
+            # Multi Checkout belongs only to the multiple-batch checkout mode.
+            # For a single-batch cart, do not display it at all.
+            if not multiple_batches:
+                continue
+
+            if has_general or has_batch_specific:
+                item["reason"] = (
+                    "Remove the currently applied coupon before using a Multi Checkout coupon."
+                )
+                catalog.append(item)
+                continue
+
+            if has_multi_checkout:
+                item["reason"] = (
+                    "Only one Multi Checkout coupon can be applied at a time."
+                )
+                catalog.append(item)
+                continue
+
+            result = calculate_multi_checkout_coupon(
+                coupon,
+                cart_items,
+                student=student,
+            )
+
+            item["discount_amount"] = _money(
+                result.get("discount_amount", 0)
+            )
+
+            if result["eligible"]:
+                item["is_available"] = True
+            else:
+                item["reason"] = result.get(
+                    "reason",
+                    "This coupon is not available for your checkout.",
+                )
+
+            catalog.append(item)
+            continue
+
+    # Keep Batch Specific coupons grouped first, then General, then
+    # Multi Checkout. Within each group, higher discount value comes first.
+    priority = {
+        "batch_specific": 1,
+        "general": 2,
+        "multi_checkout": 3,
+    }
+
+    catalog.sort(
+        key=lambda item: (
+            priority.get(item["coupon"].coupon_type, 99),
+            0 if item["is_available"] else 1,
+            -item["discount_amount"],
+            item["coupon"].code.lower(),
+        )
+    )
+
+    return catalog
 
 def toggle_coupon_status(coupon):
     """
