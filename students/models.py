@@ -10,6 +10,14 @@ class StudentProfile(models.Model):
         on_delete=models.CASCADE
     )
 
+    neo_student_id = models.CharField(
+    max_length=15,
+    unique=True,
+    editable=False,
+    db_index=True
+)
+    
+    
     profile_image = models.URLField(
         blank=True,
         null=True

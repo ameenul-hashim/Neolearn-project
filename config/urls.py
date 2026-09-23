@@ -26,6 +26,8 @@ urlpatterns = [
     path('admin-panel/', include('admins.urls')),
     path("teachers/", include("teachers.urls")),
     path("courses/", include("courses.urls")),
+    path("orders/",include("orders.urls")),
+    
 ]
 
 if settings.DEBUG:

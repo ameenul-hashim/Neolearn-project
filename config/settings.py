@@ -50,6 +50,7 @@ INSTALLED_APPS = [
     'core',
     'teachers',
     'courses',
+    'orders',
 
     # DJANGO ALLAUTH
 
@@ -304,3 +305,12 @@ SOCIALACCOUNT_LOGIN_ON_GET = True
 
 SOCIALACCOUNT_ADAPTER='accounts.adapters.GoogleAccountAdapter'
 
+import os
+
+RAZORPAY_KEY_ID = os.environ.get(
+    "RAZORPAY_KEY_ID"
+)
+
+RAZORPAY_KEY_SECRET = os.environ.get(
+    "RAZORPAY_KEY_SECRET"
+)
