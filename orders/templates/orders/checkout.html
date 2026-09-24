@@ -89,14 +89,6 @@
 
         <!-- =========================================================
              CHECKOUT WORKSPACE
-
-             Desktop:
-             - Left side contains checkout form.
-             - Left checkout panel internally scrolls.
-             - Right Order Summary stays visible.
-
-             Mobile/tablet:
-             - Normal stacked layout.
         ========================================================== -->
 
         <div class="flex min-h-0 flex-col gap-3">
@@ -122,9 +114,7 @@
 
                 <div class="min-h-0 flex flex-col">
 
-                    <!-- =================================================
-                         CHECKOUT HEADER
-                    ================================================== -->
+                    <!-- CHECKOUT HEADER -->
 
                     <section class="shrink-0 px-1 pb-3 sm:px-2 sm:pb-4">
 
@@ -182,7 +172,6 @@
 
                             </div>
 
-
                             <!-- SECURE BADGE -->
 
                             <div
@@ -222,9 +211,7 @@
                     </section>
 
 
-                    <!-- =================================================
-                         LEFT CHECKOUT PANEL
-                    ================================================== -->
+                    <!-- LEFT CHECKOUT PANEL -->
 
                     <section
                         class="
@@ -259,9 +246,7 @@
 
                             <div class="space-y-2">
 
-                                <!-- =================================================
-                                     CUSTOMER INFORMATION
-                                ================================================== -->
+                                <!-- CUSTOMER INFORMATION -->
 
                                 <section
                                     class="
@@ -330,12 +315,9 @@
 
                                         {% csrf_token %}
 
-
                                         <div class="space-y-4 px-3 py-4 sm:px-4">
 
-                                            <!-- =====================================
-                                                 FULL NAME
-                                            ====================================== -->
+                                            <!-- FULL NAME -->
 
                                             <div>
 
@@ -410,9 +392,7 @@
                                             </div>
 
 
-                                            <!-- =====================================
-                                                 EMAIL
-                                            ====================================== -->
+                                            <!-- EMAIL -->
 
                                             <div>
 
@@ -487,9 +467,7 @@
                                             </div>
 
 
-                                            <!-- =====================================
-                                                 PHONE ROW
-                                            ====================================== -->
+                                            <!-- PHONE ROW -->
 
                                             <div
                                                 class="
@@ -540,7 +518,9 @@
                                                             id="phone"
                                                             name="phone"
                                                             value="{{ form_data.phone|default:'' }}"
-                                                            maxlength="20"
+                                                            maxlength="10"
+                                                            inputmode="numeric"
+                                                            pattern="[0-9]{10}"
                                                             autocomplete="tel"
                                                             placeholder="10-digit mobile number"
                                                             class="
@@ -617,7 +597,9 @@
                                                             id="alternative_phone"
                                                             name="alternative_phone"
                                                             value="{{ form_data.alternative_phone|default:'' }}"
-                                                            maxlength="20"
+                                                            maxlength="10"
+                                                            inputmode="numeric"
+                                                            pattern="[0-9]{10}"
                                                             autocomplete="tel"
                                                             placeholder="Optional mobile number"
                                                             class="
@@ -654,9 +636,7 @@
                                             </div>
 
 
-                                            <!-- =====================================
-                                                 ORDER INFORMATION
-                                            ====================================== -->
+                                            <!-- ORDER INFORMATION -->
 
                                             <div
                                                 class="
@@ -697,12 +677,12 @@
 
                                         </div>
 
+                                    </form>
+
                                 </section>
 
 
-                                <!-- =================================================
-                                     PAYMENT SECURITY
-                                ================================================== -->
+                                <!-- PAYMENT SECURITY -->
 
                                 <section
                                     class="
@@ -758,7 +738,6 @@
 
                                     </div>
 
-
                                     <div class="px-3 py-4 sm:px-4">
 
                                         <div
@@ -813,9 +792,7 @@
                                 </section>
 
 
-                                <!-- =================================================
-                                     TERMS & CONDITIONS
-                                ================================================== -->
+                                <!-- TERMS -->
 
                                 <section
                                     class="
@@ -844,6 +821,7 @@
                                                 id="terms_accepted"
                                                 name="terms_accepted"
                                                 value="1"
+                                                form="checkoutForm"
                                                 class="
                                                     mt-0.5
                                                     h-4
@@ -885,9 +863,7 @@
                         </div>
 
 
-                        <!-- =================================================
-                             LEFT ACTION BAR
-                        ================================================== -->
+                        <!-- LEFT ACTION BAR -->
 
                         <div
                             class="
@@ -916,11 +892,13 @@
                                         py-2.5
                                     "
                                 >
+
                                     <i class="ri-error-warning-line mt-0.5 text-red-400"></i>
 
                                     <p class="text-[10px] leading-5 text-red-300">
                                         {{ errors.general }}
                                     </p>
+
                                 </div>
 
                             {% endif %}
@@ -1058,9 +1036,7 @@
                             "
                         >
 
-                            <!-- =============================================
-                                 SELECTED BATCHES
-                            ============================================== -->
+                            <!-- SELECTED BATCHES -->
 
                             <div>
 
@@ -1154,9 +1130,7 @@
                             <div class="my-5 h-px bg-white/10"></div>
 
 
-                            <!-- =============================================
-                                 PRICE BREAKDOWN
-                            ============================================== -->
+                            <!-- PRICE BREAKDOWN -->
 
                             <div class="space-y-2">
 
@@ -1288,9 +1262,7 @@
                             </div>
 
 
-                            <!-- =============================================
-                                 SECURITY NOTE
-                            ============================================== -->
+                            <!-- SECURITY NOTE -->
 
                             <div
                                 class="
@@ -1320,9 +1292,7 @@
                         </div>
 
 
-                        <!-- =================================================
-                             TOTAL
-                        ================================================== -->
+                        <!-- TOTAL -->
 
                         <div
                             class="
@@ -1386,9 +1356,7 @@
             </div>
 
 
-            <!-- =========================================================
-                 ASSURANCE ROW
-            ========================================================== -->
+            <!-- ASSURANCE ROW -->
 
             <section
                 class="
@@ -1588,5 +1556,623 @@
     {% endif %}
 
 </div>
+
+
+{% if razorpay_order_id %}
+
+<!-- =========================================================
+     RAZORPAY SECURE PAYMENT
+     Standard Razorpay Checkout.
+========================================================== -->
+
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+
+<script>
+(function () {
+    "use strict";
+
+    const razorpayOrderId = "{{ razorpay_order_id|escapejs }}";
+    const razorpayKeyId = "{{ razorpay_key_id|escapejs }}";
+    const razorpayAmount = "{{ razorpay_amount|escapejs }}";
+    const razorpayCurrency = "{{ razorpay_currency|escapejs }}";
+    const orderNumber = "{{ order_number|escapejs }}";
+
+    const customerName =
+        "{{ form_data.full_name|default:''|escapejs }}";
+
+    const customerEmail =
+        "{{ form_data.email|default:''|escapejs }}";
+
+    const customerPhone =
+        "{{ form_data.phone|default:''|escapejs }}";
+
+    const verifyPaymentUrl = "{% url 'orders:verify_payment' %}";
+
+    let paymentStarted = false;
+    let paymentFinished = false;
+
+
+    /*
+     * Django CSRF
+     */
+
+    function getCsrfToken() {
+        const csrfInput = document.querySelector(
+            '#checkoutForm input[name="csrfmiddlewaretoken"]'
+        );
+
+        return csrfInput ? csrfInput.value : null;
+    }
+
+
+    /*
+     * Razorpay contact
+     *
+     * NeoLearn stores the phone as 10 digits.
+     * Razorpay receives the Indian international format.
+     */
+
+    function getRazorpayContact(phone) {
+        const digits = String(phone || "").replace(/\D/g, "");
+
+        if (!digits) {
+            return "";
+        }
+
+        if (digits.length === 10) {
+            return "+91" + digits;
+        }
+
+        if (digits.length === 12 && digits.startsWith("91")) {
+            return "+" + digits;
+        }
+
+        if (digits.startsWith("+")) {
+            return digits;
+        }
+
+        return digits;
+    }
+
+
+    /*
+     * Status overlay
+     */
+
+    function createStatusOverlay(
+        type,
+        title,
+        message,
+        buttonText,
+        buttonAction,
+        showCloseButton = false
+    ) {
+
+        const existing =
+            document.getElementById("paymentStatusOverlay");
+
+        if (existing) {
+            existing.remove();
+        }
+
+        const isSuccess = type === "success";
+
+        const overlay = document.createElement("div");
+
+        overlay.id = "paymentStatusOverlay";
+
+        overlay.className =
+            "fixed inset-0 z-[9999] flex items-center justify-center " +
+            "bg-slate-950/80 px-4 backdrop-blur-md";
+
+        overlay.innerHTML = `
+            <div class="relative w-full max-w-md overflow-hidden rounded-3xl border border-white/10 bg-[#071224] shadow-2xl">
+
+                ${
+                    showCloseButton
+                        ? `
+                            <button
+                                type="button"
+                                id="paymentStatusCloseButton"
+                                aria-label="Close"
+                                class="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-slate-400 transition hover:border-white/20 hover:bg-white/[0.08] hover:text-white"
+                            >
+                                <i class="ri-close-line text-lg"></i>
+                            </button>
+                        `
+                        : ""
+                }
+
+                <div class="p-7 text-center">
+
+                    <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-full border ${
+                        isSuccess
+                            ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-400"
+                            : "border-amber-400/30 bg-amber-400/10 text-amber-400"
+                    }">
+                        <i class="${
+                            isSuccess
+                                ? "ri-check-line text-3xl"
+                                : "ri-close-circle-line text-3xl"
+                        }"></i>
+                    </div>
+
+                    <h3 class="mt-5 text-xl font-black text-white">
+                        ${title}
+                    </h3>
+
+                    <p class="mt-2 text-sm leading-6 text-slate-400">
+                        ${message}
+                    </p>
+
+                    <div class="mt-6 flex items-center justify-center gap-2">
+
+                        <button
+                            type="button"
+                            id="paymentStatusButton"
+                            class="inline-flex h-11 items-center justify-center rounded-xl bg-white/10 px-6 text-sm font-black text-white transition hover:bg-white/15"
+                        >
+                            ${buttonText}
+                        </button>
+
+                    </div>
+
+                </div>
+
+            </div>
+        `;
+
+        document.body.appendChild(overlay);
+
+        const button =
+            document.getElementById("paymentStatusButton");
+
+        if (button) {
+
+            button.addEventListener("click", function () {
+
+                if (typeof buttonAction === "function") {
+                    buttonAction();
+                }
+
+            });
+
+        }
+
+        const closeButton =
+            document.getElementById("paymentStatusCloseButton");
+
+        if (closeButton) {
+
+            closeButton.addEventListener("click", function () {
+                overlay.remove();
+            });
+
+        }
+
+    }
+
+
+    /*
+     * Payment success
+     */
+
+    function showPaymentSuccess(invoiceNumber) {
+
+        paymentFinished = true;
+        paymentStarted = false;
+
+        if (!invoiceNumber) {
+
+            createStatusOverlay(
+                "success",
+                "Payment Successful",
+                "Your payment has been verified successfully, but the invoice number was not returned. Please refresh the page and check your order.",
+                "Continue",
+                function () {
+                    window.location.reload();
+                }
+            );
+
+            return;
+        }
+
+        const invoiceUrl =
+            "{% url 'orders:invoice_detail' 'INVOICE_NUMBER_PLACEHOLDER' %}"
+                .replace(
+                    "INVOICE_NUMBER_PLACEHOLDER",
+                    encodeURIComponent(invoiceNumber)
+                );
+
+        createStatusOverlay(
+            "success",
+            "Payment Successful",
+            `Invoice ${invoiceNumber} has been generated successfully.`,
+            "View Invoice",
+            function () {
+                window.location.href = invoiceUrl;
+            }
+        );
+
+    }
+
+
+    /*
+     * Payment error
+     */
+
+    function showPaymentError(message) {
+
+        paymentStarted = false;
+
+        createStatusOverlay(
+            "error",
+            "Payment Failed",
+            message ||
+                "Your payment could not be completed. Please try again.",
+            "Try Again",
+            function () {
+
+                const overlay =
+                    document.getElementById("paymentStatusOverlay");
+
+                if (overlay) {
+                    overlay.remove();
+                }
+
+                openRazorpayCheckout();
+
+            },
+            true
+        );
+
+    }
+
+
+    /*
+     * Server-side payment verification
+     */
+
+    async function verifyPayment(paymentResponse) {
+
+        console.log(
+            "[NeoLearn Razorpay] SUCCESS RESPONSE RECEIVED:",
+            paymentResponse
+        );
+
+        const csrfToken = getCsrfToken();
+
+        if (!csrfToken) {
+
+            showPaymentError(
+                "Security token is missing. Please refresh the page and try again."
+            );
+
+            return;
+        }
+
+        if (
+            !paymentResponse ||
+            !paymentResponse.razorpay_order_id ||
+            !paymentResponse.razorpay_payment_id ||
+            !paymentResponse.razorpay_signature
+        ) {
+
+            showPaymentError(
+                "Razorpay returned incomplete payment information. Please try again."
+            );
+
+            return;
+        }
+
+        try {
+
+            console.log(
+                "[NeoLearn Razorpay] Sending payment for server verification..."
+            );
+
+            const response = await fetch(
+                verifyPaymentUrl,
+                {
+                    method: "POST",
+
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-CSRFToken": csrfToken,
+                        "X-Requested-With": "XMLHttpRequest"
+                    },
+
+                    credentials: "same-origin",
+
+                    body: JSON.stringify({
+                        order_number: orderNumber,
+                        razorpay_order_id:
+                            paymentResponse.razorpay_order_id,
+                        razorpay_payment_id:
+                            paymentResponse.razorpay_payment_id,
+                        razorpay_signature:
+                            paymentResponse.razorpay_signature
+                    })
+                }
+            );
+
+            let data = {};
+
+            try {
+                data = await response.json();
+            } catch (jsonError) {
+
+                console.error(
+                    "[NeoLearn Razorpay] Invalid verification response:",
+                    jsonError
+                );
+
+            }
+
+            console.log(
+                "[NeoLearn Razorpay] Verification response:",
+                response.status,
+                data
+            );
+
+            if (!response.ok || !data.success) {
+
+                showPaymentError(
+                    data.message ||
+                    "Payment verification failed. Please contact support if money was deducted."
+                );
+
+                return;
+            }
+
+            showPaymentSuccess(
+                data.invoice_number || ""
+            );
+
+        } catch (error) {
+
+            console.error(
+                "[NeoLearn Razorpay] Payment verification error:",
+                error
+            );
+
+            showPaymentError(
+                "We could not confirm the payment with NeoLearn. If money was deducted, please do not pay again immediately."
+            );
+
+        }
+
+    }
+
+
+    /*
+     * Open Razorpay Standard Checkout
+     */
+
+    function openRazorpayCheckout() {
+
+        if (paymentStarted || paymentFinished) {
+            return;
+        }
+
+        if (!window.Razorpay) {
+
+            showPaymentError(
+                "The secure payment gateway could not be loaded. Please refresh the page and try again."
+            );
+
+            return;
+        }
+
+        if (
+            !razorpayOrderId ||
+            !razorpayKeyId ||
+            !razorpayAmount
+        ) {
+
+            showPaymentError(
+                "Payment information is incomplete. Please return to checkout and try again."
+            );
+
+            return;
+        }
+
+        paymentStarted = true;
+
+        const razorpayContact =
+            getRazorpayContact(customerPhone);
+
+
+        /*
+         * IMPORTANT:
+         *
+         * We intentionally do NOT disable or manually
+         * replace Razorpay payment methods here.
+         *
+         * Razorpay Standard Checkout decides which
+         * supported payment methods are available.
+         *
+         * UPI, Cards, Netbanking and Wallets should be
+         * handled by Razorpay.
+         */
+
+        const options = {
+
+            key: razorpayKeyId,
+
+            amount: Number(razorpayAmount),
+
+            currency:
+                razorpayCurrency || "INR",
+
+            name:
+                "NeoLearn",
+
+            description:
+                "NeoLearn Course Purchase",
+
+            order_id:
+                razorpayOrderId,
+
+            prefill: {
+
+                name:
+                    customerName,
+
+                email:
+                    customerEmail,
+
+                contact:
+                    razorpayContact
+
+            },
+
+            notes: {
+
+                order_number:
+                    orderNumber
+
+            },
+
+            theme: {
+
+                color:
+                    "#22d3ee"
+
+            },
+
+            handler:
+                function (paymentResponse) {
+
+                    verifyPayment(
+                        paymentResponse
+                    );
+
+                },
+
+            modal: {
+
+                ondismiss:
+                    function () {
+
+                        paymentStarted = false;
+
+                        if (!paymentFinished) {
+
+                            createStatusOverlay(
+                                "error",
+                                "Payment Cancelled",
+                                "Your payment was cancelled. No payment was completed.",
+                                "Try Again",
+                                function () {
+
+                                    const overlay =
+                                        document.getElementById(
+                                            "paymentStatusOverlay"
+                                        );
+
+                                    if (overlay) {
+                                        overlay.remove();
+                                    }
+
+                                    openRazorpayCheckout();
+
+                                },
+                                true
+                            );
+
+                        }
+
+                    }
+
+            }
+
+        };
+
+
+        console.log(
+            "[NeoLearn Razorpay] CHECKOUT OPTIONS:",
+            {
+                key_prefix:
+                    String(razorpayKeyId).substring(0, 12),
+
+                order_id:
+                    razorpayOrderId,
+
+                amount:
+                    Number(razorpayAmount),
+
+                currency:
+                    razorpayCurrency || "INR",
+
+                contact:
+                    razorpayContact,
+
+                has_upi_restriction:
+                    false,
+
+                payment_methods:
+                    "Razorpay Standard Checkout"
+            }
+        );
+
+
+        const razorpay =
+            new Razorpay(options);
+
+
+        razorpay.on(
+            "payment.failed",
+            function (response) {
+
+                paymentStarted = false;
+
+                console.error(
+                    "[NeoLearn Razorpay] PAYMENT FAILED:",
+                    response
+                );
+
+                const description =
+                    response &&
+                    response.error &&
+                    response.error.description
+                        ? response.error.description
+                        : "Your payment could not be completed.";
+
+                showPaymentError(
+                    description
+                );
+
+            }
+        );
+
+
+        razorpay.open();
+
+    }
+
+
+    /*
+     * Start checkout after page load
+     */
+
+    window.addEventListener(
+        "load",
+        function () {
+
+            console.log(
+                "[NeoLearn Razorpay] Starting Standard Checkout..."
+            );
+
+            openRazorpayCheckout();
+
+        }
+    );
+
+})();
+
+</script>
+
+{% endif %}
 
 {% endblock %}

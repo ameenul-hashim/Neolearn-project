@@ -38,11 +38,15 @@ class Order(models.Model):
 
     # Checkout snapshot
     full_name = models.CharField(max_length=200)
-    email = models.EmailField()
-    phone = models.CharField(max_length=20)
+    
+    phone = models.CharField(
+    max_length=10,
+    )
+
     alternative_phone = models.CharField(
-        max_length=20,
-        blank=True,
+    max_length=10,
+    blank=True,
+    default="",
     )
 
     # Financial snapshot

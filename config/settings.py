@@ -307,10 +307,9 @@ SOCIALACCOUNT_ADAPTER='accounts.adapters.GoogleAccountAdapter'
 
 import os
 
-RAZORPAY_KEY_ID = os.environ.get(
-    "RAZORPAY_KEY_ID"
-)
+# settings.py
 
-RAZORPAY_KEY_SECRET = os.environ.get(
-    "RAZORPAY_KEY_SECRET"
-)
+RAZORPAY_KEY_ID = config("RAZORPAY_KEY_ID", default="")
+RAZORPAY_KEY_SECRET = config("RAZORPAY_KEY_SECRET", default="")
+
+SECURE_CROSS_ORIGIN_OPENER_POLICY = "same-origin-allow-popups"

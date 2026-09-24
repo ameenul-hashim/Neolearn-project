@@ -150,6 +150,58 @@ def get_checkout_data(user):
 
 
 # ============================================================
+# PHONE VALIDATION HELPER
+# ============================================================
+
+def _validate_optional_phone(value, field_name, errors):
+    """
+    Validate an OPTIONAL Indian mobile number.
+
+    Rules (only applied if a value was entered):
+        - After removing +91 / spaces / dashes / brackets,
+          it must be exactly 10 digits.
+        - It must start with 6, 7, 8, or 9.
+
+    If the value is empty, no error is added.
+    """
+
+    value = (value or "").strip()
+
+    if not value:
+        return ""
+
+    normalized = (
+        value
+        .replace(" ", "")
+        .replace("-", "")
+        .replace("(", "")
+        .replace(")", "")
+    )
+
+    if normalized.startswith("+91"):
+        digits = normalized[3:]
+    elif normalized.startswith("91") and len(normalized) == 12:
+        digits = normalized[2:]
+    else:
+        digits = normalized
+
+    if not digits.isdigit():
+        errors[field_name] = "Enter a valid phone number."
+
+    elif len(digits) != 10:
+        errors[field_name] = (
+            "Phone number must contain 10 digits."
+        )
+
+    elif digits[0] not in "6789":
+        errors[field_name] = (
+            "Enter a valid Indian mobile number."
+        )
+
+    return digits
+
+
+# ============================================================
 # CHECKOUT VALIDATION
 # ============================================================
 
@@ -163,6 +215,9 @@ def validate_checkout_data(
 ):
     """
     Server-side validation for every checkout field.
+
+    Main phone is REQUIRED.
+    Alternative phone is OPTIONAL.
 
     Returns:
         errors = {
@@ -243,7 +298,7 @@ def validate_checkout_data(
             )
 
     # --------------------------------------------------------
-    # PHONE
+    # PHONE (REQUIRED)
     # --------------------------------------------------------
 
     phone = (phone or "").strip()
@@ -254,115 +309,42 @@ def validate_checkout_data(
             "Phone number is required."
         )
 
+        main_digits = ""
+
     else:
 
-        normalized_phone = (
-            phone
-            .replace(" ", "")
-            .replace("-", "")
-            .replace("(", "")
-            .replace(")", "")
+        main_digits = _validate_optional_phone(
+            phone,
+            "phone",
+            errors,
         )
 
-        if normalized_phone.startswith("+91"):
-
-            digits = normalized_phone[3:]
-
-        else:
-
-            digits = normalized_phone
-
-        if not digits.isdigit():
-
-            errors["phone"] = (
-                "Enter a valid phone number."
-            )
-
-        elif len(digits) != 10:
-
-            errors["phone"] = (
-                "Phone number must contain 10 digits."
-            )
-
-        elif digits[0] not in "6789":
-
-            errors["phone"] = (
-                "Enter a valid Indian mobile number."
-            )
-
     # --------------------------------------------------------
-    # ALTERNATIVE PHONE
+    # ALTERNATIVE PHONE (OPTIONAL)
     # --------------------------------------------------------
 
-    alternative_phone = (
-        alternative_phone or ""
-    ).strip()
+    alt_digits = _validate_optional_phone(
+        alternative_phone,
+        "alternative_phone",
+        errors,
+    )
 
-    if alternative_phone:
+    # --------------------------------------------------------
+    # SAME NUMBER CHECK
+    # --------------------------------------------------------
 
-        normalized_alt_phone = (
-            alternative_phone
-            .replace(" ", "")
-            .replace("-", "")
-            .replace("(", "")
-            .replace(")", "")
+    if (
+        main_digits
+        and alt_digits
+        and not errors.get("phone")
+        and not errors.get("alternative_phone")
+        and main_digits == alt_digits
+    ):
+
+        errors["alternative_phone"] = (
+            "Alternative phone number must be "
+            "different from the main phone number."
         )
-
-        if normalized_alt_phone.startswith("+91"):
-
-            alt_digits = normalized_alt_phone[3:]
-
-        else:
-
-            alt_digits = normalized_alt_phone
-
-        if not alt_digits.isdigit():
-
-            errors["alternative_phone"] = (
-                "Enter a valid alternative phone number."
-            )
-
-        elif len(alt_digits) != 10:
-
-            errors["alternative_phone"] = (
-                "Alternative phone number must contain 10 digits."
-            )
-
-        elif alt_digits[0] not in "6789":
-
-            errors["alternative_phone"] = (
-                "Enter a valid Indian mobile number."
-            )
-
-        # ----------------------------------------------------
-        # SAME NUMBER CHECK
-        # ----------------------------------------------------
-
-        if (
-            not errors.get("alternative_phone")
-            and phone
-        ):
-
-            main_normalized = (
-                phone
-                .replace(" ", "")
-                .replace("-", "")
-                .replace("(", "")
-                .replace(")", "")
-            )
-
-            if main_normalized.startswith("+91"):
-
-                main_normalized = (
-                    main_normalized[3:]
-                )
-
-            if main_normalized == alt_digits:
-
-                errors["alternative_phone"] = (
-                    "Alternative phone number must be "
-                    "different from the main phone number."
-                )
 
     # --------------------------------------------------------
     # TERMS
@@ -377,10 +359,10 @@ def validate_checkout_data(
 
     return errors
 
-
 # ============================================================
 # BUILD ORDER SNAPSHOT
 # ============================================================
+
 
 @transaction.atomic
 def build_order_from_cart(
@@ -415,7 +397,6 @@ def build_order_from_cart(
     # --------------------------------------------------------
 
     if not cart_items:
-
         raise ValueError(
             "Your cart is empty."
         )
@@ -428,9 +409,7 @@ def build_order_from_cart(
 
         names = ", ".join(
             batch.batch_name
-            for batch in checkout[
-                "purchased_batches"
-            ]
+            for batch in checkout["purchased_batches"]
         )
 
         raise ValueError(
@@ -445,9 +424,7 @@ def build_order_from_cart(
 
         names = ", ".join(
             batch.batch_name
-            for batch in checkout[
-                "unavailable_batches"
-            ]
+            for batch in checkout["unavailable_batches"]
         )
 
         raise ValueError(
@@ -528,26 +505,43 @@ def build_order_from_cart(
     # --------------------------------------------------------
 
     if final_total < ZERO:
-
         final_total = ZERO
+
+    # --------------------------------------------------------
+    # NORMALIZE PHONE VALUES
+    # --------------------------------------------------------
+
+    phone_clean = (phone or "").strip()
+
+    alternative_phone_clean = (
+        alternative_phone or ""
+    ).strip()
 
     # --------------------------------------------------------
     # CREATE LOCAL ORDER
     # --------------------------------------------------------
+    #
+    # IMPORTANT:
+    # Order model does NOT contain an email field.
+    # Therefore email is intentionally NOT passed to
+    # Order.objects.create().
+    #
+    # The checkout email is still validated by
+    # validate_checkout_data() before this function runs.
+    # --------------------------------------------------------
 
     order = Order.objects.create(
+
         user=user,
 
         status=Order.Status.PENDING,
 
         full_name=full_name.strip(),
 
-        email=email.strip().lower(),
-
-        phone=phone.strip(),
+        phone=phone_clean,
 
         alternative_phone=(
-            alternative_phone.strip()
+            alternative_phone_clean
         ),
 
         subtotal=subtotal,
@@ -618,18 +612,10 @@ def build_order_from_cart(
         )
 
         if batch_discount < ZERO:
-
             batch_discount = ZERO
 
         # ----------------------------------------------------
         # ORDER ITEM
-        #
-        # Coupon discount remains ZERO here because the
-        # current cart calculation is cart-level.
-        #
-        # The final coupon amount is stored on Order and the
-        # exact per-item allocation can be handled later
-        # when we finalize successful-payment processing.
         # ----------------------------------------------------
 
         OrderItem.objects.create(
