@@ -1558,14 +1558,11 @@
 </div>
 
 
-{% if razorpay_order_id %}
-
-<!-- =========================================================
+<!-- ============================================================
      RAZORPAY SECURE PAYMENT
-     Standard Razorpay Checkout.
-     Failed + Cancelled stay on this page and use compact
-     NeoLearn modal overlays.
-========================================================== -->
+============================================================ -->
+
+{% if razorpay_order_id %}
 
 <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 
@@ -1585,36 +1582,38 @@
         aria-modal="true"
         aria-labelledby="neolearnPaymentModalTitle"
     >
-        <div class="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-400/70 to-transparent"></div>
-
-        <button
-            type="button"
-            id="neolearnPaymentModalClose"
-            class="absolute right-4 top-4 z-10 flex h-8 w-8 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-slate-400 transition hover:border-white/20 hover:bg-white/[0.08] hover:text-white"
-            aria-label="Close"
-        >
-            <i class="ri-close-line text-base"></i>
-        </button>
+        <div
+            class="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-400/70 to-transparent"
+        ></div>
 
         <div class="px-6 pb-6 pt-7 text-center">
+
+            <!-- RESULT ICON -->
             <div
                 id="neolearnPaymentModalIcon"
                 class="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border"
             >
-                <i id="neolearnPaymentModalIconGlyph" class="text-2xl"></i>
+                <i
+                    id="neolearnPaymentModalIconGlyph"
+                    class="text-2xl"
+                ></i>
             </div>
 
+            <!-- TITLE -->
             <h2
                 id="neolearnPaymentModalTitle"
                 class="mt-4 text-lg font-black tracking-tight text-white"
             ></h2>
 
+            <!-- MESSAGE -->
             <p
                 id="neolearnPaymentModalMessage"
                 class="mx-auto mt-2 max-w-xs text-[11px] leading-5 text-slate-400"
             ></p>
 
+            <!-- ACTIONS -->
             <div class="mt-5 grid grid-cols-2 gap-2">
+
                 <button
                     type="button"
                     id="neolearnPaymentModalPrimary"
@@ -1626,20 +1625,39 @@
                     id="neolearnPaymentModalSecondary"
                     class="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-3 text-[10px] font-black text-slate-300 transition hover:bg-white/[0.08] hover:text-white"
                 ></button>
+
             </div>
+
         </div>
     </div>
 </div>
 
+
 <script>
 (function () {
+
     "use strict";
 
-    const razorpayOrderId = "{{ razorpay_order_id|escapejs }}";
-    const razorpayKeyId = "{{ razorpay_key_id|escapejs }}";
-    const razorpayAmount = "{{ razorpay_amount|escapejs }}";
-    const razorpayCurrency = "{{ razorpay_currency|escapejs }}";
-    const orderNumber = "{{ order_number|escapejs }}";
+
+    // ============================================================
+    // RAZORPAY DATA FROM DJANGO
+    // ============================================================
+
+    const razorpayOrderId =
+        "{{ razorpay_order_id|escapejs }}";
+
+    const razorpayKeyId =
+        "{{ razorpay_key_id|escapejs }}";
+
+    const razorpayAmount =
+        "{{ razorpay_amount|escapejs }}";
+
+    const razorpayCurrency =
+        "{{ razorpay_currency|escapejs }}";
+
+    const orderNumber =
+        "{{ order_number|escapejs }}";
+
 
     const customerName =
         "{{ form_data.full_name|default:''|escapejs }}";
@@ -1650,21 +1668,22 @@
     const customerPhone =
         "{{ form_data.phone|default:''|escapejs }}";
 
-    const verifyPaymentUrl = "{% url 'orders:verify_payment' %}";
 
-    /*
-     * SUCCESS FLOW:
-     *
-     * Razorpay success
-     *      ↓
-     * Django verification
-     *      ↓
-     * payment_intro.html
-     *      ↓
-     * Video finishes
-     *      ↓
-     * payment_success.html
-     */
+    // ============================================================
+    // DJANGO PAYMENT ENDPOINTS
+    // ============================================================
+
+    const verifyPaymentUrl =
+        "{% url 'orders:verify_payment' %}";
+
+    const paymentStatusUrl =
+        "{% url 'orders:update_payment_status' %}";
+
+
+    // ============================================================
+    // SUCCESS URL
+    // ============================================================
+
     const successUrl =
         "{% url 'orders:payment_intro' 'ORDER_NUMBER_PLACEHOLDER' %}"
             .replace(
@@ -1672,116 +1691,141 @@
                 encodeURIComponent(orderNumber)
             );
 
+
+    // ============================================================
+    // PAYMENT STATE
+    // ============================================================
+
     let paymentStarted = false;
+
     let paymentFinished = false;
+
     let paymentModalOpen = false;
 
-    /*
-     * Keep the current Razorpay instance so a failed payment
-     * can be closed before showing the NeoLearn failure modal.
-     */
     let razorpayInstance = null;
 
     /*
-     * When we close Razorpay ourselves after payment.failed,
-     * its ondismiss callback must NOT show the cancelled modal.
+     * When Razorpay fires payment.failed, we close the
+     * Razorpay window ourselves.
+     *
+     * Razorpay may then fire ondismiss.
+     *
+     * This prevents the failed payment from being
+     * incorrectly recorded as cancelled.
      */
     let suppressRazorpayDismiss = false;
 
-    /*
-     * --------------------------------------------------------
-     * CSRF
-     * --------------------------------------------------------
-     */
+
+    // ============================================================
+    // CSRF
+    // ============================================================
 
     function getCsrfToken() {
-        const csrfInput = document.querySelector(
-            '#checkoutForm input[name="csrfmiddlewaretoken"]'
-        );
 
-        return csrfInput ? csrfInput.value : null;
+        const csrfInput =
+            document.querySelector(
+                '#checkoutForm input[name="csrfmiddlewaretoken"]'
+            );
+
+        return csrfInput
+            ? csrfInput.value
+            : null;
     }
 
 
-    /*
-     * --------------------------------------------------------
-     * RAZORPAY CONTACT
-     * --------------------------------------------------------
-     */
+    // ============================================================
+    // RAZORPAY CONTACT
+    // ============================================================
 
     function getRazorpayContact(phone) {
-        const digits = String(phone || "").replace(/\D/g, "");
+
+        const rawPhone =
+            String(phone || "");
+
+        const digits =
+            rawPhone.replace(/\D/g, "");
+
 
         if (!digits) {
             return "";
         }
 
+
         if (digits.length === 10) {
             return "+91" + digits;
         }
 
-        if (digits.length === 12 && digits.startsWith("91")) {
+
+        if (
+            digits.length === 12 &&
+            digits.startsWith("91")
+        ) {
             return "+" + digits;
         }
 
-        if (digits.startsWith("+")) {
-            return digits;
-        }
 
         return digits;
     }
 
 
-    /*
-     * --------------------------------------------------------
-     * PAYMENT RESULT MODAL
-     *
-     * Only FAILED and CANCELLED use this modal.
-     * SUCCESS goes to the dedicated success page.
-     * --------------------------------------------------------
-     */
+    // ============================================================
+    // PAYMENT RESULT MODAL ELEMENTS
+    // ============================================================
 
-    const paymentModal = document.getElementById(
-        "neolearnPaymentModal"
-    );
+    const paymentModal =
+        document.getElementById(
+            "neolearnPaymentModal"
+        );
 
-    const paymentModalCard = document.getElementById(
-        "neolearnPaymentModalCard"
-    );
+    const paymentModalCard =
+        document.getElementById(
+            "neolearnPaymentModalCard"
+        );
 
-    const paymentModalClose = document.getElementById(
-        "neolearnPaymentModalClose"
-    );
+    const paymentModalIcon =
+        document.getElementById(
+            "neolearnPaymentModalIcon"
+        );
 
-    const paymentModalIcon = document.getElementById(
-        "neolearnPaymentModalIcon"
-    );
+    const paymentModalIconGlyph =
+        document.getElementById(
+            "neolearnPaymentModalIconGlyph"
+        );
 
-    const paymentModalIconGlyph = document.getElementById(
-        "neolearnPaymentModalIconGlyph"
-    );
+    const paymentModalTitle =
+        document.getElementById(
+            "neolearnPaymentModalTitle"
+        );
 
-    const paymentModalTitle = document.getElementById(
-        "neolearnPaymentModalTitle"
-    );
+    const paymentModalMessage =
+        document.getElementById(
+            "neolearnPaymentModalMessage"
+        );
 
-    const paymentModalMessage = document.getElementById(
-        "neolearnPaymentModalMessage"
-    );
+    const paymentModalPrimary =
+        document.getElementById(
+            "neolearnPaymentModalPrimary"
+        );
 
-    const paymentModalPrimary = document.getElementById(
-        "neolearnPaymentModalPrimary"
-    );
+    const paymentModalSecondary =
+        document.getElementById(
+            "neolearnPaymentModalSecondary"
+        );
 
-    const paymentModalSecondary = document.getElementById(
-        "neolearnPaymentModalSecondary"
-    );
 
+    // ============================================================
+    // CLOSE RESULT MODAL
+    // ============================================================
 
     function closePaymentModal() {
-        if (!paymentModal || !paymentModalCard) {
+
+        if (
+            !paymentModal ||
+            !paymentModalCard
+        ) {
             return;
         }
+
 
         paymentModalCard.classList.remove(
             "translate-y-0",
@@ -1789,22 +1833,101 @@
             "opacity-100"
         );
 
+
         paymentModalCard.classList.add(
             "translate-y-3",
             "scale-95",
             "opacity-0"
         );
 
-        window.setTimeout(function () {
-            paymentModal.classList.add("hidden");
-            paymentModal.classList.remove("flex");
-            paymentModal.setAttribute("aria-hidden", "true");
-            paymentModalOpen = false;
-        }, 180);
+
+        window.setTimeout(
+            function () {
+
+                paymentModal.classList.add(
+                    "hidden"
+                );
+
+                paymentModal.classList.remove(
+                    "flex"
+                );
+
+                paymentModal.setAttribute(
+                    "aria-hidden",
+                    "true"
+                );
+
+                paymentModalOpen = false;
+
+            },
+            180
+        );
     }
 
 
-    function openPaymentModal(type, title, message) {
+    // ============================================================
+    // SUBMIT CHECKOUT AGAIN
+    //
+    // IMPORTANT:
+    //
+    // We DO NOT reuse the previous Razorpay order.
+    //
+    // We submit the Django checkout form again.
+    //
+    // Django will create:
+    //
+    // NEW NeoLearn Order
+    //        +
+    // NEW Razorpay Order
+    //
+    // Then checkout.html loads again and opens
+    // the NEW Razorpay checkout.
+    // ============================================================
+
+    function submitCheckoutAgain() {
+
+        const checkoutForm =
+            document.getElementById(
+                "checkoutForm"
+            );
+
+
+        if (!checkoutForm) {
+
+            console.error(
+                "[NeoLearn Payment] Checkout form not found."
+            );
+
+            window.location.reload();
+
+            return;
+        }
+
+
+        if (
+            typeof checkoutForm.requestSubmit ===
+            "function"
+        ) {
+
+            checkoutForm.requestSubmit();
+
+        } else {
+
+            checkoutForm.submit();
+        }
+    }
+
+
+    // ============================================================
+    // OPEN PAYMENT RESULT MODAL
+    // ============================================================
+
+    function openPaymentModal(
+        type,
+        title,
+        message
+    ) {
+
         if (
             !paymentModal ||
             !paymentModalCard ||
@@ -1814,9 +1937,17 @@
             return;
         }
 
+
         paymentModalOpen = true;
 
-        const isFailed = type === "failed";
+
+        const isFailed =
+            type === "failed";
+
+
+        // --------------------------------------------------------
+        // ICON
+        // --------------------------------------------------------
 
         paymentModalIcon.className =
             "mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border " +
@@ -1826,67 +1957,128 @@
                     : "border-amber-400/25 bg-amber-400/[0.08] text-amber-300"
             );
 
+
         paymentModalIconGlyph.className =
             isFailed
                 ? "ri-close-circle-line text-2xl"
                 : "ri-error-warning-line text-2xl";
 
-        paymentModalTitle.textContent = title;
-        paymentModalMessage.textContent = message;
+
+        // --------------------------------------------------------
+        // CONTENT
+        // --------------------------------------------------------
+
+        paymentModalTitle.textContent =
+            title;
+
+        paymentModalMessage.textContent =
+            message;
+
+
+        // --------------------------------------------------------
+        // TRY AGAIN BUTTON
+        // --------------------------------------------------------
 
         paymentModalPrimary.className =
             "inline-flex h-10 items-center justify-center gap-2 rounded-xl px-3 text-[10px] font-black transition " +
-            (
-                isFailed
-                    ? "bg-gradient-to-r from-cyan-400 to-sky-400 text-slate-950 shadow-lg shadow-cyan-500/10 hover:-translate-y-0.5"
-                    : "bg-gradient-to-r from-cyan-400 to-sky-400 text-slate-950 shadow-lg shadow-cyan-500/10 hover:-translate-y-0.5"
-            );
+            "bg-gradient-to-r from-cyan-400 to-sky-400 text-slate-950 " +
+            "shadow-lg shadow-cyan-500/10 hover:-translate-y-0.5";
+
 
         paymentModalPrimary.innerHTML =
             '<i class="ri-refresh-line text-sm"></i> Try Again';
 
+
+        // --------------------------------------------------------
+        // CANCEL PAYMENT BUTTON
+        // --------------------------------------------------------
+
         paymentModalSecondary.innerHTML =
-            '<i class="ri-shopping-cart-2-line text-sm"></i> Back to Cart';
+            '<i class="ri-shopping-cart-2-line text-sm"></i> Cancel Payment';
 
-        paymentModalPrimary.onclick = function () {
-            closePaymentModal();
 
-            window.setTimeout(function () {
-                openRazorpayCheckout();
-            }, 250);
-        };
+        // --------------------------------------------------------
+        // TRY AGAIN
+        // --------------------------------------------------------
 
-        paymentModalSecondary.onclick = function () {
-            window.location.href = "{% url 'cart' %}";
-        };
+        paymentModalPrimary.onclick =
+            function () {
 
-        paymentModalClose.onclick = function () {
-            closePaymentModal();
-        };
+                closePaymentModal();
 
-        paymentModal.classList.remove("hidden");
-        paymentModal.classList.add("flex");
-        paymentModal.setAttribute("aria-hidden", "false");
 
-        requestAnimationFrame(function () {
-            paymentModalCard.classList.remove(
-                "translate-y-3",
-                "scale-95",
-                "opacity-0"
-            );
+                window.setTimeout(
+                    function () {
 
-            paymentModalCard.classList.add(
-                "translate-y-0",
-                "scale-100",
-                "opacity-100"
-            );
-        });
+                        submitCheckoutAgain();
+
+                    },
+                    250
+                );
+            };
+
+
+        // --------------------------------------------------------
+        // CANCEL PAYMENT
+        // --------------------------------------------------------
+
+        paymentModalSecondary.onclick =
+            function () {
+
+                window.location.href =
+                    "{% url 'cart' %}";
+            };
+
+
+        // --------------------------------------------------------
+        // SHOW MODAL
+        // --------------------------------------------------------
+
+        paymentModal.classList.remove(
+            "hidden"
+        );
+
+        paymentModal.classList.add(
+            "flex"
+        );
+
+        paymentModal.setAttribute(
+            "aria-hidden",
+            "false"
+        );
+
+
+        window.requestAnimationFrame(
+            function () {
+
+                paymentModalCard.classList.remove(
+                    "translate-y-3",
+                    "scale-95",
+                    "opacity-0"
+                );
+
+                paymentModalCard.classList.add(
+                    "translate-y-0",
+                    "scale-100",
+                    "opacity-100"
+                );
+            }
+        );
     }
 
 
-    function showPaymentFailed(message) {
+    // ============================================================
+    // SHOW PAYMENT FAILED
+    // ============================================================
+
+    function showPaymentFailed(
+        message
+    ) {
+
         paymentStarted = false;
+
         paymentFinished = false;
+
 
         openPaymentModal(
             "failed",
@@ -1897,12 +2089,19 @@
     }
 
 
+    // ============================================================
+    // SHOW PAYMENT CANCELLED
+    // ============================================================
+
     function showPaymentCancelled() {
+
         paymentStarted = false;
+
 
         if (paymentFinished) {
             return;
         }
+
 
         openPaymentModal(
             "cancelled",
@@ -1912,39 +2111,164 @@
     }
 
 
-    /*
-     * --------------------------------------------------------
-     * ESCAPE KEY
-     * --------------------------------------------------------
-     */
+    // ============================================================
+    // UPDATE PAYMENT STATUS IN DJANGO
+    // ============================================================
 
-    document.addEventListener("keydown", function (event) {
-        if (
-            event.key === "Escape" &&
-            paymentModalOpen
-        ) {
-            closePaymentModal();
-        }
-    });
+    async function updatePaymentStatus(
+        status,
+        failureReason
+    ) {
 
+        const csrfToken =
+            getCsrfToken();
 
-    /*
-     * --------------------------------------------------------
-     * SERVER-SIDE PAYMENT VERIFICATION
-     * --------------------------------------------------------
-     */
-
-    async function verifyPayment(paymentResponse) {
-        paymentFinished = true;
-
-        const csrfToken = getCsrfToken();
 
         if (!csrfToken) {
+
+            console.error(
+                "[NeoLearn Payment] CSRF token is missing."
+            );
+
+            return {
+                success: false,
+                message:
+                    "Security token is missing."
+            };
+        }
+
+
+        try {
+
+            const response =
+                await fetch(
+                    paymentStatusUrl,
+                    {
+                        method: "POST",
+
+                        headers: {
+                            "Content-Type":
+                                "application/json",
+
+                            "X-CSRFToken":
+                                csrfToken,
+
+                            "X-Requested-With":
+                                "XMLHttpRequest"
+                        },
+
+                        credentials:
+                            "same-origin",
+
+                        body:
+                            JSON.stringify(
+                                {
+                                    order_number:
+                                        orderNumber,
+
+                                    razorpay_order_id:
+                                        razorpayOrderId,
+
+                                    status:
+                                        status,
+
+                                    failure_reason:
+                                        failureReason ||
+                                        ""
+                                }
+                            )
+                    }
+                );
+
+
+            let data = {};
+
+
+            try {
+
+                data =
+                    await response.json();
+
+            } catch (jsonError) {
+
+                console.error(
+                    "[NeoLearn Payment] Invalid status response:",
+                    jsonError
+                );
+            }
+
+
+            if (
+                !response.ok ||
+                !data.success
+            ) {
+
+                console.error(
+                    "[NeoLearn Payment] Status update failed:",
+                    data
+                );
+
+                return {
+                    success: false,
+                    message:
+                        data.message ||
+                        "Payment status could not be updated."
+                };
+            }
+
+
+            console.log(
+                "[NeoLearn Payment] Status updated:",
+                data
+            );
+
+
+            return data;
+
+
+        } catch (error) {
+
+            console.error(
+                "[NeoLearn Payment] Status request failed:",
+                error
+            );
+
+
+            return {
+                success: false,
+                message:
+                    "Payment status request failed."
+            };
+        }
+    }
+
+
+    // ============================================================
+    // SERVER-SIDE PAYMENT VERIFICATION
+    // ============================================================
+
+    async function verifyPayment(
+        paymentResponse
+    ) {
+
+        paymentFinished = true;
+
+
+        const csrfToken =
+            getCsrfToken();
+
+
+        if (!csrfToken) {
+
+            paymentFinished = false;
+
             showPaymentFailed(
                 "Security token is missing. Please refresh the checkout page and try again."
             );
+
             return;
         }
+
 
         if (
             !paymentResponse ||
@@ -1952,80 +2276,133 @@
             !paymentResponse.razorpay_payment_id ||
             !paymentResponse.razorpay_signature
         ) {
+
+            paymentFinished = false;
+
             showPaymentFailed(
                 "Razorpay returned incomplete payment information. Please try again."
             );
+
             return;
         }
 
+
         try {
-            const response = await fetch(
-                verifyPaymentUrl,
-                {
-                    method: "POST",
 
-                    headers: {
-                        "Content-Type": "application/json",
-                        "X-CSRFToken": csrfToken,
-                        "X-Requested-With": "XMLHttpRequest"
-                    },
+            const response =
+                await fetch(
+                    verifyPaymentUrl,
+                    {
+                        method: "POST",
 
-                    credentials: "same-origin",
+                        headers: {
+                            "Content-Type":
+                                "application/json",
 
-                    body: JSON.stringify({
-                        order_number: orderNumber,
+                            "X-CSRFToken":
+                                csrfToken,
 
-                        razorpay_order_id:
-                            paymentResponse.razorpay_order_id,
+                            "X-Requested-With":
+                                "XMLHttpRequest"
+                        },
 
-                        razorpay_payment_id:
-                            paymentResponse.razorpay_payment_id,
+                        credentials:
+                            "same-origin",
 
-                        razorpay_signature:
-                            paymentResponse.razorpay_signature
-                    })
-                }
-            );
+                        body:
+                            JSON.stringify(
+                                {
+                                    order_number:
+                                        orderNumber,
+
+                                    razorpay_order_id:
+                                        paymentResponse.razorpay_order_id,
+
+                                    razorpay_payment_id:
+                                        paymentResponse.razorpay_payment_id,
+
+                                    razorpay_signature:
+                                        paymentResponse.razorpay_signature
+                                }
+                            )
+                    }
+                );
+
 
             let data = {};
 
+
             try {
-                data = await response.json();
+
+                data =
+                    await response.json();
+
             } catch (jsonError) {
+
                 console.error(
                     "[NeoLearn Razorpay] Invalid verification response:",
                     jsonError
                 );
             }
 
-            if (!response.ok || !data.success) {
+
+            if (
+                !response.ok ||
+                !data.success
+            ) {
+
+                /*
+                 * IMPORTANT:
+                 *
+                 * Do NOT automatically mark this as an ordinary
+                 * failed payment.
+                 *
+                 * Razorpay may have received money while Django
+                 * verification/network communication failed.
+                 *
+                 * Therefore we show the safe message and leave
+                 * the server-side verification result authoritative.
+                 */
+
+                paymentFinished = false;
+
                 showPaymentFailed(
                     data.message ||
                     "Payment verification failed. If money was deducted, please do not pay again immediately."
                 );
+
                 return;
             }
 
+
             /*
-             * Django has now:
+             * Django has successfully:
              *
-             * - verified the Razorpay signature
-             * - marked the order PAID
-             * - created/updated Payment
-             * - created the invoice
+             * - verified Razorpay signature
+             * - marked Order PAID
+             * - updated Payment
+             * - created Invoice
              * - created StudentBatchPurchase
              * - removed purchased batches from cart
              *
-             * Now move to the dedicated success page.
+             * Now continue to payment intro.
              */
 
-            window.location.replace(successUrl);
+            window.location.replace(
+                successUrl
+            );
+
 
         } catch (error) {
+
             console.error(
                 "[NeoLearn Razorpay] Payment verification error:",
                 error
             );
+
+
+            paymentFinished = false;
+
 
             showPaymentFailed(
                 "We could not confirm the payment with NeoLearn. If money was deducted, please do not pay again immediately."
@@ -2034,64 +2411,81 @@
     }
 
 
-    /*
-     * --------------------------------------------------------
-     * OPEN RAZORPAY STANDARD CHECKOUT
-     * --------------------------------------------------------
-     */
+    // ============================================================
+    // OPEN RAZORPAY STANDARD CHECKOUT
+    // ============================================================
 
     function openRazorpayCheckout() {
 
-        if (paymentStarted || paymentFinished) {
+        if (
+            paymentStarted ||
+            paymentFinished
+        ) {
             return;
         }
 
-        /*
-         * A retry creates a fresh Razorpay Checkout instance.
-         * The same Razorpay order can be used for additional attempts
-         * while it remains uncaptured.
-         */
+
         razorpayInstance = null;
 
+
+        // --------------------------------------------------------
+        // CHECK RAZORPAY SCRIPT
+        // --------------------------------------------------------
+
         if (!window.Razorpay) {
+
             showPaymentFailed(
                 "The secure payment gateway could not be loaded. Please refresh the page and try again."
             );
+
             return;
         }
+
+
+        // --------------------------------------------------------
+        // CHECK PAYMENT DATA
+        // --------------------------------------------------------
 
         if (
             !razorpayOrderId ||
             !razorpayKeyId ||
             !razorpayAmount
         ) {
+
             showPaymentFailed(
                 "Payment information is incomplete. Please return to checkout and try again."
             );
+
             return;
         }
 
+
         paymentStarted = true;
 
+
         const razorpayContact =
-            getRazorpayContact(customerPhone);
+            getRazorpayContact(
+                customerPhone
+            );
 
 
-        /*
-         * Razorpay Standard Checkout decides which supported
-         * payment methods are available.
-         *
-         * We intentionally do not disable UPI, Cards,
-         * Netbanking or Wallets here.
-         */
+        // ========================================================
+        // RAZORPAY OPTIONS
+        // ========================================================
 
         const options = {
-            key: razorpayKeyId,
 
-            amount: Number(razorpayAmount),
+            key:
+                razorpayKeyId,
+
+            amount:
+                Number(
+                    razorpayAmount
+                ),
 
             currency:
-                razorpayCurrency || "INR",
+                razorpayCurrency ||
+                "INR",
 
             name:
                 "NeoLearn",
@@ -2102,7 +2496,13 @@
             order_id:
                 razorpayOrderId,
 
+
+            // ----------------------------------------------------
+            // CUSTOMER PREFILL
+            // ----------------------------------------------------
+
             prefill: {
+
                 name:
                     customerName,
 
@@ -2113,65 +2513,137 @@
                     razorpayContact
             },
 
+
+            // ----------------------------------------------------
+            // NOTES
+            // ----------------------------------------------------
+
             notes: {
+
                 order_number:
                     orderNumber
             },
 
+
+            // ----------------------------------------------------
+            // THEME
+            // ----------------------------------------------------
+
             theme: {
+
                 color:
                     "#22d3ee"
             },
 
+
+            // ----------------------------------------------------
+            // SUCCESS
+            // ----------------------------------------------------
+
             handler:
-                function (paymentResponse) {
+                function (
+                    paymentResponse
+                ) {
+
                     verifyPayment(
                         paymentResponse
                     );
                 },
 
+
+            // ====================================================
+            // RAZORPAY MODAL
+            // ====================================================
+
             modal: {
+
                 ondismiss:
                     function () {
-                        paymentStarted = false;
+
+                        paymentStarted =
+                            false;
+
 
                         /*
-                         * payment.failed closes Razorpay programmatically.
-                         * That dismissal is NOT a user cancellation.
+                         * payment.failed closes Razorpay
+                         * programmatically.
+                         *
+                         * That is NOT cancellation.
                          */
-                        if (suppressRazorpayDismiss) {
-                            suppressRazorpayDismiss = false;
+
+                        if (
+                            suppressRazorpayDismiss
+                        ) {
+
+                            suppressRazorpayDismiss =
+                                false;
+
                             return;
                         }
 
-                        if (!paymentFinished) {
-                            showPaymentCancelled();
+
+                        /*
+                         * If verification already started,
+                         * do not mark the order cancelled.
+                         */
+
+                        if (
+                            paymentFinished
+                        ) {
+                            return;
                         }
+
+
+                        /*
+                         * Student closed Razorpay.
+                         *
+                         * FIRST tell Django.
+                         * THEN show the cancellation modal.
+                         */
+
+                        updatePaymentStatus(
+                            "cancelled",
+                            "Payment checkout was cancelled by the student."
+                        ).finally(
+                            function () {
+
+                                showPaymentCancelled();
+                            }
+                        );
                     }
             }
         };
 
 
+        // ========================================================
+        // DEBUG
+        // ========================================================
+
         console.log(
             "[NeoLearn Razorpay] CHECKOUT OPTIONS:",
             {
                 key_prefix:
-                    String(razorpayKeyId).substring(0, 12),
+                    String(
+                        razorpayKeyId
+                    ).substring(
+                        0,
+                        12
+                    ),
 
                 order_id:
                     razorpayOrderId,
 
                 amount:
-                    Number(razorpayAmount),
+                    Number(
+                        razorpayAmount
+                    ),
 
                 currency:
-                    razorpayCurrency || "INR",
+                    razorpayCurrency ||
+                    "INR",
 
                 contact:
                     razorpayContact,
-
-                has_upi_restriction:
-                    false,
 
                 payment_methods:
                     "Razorpay Standard Checkout"
@@ -2179,20 +2651,39 @@
         );
 
 
-        razorpayInstance =
-            new Razorpay(options);
+        // ========================================================
+        // CREATE RAZORPAY INSTANCE
+        // ========================================================
 
+        razorpayInstance =
+            new Razorpay(
+                options
+            );
+
+
+        // ========================================================
+        // RAZORPAY PAYMENT FAILED
+        // ========================================================
 
         razorpayInstance.on(
             "payment.failed",
-            function (response) {
+            function (
+                response
+            ) {
 
-                paymentStarted = false;
+                paymentStarted =
+                    false;
+
 
                 console.error(
                     "[NeoLearn Razorpay] PAYMENT FAILED:",
                     response
                 );
+
+
+                // ------------------------------------------------
+                // FAILURE MESSAGE
+                // ------------------------------------------------
 
                 const description =
                     response &&
@@ -2201,50 +2692,81 @@
                         ? response.error.description
                         : "Your payment could not be completed.";
 
-                /*
-                 * Razorpay normally keeps its own failure/retry screen
-                 * open after payment.failed.
-                 *
-                 * We want the NeoLearn compact failure popup instead.
-                 * Therefore close Razorpay first, then show our modal.
-                 */
-                suppressRazorpayDismiss = true;
+
+                // ------------------------------------------------
+                // PREVENT ondismiss FROM BECOMING CANCELLED
+                // ------------------------------------------------
+
+                suppressRazorpayDismiss =
+                    true;
+
+
+                // ------------------------------------------------
+                // CLOSE RAZORPAY
+                // ------------------------------------------------
 
                 try {
-                    if (razorpayInstance) {
+
+                    if (
+                        razorpayInstance
+                    ) {
+
                         razorpayInstance.close();
                     }
-                } catch (closeError) {
+
+                } catch (
+                    closeError
+                ) {
+
                     console.warn(
                         "[NeoLearn Razorpay] Could not close failed checkout:",
                         closeError
                     );
                 }
 
-                window.setTimeout(function () {
 
-                    showPaymentFailed(
-                        description
-                    );
+                // ------------------------------------------------
+                // SAVE FAILURE IN DJANGO
+                // ------------------------------------------------
 
-                }, 220);
+                updatePaymentStatus(
+                    "failed",
+                    description
+                ).finally(
+                    function () {
+
+                        window.setTimeout(
+                            function () {
+
+                                showPaymentFailed(
+                                    description
+                                );
+
+                            },
+                            220
+                        );
+                    }
+                );
             }
         );
 
+
+        // ========================================================
+        // OPEN RAZORPAY
+        // ========================================================
 
         razorpayInstance.open();
     }
 
 
-    /*
-     * --------------------------------------------------------
-     * START CHECKOUT AFTER PAGE LOAD
-     * --------------------------------------------------------
-     */
+    // ============================================================
+    // START CHECKOUT
+    // ============================================================
 
     window.addEventListener(
         "load",
         function () {
+
             console.log(
                 "[NeoLearn Razorpay] Starting Standard Checkout..."
             );

@@ -16,17 +16,98 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
     // ============================================
+    // RESPONSIVE BREAKPOINT
+    // Tailwind lg = 1024px
+    // ============================================
+
+    const DESKTOP_BREAKPOINT = 1024;
+
+
+    // ============================================
     // OPEN SIDEBAR
     // ============================================
 
-    if (openSidebar) {
-        openSidebar.addEventListener("click", function () {
+    function openSidebarMenu() {
+
+        if (!sidebar) {
+            return;
+        }
+
+        sidebar.classList.remove("-translate-x-full");
+
+        if (overlay && window.innerWidth < DESKTOP_BREAKPOINT) {
+            overlay.classList.remove("hidden");
+        }
+    }
+
+
+    // ============================================
+    // CLOSE SIDEBAR
+    // ============================================
+
+    function closeSidebarMenu() {
+
+        if (sidebar) {
+            sidebar.classList.add("-translate-x-full");
+        }
+
+        if (overlay) {
+            overlay.classList.add("hidden");
+        }
+    }
+
+
+    // ============================================
+    // DESKTOP SIDEBAR STATE
+    // ============================================
+
+    function updateSidebarForViewport() {
+
+        if (!sidebar) {
+            return;
+        }
+
+
+        // --------------------------------------------
+        // DESKTOP
+        // --------------------------------------------
+
+        if (window.innerWidth >= DESKTOP_BREAKPOINT) {
+
             sidebar.classList.remove("-translate-x-full");
 
             if (overlay) {
-                overlay.classList.remove("hidden");
+                overlay.classList.add("hidden");
             }
+
+            return;
+        }
+
+
+        // --------------------------------------------
+        // MOBILE / TABLET
+        // --------------------------------------------
+
+        sidebar.classList.add("-translate-x-full");
+
+        if (overlay) {
+            overlay.classList.add("hidden");
+        }
+    }
+
+
+    // ============================================
+    // OPEN SIDEBAR BUTTON
+    // ============================================
+
+    if (openSidebar) {
+
+        openSidebar.addEventListener("click", function () {
+
+            openSidebarMenu();
+
         });
+
     }
 
 
@@ -35,13 +116,13 @@ document.addEventListener("DOMContentLoaded", function () {
     // ============================================
 
     if (closeSidebar) {
-        closeSidebar.addEventListener("click", function () {
-            sidebar.classList.add("-translate-x-full");
 
-            if (overlay) {
-                overlay.classList.add("hidden");
-            }
+        closeSidebar.addEventListener("click", function () {
+
+            closeSidebarMenu();
+
         });
+
     }
 
 
@@ -50,10 +131,13 @@ document.addEventListener("DOMContentLoaded", function () {
     // ============================================
 
     if (overlay) {
+
         overlay.addEventListener("click", function () {
-            sidebar.classList.add("-translate-x-full");
-            overlay.classList.add("hidden");
+
+            closeSidebarMenu();
+
         });
+
     }
 
 
@@ -65,13 +149,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
         if (e.key === "Escape") {
 
-            if (sidebar) {
-                sidebar.classList.add("-translate-x-full");
-            }
-
-            if (overlay) {
-                overlay.classList.add("hidden");
-            }
+            closeSidebarMenu();
 
         }
 
@@ -82,22 +160,46 @@ document.addEventListener("DOMContentLoaded", function () {
     // WINDOW RESIZE
     // ============================================
 
+    let resizeTimer = null;
+
     window.addEventListener("resize", function () {
 
-        if (window.innerWidth >= 1024) {
+        clearTimeout(resizeTimer);
 
-            if (sidebar) {
-                sidebar.classList.remove("-translate-x-full");
-            }
+        resizeTimer = setTimeout(function () {
 
-            if (overlay) {
-                overlay.classList.add("hidden");
-            }
+            updateSidebarForViewport();
 
-        }
+        }, 100);
 
     });
 
+
+    // ============================================
+    // INITIAL RESPONSIVE STATE
+    // ============================================
+
+    updateSidebarForViewport();
+
+
+    // ============================================
+    // MESSAGE CONTAINER
+    // Reserved for shared message system.
+    // Existing toast-messages.js handles messages.
+    // ============================================
+
+    if (messageContainer) {
+
+        // Intentionally no additional behavior here.
+        // Keep message functionality handled by
+        // the existing shared toast system.
+
+    }
+
+
+    // ============================================
+    // DEBUG
+    // ============================================
 
     console.log("✅ Student Base JS Loaded");
 

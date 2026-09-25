@@ -3,6 +3,7 @@ from django.urls import path
 from .views import (
     checkout_view,
     verify_payment_view,
+    update_payment_status_view,
     invoice_detail_view,
     payment_intro_view,
     payment_success_view,
@@ -34,6 +35,17 @@ urlpatterns = [
         "payment/verify/",
         verify_payment_view,
         name="verify_payment",
+    ),
+
+    # --------------------------------------------------------
+    # RAZORPAY PAYMENT STATUS
+    # Failed / Cancelled payment attempt
+    # --------------------------------------------------------
+
+    path(
+        "payment/status/",
+        update_payment_status_view,
+        name="update_payment_status",
     ),
 
     # --------------------------------------------------------

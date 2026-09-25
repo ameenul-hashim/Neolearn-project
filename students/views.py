@@ -5,12 +5,13 @@ from django.contrib import messages
 from django.http import JsonResponse
 from django.db.models import Q
 from django.utils import timezone
+from datetime import datetime, timedelta
 from admins.models import (
     Batch,
     Subject,
     Coupon,
 )
-from orders.models import StudentBatchPurchase
+from orders.models import StudentBatchPurchase,Order
 from admins.helpers import (
     normalize_coupon_code,
     calculate_student_cart_totals,
@@ -1818,5 +1819,394 @@ def my_learning_view(request):
         'students/my_learning/my_learning.html',
         {
             'purchased_batches': purchased_batches,
+        },
+    )
+    
+# ============================================================
+# STUDENT ORDER HISTORY
+# ============================================================
+
+@login_required(login_url="signin")
+@cache_control(
+    no_cache=True,
+    must_revalidate=True,
+    no_store=True,
+)
+def order_history_view(request):
+
+    # ========================================================
+    # STUDENT ACCESS
+    # ========================================================
+
+    if not is_student_user(request.user):
+
+        messages.error(
+            request,
+            "Admin login is not allowed here. Please use the admin login area.",
+        )
+
+        return redirect("signin")
+
+    # ========================================================
+    # QUERY PARAMETERS
+    # ========================================================
+
+    search_query = request.GET.get(
+        "search",
+        "",
+    ).strip()
+
+    current_status = request.GET.get(
+        "status",
+        "all",
+    ).strip().lower()
+
+    date_range = request.GET.get(
+        "date_range",
+        "all",
+    ).strip().lower()
+
+    start_date_value = request.GET.get(
+        "start_date",
+        "",
+    ).strip()
+
+    end_date_value = request.GET.get(
+        "end_date",
+        "",
+    ).strip()
+
+    # ========================================================
+    # VALID STATUS FILTERS
+    # ========================================================
+
+    allowed_statuses = {
+        "all",
+        "pending",
+        "payment_processing",
+        "paid",
+        "payment_failed",
+        "cancelled",
+        "partially_refunded",
+        "refunded",
+    }
+
+    if current_status not in allowed_statuses:
+        current_status = "all"
+
+    # ========================================================
+    # VALID DATE FILTERS
+    # ========================================================
+
+    allowed_date_ranges = {
+        "all",
+        "7",
+        "30",
+        "3m",
+        "6m",
+        "year",
+        "custom",
+    }
+
+    if date_range not in allowed_date_ranges:
+        date_range = "all"
+
+    # ========================================================
+    # CURRENT TIME
+    # ========================================================
+
+    now = timezone.now()
+
+    # ========================================================
+    # DATE FILTER STATE
+    # ========================================================
+
+    start_datetime = None
+    end_datetime = None
+
+    current_date_range = "All Time"
+
+    # ========================================================
+    # PRESET DATE FILTERS
+    # ========================================================
+
+    if date_range == "7":
+
+        start_datetime = now - timedelta(days=7)
+
+        current_date_range = "Last 7 Days"
+
+    elif date_range == "30":
+
+        start_datetime = now - timedelta(days=30)
+
+        current_date_range = "Last 30 Days"
+
+    elif date_range == "3m":
+
+        start_datetime = now - timedelta(days=90)
+
+        current_date_range = "Last 3 Months"
+
+    elif date_range == "6m":
+
+        start_datetime = now - timedelta(days=180)
+
+        current_date_range = "Last 6 Months"
+
+    elif date_range == "year":
+
+        local_now = timezone.localtime(now)
+
+        year_start = datetime(
+            local_now.year,
+            1,
+            1,
+        )
+
+        start_datetime = timezone.make_aware(
+            year_start,
+            timezone.get_current_timezone(),
+        )
+
+        current_date_range = "This Year"
+
+    # ========================================================
+    # CUSTOM DATE RANGE
+    # ========================================================
+
+    elif date_range == "custom":
+
+        try:
+
+            start_date = datetime.strptime(
+                start_date_value,
+                "%Y-%m-%d",
+            ).date()
+
+            end_date = datetime.strptime(
+                end_date_value,
+                "%Y-%m-%d",
+            ).date()
+
+            if start_date > end_date:
+
+                date_range = "all"
+                start_date_value = ""
+                end_date_value = ""
+                current_date_range = "All Time"
+
+            else:
+
+                start_datetime = timezone.make_aware(
+                    datetime.combine(
+                        start_date,
+                        datetime.min.time(),
+                    ),
+                    timezone.get_current_timezone(),
+                )
+
+                # End date is inclusive.
+                # We use the next midnight as an exclusive boundary.
+                end_datetime = timezone.make_aware(
+                    datetime.combine(
+                        end_date + timedelta(days=1),
+                        datetime.min.time(),
+                    ),
+                    timezone.get_current_timezone(),
+                )
+
+                current_date_range = (
+                    f"{start_date.strftime('%d %b %Y')}"
+                    f" – "
+                    f"{end_date.strftime('%d %b %Y')}"
+                )
+
+        except (
+            TypeError,
+            ValueError,
+        ):
+
+            date_range = "all"
+            start_date_value = ""
+            end_date_value = ""
+            current_date_range = "All Time"
+
+    # ========================================================
+    # BASE ORDER QUERY
+    #
+    # IMPORTANT:
+    # Only the currently logged-in student's orders.
+    # ========================================================
+
+    orders = (
+        Order.objects
+        .filter(
+            user=request.user,
+        )
+        .prefetch_related(
+            "items__batch",
+        )
+        .select_related(
+            "payment",
+            "invoice",
+        )
+        .order_by(
+            "-created_at",
+        )
+    )
+
+    # ========================================================
+    # STATUS FILTER
+    # ========================================================
+
+    if current_status != "all":
+
+        orders = orders.filter(
+            status=current_status,
+        )
+
+    # ========================================================
+    # DATE FILTER
+    # ========================================================
+
+    if start_datetime is not None:
+
+        orders = orders.filter(
+            created_at__gte=start_datetime,
+        )
+
+    if end_datetime is not None:
+
+        orders = orders.filter(
+            created_at__lt=end_datetime,
+        )
+
+    # ========================================================
+    # SEARCH
+    #
+    # Search:
+    #   - Order number
+    #   - Batch name
+    #   - Invoice number
+    # ========================================================
+
+    if search_query:
+
+        orders = orders.filter(
+            Q(
+                order_number__icontains=search_query,
+            )
+            |
+            Q(
+                items__batch_name__icontains=search_query,
+            )
+            |
+            Q(
+                invoice__invoice_number__icontains=search_query,
+            )
+        ).distinct()
+
+    # ========================================================
+    # PAGINATION
+    # ========================================================
+
+    from django.core.paginator import Paginator
+
+    paginator = Paginator(
+        orders,
+        8,
+    )
+
+    page_number = request.GET.get(
+        "page",
+        1,
+    )
+
+    orders_page = paginator.get_page(
+        page_number,
+    )
+
+    # ========================================================
+    # STATUS COUNTS
+    #
+    # Counts respect the selected DATE RANGE.
+    #
+    # They intentionally do not depend on the currently
+    # selected status or search text.
+    # ========================================================
+
+    all_orders = Order.objects.filter(
+        user=request.user,
+    )
+
+    if start_datetime is not None:
+
+        all_orders = all_orders.filter(
+            created_at__gte=start_datetime,
+        )
+
+    if end_datetime is not None:
+
+        all_orders = all_orders.filter(
+            created_at__lt=end_datetime,
+        )
+
+    status_counts = {
+        "all": all_orders.count(),
+
+        "paid": all_orders.filter(
+            status=Order.Status.PAID,
+        ).count(),
+
+        "pending": all_orders.filter(
+            status=Order.Status.PENDING,
+        ).count(),
+
+        "payment_processing": all_orders.filter(
+            status=Order.Status.PAYMENT_PROCESSING,
+        ).count(),
+
+        "payment_failed": all_orders.filter(
+            status=Order.Status.PAYMENT_FAILED,
+        ).count(),
+
+        "cancelled": all_orders.filter(
+            status=Order.Status.CANCELLED,
+        ).count(),
+
+        "partially_refunded": all_orders.filter(
+            status=Order.Status.PARTIALLY_REFUNDED,
+        ).count(),
+
+        "refunded": all_orders.filter(
+            status=Order.Status.REFUNDED,
+        ).count(),
+    }
+
+    # ========================================================
+    # RENDER ORDER HISTORY
+    # ========================================================
+
+    return render(
+        request,
+        "students/order_history/order_history.html",
+        {
+            "orders": orders_page,
+
+            # Search
+            "search_query": search_query,
+
+            # Status
+            "current_status": current_status,
+
+            # Date filtering
+            "date_range": date_range,
+            "current_date_range": current_date_range,
+            "start_date": start_date_value,
+            "end_date": end_date_value,
+
+            # Counts
+            "status_counts": status_counts,
         },
     )

@@ -1,22 +1,17 @@
 from django.conf import settings
-
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.db import transaction
+from django.http import JsonResponse
+from django.shortcuts import redirect, render
+from django.utils import timezone
+from django.views.decorators.cache import cache_control
+from django.views.decorators.http import require_POST
+import json
+from decimal import Decimal
+import logging
 
 from django.contrib.auth.decorators import login_required
-
-from django.db import transaction
-
-from django.http import JsonResponse
-
-from django.shortcuts import redirect, render
-
-from django.utils import timezone
-
-from django.views.decorators.cache import cache_control
-
-from django.views.decorators.http import require_POST
-
-
 from .helpers import (
 
     is_student_user,
@@ -2456,3 +2451,349 @@ def payment_intro_view(request, order_number):
             "order_number": order.order_number,
         },
     )
+    
+# ============================================================
+# UPDATE RAZORPAY PAYMENT STATUS
+# ============================================================
+
+@login_required(login_url="signin")
+@require_POST
+def update_payment_status_view(request):
+    """
+    Update the local NeoLearn order/payment status after a Razorpay
+    checkout failure or cancellation.
+
+    Important:
+    - The Order row is locked independently.
+    - The Payment row is locked independently.
+    - We intentionally do NOT use select_related("payment") together
+      with select_for_update(), because PostgreSQL rejects locking
+      the nullable reverse OneToOne side of that outer join.
+    """
+
+    # ============================================================
+    # STUDENT CHECK
+    # ============================================================
+
+    if not is_student_user(request.user):
+        return JsonResponse(
+            {
+                "success": False,
+                "message": "Student access required.",
+            },
+            status=403,
+        )
+
+
+    # ============================================================
+    # PARSE REQUEST
+    # ============================================================
+
+    try:
+        payload = json.loads(
+            request.body.decode("utf-8")
+        )
+
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return JsonResponse(
+            {
+                "success": False,
+                "message": "Invalid payment status request.",
+            },
+            status=400,
+        )
+
+
+    # ============================================================
+    # REQUEST DATA
+    # ============================================================
+
+    order_number = (
+        payload.get("order_number") or ""
+    ).strip()
+
+    razorpay_order_id = (
+        payload.get("razorpay_order_id") or ""
+    ).strip()
+
+    payment_status = (
+        payload.get("status") or ""
+    ).strip().lower()
+
+    failure_reason = (
+        payload.get("failure_reason") or ""
+    ).strip()
+
+
+    # ============================================================
+    # VALIDATION
+    # ============================================================
+
+    if not order_number:
+        return JsonResponse(
+            {
+                "success": False,
+                "message": "Order number is required.",
+            },
+            status=400,
+        )
+
+
+    if not razorpay_order_id:
+        return JsonResponse(
+            {
+                "success": False,
+                "message": "Razorpay order ID is required.",
+            },
+            status=400,
+        )
+
+
+    if payment_status not in {
+        "failed",
+        "cancelled",
+    }:
+        return JsonResponse(
+            {
+                "success": False,
+                "message": "Invalid payment status.",
+            },
+            status=400,
+        )
+
+
+    # ============================================================
+    # DATABASE TRANSACTION
+    # ============================================================
+
+    try:
+
+        with transaction.atomic():
+
+            # ----------------------------------------------------
+            # LOCK ONLY THE ORDER
+            #
+            # IMPORTANT:
+            # Do NOT use:
+            #
+            # .select_related("payment")
+            # .select_for_update()
+            #
+            # together here.
+            #
+            # PostgreSQL rejects FOR UPDATE on the nullable side
+            # of the reverse OneToOne join.
+            # ----------------------------------------------------
+
+            try:
+
+                order = (
+                    Order.objects
+                    .select_for_update()
+                    .get(
+                        order_number=order_number,
+                        razorpay_order_id=razorpay_order_id,
+                        user=request.user,
+                    )
+                )
+
+            except Order.DoesNotExist:
+
+                return JsonResponse(
+                    {
+                        "success": False,
+                        "message": (
+                            "Payment order could not be found."
+                        ),
+                    },
+                    status=404,
+                )
+
+
+            # ----------------------------------------------------
+            # NEVER DOWNGRADE A SUCCESSFUL PAYMENT
+            # ----------------------------------------------------
+
+            if order.status == Order.Status.PAID:
+
+                return JsonResponse(
+                    {
+                        "success": True,
+                        "already_paid": True,
+                        "order_number":
+                            order.order_number,
+                        "status":
+                            order.status,
+                        "message":
+                            "Payment has already been completed.",
+                    }
+                )
+
+
+            # ----------------------------------------------------
+            # ONLY PAYMENT_PROCESSING CAN BE FINALIZED
+            # ----------------------------------------------------
+
+            if (
+                order.status !=
+                Order.Status.PAYMENT_PROCESSING
+            ):
+
+                return JsonResponse(
+                    {
+                        "success": True,
+                        "already_final": True,
+                        "order_number":
+                            order.order_number,
+                        "status":
+                            order.status,
+                        "message":
+                            "Payment status has already been finalized.",
+                    }
+                )
+
+
+            # ----------------------------------------------------
+            # LOCK PAYMENT SEPARATELY
+            # ----------------------------------------------------
+
+            payment = (
+                Payment.objects
+                .select_for_update()
+                .filter(
+                    order=order
+                )
+                .first()
+            )
+
+
+            # ====================================================
+            # PAYMENT FAILED
+            # ====================================================
+
+            if payment_status == "failed":
+
+                order.status = (
+                    Order.Status.PAYMENT_FAILED
+                )
+
+                order.save(
+                    update_fields=[
+                        "status",
+                        "updated_at",
+                    ]
+                )
+
+
+                if payment is not None:
+
+                    payment.status = (
+                        Payment.Status.FAILED
+                    )
+
+                    payment.failure_reason = (
+                        failure_reason
+                        or "Razorpay payment failed."
+                    )
+
+                    payment.save(
+                        update_fields=[
+                            "status",
+                            "failure_reason",
+                            "updated_at",
+                        ]
+                    )
+
+
+                return JsonResponse(
+                    {
+                        "success": True,
+                        "status":
+                            order.status,
+                        "order_number":
+                            order.order_number,
+                        "message":
+                            "Payment failure recorded.",
+                    }
+                )
+
+
+            # ====================================================
+            # PAYMENT CANCELLED
+            # ====================================================
+
+            order.status = (
+                Order.Status.CANCELLED
+            )
+
+            order.save(
+                update_fields=[
+                    "status",
+                    "updated_at",
+                ]
+            )
+
+
+            if payment is not None:
+
+                # Payment model does not have a CANCELLED status.
+                #
+                # Therefore the payment record is marked FAILED
+                # while the Order itself is marked CANCELLED.
+
+                payment.status = (
+                    Payment.Status.FAILED
+                )
+
+                payment.failure_reason = (
+                    failure_reason
+                    or
+                    "Payment checkout was cancelled "
+                    "before completion."
+                )
+
+                payment.save(
+                    update_fields=[
+                        "status",
+                        "failure_reason",
+                        "updated_at",
+                    ]
+                )
+
+
+            return JsonResponse(
+                {
+                    "success": True,
+                    "status":
+                        order.status,
+                    "order_number":
+                        order.order_number,
+                    "message":
+                        "Payment cancellation recorded.",
+                }
+            )
+
+
+    # ============================================================
+    # UNEXPECTED ERROR
+    # ============================================================
+
+    except Exception as exc:
+
+        import logging
+
+        logging.getLogger(__name__).exception(
+            "NeoLearn payment status update failed "
+            "for order %s: %s",
+            order_number,
+            exc,
+        )
+
+        return JsonResponse(
+            {
+                "success": False,
+                "message":
+                    "Unable to update payment status.",
+            },
+            status=500,
+        )
