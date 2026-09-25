@@ -10,7 +10,7 @@ from admins.models import (
     Subject,
     Coupon,
 )
-
+from orders.models import StudentBatchPurchase
 from admins.helpers import (
     normalize_coupon_code,
     calculate_student_cart_totals,
@@ -209,7 +209,6 @@ def update_profile_image_view(request):
             )
 
     return redirect('profile')
-
 
 # ============================================================
 # MARKETPLACE
@@ -669,6 +668,30 @@ def marketplace_view(request):
         cart_batch_ids = set()
 
     # ========================================================
+    # PURCHASED BATCH IDS
+    #
+    # These are the batches already purchased by the
+    # currently logged-in student.
+    #
+    # Marketplace will use this to show:
+    #
+    #   ✓ Purchased
+    #   View My Learning
+    #
+    # instead of Add to Cart.
+    # ========================================================
+
+    purchased_batch_ids = set(
+        StudentBatchPurchase.objects.filter(
+            student=request.user,
+            status=StudentBatchPurchase.Status.ACTIVE,
+        ).values_list(
+            'batch_id',
+            flat=True,
+        )
+    )
+
+    # ========================================================
     # FLAT SUBJECT LIST
     #
     # Kept for compatibility with existing templates.
@@ -753,6 +776,17 @@ def marketplace_view(request):
             # ------------------------------------------------
 
             'cart_batch_ids': cart_batch_ids,
+
+            # ------------------------------------------------
+            # PURCHASED BATCHES
+            #
+            # Page-specific purchased state.
+            #
+            # This is what Marketplace needs to determine
+            # whether the student already owns the batch.
+            # ------------------------------------------------
+
+            'purchased_batch_ids': purchased_batch_ids,
         }
     )
     
@@ -1072,6 +1106,29 @@ def add_to_cart_view(request, batch_id):
         )
 
         return redirect('marketplace')
+
+    # ========================================================
+    # ALREADY PURCHASED
+    # ========================================================
+    # A student who already owns an active purchase must never
+    # be able to add the same batch to the cart again.
+    #
+    # This is enforced server-side so it cannot be bypassed by
+    # manually submitting the add-to-cart request.
+    # ========================================================
+
+    if StudentBatchPurchase.objects.filter(
+        student=request.user,
+        batch=batch,
+        status=StudentBatchPurchase.Status.ACTIVE,
+    ).exists():
+
+        messages.info(
+            request,
+            f'"{batch.batch_name}" is already in your learning.'
+        )
+
+        return redirect('my_learning')
 
     cart, created = Cart.objects.get_or_create(
         student=request.user
@@ -1707,3 +1764,59 @@ def remove_coupon_view(request, coupon_id):
 
     return redirect("cart")
 
+# ============================================================
+# MY LEARNING
+# ============================================================
+
+@login_required(login_url='signin')
+@cache_control(
+    no_cache=True,
+    must_revalidate=True,
+    no_store=True
+)
+def my_learning_view(request):
+
+    # ========================================================
+    # STUDENT ACCESS
+    # ========================================================
+
+    if not is_student_user(request.user):
+
+        messages.error(
+            request,
+            'Admin login is not allowed here. Please use the admin login area.'
+        )
+
+        return redirect('signin')
+
+    # ========================================================
+    # PURCHASED BATCHES
+    # ========================================================
+
+    purchased_batches = (
+        StudentBatchPurchase.objects
+        .filter(
+            student=request.user,
+            status=StudentBatchPurchase.Status.ACTIVE,
+        )
+        .select_related(
+            'batch',
+            'order',
+            'order_item',
+        )
+        .order_by(
+            '-purchased_at'
+        )
+    )
+
+    # ========================================================
+    # RENDER MY LEARNING
+    # ========================================================
+
+    return render(
+        request,
+        'students/my_learning/my_learning.html',
+        {
+            'purchased_batches': purchased_batches,
+        },
+    )

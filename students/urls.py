@@ -7,6 +7,7 @@ from .views import (
 
     marketplace_view,
     marketplace_detail_view,
+    my_learning_view,
 
     wishlist_view,
     toggle_wishlist_view,
@@ -131,4 +132,14 @@ path(
     remove_coupon_view,
     name="remove_coupon",
 ),
+# ============================================================
+# MY LEARNING
+# ============================================================
+
+path(
+    "my-learning/",
+    my_learning_view,
+    name="my_learning",
+),
+
 ]

@@ -45,6 +45,9 @@ from .models import (
 )
 
 
+from students.models import Cart
+
+
 from .razorpay_utils import (
 
     create_razorpay_order,
@@ -1425,6 +1428,181 @@ def invoice_detail_view(request, invoice_number):
 
 # ============================================================
 
+
+
+# ============================================================
+# PAYMENT RESULT PAGES
+# ============================================================
+
+
+@login_required(login_url="signin")
+@cache_control(
+    no_cache=True,
+    must_revalidate=True,
+    no_store=True,
+)
+def payment_success_view(request, order_number):
+    """
+    Display the final successful payment page.
+
+    This page is only available when the supplied order belongs to
+    the logged-in student and has already been marked PAID by the
+    server-side Razorpay verification flow.
+    """
+
+    if not is_student_user(request.user):
+        messages.error(
+            request,
+            "Student access is required to view the payment result.",
+        )
+        return redirect("signin")
+
+    try:
+        order = (
+            Order.objects
+            .select_related(
+                "user",
+                "payment",
+                "invoice",
+            )
+            .prefetch_related(
+                "items__batch",
+            )
+            .get(
+                order_number=order_number,
+                user=request.user,
+                status=Order.Status.PAID,
+            )
+        )
+    except Order.DoesNotExist:
+        messages.error(
+            request,
+            "Successful payment order could not be found.",
+        )
+        return redirect("orders:checkout")
+
+    invoice = getattr(order, "invoice", None)
+
+    return render(
+        request,
+        "orders/payment_success.html",
+        {
+            "order": order,
+            "order_items": order.items.all(),
+            "invoice": invoice,
+            "order_number": order.order_number,
+        },
+    )
+
+
+@login_required(login_url="signin")
+@cache_control(
+    no_cache=True,
+    must_revalidate=True,
+    no_store=True,
+)
+def payment_failed_view(request, order_number):
+    """
+    Display the payment-failed page.
+
+    The cart is intentionally not changed here. The student can
+    return to checkout and try the payment again.
+    """
+
+    if not is_student_user(request.user):
+        messages.error(
+            request,
+            "Student access is required to view the payment result.",
+        )
+        return redirect("signin")
+
+    try:
+        order = (
+            Order.objects
+            .select_related(
+                "user",
+                "payment",
+            )
+            .prefetch_related(
+                "items__batch",
+            )
+            .get(
+                order_number=order_number,
+                user=request.user,
+            )
+        )
+    except Order.DoesNotExist:
+        messages.error(
+            request,
+            "Payment order could not be found.",
+        )
+        return redirect("orders:checkout")
+
+    return render(
+        request,
+        "orders/payment_failed.html",
+        {
+            "order": order,
+            "order_items": order.items.all(),
+            "order_number": order.order_number,
+        },
+    )
+
+
+@login_required(login_url="signin")
+@cache_control(
+    no_cache=True,
+    must_revalidate=True,
+    no_store=True,
+)
+def payment_cancelled_view(request, order_number):
+    """
+    Display the payment-cancelled page.
+
+    Closing/cancelling Razorpay does not remove cart items or
+    coupons. The student can return to checkout and retry.
+    """
+
+    if not is_student_user(request.user):
+        messages.error(
+            request,
+            "Student access is required to view the payment result.",
+        )
+        return redirect("signin")
+
+    try:
+        order = (
+            Order.objects
+            .select_related(
+                "user",
+                "payment",
+            )
+            .prefetch_related(
+                "items__batch",
+            )
+            .get(
+                order_number=order_number,
+                user=request.user,
+            )
+        )
+    except Order.DoesNotExist:
+        messages.error(
+            request,
+            "Payment order could not be found.",
+        )
+        return redirect("orders:checkout")
+
+    return render(
+        request,
+        "orders/payment_cancelled.html",
+        {
+            "order": order,
+            "order_items": order.items.all(),
+            "order_number": order.order_number,
+        },
+    )
+
+
 # RAZORPAY PAYMENT VERIFICATION
 
 # ============================================================
@@ -1665,6 +1843,62 @@ def verify_payment_view(request):
             None,
 
         )
+
+
+        # A repeated verification request is safe. The payment is already
+
+        # complete, so remove only the batches that belong to this order
+
+        # from the student's cart. This also keeps unrelated cart items.
+
+        try:
+
+            purchased_batch_ids = list(
+
+                order.items.values_list(
+
+                    "batch_id",
+
+                    flat=True,
+
+                )
+
+            )
+
+
+            cart = Cart.objects.filter(
+
+                student=request.user,
+
+            ).first()
+
+
+            if cart and purchased_batch_ids:
+
+                cart.items.filter(
+
+                    batch_id__in=purchased_batch_ids,
+
+                ).delete()
+
+
+                # Coupons belong to the checkout/cart state. Once the
+
+                # purchased items are gone, clear the remaining checkout
+
+                # coupons only when the cart itself is empty.
+
+                if not cart.items.exists():
+
+                    cart.cart_coupons.all().delete()
+
+        except Exception:
+
+            # Do not turn an already-completed payment into a failure just
+
+            # because cart cleanup encountered a non-payment problem.
+
+            pass
 
 
         return JsonResponse(
@@ -2017,6 +2251,60 @@ def verify_payment_view(request):
                     )
 
 
+            # --------------------------------------------
+
+            # REMOVE PURCHASED ITEMS FROM CART
+
+            # --------------------------------------------
+
+            # Only remove batches that were actually included in this paid
+
+            # order. This prevents an unrelated cart item from being lost
+
+            # if the cart changes between checkout creation and payment
+
+            # verification.
+
+            purchased_batch_ids = list(
+
+                order.items.values_list(
+
+                    "batch_id",
+
+                    flat=True,
+
+                )
+
+            )
+
+
+            if purchased_batch_ids:
+
+                cart = Cart.objects.filter(
+
+                    student=request.user,
+
+                ).first()
+
+
+                if cart:
+
+                    cart.items.filter(
+
+                        batch_id__in=purchased_batch_ids,
+
+                    ).delete()
+
+
+                    # If the successful purchase emptied the cart, its
+
+                    # checkout coupon state is no longer needed.
+
+                    if not cart.items.exists():
+
+                        cart.cart_coupons.all().delete()
+
+
     except Exception as exc:
 
 
@@ -2099,4 +2387,72 @@ def verify_payment_view(request):
 
         }
 
+    )
+@login_required(login_url="signin")
+@cache_control(
+    no_cache=True,
+    must_revalidate=True,
+    no_store=True,
+)
+def payment_intro_view(request, order_number):
+    """
+    Display the payment-success intro video before the final
+    payment success page.
+
+    This view does not process or verify payment.
+    It only allows the intro page to be shown for a paid order
+    belonging to the logged-in student.
+    """
+
+    # --------------------------------------------------------
+    # STUDENT ACCESS
+    # --------------------------------------------------------
+
+    if not is_student_user(request.user):
+        messages.error(
+            request,
+            "Student access is required to view the payment result.",
+        )
+        return redirect("signin")
+
+    # --------------------------------------------------------
+    # FIND PAID ORDER
+    # --------------------------------------------------------
+
+    try:
+        order = (
+            Order.objects
+            .select_related(
+                "user",
+                "payment",
+                "invoice",
+            )
+            .prefetch_related(
+                "items__batch",
+            )
+            .get(
+                order_number=order_number,
+                user=request.user,
+                status=Order.Status.PAID,
+            )
+        )
+
+    except Order.DoesNotExist:
+        messages.error(
+            request,
+            "Successful payment order could not be found.",
+        )
+        return redirect("orders:checkout")
+
+    # --------------------------------------------------------
+    # RENDER PAYMENT INTRO VIDEO PAGE
+    # --------------------------------------------------------
+
+    return render(
+        request,
+        "orders/payment_intro.html",
+        {
+            "order": order,
+            "order_number": order.order_number,
+        },
     )

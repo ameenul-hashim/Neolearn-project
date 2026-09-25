@@ -1,0 +1,949 @@
+{% extends "students/base_student.html" %}
+{% load static %}
+
+{% block title %}
+    Payment Complete | NeoLearn
+{% endblock %}
+
+{% block student_content %}
+
+<div
+    class="
+        fixed
+        inset-0
+        z-[9999]
+        flex
+        min-h-screen
+        items-center
+        justify-center
+        bg-[#020817]
+        px-3
+        py-4
+        sm:px-5
+        sm:py-6
+    "
+>
+
+    <div class="w-full max-w-5xl">
+
+        <!-- =====================================================
+             VIDEO CARD
+        ====================================================== -->
+
+        <div
+            class="
+                overflow-hidden
+                rounded-3xl
+                border
+                border-cyan-400/15
+                bg-[#071224]
+                shadow-2xl
+                shadow-black/30
+            "
+        >
+
+            <!-- =================================================
+                 VIDEO AREA
+            ================================================== -->
+
+            <div
+                class="
+                    relative
+                    aspect-video
+                    w-full
+                    bg-black
+                "
+            >
+
+                <video
+                    id="paymentIntroVideo"
+                    class="
+                        h-full
+                        w-full
+                        object-contain
+                        bg-black
+                    "
+                    autoplay
+                    playsinline
+                    webkit-playsinline
+                    preload="auto"
+                >
+
+                    <source
+                        src="{% static 'orders/video/payment_success.mp4' %}"
+                        type="video/mp4"
+                    >
+
+                    Your browser does not support HTML5 video.
+
+                </video>
+
+
+                <!-- =================================================
+                     LOADING OVERLAY
+                ================================================== -->
+
+                <div
+                    id="videoLoading"
+                    class="
+                        absolute
+                        inset-0
+                        flex
+                        items-center
+                        justify-center
+                        bg-[#020817]/45
+                        px-4
+                        backdrop-blur-sm
+                        transition-opacity
+                        duration-300
+                    "
+                >
+
+                    <div
+                        class="
+                            flex
+                            items-center
+                            gap-2
+                            rounded-full
+                            border
+                            border-white/10
+                            bg-black/35
+                            px-4
+                            py-2
+                            backdrop-blur-md
+                        "
+                    >
+
+                        <span
+                            class="
+                                h-2
+                                w-2
+                                animate-pulse
+                                rounded-full
+                                bg-cyan-400
+                            "
+                        ></span>
+
+                        <span
+                            class="
+                                text-[9px]
+                                font-bold
+                                uppercase
+                                tracking-[0.15em]
+                                text-slate-300
+                                sm:text-[10px]
+                            "
+                        >
+                            Preparing your payment confirmation
+                        </span>
+
+                    </div>
+
+                </div>
+
+
+                <!-- =================================================
+                     AUTOPLAY AUDIO FALLBACK
+                ================================================== -->
+
+                <div
+                    id="audioFallbackOverlay"
+                    class="
+                        absolute
+                        inset-0
+                        hidden
+                        items-center
+                        justify-center
+                        bg-[#020817]/55
+                        px-4
+                        backdrop-blur-sm
+                    "
+                >
+
+                    <div class="text-center">
+
+                        <!-- ICON -->
+
+                        <div
+                            class="
+                                mx-auto
+                                flex
+                                h-16
+                                w-16
+                                items-center
+                                justify-center
+                                rounded-2xl
+                                border
+                                border-cyan-400/20
+                                bg-cyan-400/10
+                                text-cyan-300
+                                shadow-[0_0_35px_rgba(34,211,238,0.10)]
+                                sm:h-20
+                                sm:w-20
+                            "
+                        >
+                            <i class="ri-volume-up-line text-3xl sm:text-4xl"></i>
+                        </div>
+
+
+                        <!-- TITLE -->
+
+                        <p
+                            class="
+                                mt-5
+                                text-sm
+                                font-black
+                                text-white
+                                sm:text-base
+                            "
+                        >
+                            Enable confirmation sound
+                        </p>
+
+
+                        <!-- DESCRIPTION -->
+
+                        <p
+                            class="
+                                mx-auto
+                                mt-2
+                                max-w-sm
+                                text-[10px]
+                                leading-5
+                                text-slate-400
+                                sm:text-[11px]
+                            "
+                        >
+                            Your payment is confirmed. Your browser blocked
+                            automatic audio playback. Tap once to continue
+                            the confirmation video with sound.
+                        </p>
+
+
+                        <!-- ENABLE SOUND BUTTON -->
+
+                        <button
+                            type="button"
+                            id="enableSoundButton"
+                            class="
+                                mt-5
+                                inline-flex
+                                h-11
+                                items-center
+                                justify-center
+                                gap-2
+                                rounded-xl
+                                bg-gradient-to-r
+                                from-cyan-400
+                                to-sky-400
+                                px-6
+                                text-[10px]
+                                font-black
+                                text-slate-950
+                                shadow-lg
+                                shadow-cyan-500/10
+                                transition
+                                hover:-translate-y-0.5
+                                hover:shadow-cyan-400/20
+                                focus:outline-none
+                                focus:ring-2
+                                focus:ring-cyan-300/30
+                                sm:text-[11px]
+                            "
+                        >
+
+                            <i class="ri-volume-up-line text-base"></i>
+
+                            Enable Sound
+
+                        </button>
+
+
+                        <p
+                            class="
+                                mt-3
+                                text-[8px]
+                                font-semibold
+                                uppercase
+                                tracking-[0.12em]
+                                text-slate-600
+                            "
+                        >
+                            Payment verified successfully
+                        </p>
+
+                    </div>
+
+                </div>
+
+
+                <!-- =================================================
+                     VIDEO ERROR FALLBACK
+                ================================================== -->
+
+                <div
+                    id="videoErrorOverlay"
+                    class="
+                        absolute
+                        inset-0
+                        hidden
+                        items-center
+                        justify-center
+                        bg-[#020817]/90
+                        px-4
+                        backdrop-blur-sm
+                    "
+                >
+
+                    <div class="max-w-sm text-center">
+
+                        <div
+                            class="
+                                mx-auto
+                                flex
+                                h-14
+                                w-14
+                                items-center
+                                justify-center
+                                rounded-2xl
+                                border
+                                border-amber-400/20
+                                bg-amber-400/10
+                                text-amber-300
+                            "
+                        >
+                            <i class="ri-video-line text-2xl"></i>
+                        </div>
+
+
+                        <p
+                            class="
+                                mt-4
+                                text-sm
+                                font-black
+                                text-white
+                            "
+                        >
+                            Payment confirmed
+                        </p>
+
+
+                        <p
+                            class="
+                                mt-2
+                                text-[10px]
+                                leading-5
+                                text-slate-400
+                                sm:text-[11px]
+                            "
+                        >
+                            The confirmation video could not be loaded.
+                            You can continue to your payment confirmation.
+                        </p>
+
+
+                        <button
+                            type="button"
+                            id="continueWithoutVideo"
+                            class="
+                                mt-5
+                                inline-flex
+                                h-10
+                                items-center
+                                justify-center
+                                gap-2
+                                rounded-xl
+                                bg-gradient-to-r
+                                from-cyan-400
+                                to-sky-400
+                                px-5
+                                text-[10px]
+                                font-black
+                                text-slate-950
+                                transition
+                                hover:-translate-y-0.5
+                            "
+                        >
+
+                            Continue
+
+                            <i class="ri-arrow-right-line text-sm"></i>
+
+                        </button>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- =====================================================
+                 SMALL FOOTER
+            ====================================================== -->
+
+            <div
+                class="
+                    flex
+                    items-center
+                    justify-between
+                    gap-3
+                    border-t
+                    border-white/5
+                    px-4
+                    py-3
+                "
+            >
+
+                <div class="min-w-0">
+
+                    <p
+                        class="
+                            truncate
+                            text-[9px]
+                            font-black
+                            uppercase
+                            tracking-[0.16em]
+                            text-cyan-300
+                            sm:text-[10px]
+                        "
+                    >
+                        Payment Confirmed
+                    </p>
+
+                    <p
+                        class="
+                            mt-1
+                            truncate
+                            text-[9px]
+                            text-slate-500
+                            sm:text-[10px]
+                        "
+                    >
+                        Order {{ order_number }}
+                    </p>
+
+                </div>
+
+
+                <div class="shrink-0">
+
+                    <div class="flex items-center gap-1.5">
+
+                        <span
+                            class="
+                                h-1.5
+                                w-1.5
+                                rounded-full
+                                bg-cyan-400
+                            "
+                        ></span>
+
+                        <span
+                            class="
+                                text-[8px]
+                                font-bold
+                                uppercase
+                                tracking-[0.12em]
+                                text-slate-500
+                                sm:text-[9px]
+                            "
+                        >
+                            NeoLearn
+                        </span>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<script>
+(function () {
+
+    "use strict";
+
+
+    /* =========================================================
+       ELEMENTS
+    ========================================================== */
+
+    const video =
+        document.getElementById("paymentIntroVideo");
+
+    const loading =
+        document.getElementById("videoLoading");
+
+    const audioFallback =
+        document.getElementById("audioFallbackOverlay");
+
+    const enableSoundButton =
+        document.getElementById("enableSoundButton");
+
+    const errorOverlay =
+        document.getElementById("videoErrorOverlay");
+
+    const continueWithoutVideo =
+        document.getElementById("continueWithoutVideo");
+
+
+    /* =========================================================
+       FINAL SUCCESS URL
+    ========================================================== */
+
+    const successUrl =
+        "{% url 'orders:payment_success' order_number %}";
+
+
+    /* =========================================================
+       STATE
+    ========================================================== */
+
+    let redirectStarted = false;
+    let autoplayAttempted = false;
+
+
+    /* =========================================================
+       REDIRECT TO FINAL SUCCESS PAGE
+       
+       IMPORTANT:
+       - Video must actually finish first.
+       - Then wait exactly 1 second.
+       - No fixed video-duration timer.
+    ========================================================== */
+
+    function redirectToSuccess() {
+
+        if (redirectStarted) {
+            return;
+        }
+
+        redirectStarted = true;
+
+        window.setTimeout(function () {
+
+            window.location.replace(successUrl);
+
+        }, 1000);
+
+    }
+
+
+    /* =========================================================
+       HIDE LOADING
+    ========================================================== */
+
+    function hideLoading() {
+
+        if (!loading) {
+            return;
+        }
+
+        loading.classList.add(
+            "opacity-0",
+            "pointer-events-none"
+        );
+
+        window.setTimeout(function () {
+
+            if (loading) {
+
+                loading.classList.add("hidden");
+                loading.classList.remove("flex");
+
+            }
+
+        }, 300);
+
+    }
+
+
+    /* =========================================================
+       SHOW LOADING
+    ========================================================== */
+
+    function showLoading() {
+
+        if (!loading) {
+            return;
+        }
+
+        loading.classList.remove("hidden");
+
+        loading.classList.add("flex");
+
+        loading.classList.remove(
+            "opacity-0",
+            "pointer-events-none"
+        );
+
+    }
+
+
+    /* =========================================================
+       SHOW AUDIO FALLBACK
+    ========================================================== */
+
+    function showAudioFallback() {
+
+        hideLoading();
+
+        if (!audioFallback) {
+            return;
+        }
+
+        audioFallback.classList.remove("hidden");
+
+        audioFallback.classList.add("flex");
+
+    }
+
+
+    /* =========================================================
+       HIDE AUDIO FALLBACK
+    ========================================================== */
+
+    function hideAudioFallback() {
+
+        if (!audioFallback) {
+            return;
+        }
+
+        audioFallback.classList.add("hidden");
+
+        audioFallback.classList.remove("flex");
+
+    }
+
+
+    /* =========================================================
+       SHOW VIDEO ERROR
+    ========================================================== */
+
+    function showVideoError() {
+
+        hideLoading();
+
+        hideAudioFallback();
+
+        if (!errorOverlay) {
+            return;
+        }
+
+        errorOverlay.classList.remove("hidden");
+
+        errorOverlay.classList.add("flex");
+
+    }
+
+
+    /* =========================================================
+       VIDEO SETUP
+    ========================================================== */
+
+    if (!video) {
+
+        showVideoError();
+
+        return;
+
+    }
+
+
+    /* =========================================================
+       VIDEO DATA LOADED
+    ========================================================== */
+
+    video.addEventListener(
+        "loadeddata",
+        function () {
+
+            hideLoading();
+
+        },
+        { once: true }
+    );
+
+
+    /* =========================================================
+       VIDEO CAN PLAY
+    ========================================================== */
+
+    video.addEventListener(
+        "canplay",
+        function () {
+
+            hideLoading();
+
+        },
+        { once: true }
+    );
+
+
+    /* =========================================================
+       ACTUAL VIDEO END
+       
+       This is the ONLY place where normal completion
+       redirects to the final payment-success page.
+    ========================================================== */
+
+    video.addEventListener(
+        "ended",
+        function () {
+
+            hideAudioFallback();
+
+            redirectToSuccess();
+
+        },
+        { once: true }
+    );
+
+
+    /* =========================================================
+       REAL VIDEO ERROR
+    ========================================================== */
+
+    video.addEventListener(
+        "error",
+        function () {
+
+            showVideoError();
+
+        }
+    );
+
+
+    /* =========================================================
+       START VIDEO AUTOMATICALLY
+       
+       First attempt:
+       - autoplay
+       - audio enabled
+       
+       Browser policy may reject audible autoplay.
+       If rejected, we show the small audio fallback.
+    ========================================================== */
+
+    function startVideoAutomatically() {
+
+        if (autoplayAttempted) {
+            return;
+        }
+
+        autoplayAttempted = true;
+
+        hideAudioFallback();
+
+        showLoading();
+
+
+        /*
+         * Make sure audio is enabled.
+         */
+
+        video.muted = false;
+
+        video.defaultMuted = false;
+
+        video.volume = 1;
+
+
+        let playPromise;
+
+        try {
+
+            playPromise = video.play();
+
+        } catch (error) {
+
+            console.error(
+                "[NeoLearn Payment Intro] Automatic playback failed:",
+                error
+            );
+
+            showAudioFallback();
+
+            return;
+
+        }
+
+
+        if (playPromise !== undefined) {
+
+            playPromise
+                .then(function () {
+
+                    /*
+                     * Automatic playback with sound was accepted
+                     * by the browser.
+                     */
+
+                    hideLoading();
+
+                    hideAudioFallback();
+
+                })
+                .catch(function (error) {
+
+                    /*
+                     * Most commonly this is browser autoplay
+                     * policy blocking audible autoplay.
+                     */
+
+                    console.warn(
+                        "[NeoLearn Payment Intro] Audible autoplay was blocked:",
+                        error
+                    );
+
+                    hideLoading();
+
+                    showAudioFallback();
+
+                });
+
+        }
+
+    }
+
+
+    /* =========================================================
+       VIDEO RESOURCE LOAD
+    ========================================================== */
+
+    try {
+
+        video.load();
+
+    } catch (error) {
+
+        console.error(
+            "[NeoLearn Payment Intro] Video load error:",
+            error
+        );
+
+        showVideoError();
+
+        return;
+
+    }
+
+
+    /* =========================================================
+       START AUTOMATICALLY WHEN VIDEO IS READY
+    ========================================================== */
+
+    if (video.readyState >= 3) {
+
+        startVideoAutomatically();
+
+    } else {
+
+        video.addEventListener(
+            "canplay",
+            function () {
+
+                startVideoAutomatically();
+
+            },
+            { once: true }
+        );
+
+    }
+
+
+    /* =========================================================
+       ENABLE SOUND FALLBACK
+       
+       This is only used if the browser blocks automatic
+       audible playback.
+       
+       The user's click gives the browser permission to
+       start/resume the video with sound.
+    ========================================================== */
+
+    if (enableSoundButton) {
+
+        enableSoundButton.addEventListener(
+            "click",
+            function () {
+
+                hideAudioFallback();
+
+                showLoading();
+
+
+                /*
+                 * Explicitly enable audio.
+                 */
+
+                video.muted = false;
+
+                video.defaultMuted = false;
+
+                video.volume = 1;
+
+
+                const playPromise =
+                    video.play();
+
+
+                if (playPromise !== undefined) {
+
+                    playPromise
+                        .then(function () {
+
+                            hideLoading();
+
+                        })
+                        .catch(function (error) {
+
+                            console.error(
+                                "[NeoLearn Payment Intro] Playback after sound permission failed:",
+                                error
+                            );
+
+                            hideLoading();
+
+                            showAudioFallback();
+
+                        });
+
+                }
+
+            }
+        );
+
+    }
+
+
+    /* =========================================================
+       CONTINUE WITHOUT VIDEO
+       
+       Only used when the actual MP4 cannot be loaded.
+    ========================================================== */
+
+    if (continueWithoutVideo) {
+
+        continueWithoutVideo.addEventListener(
+            "click",
+            function () {
+
+                redirectToSuccess();
+
+            }
+        );
+
+    }
+
+})();
+</script>
+
+{% endblock %}

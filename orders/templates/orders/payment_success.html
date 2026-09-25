@@ -1,0 +1,2069 @@
+{% extends "students/base_student.html" %}
+{% load static %}
+
+{% block title %}
+    Payment Successful | NeoLearn
+{% endblock %}
+
+{% block student_content %}
+
+<!-- ================================================================
+     NEOLEARN PAYMENT SUCCESS PAGE
+
+     DESKTOP
+     ---------------------------------------------------------------
+     One outer card owns the page scrolling.
+
+     Banner
+        ↓
+     Purchased Batches + Payment Details
+        ↓
+     Learning Journey Footer
+
+     Purchased Batches / Payment Details have their own internal
+     scrolling on large screens.
+
+     MOBILE / SMALL DEVICES
+     ---------------------------------------------------------------
+     Internal panel scrolling is disabled.
+     The outer page/card scrolls normally.
+================================================================ -->
+
+<div
+    class="
+        w-full
+        min-w-0
+        text-white
+
+        px-0
+        sm:px-1
+        md:px-2
+        lg:px-3
+        xl:px-4
+
+        lg:h-[calc(100dvh-7rem)]
+        lg:min-h-0
+    "
+>
+
+    <!-- ============================================================
+         SINGLE OUTER NEOLEARN CARD
+
+         IMPORTANT:
+         There is NO extra main-content card inside this card.
+    ============================================================= -->
+
+    <div
+        class="
+            neo-success-card
+            mx-auto
+            flex
+            h-auto
+            min-h-0
+            w-full
+            min-w-0
+            flex-col
+            overflow-hidden
+
+            rounded-2xl
+
+            border
+            border-cyan-400/20
+
+            bg-[#020b18]/95
+
+            shadow-[0_0_40px_rgba(8,145,178,0.08)]
+
+            p-1.5
+
+            sm:p-2
+
+            md:p-2.5
+
+            lg:p-3
+
+            xl:p-3.5
+        "
+    >
+
+        <!-- ========================================================
+             OUTER CARD SCROLL AREA
+
+             Desktop:
+             The entire payment-success page scrolls inside
+             the NeoLearn outer card.
+
+             Mobile:
+             This simply becomes the normal content flow.
+        ========================================================= -->
+
+        <div
+            class="
+                neo-success-page-scroll
+
+                min-h-0
+                min-w-0
+                w-full
+
+                lg:flex-1
+
+                overflow-x-hidden
+                overflow-y-visible
+                lg:overflow-y-auto
+
+                overscroll-auto
+
+                touch-pan-y
+
+                pr-0
+                sm:pr-0.5
+            "
+        >
+
+            <!-- ====================================================
+                 COMPLETE SUCCESS CONTENT
+            ===================================================== -->
+
+            <div
+                class="
+                    flex
+                    w-full
+                    min-w-0
+                    flex-col
+
+                    gap-2.5
+
+                    sm:gap-3
+
+                    lg:gap-3
+
+                    xl:gap-3.5
+
+                    pb-1
+                "
+            >
+
+                <!-- =================================================
+                     SMALLER PAYMENT SUCCESS BANNER
+                ================================================== -->
+
+                <section
+                    class="
+                        relative
+                        w-full
+                        shrink-0
+                        overflow-hidden
+
+                        rounded-lg
+
+                        border
+                        border-cyan-400/20
+
+                        bg-[#020817]
+
+                        shadow-[0_0_25px_rgba(34,211,238,0.06)]
+
+                        aspect-[8/2.35]
+
+                        sm:aspect-[8/2.45]
+
+                        lg:aspect-[8/2.25]
+
+                        xl:aspect-[8/2.3]
+                    "
+                >
+
+                    <img
+                        src="{% static 'orders/images/payment_success_banner.png' %}"
+                        alt="Payment Successful"
+                        class="
+                            absolute
+                            inset-0
+                            block
+                            h-full
+                            w-full
+                            object-fill
+                        "
+                    >
+
+                </section>
+
+
+                <!-- =================================================
+                     MAIN SUCCESS CONTENT
+
+                     IMPORTANT:
+                     There is NO wrapper card here.
+
+                     Purchased Batches and Payment Details are
+                     directly placed side-by-side.
+                ================================================== -->
+
+                <div
+                    class="
+                        neo-main-success-grid
+                        grid
+                        w-full
+                        min-w-0
+
+                        grid-cols-1
+
+                        gap-2.5
+
+                        sm:gap-3
+
+                        lg:grid-cols-[minmax(0,1.85fr)_minmax(330px,1fr)]
+
+                        xl:grid-cols-[minmax(0,1.9fr)_minmax(350px,1fr)]
+
+                        2xl:grid-cols-[minmax(0,2fr)_minmax(380px,1fr)]
+
+                        min-h-0
+                        lg:flex-1
+                        lg:overflow-hidden
+                    "
+                >
+
+                    <!-- =================================================
+                         PURCHASED BATCHES
+                    ================================================== -->
+
+                    <section
+                        class="
+                            neo-success-panel
+                            flex
+                            min-w-0
+
+                            rounded-xl
+
+                            border
+                            border-cyan-400/20
+
+                            bg-[#061326]/95
+
+                            shadow-[0_0_25px_rgba(8,145,178,0.06)]
+
+                            overflow-hidden
+
+                            lg:min-h-0
+                            lg:flex-col
+                        "
+                    >
+
+                        <!-- HEADER -->
+
+                        <div
+                            class="
+                                flex
+                                shrink-0
+                                items-center
+                                justify-between
+                                gap-2
+
+                                border-b
+                                border-white/[0.07]
+
+                                bg-[#07182c]
+
+                                px-3
+                                py-2
+
+                                sm:px-3.5
+                                sm:py-2.5
+
+                                lg:px-3.5
+                                lg:py-2.5
+                            "
+                        >
+
+                            <div
+                                class="
+                                    flex
+                                    min-w-0
+                                    items-center
+                                    gap-2
+                                "
+                            >
+
+                                <span
+                                    class="
+                                        flex
+                                        h-7
+                                        w-7
+                                        shrink-0
+                                        items-center
+                                        justify-center
+
+                                        rounded-lg
+
+                                        border
+                                        border-cyan-300/20
+
+                                        bg-cyan-400/10
+
+                                        text-cyan-300
+
+                                        sm:h-8
+                                        sm:w-8
+                                    "
+                                >
+
+                                    <i
+                                        class="
+                                            ri-book-open-fill
+                                            text-sm
+                                            sm:text-base
+                                        "
+                                    ></i>
+
+                                </span>
+
+
+                                <h2
+                                    class="
+                                        min-w-0
+                                        truncate
+
+                                        text-xs
+                                        font-black
+                                        tracking-tight
+                                        text-white
+
+                                        sm:text-sm
+                                    "
+                                >
+
+                                    Purchased Batches
+
+                                    <span class="text-slate-400">
+                                        ({{ order_items|length }})
+                                    </span>
+
+                                </h2>
+
+                            </div>
+
+
+                            <div
+                                class="
+                                    flex
+                                    shrink-0
+                                    items-center
+                                    gap-1
+
+                                    rounded-full
+
+                                    border
+                                    border-emerald-400/20
+
+                                    bg-emerald-400/10
+
+                                    px-2
+                                    py-1
+
+                                    text-[8px]
+                                    font-black
+                                    text-emerald-300
+
+                                    sm:px-2.5
+                                "
+                            >
+
+                                <i class="ri-checkbox-circle-fill"></i>
+
+                                <span class="hidden sm:inline">
+                                    All Access Active
+                                </span>
+
+                                <span class="sm:hidden">
+                                    Active
+                                </span>
+
+                            </div>
+
+                        </div>
+
+
+                        <!-- =================================================
+                             PURCHASED BATCHES CONTENT
+
+                             DESKTOP:
+                             Internal scrolling.
+
+                             MOBILE:
+                             Normal flow.
+                        ================================================== -->
+
+                        <div
+                            class="
+                                neo-internal-scroll
+
+                                min-w-0
+                                w-full
+
+                                px-2
+                                py-2
+
+                                sm:px-2.5
+                                sm:py-2.5
+
+                                lg:min-h-0
+                                lg:flex-1
+                                lg:overflow-x-hidden
+                                lg:overflow-y-auto
+                            "
+                        >
+
+                            {% for item in order_items %}
+
+                                <!-- =====================================
+                                     BATCH ITEM
+                                ====================================== -->
+
+                                <article
+                                    class="
+                                        mb-1.5
+
+                                        w-full
+                                        min-w-0
+
+                                        overflow-hidden
+
+                                        rounded-lg
+
+                                        border
+                                        border-white/[0.08]
+
+                                        bg-[#08182d]/90
+
+                                        transition
+                                        duration-200
+
+                                        last:mb-0
+
+                                        hover:border-cyan-400/25
+                                        hover:bg-[#0a1d35]
+                                    "
+                                >
+
+                                    <div
+                                        class="
+                                            neo-batch-row
+                                            grid
+                                            w-full
+                                            min-w-0
+
+                                            grid-cols-1
+
+                                            gap-2
+
+                                            p-2
+
+                                            sm:grid-cols-[82px_minmax(0,1fr)_125px]
+
+                                            sm:items-center
+
+                                            md:grid-cols-[90px_minmax(0,1fr)_135px]
+
+                                            lg:grid-cols-[90px_minmax(0,1fr)_135px]
+
+                                            xl:grid-cols-[100px_minmax(0,1fr)_145px]
+                                        "
+                                    >
+
+                                        <!-- =================================
+                                             THUMBNAIL
+                                        ================================== -->
+
+                                        <div
+                                            class="
+                                                h-[68px]
+                                                w-full
+
+                                                overflow-hidden
+
+                                                rounded-lg
+
+                                                border
+                                                border-white/[0.08]
+
+                                                bg-[#020817]
+
+                                                sm:h-[62px]
+                                                sm:w-[82px]
+
+                                                md:h-[68px]
+                                                md:w-[90px]
+
+                                                lg:h-[68px]
+                                                lg:w-[90px]
+
+                                                xl:h-[74px]
+                                                xl:w-[100px]
+                                            "
+                                        >
+
+                                            {% if item.batch.batch_thumbnail %}
+
+                                                <img
+                                                    src="{{ item.batch.batch_thumbnail.url }}"
+                                                    alt="{{ item.batch.batch_name }}"
+
+                                                    class="
+                                                        block
+                                                        h-full
+                                                        w-full
+
+                                                        object-cover
+                                                        object-center
+                                                    "
+                                                >
+
+                                            {% else %}
+
+                                                <div
+                                                    class="
+                                                        flex
+                                                        h-full
+                                                        w-full
+                                                        items-center
+                                                        justify-center
+
+                                                        bg-gradient-to-br
+                                                        from-cyan-500/10
+                                                        via-blue-500/10
+                                                        to-violet-500/10
+
+                                                        text-cyan-300
+                                                    "
+                                                >
+
+                                                    <i
+                                                        class="
+                                                            ri-graduation-cap-fill
+                                                            text-2xl
+                                                            sm:text-3xl
+                                                        "
+                                                    ></i>
+
+                                                </div>
+
+                                            {% endif %}
+
+                                        </div>
+
+
+                                        <!-- =================================
+                                             BATCH INFORMATION
+                                        ================================== -->
+
+                                        <div class="min-w-0">
+
+                                            <h3
+                                                class="
+                                                    min-w-0
+                                                    truncate
+
+                                                    text-[11px]
+                                                    font-black
+                                                    text-white
+
+                                                    sm:text-xs
+                                                    lg:text-sm
+                                                "
+
+                                                title="{{ item.batch.batch_name }}"
+                                            >
+                                                {{ item.batch.batch_name }}
+                                            </h3>
+
+
+                                            <div
+                                                class="
+                                                    mt-1
+
+                                                    flex
+                                                    min-w-0
+                                                    flex-wrap
+                                                    items-center
+                                                    gap-1
+                                                "
+                                            >
+
+                                                {% if item.batch.batch %}
+
+                                                    <span
+                                                        class="
+                                                            max-w-full
+                                                            truncate
+
+                                                            rounded-md
+
+                                                            border
+                                                            border-white/10
+
+                                                            bg-white/[0.04]
+
+                                                            px-1.5
+                                                            py-0.5
+
+                                                            text-[7px]
+                                                            font-semibold
+                                                            text-slate-300
+                                                        "
+                                                    >
+                                                        {{ item.batch.batch }}
+                                                    </span>
+
+                                                {% endif %}
+
+
+                                                {% if item.batch.subject %}
+
+                                                    <span
+                                                        class="
+                                                            max-w-full
+                                                            truncate
+
+                                                            rounded-md
+
+                                                            border
+                                                            border-cyan-400/10
+
+                                                            bg-cyan-400/[0.05]
+
+                                                            px-1.5
+                                                            py-0.5
+
+                                                            text-[7px]
+                                                            font-semibold
+                                                            text-cyan-300
+                                                        "
+                                                    >
+                                                        {{ item.batch.subject }}
+                                                    </span>
+
+                                                {% endif %}
+
+                                            </div>
+
+
+                                            <p
+                                                class="
+                                                    mt-1
+
+                                                    line-clamp-1
+
+                                                    text-[8px]
+                                                    leading-3
+
+                                                    text-slate-400
+
+                                                    sm:text-[9px]
+                                                "
+                                            >
+                                                Your purchased learning access is now active.
+                                            </p>
+
+                                        </div>
+
+
+                                        <!-- =================================
+                                             PRICE / ACCESS / LEARNING
+                                        ================================== -->
+
+                                        <div
+                                            class="
+                                                flex
+                                                min-w-0
+                                                items-center
+                                                justify-between
+                                                gap-2
+
+                                                sm:flex-col
+                                                sm:items-end
+                                                sm:justify-center
+                                            "
+                                        >
+
+                                            <div
+                                                class="
+                                                    flex
+                                                    min-w-0
+                                                    flex-col
+                                                    items-start
+                                                    gap-0.5
+
+                                                    sm:items-end
+                                                "
+                                            >
+
+                                                <span
+                                                    class="
+                                                        inline-flex
+                                                        items-center
+                                                        gap-1
+
+                                                        whitespace-nowrap
+
+                                                        rounded-full
+
+                                                        border
+                                                        border-emerald-400/20
+
+                                                        bg-emerald-400/10
+
+                                                        px-1.5
+                                                        py-0.5
+
+                                                        text-[7px]
+                                                        font-black
+                                                        text-emerald-300
+
+                                                        sm:px-2
+                                                    "
+                                                >
+
+                                                    <i class="ri-checkbox-circle-fill"></i>
+
+                                                    Access Granted
+
+                                                </span>
+
+
+                                                <strong
+                                                    class="
+                                                        whitespace-nowrap
+
+                                                        text-[11px]
+                                                        font-black
+                                                        text-white
+
+                                                        sm:text-xs
+                                                    "
+                                                >
+                                                    ₹{{ item.final_price|floatformat:2 }}
+                                                </strong>
+
+                                            </div>
+
+
+                                            <a
+                                                href="{% url 'my_learning' %}"
+
+                                                class="
+                                                    inline-flex
+                                                    shrink-0
+                                                    items-center
+                                                    gap-1
+
+                                                    rounded-lg
+
+                                                    border
+                                                    border-cyan-400/25
+
+                                                    bg-gradient-to-r
+                                                    from-cyan-500/15
+                                                    to-blue-500/15
+
+                                                    px-1.5
+                                                    py-1
+
+                                                    text-[7px]
+                                                    font-black
+                                                    text-cyan-300
+
+                                                    transition
+                                                    duration-200
+
+                                                    hover:border-cyan-300/40
+                                                    hover:bg-cyan-400/20
+                                                    hover:text-cyan-200
+
+                                                    sm:px-2
+                                                    sm:py-1.5
+
+                                                    sm:text-[8px]
+                                                "
+                                            >
+
+                                                <i class="ri-play-circle-fill"></i>
+
+                                                <span class="whitespace-nowrap">
+                                                    Go to My Learning
+                                                </span>
+
+                                                <i class="ri-arrow-right-line"></i>
+
+                                            </a>
+
+                                        </div>
+
+                                    </div>
+
+                                </article>
+
+                            {% empty %}
+
+                                <div
+                                    class="
+                                        flex
+                                        min-h-[150px]
+                                        items-center
+                                        justify-center
+                                        text-center
+                                    "
+                                >
+
+                                    <div>
+
+                                        <i
+                                            class="
+                                                ri-inbox-2-line
+                                                text-3xl
+                                                text-slate-600
+                                            "
+                                        ></i>
+
+                                        <p
+                                            class="
+                                                mt-2
+                                                text-xs
+                                                font-semibold
+                                                text-slate-400
+                                            "
+                                        >
+                                            No purchased batch information available.
+                                        </p>
+
+                                    </div>
+
+                                </div>
+
+                            {% endfor %}
+
+                        </div>
+
+                    </section>
+
+
+                    <!-- =================================================
+                         PAYMENT DETAILS
+                    ================================================== -->
+
+                    <section
+                        class="
+                            neo-success-panel
+                            flex
+                            min-w-0
+
+                            rounded-xl
+
+                            border
+                            border-cyan-400/20
+
+                            bg-[#061326]/95
+
+                            shadow-[0_0_25px_rgba(8,145,178,0.06)]
+
+                            overflow-hidden
+
+                            lg:min-h-0
+                            lg:flex-col
+                        "
+                    >
+
+                        <!-- HEADER -->
+
+                        <div
+                            class="
+                                flex
+                                shrink-0
+                                items-center
+                                justify-between
+                                gap-2
+
+                                border-b
+                                border-white/[0.07]
+
+                                bg-[#07182c]
+
+                                px-3
+                                py-2
+
+                                sm:px-3.5
+                                sm:py-2.5
+
+                                lg:px-3.5
+                                lg:py-2.5
+                            "
+                        >
+
+                            <div
+                                class="
+                                    flex
+                                    min-w-0
+                                    items-center
+                                    gap-2
+                                "
+                            >
+
+                                <span
+                                    class="
+                                        flex
+                                        h-7
+                                        w-7
+                                        shrink-0
+                                        items-center
+                                        justify-center
+
+                                        rounded-lg
+
+                                        border
+                                        border-cyan-300/20
+
+                                        bg-cyan-400/10
+
+                                        text-cyan-300
+
+                                        sm:h-8
+                                        sm:w-8
+                                    "
+                                >
+
+                                    <i
+                                        class="
+                                            ri-bank-card-fill
+                                            text-sm
+                                            sm:text-base
+                                        "
+                                    ></i>
+
+                                </span>
+
+
+                                <h2
+                                    class="
+                                        min-w-0
+                                        truncate
+
+                                        text-xs
+                                        font-black
+                                        tracking-tight
+                                        text-white
+
+                                        sm:text-sm
+                                    "
+                                >
+                                    Payment Details
+                                </h2>
+
+                            </div>
+
+
+                            <a
+                                href="#"
+                                title="Payment History"
+
+                                class="
+                                    inline-flex
+                                    shrink-0
+                                    items-center
+                                    gap-1
+
+                                    rounded-lg
+
+                                    border
+                                    border-violet-400/25
+
+                                    bg-gradient-to-r
+                                    from-violet-500/15
+                                    to-indigo-500/15
+
+                                    px-1.5
+                                    py-1
+
+                                    text-[7px]
+                                    font-black
+                                    text-violet-300
+
+                                    transition
+                                    duration-200
+
+                                    hover:border-violet-300/40
+                                    hover:bg-violet-500/20
+                                    hover:text-violet-200
+
+                                    sm:px-2
+                                    sm:py-1.5
+
+                                    sm:text-[8px]
+                                "
+                            >
+
+                                <i class="ri-history-line"></i>
+
+                                <span class="payment-history-label hidden sm:inline">
+                                    Payment History
+                                </span>
+
+                                <i class="ri-arrow-right-line"></i>
+
+                            </a>
+
+                        </div>
+
+
+                        <!-- =================================================
+                             PAYMENT DETAILS CONTENT
+
+                             DESKTOP:
+                             Internal scroll.
+
+                             MOBILE:
+                             Normal page flow.
+                        ================================================== -->
+
+                        <div
+                            class="
+                                neo-internal-scroll
+
+                                min-w-0
+                                w-full
+
+                                px-3
+
+                                sm:px-3.5
+
+                                lg:min-h-0
+                                lg:flex-1
+                                lg:overflow-x-hidden
+                                lg:overflow-y-auto
+
+                                lg:px-3.5
+                            "
+                        >
+
+                            <!-- AMOUNT -->
+
+                            <div
+                                class="
+                                    flex
+                                    min-h-[44px]
+                                    items-center
+                                    gap-2
+
+                                    border-b
+                                    border-white/[0.07]
+                                "
+                            >
+
+                                <span
+                                    class="
+                                        flex
+                                        w-5
+                                        shrink-0
+                                        justify-center
+                                        text-base
+                                        text-slate-300
+                                    "
+                                >
+                                    <i class="ri-question-mark"></i>
+                                </span>
+
+
+                                <span
+                                    class="
+                                        min-w-0
+                                        flex-1
+
+                                        text-[10px]
+                                        text-slate-300
+
+                                        sm:text-[11px]
+                                    "
+                                >
+                                    Amount Paid
+                                </span>
+
+
+                                <strong
+                                    class="
+                                        whitespace-nowrap
+
+                                        text-xs
+                                        font-black
+                                        text-cyan-300
+
+                                        sm:text-sm
+                                    "
+                                >
+                                    ₹{{ order.final_amount|floatformat:2 }}
+                                </strong>
+
+                            </div>
+
+
+                            <!-- ORDER NUMBER -->
+
+                            <div
+                                class="
+                                    flex
+                                    min-h-[44px]
+                                    items-center
+                                    gap-2
+
+                                    border-b
+                                    border-white/[0.07]
+                                "
+                            >
+
+                                <span
+                                    class="
+                                        flex
+                                        w-5
+                                        shrink-0
+                                        justify-center
+                                        text-base
+                                        text-slate-300
+                                    "
+                                >
+                                    <i class="ri-links-line"></i>
+                                </span>
+
+
+                                <span
+                                    class="
+                                        min-w-0
+                                        flex-1
+
+                                        text-[10px]
+                                        text-slate-300
+
+                                        sm:text-[11px]
+                                    "
+                                >
+                                    Order Number
+                                </span>
+
+
+                                <span
+                                    class="
+                                        max-w-[58%]
+                                        truncate
+
+                                        text-right
+                                        text-[8px]
+                                        font-semibold
+                                        text-slate-200
+
+                                        sm:text-[9px]
+                                    "
+
+                                    title="{{ order.order_number }}"
+                                >
+                                    {{ order.order_number }}
+                                </span>
+
+                            </div>
+
+
+                            <!-- INVOICE -->
+
+                            {% if invoice %}
+
+                                <div
+                                    class="
+                                        flex
+                                        min-h-[44px]
+                                        items-center
+                                        gap-2
+
+                                        border-b
+                                        border-white/[0.07]
+                                    "
+                                >
+
+                                    <span
+                                        class="
+                                            flex
+                                            w-5
+                                            shrink-0
+                                            justify-center
+                                            text-base
+                                            text-slate-300
+                                        "
+                                    >
+                                        <i class="ri-file-text-line"></i>
+                                    </span>
+
+
+                                    <span
+                                        class="
+                                            min-w-0
+                                            flex-1
+
+                                            text-[10px]
+                                            text-slate-300
+
+                                            sm:text-[11px]
+                                        "
+                                    >
+                                        Invoice Number
+                                    </span>
+
+
+                                    <span
+                                        class="
+                                            max-w-[58%]
+                                            truncate
+
+                                            text-right
+                                            text-[8px]
+                                            font-semibold
+                                            text-slate-200
+
+                                            sm:text-[9px]
+                                        "
+
+                                        title="{{ invoice.invoice_number }}"
+                                    >
+                                        {{ invoice.invoice_number }}
+                                    </span>
+
+                                </div>
+
+                            {% endif %}
+
+
+                            <!-- PAYMENT METHOD -->
+
+                            <div
+                                class="
+                                    flex
+                                    min-h-[44px]
+                                    items-center
+                                    gap-2
+
+                                    border-b
+                                    border-white/[0.07]
+                                "
+                            >
+
+                                <span
+                                    class="
+                                        flex
+                                        w-5
+                                        shrink-0
+                                        justify-center
+                                        text-base
+                                        text-slate-300
+                                    "
+                                >
+                                    <i class="ri-bank-card-line"></i>
+                                </span>
+
+
+                                <span
+                                    class="
+                                        min-w-0
+                                        flex-1
+
+                                        text-[10px]
+                                        text-slate-300
+
+                                        sm:text-[11px]
+                                    "
+                                >
+                                    Payment Method
+                                </span>
+
+
+                                <span
+                                    class="
+                                        whitespace-nowrap
+
+                                        text-right
+                                        text-[8px]
+                                        font-semibold
+                                        text-slate-200
+
+                                        sm:text-[9px]
+                                    "
+                                >
+                                    Razorpay
+                                </span>
+
+                            </div>
+
+
+                            <!-- TRANSACTION ID -->
+
+                            {% if order.payment and order.payment.razorpay_payment_id %}
+
+                                <div
+                                    class="
+                                        flex
+                                        min-h-[44px]
+                                        items-center
+                                        gap-2
+
+                                        border-b
+                                        border-white/[0.07]
+                                    "
+                                >
+
+                                    <span
+                                        class="
+                                            flex
+                                            w-5
+                                            shrink-0
+                                            justify-center
+                                            text-base
+                                            text-slate-300
+                                        "
+                                    >
+                                        <i class="ri-receipt-line"></i>
+                                    </span>
+
+
+                                    <span
+                                        class="
+                                            min-w-0
+                                            flex-1
+
+                                            text-[10px]
+                                            text-slate-300
+
+                                            sm:text-[11px]
+                                        "
+                                    >
+                                        Transaction ID
+                                    </span>
+
+
+                                    <span
+                                        class="
+                                            max-w-[58%]
+                                            truncate
+
+                                            text-right
+                                            text-[8px]
+                                            font-semibold
+                                            text-slate-200
+
+                                            sm:text-[9px]
+                                        "
+
+                                        title="{{ order.payment.razorpay_payment_id }}"
+                                    >
+                                        {{ order.payment.razorpay_payment_id }}
+                                    </span>
+
+                                </div>
+
+                            {% endif %}
+
+
+                            <!-- PAYMENT DATE -->
+
+                            <div
+                                class="
+                                    flex
+                                    min-h-[44px]
+                                    items-center
+                                    gap-2
+
+                                    border-b
+                                    border-white/[0.07]
+                                "
+                            >
+
+                                <span
+                                    class="
+                                        flex
+                                        w-5
+                                        shrink-0
+                                        justify-center
+                                        text-base
+                                        text-slate-300
+                                    "
+                                >
+                                    <i class="ri-calendar-line"></i>
+                                </span>
+
+
+                                <span
+                                    class="
+                                        min-w-0
+                                        flex-1
+
+                                        text-[10px]
+                                        text-slate-300
+
+                                        sm:text-[11px]
+                                    "
+                                >
+                                    Payment Date
+                                </span>
+
+
+                                {% if order.paid_at %}
+
+                                    <span
+                                        class="
+                                            whitespace-nowrap
+
+                                            text-right
+                                            text-[8px]
+                                            font-semibold
+                                            text-slate-200
+
+                                            sm:text-[9px]
+                                        "
+                                    >
+                                        {{ order.paid_at|date:"d M Y, h:i A" }}
+                                    </span>
+
+                                {% else %}
+
+                                    <span class="text-xs text-slate-400">
+                                        —
+                                    </span>
+
+                                {% endif %}
+
+                            </div>
+
+
+                            <!-- PAYMENT STATUS -->
+
+                            <div
+                                class="
+                                    flex
+                                    min-h-[44px]
+                                    items-center
+                                    gap-2
+
+                                    border-b
+                                    border-white/[0.07]
+                                "
+                            >
+
+                                <span
+                                    class="
+                                        flex
+                                        w-5
+                                        shrink-0
+                                        justify-center
+                                        text-base
+                                        text-emerald-400
+                                    "
+                                >
+                                    <i class="ri-checkbox-circle-fill"></i>
+                                </span>
+
+
+                                <span
+                                    class="
+                                        min-w-0
+                                        flex-1
+
+                                        text-[10px]
+                                        text-slate-300
+
+                                        sm:text-[11px]
+                                    "
+                                >
+                                    Payment Status
+                                </span>
+
+
+                                <span
+                                    class="
+                                        inline-flex
+                                        items-center
+                                        gap-1
+
+                                        rounded-full
+
+                                        border
+                                        border-emerald-400/20
+
+                                        bg-emerald-400/10
+
+                                        px-2
+                                        py-0.5
+
+                                        text-[8px]
+                                        font-black
+                                        text-emerald-300
+                                    "
+                                >
+
+                                    <i class="ri-checkbox-circle-fill"></i>
+
+                                    Paid
+
+                                </span>
+
+                            </div>
+
+
+                            <!-- BATCH COUNT -->
+
+                            <div
+                                class="
+                                    flex
+                                    min-h-[44px]
+                                    items-center
+                                    gap-2
+                                "
+                            >
+
+                                <span
+                                    class="
+                                        flex
+                                        w-5
+                                        shrink-0
+                                        justify-center
+                                        text-base
+                                        text-slate-300
+                                    "
+                                >
+                                    <i class="ri-file-list-3-line"></i>
+                                </span>
+
+
+                                <span
+                                    class="
+                                        min-w-0
+                                        flex-1
+
+                                        text-[10px]
+                                        text-slate-300
+
+                                        sm:text-[11px]
+                                    "
+                                >
+                                    Batch Count
+                                </span>
+
+
+                                <strong
+                                    class="
+                                        whitespace-nowrap
+
+                                        text-[9px]
+                                        font-black
+                                        text-white
+
+                                        sm:text-[10px]
+                                    "
+                                >
+                                    {{ order_items|length }} Batches
+                                </strong>
+
+                            </div>
+
+                        </div>
+
+                    </section>
+
+                </div>
+
+
+                <!-- =================================================
+                     LEARNING JOURNEY FOOTER
+                ================================================== -->
+
+                <section
+                    class="
+                        flex
+                        w-full
+                        shrink-0
+                        min-w-0
+                        items-center
+                        gap-2
+
+                        overflow-hidden
+
+                        rounded-lg
+
+                        border
+                        border-fuchsia-400/25
+
+                        bg-gradient-to-r
+                        from-violet-950/80
+                        via-purple-950/70
+                        to-fuchsia-950/70
+
+                        px-3
+                        py-2
+
+                        shadow-[0_0_20px_rgba(168,85,247,0.08)]
+
+                        sm:px-3.5
+                        sm:py-2.5
+                    "
+                >
+
+                    <span
+                        class="
+                            flex
+                            h-7
+                            w-7
+                            shrink-0
+                            items-center
+                            justify-center
+
+                            rounded-full
+
+                            bg-violet-500/20
+
+                            text-violet-300
+
+                            sm:h-8
+                            sm:w-8
+                        "
+                    >
+
+                        <i class="ri-rocket-2-fill text-sm"></i>
+
+                    </span>
+
+
+                    <div
+                        class="
+                            min-w-0
+                            flex-1
+                        "
+                    >
+
+                        <p
+                            class="
+                                truncate
+
+                                text-[9px]
+                                font-black
+                                text-white
+
+                                sm:text-[10px]
+                            "
+                        >
+                            Your Learning Journey Starts Now!
+                        </p>
+
+
+                        <p
+                            class="
+                                hidden
+                                truncate
+
+                                text-[7px]
+                                text-slate-400
+
+                                sm:block
+                            "
+                        >
+                            Access your purchased batches in My Learning and begin your journey towards success.
+                        </p>
+
+                    </div>
+
+
+                    <div
+                        class="
+                            shrink-0
+
+                            text-right
+
+                            text-[10px]
+                            font-semibold
+                            italic
+                            text-fuchsia-300
+
+                            sm:text-xs
+                        "
+                    >
+                        Happy Learning! ♥
+                    </div>
+
+                </section>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- ================================================================
+     SCROLL BEHAVIOR
+================================================================ -->
+
+<style>
+
+    /*
+        ============================================================
+        NEOLEARN PAYMENT SUCCESS — RESPONSIVE LAYOUT
+        ============================================================
+
+        XL / LARGE DESKTOP
+        - Outer success card owns the available viewport height.
+        - Banner remains proportional.
+        - Purchased + Payment panels sit side-by-side.
+        - Their content areas scroll internally.
+
+        BELOW XL
+        - No fixed-height content panels.
+        - Panels stack naturally.
+        - The browser/page scrolls normally.
+        - This avoids squeezed cards on tablets and phones.
+    */
+
+    .neo-success-page-scroll {
+        min-width: 0;
+        max-width: 100%;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+        overscroll-behavior-y: auto;
+        overscroll-behavior-x: none;
+        overflow-anchor: none;
+    }
+
+    .neo-success-page-scroll::-webkit-scrollbar {
+        display: none;
+        width: 0;
+        height: 0;
+    }
+
+    .neo-internal-scroll {
+        min-width: 0;
+        max-width: 100%;
+        overscroll-behavior-y: auto;
+        overscroll-behavior-x: none;
+        overflow-anchor: none;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+    }
+
+    .neo-internal-scroll::-webkit-scrollbar {
+        display: none;
+        width: 0;
+        height: 0;
+    }
+
+    .neo-success-card,
+    .neo-main-success-grid,
+    .neo-success-panel,
+    .neo-batch-row,
+    .neo-success-page-scroll,
+    .neo-success-page-scroll > * {
+        min-width: 0;
+        max-width: 100%;
+    }
+
+    /*
+        ============================================================
+        PHONE
+        ============================================================
+    */
+
+    @media (max-width: 639px) {
+
+        .neo-success-card {
+            height: auto !important;
+            min-height: 0 !important;
+            overflow: visible !important;
+            border-radius: 0.875rem;
+            padding: 0.375rem !important;
+        }
+
+        .neo-success-page-scroll {
+            height: auto !important;
+            max-height: none !important;
+            overflow-x: hidden !important;
+            overflow-y: visible !important;
+        }
+
+        .neo-main-success-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) !important;
+            height: auto !important;
+            min-height: 0 !important;
+            max-height: none !important;
+            overflow: visible !important;
+        }
+
+        .neo-success-panel {
+            height: auto !important;
+            min-height: 0 !important;
+            max-height: none !important;
+            overflow: visible !important;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .neo-internal-scroll {
+            height: auto !important;
+            max-height: none !important;
+            min-height: 0 !important;
+            flex: none !important;
+            overflow: visible !important;
+        }
+
+        .neo-batch-row {
+            grid-template-columns: 64px minmax(0, 1fr) !important;
+            gap: 0.5rem !important;
+        }
+
+        .neo-batch-row > :last-child {
+            grid-column: 1 / -1;
+            width: 100%;
+        }
+
+        .neo-batch-row > :first-child {
+            width: 64px !important;
+            height: 56px !important;
+        }
+
+        .neo-batch-row h3 {
+            font-size: 0.72rem;
+        }
+
+        .neo-batch-row a {
+            max-width: 100%;
+        }
+
+        .neo-success-page-scroll img {
+            max-width: 100%;
+        }
+
+        html,
+        body {
+            overflow-x: hidden;
+        }
+    }
+
+
+    /*
+        ============================================================
+        SMALL TABLET
+        ============================================================
+    */
+
+    @media (min-width: 640px) and (max-width: 1023px) {
+
+        .neo-success-card {
+            height: auto !important;
+            min-height: 0 !important;
+            overflow: visible !important;
+        }
+
+        .neo-success-page-scroll {
+            height: auto !important;
+            max-height: none !important;
+            overflow-x: hidden !important;
+            overflow-y: visible !important;
+        }
+
+        .neo-main-success-grid {
+            grid-template-columns: minmax(0, 1fr) !important;
+            height: auto !important;
+            min-height: 0 !important;
+            max-height: none !important;
+            overflow: visible !important;
+        }
+
+        .neo-success-panel {
+            height: auto !important;
+            min-height: 0 !important;
+            max-height: none !important;
+            overflow: visible !important;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .neo-internal-scroll {
+            height: auto !important;
+            max-height: none !important;
+            min-height: 0 !important;
+            flex: none !important;
+            overflow: visible !important;
+        }
+
+    }
+
+
+    /*
+        ============================================================
+        LAPTOP / TABLET-LANDSCAPE
+        ============================================================
+        Keep everything stacked until there is enough width for a
+        genuinely comfortable two-column layout.
+    */
+
+    @media (min-width: 1024px) and (max-width: 1279px) {
+
+        .neo-success-card {
+            height: auto !important;
+            min-height: 0 !important;
+            max-height: none !important;
+            overflow: visible !important;
+        }
+
+        .neo-success-page-scroll {
+            height: auto !important;
+            max-height: none !important;
+            overflow-x: hidden !important;
+            overflow-y: visible !important;
+        }
+
+        .neo-main-success-grid {
+            grid-template-columns: minmax(0, 1fr) !important;
+            height: auto !important;
+            min-height: 0 !important;
+            max-height: none !important;
+            overflow: visible !important;
+        }
+
+        .neo-success-panel {
+            height: auto !important;
+            min-height: 0 !important;
+            max-height: none !important;
+            overflow: visible !important;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .neo-internal-scroll {
+            height: auto !important;
+            max-height: none !important;
+            min-height: 0 !important;
+            flex: none !important;
+            overflow: visible !important;
+        }
+
+    }
+
+
+    /*
+        ============================================================
+        LARGE DESKTOP
+        ============================================================
+        Internal scrolling starts only when the screen is genuinely
+        wide enough for the two-column layout.
+    */
+
+    @media (min-width: 1280px) {
+
+        .neo-success-card {
+            height: 100%;
+            min-height: 0;
+            overflow: hidden;
+        }
+
+        .neo-success-page-scroll {
+            min-height: 0;
+            overflow-x: hidden;
+            overflow-y: auto;
+        }
+
+        .neo-main-success-grid {
+            min-height: 0;
+            flex: 1 1 0%;
+            overflow: hidden;
+        }
+
+        .neo-success-panel {
+            min-height: 0;
+            height: 100%;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .neo-internal-scroll {
+            min-height: 0;
+            flex: 1 1 0%;
+            overflow-x: hidden;
+            overflow-y: auto;
+        }
+
+    }
+
+
+    /*
+        ============================================================
+        VERY WIDE SCREENS
+        ============================================================
+    */
+
+    @media (min-width: 1536px) {
+
+        .neo-success-card {
+            border-radius: 1rem;
+        }
+
+        .neo-main-success-grid {
+            gap: 0.75rem;
+        }
+
+    }
+
+
+    /*
+        ============================================================
+        GENERAL OVERFLOW PROTECTION
+        ============================================================
+    */
+
+    .neo-success-page-scroll,
+    .neo-success-page-scroll > *,
+    .neo-internal-scroll,
+    .neo-internal-scroll > *,
+    .neo-success-panel,
+    .neo-batch-row {
+        min-width: 0;
+        max-width: 100%;
+    }
+
+    .neo-internal-scroll span,
+    .neo-internal-scroll strong,
+    .neo-internal-scroll h2,
+    .neo-internal-scroll h3,
+    .neo-internal-scroll p {
+        min-width: 0;
+    }
+
+    html,
+    body {
+        overflow-x: hidden;
+    }
+
+
+    /*
+        ============================================================
+        PAYMENT HISTORY BUTTON — SMALL DEVICES
+        ============================================================
+        Keep the icon + short readable label visible on phones so
+        first-time users can understand that this opens payment
+        history/details.
+    */
+    @media (max-width: 639px) {
+
+        .payment-history-label {
+            display: inline !important;
+            font-size: 0.625rem;
+            line-height: 1;
+            white-space: nowrap;
+        }
+
+    }
+
+</style>
+
+{% endblock %}
