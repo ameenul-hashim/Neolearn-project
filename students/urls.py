@@ -7,6 +7,7 @@ from .views import (
 
     marketplace_view,
     marketplace_detail_view,
+    my_learning_view,
 
     wishlist_view,
     toggle_wishlist_view,
@@ -17,7 +18,10 @@ from .views import (
     remove_from_cart_view,
     clear_cart_view,
     apply_coupon_view,
-    remove_coupon_view, 
+    remove_coupon_view,
+
+    order_history_view,
+    order_details_view,
 )
 
 
@@ -28,9 +32,9 @@ urlpatterns = [
     # ============================================================
 
     path(
-        'dashboard/',
+        "dashboard/",
         dashboard_view,
-        name='dashboard',
+        name="dashboard",
     ),
 
     # ============================================================
@@ -38,15 +42,15 @@ urlpatterns = [
     # ============================================================
 
     path(
-        'profile/',
+        "profile/",
         profile_view,
-        name='profile',
+        name="profile",
     ),
 
     path(
-        'update-profile-image/',
+        "update-profile-image/",
         update_profile_image_view,
-        name='update_profile_image',
+        name="update_profile_image",
     ),
 
     # ============================================================
@@ -54,15 +58,15 @@ urlpatterns = [
     # ============================================================
 
     path(
-        'marketplace/',
+        "marketplace/",
         marketplace_view,
-        name='marketplace',
+        name="marketplace",
     ),
 
     path(
-        'marketplace/<int:batch_id>/',
+        "marketplace/<int:batch_id>/",
         marketplace_detail_view,
-        name='marketplace_detail',
+        name="marketplace_detail",
     ),
 
     # ============================================================
@@ -70,65 +74,94 @@ urlpatterns = [
     # ============================================================
 
     path(
-        'wishlist/',
+        "wishlist/",
         wishlist_view,
-        name='wishlist',
+        name="wishlist",
     ),
 
     path(
-        'wishlist/toggle/<int:batch_id>/',
+        "wishlist/toggle/<int:batch_id>/",
         toggle_wishlist_view,
-        name='toggle_wishlist',
+        name="toggle_wishlist",
     ),
 
-    # Used only when a client needs the current wishlist count.
     path(
-        'wishlist/count/',
+        "wishlist/count/",
         wishlist_count_view,
-        name='wishlist_count',
+        name="wishlist_count",
     ),
 
-    # ==========================================================
-# CART
-# ==========================================================
+    # ============================================================
+    # CART
+    # ============================================================
 
-path(
-    "cart/",
-    cart_view,
-    name="cart",
-),
+    path(
+        "cart/",
+        cart_view,
+        name="cart",
+    ),
 
-path(
-    "cart/add/<int:batch_id>/",
-    add_to_cart_view,
-    name="add_to_cart",
-),
+    path(
+        "cart/add/<int:batch_id>/",
+        add_to_cart_view,
+        name="add_to_cart",
+    ),
 
-path(
-    "cart/remove/<int:batch_id>/",
-    remove_from_cart_view,
-    name="remove_from_cart",
-),
+    path(
+        "cart/remove/<int:batch_id>/",
+        remove_from_cart_view,
+        name="remove_from_cart",
+    ),
 
-path(
-    "cart/clear/",
-    clear_cart_view,
-    name="clear_cart",
-),
+    path(
+        "cart/clear/",
+        clear_cart_view,
+        name="clear_cart",
+    ),
 
-# ==========================================================
-# CART COUPONS
-# ==========================================================
+    # ============================================================
+    # CART COUPONS
+    # ============================================================
 
-path(
-    "cart/apply-coupon/",
-    apply_coupon_view,
-    name="apply_coupon",
-),
+    path(
+        "cart/apply-coupon/",
+        apply_coupon_view,
+        name="apply_coupon",
+    ),
 
-path(
-    "cart/remove-coupon/<int:coupon_id>/",
-    remove_coupon_view,
-    name="remove_coupon",
-),
+    path(
+        "cart/remove-coupon/<int:coupon_id>/",
+        remove_coupon_view,
+        name="remove_coupon",
+    ),
+
+    # ============================================================
+    # MY LEARNING
+    # ============================================================
+
+    path(
+        "my-learning/",
+        my_learning_view,
+        name="my_learning",
+    ),
+
+    # ============================================================
+    # ORDER HISTORY
+    # ============================================================
+
+    path(
+        "orders/",
+        order_history_view,
+        name="order_history",
+    ),
+
+    # ============================================================
+    # ORDER DETAILS
+    # ============================================================
+
+    path(
+        "orders/<str:order_number>/",
+        order_details_view,
+        name="order_details",
+    ),
 ]

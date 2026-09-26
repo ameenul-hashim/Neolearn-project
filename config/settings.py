@@ -50,6 +50,7 @@ INSTALLED_APPS = [
     'core',
     'teachers',
     'courses',
+    'orders',
 
     # DJANGO ALLAUTH
 
@@ -304,3 +305,11 @@ SOCIALACCOUNT_LOGIN_ON_GET = True
 
 SOCIALACCOUNT_ADAPTER='accounts.adapters.GoogleAccountAdapter'
 
+import os
+
+# settings.py
+
+RAZORPAY_KEY_ID = config("RAZORPAY_KEY_ID", default="")
+RAZORPAY_KEY_SECRET = config("RAZORPAY_KEY_SECRET", default="")
+
+SECURE_CROSS_ORIGIN_OPENER_POLICY = "same-origin-allow-popups"

@@ -1,0 +1,3984 @@
+{% extends "students/base_student.html" %}
+{% load static %}
+
+{% block title %}
+    Order Details | NeoLearn
+{% endblock %}
+
+{% block student_content %}
+
+<div class="w-full min-w-0 overflow-x-hidden text-white">
+
+    <section
+        class="
+            mx-auto
+            flex
+            w-full
+            max-w-[1540px]
+            min-w-0
+            flex-col
+            overflow-hidden
+            rounded-2xl
+            border
+            border-cyan-400/20
+            bg-[#020b18]/95
+            shadow-[0_0_40px_rgba(8,145,178,0.08)]
+            p-2
+            sm:p-2.5
+            md:p-3
+            lg:h-[calc(100dvh-7.5rem)]
+            lg:min-h-0
+            xl:p-3.5
+        "
+    >
+
+        <!-- =========================================================
+             TOP STATUS BANNER
+        ========================================================== -->
+
+        <section
+            class="
+                shrink-0
+                overflow-hidden
+                rounded-xl
+                border
+                border-white/10
+                {% if order.status == 'paid' %}
+                    bg-emerald-600
+                {% elif order.status == 'partially_refunded' %}
+                    bg-violet-600
+                {% elif order.status == 'refunded' %}
+                    bg-slate-600
+                {% elif order.status == 'cancelled' %}
+                    bg-orange-500
+                {% elif order.status == 'payment_failed' %}
+                    bg-rose-600
+                {% else %}
+                    bg-cyan-600
+                {% endif %}
+            "
+        >
+
+            <div
+                class="
+                    flex
+                    min-h-[40px]
+                    items-center
+                    justify-between
+                    gap-3
+                    px-3
+                    py-2
+                    sm:px-4
+                "
+            >
+
+                <div class="flex min-w-0 items-center gap-2">
+
+                    <span
+                        class="
+                            flex
+                            h-6
+                            w-6
+                            shrink-0
+                            items-center
+                            justify-center
+                            rounded-md
+                            bg-black/15
+                            text-[11px]
+                            font-black
+                            text-white
+                        "
+                    >
+                        {% if order.status == "paid" %}
+                            1
+                        {% elif order.status == "partially_refunded" %}
+                            2
+                        {% elif order.status == "refunded" %}
+                            3
+                        {% elif order.status == "cancelled" %}
+                            4
+                        {% elif order.status == "payment_failed" %}
+                            5
+                        {% else %}
+                            •
+                        {% endif %}
+                    </span>
+
+                    <h1
+                        class="
+                            min-w-0
+                            truncate
+                            text-xs
+                            font-black
+                            uppercase
+                            tracking-tight
+                            text-white
+                            sm:text-sm
+                            lg:text-base
+                        "
+                    >
+                        {% if order.status == "paid" %}
+                            Completed / Paid Order
+                        {% elif order.status == "partially_refunded" %}
+                            Partially Refunded Order
+                        {% elif order.status == "refunded" %}
+                            Fully Refunded Order
+                        {% elif order.status == "cancelled" %}
+                            Cancelled Order
+                        {% elif order.status == "payment_failed" %}
+                            Payment Failed Order
+                        {% else %}
+                            Order Details
+                        {% endif %}
+                    </h1>
+
+                </div>
+
+
+                <span
+                    class="
+                        hidden
+                        shrink-0
+                        text-[8px]
+                        font-bold
+                        text-white/90
+                        sm:block
+                        sm:text-[9px]
+                        lg:text-[10px]
+                    "
+                >
+                    {% if order.status == "paid" %}
+                        Normal successful order
+                    {% elif order.status == "partially_refunded" %}
+                        One or more batches refunded
+                    {% elif order.status == "refunded" %}
+                        All batches refunded
+                    {% elif order.status == "cancelled" %}
+                        Order cancelled by user
+                    {% elif order.status == "payment_failed" %}
+                        Payment failed, no access provided
+                    {% endif %}
+                </span>
+
+            </div>
+
+        </section>
+
+
+        <!-- =========================================================
+             MAIN WORKSPACE
+        ========================================================== -->
+
+        <div
+            class="
+                mt-2
+                grid
+                min-h-0
+                min-w-0
+                flex-1
+                grid-cols-1
+                gap-2.5
+                lg:grid-cols-[minmax(0,1fr)_300px]
+                xl:grid-cols-[minmax(0,1fr)_320px]
+                2xl:grid-cols-[minmax(0,1fr)_350px]
+                lg:overflow-hidden
+            "
+        >
+
+            <!-- =====================================================
+                 LEFT SIDE
+            ====================================================== -->
+
+            <main
+                class="
+                    min-h-0
+                    min-w-0
+                    lg:overflow-y-auto
+                    lg:overflow-x-hidden
+                    lg:overscroll-contain
+                    [scrollbar-width:none]
+                    [&::-webkit-scrollbar]:hidden
+                "
+            >
+
+                <div class="flex min-w-0 flex-col gap-2.5 pb-1">
+
+
+                    <!-- =================================================
+                         ORDER HEADER
+                    ================================================== -->
+
+                    <section
+                        class="
+                            min-w-0
+                            rounded-xl
+                            border
+                            border-cyan-400/15
+                            bg-[#061326]/95
+                        "
+                    >
+
+                        <div class="p-3 sm:p-3.5">
+
+                            <div
+                                class="
+                                    flex
+                                    min-w-0
+                                    flex-col
+                                    gap-3
+                                    sm:flex-row
+                                    sm:items-start
+                                    sm:justify-between
+                                "
+                            >
+
+                                <div class="min-w-0 flex-1">
+
+                                    <a
+                                        href="{% url 'order_history' %}"
+                                        class="
+                                            inline-flex
+                                            min-h-[28px]
+                                            items-center
+                                            gap-1.5
+                                            rounded-md
+                                            text-[9px]
+                                            font-bold
+                                            text-cyan-300
+                                            transition
+                                            hover:text-cyan-200
+                                        "
+                                    >
+                                        <i class="ri-arrow-left-line"></i>
+                                        Back to Order History
+                                    </a>
+
+
+                                    <div class="mt-1.5 flex min-w-0 flex-wrap items-center gap-2">
+
+                                        <h2
+                                            class="
+                                                min-w-0
+                                                break-all
+                                                text-base
+                                                font-black
+                                                tracking-tight
+                                                text-white
+                                                sm:text-lg
+                                                lg:text-xl
+                                            "
+                                        >
+                                            Order #{{ order.order_number }}
+                                        </h2>
+
+
+                                        {% if order.status == "paid" %}
+
+                                            <span
+                                                class="
+                                                    inline-flex
+                                                    shrink-0
+                                                    items-center
+                                                    gap-1
+                                                    rounded-full
+                                                    border
+                                                    border-emerald-400/25
+                                                    bg-emerald-400/10
+                                                    px-2.5
+                                                    py-1
+                                                    text-[7px]
+                                                    font-black
+                                                    uppercase
+                                                    text-emerald-300
+                                                "
+                                            >
+                                                <i class="ri-checkbox-circle-fill"></i>
+                                                Completed
+                                            </span>
+
+                                        {% elif order.status == "partially_refunded" %}
+
+                                            <span
+                                                class="
+                                                    inline-flex
+                                                    shrink-0
+                                                    items-center
+                                                    gap-1
+                                                    rounded-full
+                                                    border
+                                                    border-violet-400/25
+                                                    bg-violet-400/10
+                                                    px-2.5
+                                                    py-1
+                                                    text-[7px]
+                                                    font-black
+                                                    uppercase
+                                                    text-violet-300
+                                                "
+                                            >
+                                                <i class="ri-refund-2-line"></i>
+                                                Partially Refunded
+                                            </span>
+
+                                        {% elif order.status == "refunded" %}
+
+                                            <span
+                                                class="
+                                                    inline-flex
+                                                    shrink-0
+                                                    items-center
+                                                    gap-1
+                                                    rounded-full
+                                                    border
+                                                    border-sky-400/25
+                                                    bg-sky-400/10
+                                                    px-2.5
+                                                    py-1
+                                                    text-[7px]
+                                                    font-black
+                                                    uppercase
+                                                    text-sky-300
+                                                "
+                                            >
+                                                <i class="ri-refund-2-line"></i>
+                                                Refunded
+                                            </span>
+
+                                        {% elif order.status == "cancelled" %}
+
+                                            <span
+                                                class="
+                                                    inline-flex
+                                                    shrink-0
+                                                    items-center
+                                                    gap-1
+                                                    rounded-full
+                                                    border
+                                                    border-orange-400/25
+                                                    bg-orange-400/10
+                                                    px-2.5
+                                                    py-1
+                                                    text-[7px]
+                                                    font-black
+                                                    uppercase
+                                                    text-orange-300
+                                                "
+                                            >
+                                                <i class="ri-close-circle-fill"></i>
+                                                Cancelled
+                                            </span>
+
+                                        {% elif order.status == "payment_failed" %}
+
+                                            <span
+                                                class="
+                                                    inline-flex
+                                                    shrink-0
+                                                    items-center
+                                                    gap-1
+                                                    rounded-full
+                                                    border
+                                                    border-rose-400/25
+                                                    bg-rose-400/10
+                                                    px-2.5
+                                                    py-1
+                                                    text-[7px]
+                                                    font-black
+                                                    uppercase
+                                                    text-rose-300
+                                                "
+                                            >
+                                                <i class="ri-error-warning-fill"></i>
+                                                Payment Failed
+                                            </span>
+
+                                        {% else %}
+
+                                            <span
+                                                class="
+                                                    inline-flex
+                                                    shrink-0
+                                                    items-center
+                                                    gap-1
+                                                    rounded-full
+                                                    border
+                                                    border-amber-400/25
+                                                    bg-amber-400/10
+                                                    px-2.5
+                                                    py-1
+                                                    text-[7px]
+                                                    font-black
+                                                    uppercase
+                                                    text-amber-300
+                                                "
+                                            >
+                                                <i class="ri-time-line"></i>
+                                                {{ status_label }}
+                                            </span>
+
+                                        {% endif %}
+
+                                    </div>
+
+
+                                    <div
+                                        class="
+                                            mt-1
+                                            flex
+                                            min-w-0
+                                            flex-wrap
+                                            items-center
+                                            gap-x-2.5
+                                            gap-y-1
+                                            text-[8px]
+                                            text-slate-500
+                                            sm:text-[9px]
+                                        "
+                                    >
+
+                                        <span class="inline-flex items-center gap-1">
+                                            <i class="ri-calendar-line text-cyan-400/70"></i>
+                                            Placed on
+                                            {{ order.created_at|date:"d M Y, h:i A" }}
+                                        </span>
+
+                                        <span class="hidden h-3 w-px bg-white/10 sm:block"></span>
+
+                                        <span class="inline-flex items-center gap-1">
+                                            <i class="ri-book-open-line text-cyan-400/70"></i>
+                                            {{ order_items|length }}
+                                            {% if order_items|length == 1 %}
+                                                Batch
+                                            {% else %}
+                                                Batches
+                                            {% endif %}
+                                        </span>
+
+                                        {% if invoice %}
+
+                                            <span class="hidden h-3 w-px bg-white/10 sm:block"></span>
+
+                                            <span class="inline-flex min-w-0 items-center gap-1">
+                                                <i class="ri-file-text-line text-cyan-400/70"></i>
+                                                <span class="truncate">
+                                                    Invoice: {{ invoice.invoice_number }}
+                                                </span>
+                                            </span>
+
+                                        {% endif %}
+
+                                    </div>
+
+                                </div>
+
+
+                                <div
+                                    class="
+                                        shrink-0
+                                        rounded-xl
+                                        border
+                                        border-cyan-400/15
+                                        bg-cyan-400/[0.025]
+                                        px-3
+                                        py-2
+                                        sm:min-w-[175px]
+                                    "
+                                >
+
+                                    <p
+                                        class="
+                                            text-[7px]
+                                            font-black
+                                            uppercase
+                                            tracking-[0.15em]
+                                            text-slate-600
+                                        "
+                                    >
+                                        Final Order Amount
+                                    </p>
+
+                                    <p class="mt-0.5 text-lg font-black text-cyan-400 sm:text-xl">
+                                        ₹{{ order.final_amount|floatformat:2 }}
+                                    </p>
+
+                                    {% if refunded_amount %}
+
+                                        <p class="mt-0.5 text-[8px] font-bold text-rose-400">
+                                            ₹{{ refunded_amount|floatformat:2 }} refunded
+                                        </p>
+
+                                    {% endif %}
+
+                                </div>
+
+                            </div>
+
+
+                            <!-- =================================================
+                                 TABS
+                            ================================================== -->
+
+                            <nav
+                                class="
+                                    mt-3
+                                    flex
+                                    min-w-0
+                                    gap-1
+                                    overflow-x-auto
+                                    border-t
+                                    border-white/5
+                                    pt-2
+                                    [scrollbar-width:none]
+                                    [&::-webkit-scrollbar]:hidden
+                                "
+                            >
+
+                                <a
+                                    href="#overview"
+                                    class="
+                                        inline-flex
+                                        h-8
+                                        shrink-0
+                                        items-center
+                                        justify-center
+                                        gap-1.5
+                                        rounded-lg
+                                        border
+                                        border-cyan-400/25
+                                        bg-cyan-400/10
+                                        px-3
+                                        text-[8px]
+                                        font-black
+                                        text-cyan-300
+                                        sm:text-[9px]
+                                    "
+                                >
+                                    <i class="ri-dashboard-3-line"></i>
+                                    Overview
+                                </a>
+
+
+                                <a
+                                    href="#batches"
+                                    class="
+                                        inline-flex
+                                        h-8
+                                        shrink-0
+                                        items-center
+                                        justify-center
+                                        gap-1.5
+                                        rounded-lg
+                                        border
+                                        border-white/10
+                                        bg-white/[0.025]
+                                        px-3
+                                        text-[8px]
+                                        font-black
+                                        text-slate-400
+                                        transition
+                                        hover:border-cyan-400/20
+                                        hover:text-cyan-300
+                                        sm:text-[9px]
+                                    "
+                                >
+                                    <i class="ri-book-open-line"></i>
+                                    Batches ({{ order_items|length }})
+                                </a>
+
+
+                                <a
+                                    href="#payment"
+                                    class="
+                                        inline-flex
+                                        h-8
+                                        shrink-0
+                                        items-center
+                                        justify-center
+                                        gap-1.5
+                                        rounded-lg
+                                        border
+                                        border-white/10
+                                        bg-white/[0.025]
+                                        px-3
+                                        text-[8px]
+                                        font-black
+                                        text-slate-400
+                                        transition
+                                        hover:border-cyan-400/20
+                                        hover:text-cyan-300
+                                        sm:text-[9px]
+                                    "
+                                >
+                                    <i class="ri-bank-card-line"></i>
+                                    Payment
+                                </a>
+
+
+                                {% if refunds %}
+
+                                    <a
+                                        href="#refunds"
+                                        class="
+                                            inline-flex
+                                            h-8
+                                            shrink-0
+                                            items-center
+                                            justify-center
+                                            gap-1.5
+                                            rounded-lg
+                                            border
+                                            border-violet-400/20
+                                            bg-violet-400/10
+                                            px-3
+                                            text-[8px]
+                                            font-black
+                                            text-violet-300
+                                            sm:text-[9px]
+                                        "
+                                    >
+                                        <i class="ri-refund-2-line"></i>
+                                        Refunds ({{ refunds|length }})
+                                    </a>
+
+                                {% endif %}
+
+                            </nav>
+
+                        </div>
+
+                    </section>
+
+
+                    <!-- =================================================
+                         OVERVIEW
+                    ================================================== -->
+
+                    <section
+                        id="overview"
+                        class="
+                            min-w-0
+                            overflow-hidden
+                            rounded-xl
+                            border
+                            border-cyan-400/15
+                            bg-[#061326]/95
+                        "
+                    >
+
+                        <div
+                            class="
+                                flex
+                                items-center
+                                justify-between
+                                gap-2
+                                border-b
+                                border-white/[0.06]
+                                bg-[#07182c]
+                                px-3
+                                py-2.5
+                            "
+                        >
+
+                            <div class="flex items-center gap-2">
+
+                                <span
+                                    class="
+                                        flex
+                                        h-7
+                                        w-7
+                                        shrink-0
+                                        items-center
+                                        justify-center
+                                        rounded-lg
+                                        border
+                                        border-cyan-400/20
+                                        bg-cyan-400/10
+                                        text-cyan-300
+                                    "
+                                >
+                                    <i class="ri-dashboard-3-line text-sm"></i>
+                                </span>
+
+                                <div>
+
+                                    <h2 class="text-xs font-black text-white">
+                                        Order Overview
+                                    </h2>
+
+                                    <p class="mt-0.5 text-[7px] text-slate-600">
+                                        Complete historical order summary
+                                    </p>
+
+                                </div>
+
+                            </div>
+
+
+                            {% if order.status == "paid" %}
+
+                                <span
+                                    class="
+                                        rounded-full
+                                        border
+                                        border-emerald-400/20
+                                        bg-emerald-400/10
+                                        px-2
+                                        py-1
+                                        text-[7px]
+                                        font-black
+                                        text-emerald-300
+                                    "
+                                >
+                                    Successful
+                                </span>
+
+                            {% elif order.status == "partially_refunded" %}
+
+                                <span
+                                    class="
+                                        rounded-full
+                                        border
+                                        border-violet-400/20
+                                        bg-violet-400/10
+                                        px-2
+                                        py-1
+                                        text-[7px]
+                                        font-black
+                                        text-violet-300
+                                    "
+                                >
+                                    Partial Refund
+                                </span>
+
+                            {% elif order.status == "refunded" %}
+
+                                <span
+                                    class="
+                                        rounded-full
+                                        border
+                                        border-sky-400/20
+                                        bg-sky-400/10
+                                        px-2
+                                        py-1
+                                        text-[7px]
+                                        font-black
+                                        text-sky-300
+                                    "
+                                >
+                                    Fully Refunded
+                                </span>
+
+                            {% endif %}
+
+                        </div>
+
+
+                        <div
+                            class="
+                                grid
+                                min-w-0
+                                grid-cols-1
+                                gap-2
+                                p-2.5
+                                sm:grid-cols-2
+                                xl:grid-cols-4
+                            "
+                        >
+
+                            <div class="min-w-0 rounded-lg border border-white/[0.06] bg-white/[0.018] p-2.5">
+
+                                <p class="text-[7px] uppercase tracking-wide text-slate-600">
+                                    Order Number
+                                </p>
+
+                                <p class="mt-1 break-all text-[9px] font-black text-slate-200">
+                                    {{ order.order_number }}
+                                </p>
+
+                            </div>
+
+
+                            <div class="min-w-0 rounded-lg border border-white/[0.06] bg-white/[0.018] p-2.5">
+
+                                <p class="text-[7px] uppercase tracking-wide text-slate-600">
+                                    Order Date
+                                </p>
+
+                                <p class="mt-1 text-[9px] font-bold text-slate-200">
+                                    {{ order.created_at|date:"d M Y" }}
+                                </p>
+
+                                <p class="mt-0.5 text-[7px] text-slate-600">
+                                    {{ order.created_at|date:"h:i A" }}
+                                </p>
+
+                            </div>
+
+
+                            <div class="min-w-0 rounded-lg border border-white/[0.06] bg-white/[0.018] p-2.5">
+
+                                <p class="text-[7px] uppercase tracking-wide text-slate-600">
+                                    Batches
+                                </p>
+
+                                <p class="mt-1 text-sm font-black text-white">
+                                    {{ order_items|length }}
+                                </p>
+
+                            </div>
+
+
+                            <div class="min-w-0 rounded-lg border border-cyan-400/10 bg-cyan-400/[0.025] p-2.5">
+
+                                <p class="text-[7px] uppercase tracking-wide text-slate-600">
+                                    Total Paid
+                                </p>
+
+                                <p class="mt-1 text-sm font-black text-cyan-400">
+                                    ₹{{ order.final_amount|floatformat:2 }}
+                                </p>
+
+                            </div>
+
+                        </div>
+
+                    </section>
+
+
+                    <!-- =================================================
+                         BATCHES
+                    ================================================== -->
+
+                    <section
+                        id="batches"
+                        class="
+                            min-w-0
+                            overflow-hidden
+                            rounded-xl
+                            border
+                            border-cyan-400/15
+                            bg-[#061326]/95
+                        "
+                    >
+
+                        <div
+                            class="
+                                flex
+                                items-center
+                                justify-between
+                                gap-2
+                                border-b
+                                border-white/[0.06]
+                                bg-[#07182c]
+                                px-3
+                                py-2.5
+                            "
+                        >
+
+                            <div class="flex min-w-0 items-center gap-2">
+
+                                <span
+                                    class="
+                                        flex
+                                        h-8
+                                        w-8
+                                        shrink-0
+                                        items-center
+                                        justify-center
+                                        rounded-lg
+                                        border
+                                        border-cyan-400/20
+                                        bg-cyan-400/10
+                                        text-cyan-300
+                                    "
+                                >
+                                    <i class="ri-book-open-fill"></i>
+                                </span>
+
+                                <div class="min-w-0">
+
+                                    <h2 class="text-xs font-black text-white sm:text-sm">
+
+                                        {% if order.status == "cancelled" or order.status == "payment_failed" %}
+                                            Ordered Batches
+                                        {% else %}
+                                            Purchased Batches
+                                        {% endif %}
+
+                                        <span class="text-slate-500">
+                                            ({{ order_items|length }})
+                                        </span>
+
+                                    </h2>
+
+                                    <p class="mt-0.5 text-[7px] text-slate-600">
+                                        Batch-level price, coupon and access information
+                                    </p>
+
+                                </div>
+
+                            </div>
+
+
+                            {% if order.status == "paid" %}
+
+                                <span
+                                    class="
+                                        shrink-0
+                                        rounded-full
+                                        border
+                                        border-emerald-400/20
+                                        bg-emerald-400/10
+                                        px-2
+                                        py-1
+                                        text-[7px]
+                                        font-black
+                                        text-emerald-300
+                                    "
+                                >
+                                    Active
+                                </span>
+
+                            {% elif order.status == "partially_refunded" %}
+
+                                <span
+                                    class="
+                                        shrink-0
+                                        rounded-full
+                                        border
+                                        border-violet-400/20
+                                        bg-violet-400/10
+                                        px-2
+                                        py-1
+                                        text-[7px]
+                                        font-black
+                                        text-violet-300
+                                    "
+                                >
+                                    Partial Refund
+                                </span>
+
+                            {% elif order.status == "refunded" %}
+
+                                <span
+                                    class="
+                                        shrink-0
+                                        rounded-full
+                                        border
+                                        border-sky-400/20
+                                        bg-sky-400/10
+                                        px-2
+                                        py-1
+                                        text-[7px]
+                                        font-black
+                                        text-sky-300
+                                    "
+                                >
+                                    Refunded
+                                </span>
+
+                            {% endif %}
+
+                        </div>
+
+
+                        <div class="min-w-0 p-2.5">
+
+                            {% for row in order_items %}
+
+                                {% with item=row.item purchase=row.purchase %}
+
+                                    <article
+                                        class="
+                                            group
+                                            mb-1.5
+                                            last:mb-0
+                                            overflow-hidden
+                                            rounded-xl
+                                            border
+                                            border-white/[0.07]
+                                            bg-[#08182d]/90
+                                            transition
+                                            duration-200
+                                            hover:border-cyan-400/20
+                                        "
+                                    >
+
+                                        <div
+                                            class="
+                                                grid
+                                                min-w-0
+                                                grid-cols-1
+                                                gap-2.5
+                                                p-2.5
+                                                sm:grid-cols-[82px_minmax(0,1fr)]
+                                                lg:grid-cols-[88px_minmax(0,1fr)_155px]
+                                                lg:items-center
+                                            "
+                                        >
+
+                                            <!-- THUMBNAIL -->
+
+                                            <div
+                                                class="
+                                                    relative
+                                                    h-[105px]
+                                                    w-full
+                                                    overflow-hidden
+                                                    rounded-lg
+                                                    border
+                                                    border-white/10
+                                                    bg-[#020817]
+                                                    sm:h-[70px]
+                                                    sm:w-[82px]
+                                                    lg:h-[76px]
+                                                    lg:w-[88px]
+                                                "
+                                            >
+
+                                                {% if item.batch.batch_thumbnail %}
+
+                                                    <img
+                                                        src="{{ item.batch.batch_thumbnail.url }}"
+                                                        alt="{{ item.batch.batch_name }}"
+                                                        loading="lazy"
+                                                        class="
+                                                            block
+                                                            h-full
+                                                            w-full
+                                                            object-cover
+                                                            object-center
+                                                            transition
+                                                            duration-500
+                                                            group-hover:scale-105
+                                                        "
+                                                    >
+
+                                                {% else %}
+
+                                                    <div
+                                                        class="
+                                                            flex
+                                                            h-full
+                                                            w-full
+                                                            items-center
+                                                            justify-center
+                                                            bg-gradient-to-br
+                                                            from-cyan-400/10
+                                                            via-blue-500/10
+                                                            to-violet-500/10
+                                                            text-cyan-300
+                                                        "
+                                                    >
+                                                        <i class="ri-graduation-cap-fill text-3xl"></i>
+                                                    </div>
+
+                                                {% endif %}
+
+                                            </div>
+
+
+                                            <!-- BATCH CONTENT -->
+
+                                            <div class="min-w-0">
+
+                                                <div
+                                                    class="
+                                                        flex
+                                                        min-w-0
+                                                        flex-col
+                                                        gap-1.5
+                                                        sm:flex-row
+                                                        sm:items-start
+                                                        sm:justify-between
+                                                    "
+                                                >
+
+                                                    <div class="min-w-0">
+
+                                                        <h3
+                                                            class="
+                                                                break-words
+                                                                text-[11px]
+                                                                font-black
+                                                                leading-5
+                                                                text-white
+                                                                sm:text-xs
+                                                                lg:text-sm
+                                                            "
+                                                        >
+                                                            {{ item.batch.batch_name }}
+                                                        </h3>
+
+
+                                                        {% if item.batch.batch_code %}
+
+                                                            <p class="mt-0.5 text-[7px] font-semibold text-slate-500">
+                                                                Batch Code:
+                                                                <span class="text-slate-300">
+                                                                    {{ item.batch.batch_code }}
+                                                                </span>
+                                                            </p>
+
+                                                        {% endif %}
+
+                                                    </div>
+
+
+                                                    <!-- MOBILE STATUS -->
+
+                                                    <div class="shrink-0 lg:hidden">
+
+                                                        {% if purchase and purchase.status == "refunded" %}
+
+                                                            <span
+                                                                class="
+                                                                    inline-flex
+                                                                    items-center
+                                                                    gap-1
+                                                                    rounded-full
+                                                                    border
+                                                                    border-violet-400/20
+                                                                    bg-violet-400/10
+                                                                    px-2
+                                                                    py-1
+                                                                    text-[7px]
+                                                                    font-black
+                                                                    text-violet-300
+                                                                "
+                                                            >
+                                                                <i class="ri-lock-line"></i>
+                                                                Access Revoked
+                                                            </span>
+
+                                                        {% elif purchase %}
+
+                                                            <span
+                                                                class="
+                                                                    inline-flex
+                                                                    items-center
+                                                                    gap-1
+                                                                    rounded-full
+                                                                    border
+                                                                    border-emerald-400/20
+                                                                    bg-emerald-400/10
+                                                                    px-2
+                                                                    py-1
+                                                                    text-[7px]
+                                                                    font-black
+                                                                    text-emerald-300
+                                                                "
+                                                            >
+                                                                <i class="ri-checkbox-circle-fill"></i>
+                                                                Active
+                                                            </span>
+
+                                                        {% else %}
+
+                                                            <span
+                                                                class="
+                                                                    inline-flex
+                                                                    items-center
+                                                                    gap-1
+                                                                    rounded-full
+                                                                    border
+                                                                    border-slate-400/15
+                                                                    bg-white/[0.03]
+                                                                    px-2
+                                                                    py-1
+                                                                    text-[7px]
+                                                                    font-black
+                                                                    text-slate-400
+                                                                "
+                                                            >
+                                                                <i class="ri-close-circle-line"></i>
+                                                                Not Purchased
+                                                            </span>
+
+                                                        {% endif %}
+
+                                                    </div>
+
+                                                </div>
+
+
+                                                <!-- PRICE BREAKDOWN -->
+
+                                                <div
+                                                    class="
+                                                        mt-2
+                                                        grid
+                                                        grid-cols-2
+                                                        gap-x-4
+                                                        gap-y-1.5
+                                                        sm:grid-cols-4
+                                                    "
+                                                >
+
+                                                    <div>
+
+                                                        <p class="text-[7px] uppercase tracking-wide text-slate-600">
+                                                            Original
+                                                        </p>
+
+                                                        <p class="mt-0.5 text-[9px] font-bold text-slate-300">
+                                                            ₹{{ item.original_price|floatformat:2 }}
+                                                        </p>
+
+                                                    </div>
+
+
+                                                    <div>
+
+                                                        <p class="text-[7px] uppercase tracking-wide text-slate-600">
+                                                            Batch Discount
+                                                        </p>
+
+                                                        <p class="mt-0.5 text-[9px] font-bold text-emerald-400">
+                                                            - ₹{{ item.batch_discount|floatformat:2 }}
+                                                        </p>
+
+                                                    </div>
+
+
+                                                    <div>
+
+                                                        <p class="text-[7px] uppercase tracking-wide text-slate-600">
+                                                            Coupon Discount
+                                                        </p>
+
+                                                        <p class="mt-0.5 text-[9px] font-bold text-violet-300">
+                                                            - ₹{{ item.coupon_discount|floatformat:2 }}
+                                                        </p>
+
+                                                    </div>
+
+
+                                                    <div>
+
+                                                        <p class="text-[7px] uppercase tracking-wide text-slate-600">
+                                                            Paid
+                                                        </p>
+
+                                                        <p class="mt-0.5 text-[10px] font-black text-white">
+                                                            ₹{{ item.final_price|floatformat:2 }}
+                                                        </p>
+
+                                                    </div>
+
+                                                </div>
+
+                                            </div>
+
+
+                                            <!-- DESKTOP ACTION AREA -->
+
+                                            <div
+                                                class="
+                                                    hidden
+                                                    min-w-0
+                                                    flex-col
+                                                    items-end
+                                                    justify-center
+                                                    gap-2
+                                                    lg:flex
+                                                "
+                                            >
+
+                                                {% if purchase and purchase.status == "refunded" %}
+
+                                                    <span
+                                                        class="
+                                                            inline-flex
+                                                            items-center
+                                                            gap-1
+                                                            rounded-full
+                                                            border
+                                                            border-violet-400/20
+                                                            bg-violet-400/10
+                                                            px-2
+                                                            py-1
+                                                            text-[7px]
+                                                            font-black
+                                                            text-violet-300
+                                                        "
+                                                    >
+                                                        <i class="ri-lock-line"></i>
+                                                        Access Revoked
+                                                    </span>
+
+
+                                                    <button
+                                                        type="button"
+                                                        class="
+                                                            inline-flex
+                                                            h-8
+                                                            items-center
+                                                            gap-1.5
+                                                            rounded-lg
+                                                            border
+                                                            border-violet-400/25
+                                                            bg-violet-400/[0.05]
+                                                            px-2.5
+                                                            text-[7px]
+                                                            font-black
+                                                            text-violet-300
+                                                        "
+                                                    >
+                                                        <i class="ri-eye-line"></i>
+                                                        View Refund
+                                                    </button>
+
+                                                {% elif purchase %}
+
+                                                    <span
+                                                        class="
+                                                            inline-flex
+                                                            items-center
+                                                            gap-1
+                                                            rounded-full
+                                                            border
+                                                            border-emerald-400/20
+                                                            bg-emerald-400/10
+                                                            px-2
+                                                            py-1
+                                                            text-[7px]
+                                                            font-black
+                                                            text-emerald-300
+                                                        "
+                                                    >
+                                                        <i class="ri-checkbox-circle-fill"></i>
+                                                        Active
+                                                    </span>
+
+
+                                                    {% if refund_eligible %}
+
+                                                        <button
+                                                            type="button"
+                                                            class="
+                                                                inline-flex
+                                                                h-8
+                                                                items-center
+                                                                gap-1.5
+                                                                rounded-lg
+                                                                border
+                                                                border-cyan-400/30
+                                                                bg-cyan-400/[0.04]
+                                                                px-2.5
+                                                                text-[7px]
+                                                                font-black
+                                                                text-cyan-300
+                                                                transition
+                                                                hover:border-cyan-300/50
+                                                                hover:bg-cyan-400/10
+                                                            "
+                                                        >
+                                                            <i class="ri-refund-2-line"></i>
+                                                            Request Refund
+                                                        </button>
+
+                                                    {% endif %}
+
+                                                {% else %}
+
+                                                    <span
+                                                        class="
+                                                            inline-flex
+                                                            items-center
+                                                            gap-1
+                                                            rounded-full
+                                                            border
+                                                            border-slate-400/15
+                                                            bg-white/[0.03]
+                                                            px-2
+                                                            py-1
+                                                            text-[7px]
+                                                            font-black
+                                                            text-slate-400
+                                                        "
+                                                    >
+                                                        Not Purchased
+                                                    </span>
+
+                                                {% endif %}
+
+
+                                                <strong class="text-base font-black text-cyan-400">
+                                                    ₹{{ item.final_price|floatformat:2 }}
+                                                </strong>
+
+                                            </div>
+
+                                        </div>
+
+
+                                        <!-- MOBILE REFUND / ACCESS MESSAGE -->
+
+                                        {% if purchase and purchase.status == "refunded" %}
+
+                                            <div
+                                                class="
+                                                    flex
+                                                    items-center
+                                                    justify-between
+                                                    gap-2
+                                                    border-t
+                                                    border-white/[0.06]
+                                                    bg-violet-400/[0.025]
+                                                    px-2.5
+                                                    py-2
+                                                    lg:hidden
+                                                "
+                                            >
+
+                                                <span class="text-[8px] font-semibold text-violet-300">
+                                                    Learning access revoked after refund.
+                                                </span>
+
+                                                <button
+                                                    type="button"
+                                                    class="
+                                                        inline-flex
+                                                        h-8
+                                                        shrink-0
+                                                        items-center
+                                                        gap-1
+                                                        rounded-lg
+                                                        border
+                                                        border-violet-400/25
+                                                        px-2.5
+                                                        text-[7px]
+                                                        font-black
+                                                        text-violet-300
+                                                    "
+                                                >
+                                                    <i class="ri-eye-line"></i>
+                                                    View Refund
+                                                </button>
+
+                                            </div>
+
+                                        {% elif purchase and refund_eligible %}
+
+                                            <div
+                                                class="
+                                                    flex
+                                                    flex-col
+                                                    gap-2
+                                                    border-t
+                                                    border-white/[0.06]
+                                                    bg-cyan-400/[0.02]
+                                                    px-2.5
+                                                    py-2
+                                                    sm:flex-row
+                                                    sm:items-center
+                                                    sm:justify-between
+                                                    lg:hidden
+                                                "
+                                            >
+
+                                                <p class="text-[8px] leading-4 text-slate-500">
+                                                    Refund available within the 7-day refund window.
+                                                </p>
+
+                                                <button
+                                                    type="button"
+                                                    class="
+                                                        inline-flex
+                                                        h-8
+                                                        items-center
+                                                        justify-center
+                                                        gap-1.5
+                                                        rounded-lg
+                                                        border
+                                                        border-cyan-400/25
+                                                        px-3
+                                                        text-[8px]
+                                                        font-black
+                                                        text-cyan-300
+                                                    "
+                                                >
+                                                    <i class="ri-refund-2-line"></i>
+                                                    Request Refund
+                                                </button>
+
+                                            </div>
+
+                                        {% endif %}
+
+                                    </article>
+
+                                {% endwith %}
+
+                            {% empty %}
+
+                                <div class="flex min-h-[150px] items-center justify-center text-center">
+
+                                    <div>
+
+                                        <i class="ri-inbox-2-line text-3xl text-slate-700"></i>
+
+                                        <p class="mt-2 text-[9px] font-semibold text-slate-500">
+                                            No batch information available.
+                                        </p>
+
+                                    </div>
+
+                                </div>
+
+                            {% endfor %}
+
+                        </div>
+
+                    </section>
+
+
+                    <!-- =================================================
+                         ORDER SUMMARY + COUPON DETAILS
+                    ================================================== -->
+
+                    <div
+                        class="
+                            grid
+                            min-w-0
+                            grid-cols-1
+                            gap-2.5
+                            md:grid-cols-2
+                        "
+                    >
+
+                        <!-- ORDER SUMMARY -->
+
+                        <section
+                            class="
+                                min-w-0
+                                overflow-hidden
+                                rounded-xl
+                                border
+                                border-cyan-400/15
+                                bg-[#061326]/95
+                            "
+                        >
+
+                            <div
+                                class="
+                                    flex
+                                    items-center
+                                    gap-2
+                                    border-b
+                                    border-white/[0.06]
+                                    bg-[#07182c]
+                                    px-3
+                                    py-2.5
+                                "
+                            >
+
+                                <span
+                                    class="
+                                        flex
+                                        h-7
+                                        w-7
+                                        shrink-0
+                                        items-center
+                                        justify-center
+                                        rounded-lg
+                                        border
+                                        border-cyan-400/20
+                                        bg-cyan-400/10
+                                        text-cyan-300
+                                    "
+                                >
+                                    <i class="ri-calculator-line text-sm"></i>
+                                </span>
+
+                                <h2 class="text-xs font-black text-white">
+                                    Order Summary
+                                </h2>
+
+                            </div>
+
+
+                            <div class="p-3">
+
+                                <!-- EVERY BATCH -->
+
+                                <div class="space-y-1.5">
+
+                                    {% for row in order_items %}
+
+                                        {% with item=row.item %}
+
+                                            <div
+                                                class="
+                                                    flex
+                                                    min-w-0
+                                                    items-center
+                                                    justify-between
+                                                    gap-2
+                                                    rounded-lg
+                                                    border
+                                                    border-white/[0.05]
+                                                    bg-white/[0.015]
+                                                    px-2.5
+                                                    py-2
+                                                "
+                                            >
+
+                                                <div class="min-w-0">
+
+                                                    <p
+                                                        class="
+                                                            truncate
+                                                            text-[8px]
+                                                            font-bold
+                                                            text-slate-300
+                                                        "
+                                                        title="{{ item.batch.batch_name }}"
+                                                    >
+                                                        {{ item.batch.batch_name }}
+                                                    </p>
+
+                                                    <p class="mt-0.5 text-[7px] text-slate-600">
+                                                        Batch price
+                                                    </p>
+
+                                                </div>
+
+                                                <span class="shrink-0 text-[9px] font-black text-slate-200">
+                                                    ₹{{ item.final_price|floatformat:2 }}
+                                                </span>
+
+                                            </div>
+
+                                        {% endwith %}
+
+                                    {% endfor %}
+
+                                </div>
+
+
+                                <div class="my-2.5 h-px bg-white/[0.06]"></div>
+
+
+                                <div class="flex items-center justify-between gap-2">
+
+                                    <span class="text-[9px] text-slate-500">
+                                        Subtotal
+                                    </span>
+
+                                    <span class="text-[10px] font-bold text-slate-200">
+                                        ₹{{ order.subtotal|floatformat:2 }}
+                                    </span>
+
+                                </div>
+
+
+                                <div class="mt-2 flex items-center justify-between gap-2">
+
+                                    <span class="text-[9px] text-slate-500">
+                                        Coupon Discount
+                                    </span>
+
+                                    <span class="text-[10px] font-bold text-emerald-400">
+                                        - ₹{{ order.total_coupon_discount|floatformat:2 }}
+                                    </span>
+
+                                </div>
+
+
+                                <div class="mt-2 flex items-center justify-between gap-2">
+
+                                    <span class="text-[9px] text-slate-500">
+                                        Total Discount
+                                    </span>
+
+                                    <span class="text-[10px] font-bold text-emerald-400">
+                                        - ₹{{ order.total_discount|floatformat:2 }}
+                                    </span>
+
+                                </div>
+
+
+                                <div class="my-2.5 h-px bg-white/[0.06]"></div>
+
+
+                                <div
+                                    class="
+                                        flex
+                                        items-center
+                                        justify-between
+                                        gap-2
+                                        rounded-lg
+                                        border
+                                        border-cyan-400/10
+                                        bg-cyan-400/[0.035]
+                                        px-2.5
+                                        py-2
+                                    "
+                                >
+
+                                    <span class="text-xs font-black text-white">
+                                        Total Paid
+                                    </span>
+
+                                    <span class="text-base font-black text-cyan-400">
+                                        ₹{{ order.final_amount|floatformat:2 }}
+                                    </span>
+
+                                </div>
+
+
+                                {% if refunded_amount %}
+
+                                    <div class="mt-2 flex items-center justify-between gap-2">
+
+                                        <span class="text-[9px] font-semibold text-rose-400">
+                                            Refunded Amount
+                                        </span>
+
+                                        <span class="text-[10px] font-black text-rose-400">
+                                            - ₹{{ refunded_amount|floatformat:2 }}
+                                        </span>
+
+                                    </div>
+
+
+                                    <div class="mt-2 flex items-center justify-between gap-2">
+
+                                        <span class="text-[9px] font-black text-white">
+                                            Net Paid
+                                        </span>
+
+                                        <span class="text-sm font-black text-cyan-300">
+                                            ₹{{ net_paid|floatformat:2 }}
+                                        </span>
+
+                                    </div>
+
+                                {% endif %}
+
+                            </div>
+
+                        </section>
+
+
+                        <!-- COUPON DETAILS -->
+
+                        <section
+                            class="
+                                min-w-0
+                                overflow-hidden
+                                rounded-xl
+                                border
+                                border-violet-400/15
+                                bg-[#061326]/95
+                            "
+                        >
+
+                            <div
+                                class="
+                                    flex
+                                    items-center
+                                    gap-2
+                                    border-b
+                                    border-white/[0.06]
+                                    bg-[#07182c]
+                                    px-3
+                                    py-2.5
+                                "
+                            >
+
+                                <span
+                                    class="
+                                        flex
+                                        h-7
+                                        w-7
+                                        shrink-0
+                                        items-center
+                                        justify-center
+                                        rounded-lg
+                                        border
+                                        border-violet-400/20
+                                        bg-violet-400/10
+                                        text-violet-300
+                                    "
+                                >
+                                    <i class="ri-coupon-3-line text-sm"></i>
+                                </span>
+
+                                <h2 class="text-xs font-black text-white">
+                                    Coupon Details
+                                </h2>
+
+                            </div>
+
+
+                            <div class="p-3">
+
+                                {% for coupon in order.coupons.all %}
+
+                                    <div
+                                        class="
+                                            mb-2
+                                            last:mb-0
+                                            rounded-lg
+                                            border
+                                            border-violet-400/10
+                                            bg-violet-400/[0.035]
+                                            p-2.5
+                                        "
+                                    >
+
+                                        <div class="flex items-center justify-between gap-2">
+
+                                            <span
+                                                class="
+                                                    rounded-md
+                                                    border
+                                                    border-violet-400/15
+                                                    bg-violet-400/10
+                                                    px-2
+                                                    py-1
+                                                    text-[8px]
+                                                    font-black
+                                                    uppercase
+                                                    tracking-wide
+                                                    text-violet-300
+                                                "
+                                            >
+                                                {{ coupon.coupon_code }}
+                                            </span>
+
+                                            <span class="shrink-0 text-[10px] font-black text-emerald-400">
+                                                - ₹{{ coupon.discount_amount|floatformat:2 }}
+                                            </span>
+
+                                        </div>
+
+
+                                        <div
+                                            class="
+                                                mt-2
+                                                grid
+                                                grid-cols-2
+                                                gap-x-3
+                                                gap-y-2
+                                            "
+                                        >
+
+                                            <div>
+
+                                                <p class="text-[7px] uppercase tracking-wide text-slate-600">
+                                                    Type
+                                                </p>
+
+                                                <p class="mt-0.5 text-[8px] font-bold text-slate-300">
+
+                                                    {% if coupon.coupon_type == "multi_checkout" %}
+                                                        Multi-cart / Threshold
+                                                    {% elif coupon.coupon_type == "batch_specific" %}
+                                                        Batch Specific
+                                                    {% else %}
+                                                        General
+                                                    {% endif %}
+
+                                                </p>
+
+                                            </div>
+
+
+                                            <div>
+
+                                                <p class="text-[7px] uppercase tracking-wide text-slate-600">
+                                                    Discount
+                                                </p>
+
+                                                <p class="mt-0.5 text-[8px] font-bold text-slate-300">
+
+                                                    {% if coupon.discount_type == "percentage" %}
+                                                        {{ coupon.discount_value|floatformat:0 }}%
+                                                    {% else %}
+                                                        ₹{{ coupon.discount_value|floatformat:2 }}
+                                                    {% endif %}
+
+                                                </p>
+
+                                            </div>
+
+
+                                            <div>
+
+                                                <p class="text-[7px] uppercase tracking-wide text-slate-600">
+                                                    Min Purchase
+                                                </p>
+
+                                                <p class="mt-0.5 text-[8px] font-bold text-slate-300">
+                                                    ₹{{ coupon.minimum_order_amount|floatformat:2 }}
+                                                </p>
+
+                                            </div>
+
+
+                                            {% if coupon.maximum_order_amount %}
+
+                                                <div>
+
+                                                    <p class="text-[7px] uppercase tracking-wide text-slate-600">
+                                                        Max Purchase
+                                                    </p>
+
+                                                    <p class="mt-0.5 text-[8px] font-bold text-slate-300">
+                                                        ₹{{ coupon.maximum_order_amount|floatformat:2 }}
+                                                    </p>
+
+                                                </div>
+
+                                            {% endif %}
+
+
+                                            {% if coupon.applied_batch_name %}
+
+                                                <div class="min-w-0 col-span-2">
+
+                                                    <p class="text-[7px] uppercase tracking-wide text-slate-600">
+                                                        Applied Batch
+                                                    </p>
+
+                                                    <p
+                                                        class="
+                                                            mt-0.5
+                                                            truncate
+                                                            text-[8px]
+                                                            font-bold
+                                                            text-slate-300
+                                                        "
+                                                        title="{{ coupon.applied_batch_name }}"
+                                                    >
+                                                        {{ coupon.applied_batch_name }}
+                                                    </p>
+
+                                                </div>
+
+                                            {% endif %}
+
+                                        </div>
+
+
+                                        {% if coupon.coupon_description %}
+
+                                            <p class="mt-2 text-[8px] leading-4 text-slate-500">
+                                                {{ coupon.coupon_description }}
+                                            </p>
+
+                                        {% endif %}
+
+                                    </div>
+
+                                {% empty %}
+
+                                    <div
+                                        class="
+                                            flex
+                                            min-h-[140px]
+                                            flex-col
+                                            items-center
+                                            justify-center
+                                            text-center
+                                        "
+                                    >
+
+                                        <i class="ri-coupon-3-line text-2xl text-slate-700"></i>
+
+                                        <p class="mt-2 text-[9px] font-semibold text-slate-500">
+                                            No Coupon Applied
+                                        </p>
+
+                                        <p class="mt-1 max-w-[220px] text-[7px] leading-4 text-slate-700">
+                                            No coupon was used for this order.
+                                        </p>
+
+                                    </div>
+
+                                {% endfor %}
+
+                            </div>
+
+                        </section>
+
+                    </div>
+
+
+                    <!-- =================================================
+                         PAYMENT INFORMATION
+                    ================================================== -->
+
+                    <section
+                        id="payment"
+                        class="
+                            min-w-0
+                            overflow-hidden
+                            rounded-xl
+                            border
+                            border-cyan-400/15
+                            bg-[#061326]/95
+                        "
+                    >
+
+                        <div
+                            class="
+                                flex
+                                items-center
+                                justify-between
+                                gap-2
+                                border-b
+                                border-white/[0.06]
+                                bg-[#07182c]
+                                px-3
+                                py-2.5
+                            "
+                        >
+
+                            <div class="flex min-w-0 items-center gap-2">
+
+                                <span
+                                    class="
+                                        flex
+                                        h-7
+                                        w-7
+                                        shrink-0
+                                        items-center
+                                        justify-center
+                                        rounded-lg
+                                        border
+                                        border-cyan-400/20
+                                        bg-cyan-400/10
+                                        text-cyan-300
+                                    "
+                                >
+                                    <i class="ri-secure-payment-line text-sm"></i>
+                                </span>
+
+                                <div>
+
+                                    <h2 class="text-xs font-black text-white">
+                                        Payment Information
+                                    </h2>
+
+                                    <p class="mt-0.5 text-[7px] text-slate-600">
+                                        Gateway and transaction information
+                                    </p>
+
+                                </div>
+
+                            </div>
+
+
+                            {% if payment %}
+
+                                {% if payment.status == "captured" %}
+
+                                    <span
+                                        class="
+                                            rounded-full
+                                            border
+                                            border-emerald-400/20
+                                            bg-emerald-400/10
+                                            px-2
+                                            py-1
+                                            text-[7px]
+                                            font-black
+                                            text-emerald-300
+                                        "
+                                    >
+                                        Captured
+                                    </span>
+
+                                {% elif payment.status == "failed" %}
+
+                                    <span
+                                        class="
+                                            rounded-full
+                                            border
+                                            border-rose-400/20
+                                            bg-rose-400/10
+                                            px-2
+                                            py-1
+                                            text-[7px]
+                                            font-black
+                                            text-rose-300
+                                        "
+                                    >
+                                        Failed
+                                    </span>
+
+                                {% elif payment.status == "refunded" %}
+
+                                    <span
+                                        class="
+                                            rounded-full
+                                            border
+                                            border-violet-400/20
+                                            bg-violet-400/10
+                                            px-2
+                                            py-1
+                                            text-[7px]
+                                            font-black
+                                            text-violet-300
+                                        "
+                                    >
+                                        Refunded
+                                    </span>
+
+                                {% elif payment.status == "partially_refunded" %}
+
+                                    <span
+                                        class="
+                                            rounded-full
+                                            border
+                                            border-violet-400/20
+                                            bg-violet-400/10
+                                            px-2
+                                            py-1
+                                            text-[7px]
+                                            font-black
+                                            text-violet-300
+                                        "
+                                    >
+                                        Partially Refunded
+                                    </span>
+
+                                {% else %}
+
+                                    <span
+                                        class="
+                                            rounded-full
+                                            border
+                                            border-amber-400/20
+                                            bg-amber-400/10
+                                            px-2
+                                            py-1
+                                            text-[7px]
+                                            font-black
+                                            text-amber-300
+                                        "
+                                    >
+                                        {{ payment.status|title }}
+                                    </span>
+
+                                {% endif %}
+
+                            {% endif %}
+
+                        </div>
+
+
+                        <div
+                            class="
+                                grid
+                                min-w-0
+                                grid-cols-1
+                                gap-2
+                                p-3
+                                sm:grid-cols-2
+                                xl:grid-cols-4
+                            "
+                        >
+
+                            <div class="rounded-lg border border-white/[0.06] bg-white/[0.018] p-2.5">
+
+                                <p class="text-[7px] uppercase tracking-wide text-slate-600">
+                                    Payment Method
+                                </p>
+
+                                <p class="mt-1 text-[9px] font-black text-slate-200">
+                                    Razorpay
+                                </p>
+
+                            </div>
+
+
+                            <div class="rounded-lg border border-white/[0.06] bg-white/[0.018] p-2.5">
+
+                                <p class="text-[7px] uppercase tracking-wide text-slate-600">
+                                    Payment Status
+                                </p>
+
+                                <p class="mt-1 text-[9px] font-black text-slate-200">
+
+                                    {% if payment %}
+                                        {{ payment.status|title }}
+                                    {% else %}
+                                        —
+                                    {% endif %}
+
+                                </p>
+
+                            </div>
+
+
+                            <div class="rounded-lg border border-white/[0.06] bg-white/[0.018] p-2.5">
+
+                                <p class="text-[7px] uppercase tracking-wide text-slate-600">
+                                    Amount
+                                </p>
+
+                                <p class="mt-1 text-[10px] font-black text-cyan-400">
+                                    ₹{{ order.final_amount|floatformat:2 }}
+                                </p>
+
+                            </div>
+
+
+                            <div class="rounded-lg border border-white/[0.06] bg-white/[0.018] p-2.5">
+
+                                <p class="text-[7px] uppercase tracking-wide text-slate-600">
+                                    Currency
+                                </p>
+
+                                <p class="mt-1 text-[9px] font-black text-slate-200">
+                                    {{ order.currency }}
+                                </p>
+
+                            </div>
+
+
+                            <div
+                                class="
+                                    min-w-0
+                                    rounded-lg
+                                    border
+                                    border-white/[0.06]
+                                    bg-white/[0.018]
+                                    p-2.5
+                                    sm:col-span-2
+                                    xl:col-span-2
+                                "
+                            >
+
+                                <p class="text-[7px] uppercase tracking-wide text-slate-600">
+                                    Razorpay Order ID
+                                </p>
+
+                                <p class="mt-1 break-all text-[8px] font-bold text-slate-300">
+
+                                    {% if payment %}
+                                        {{ payment.razorpay_order_id|default:"—" }}
+                                    {% else %}
+                                        —
+                                    {% endif %}
+
+                                </p>
+
+                            </div>
+
+
+                            <div
+                                class="
+                                    min-w-0
+                                    rounded-lg
+                                    border
+                                    border-white/[0.06]
+                                    bg-white/[0.018]
+                                    p-2.5
+                                    sm:col-span-2
+                                    xl:col-span-2
+                                "
+                            >
+
+                                <p class="text-[7px] uppercase tracking-wide text-slate-600">
+                                    Razorpay Payment ID
+                                </p>
+
+                                <p class="mt-1 break-all text-[8px] font-bold text-slate-300">
+
+                                    {% if payment %}
+                                        {{ payment.razorpay_payment_id|default:"—" }}
+                                    {% else %}
+                                        —
+                                    {% endif %}
+
+                                </p>
+
+                            </div>
+
+                        </div>
+
+
+                        {% if payment and payment.failure_reason %}
+
+                            <div
+                                class="
+                                    mx-3
+                                    mb-3
+                                    rounded-lg
+                                    border
+                                    border-rose-400/15
+                                    bg-rose-400/[0.035]
+                                    px-2.5
+                                    py-2
+                                "
+                            >
+
+                                <p class="text-[7px] font-black uppercase tracking-wide text-rose-300">
+                                    Failure / Cancellation Reason
+                                </p>
+
+                                <p class="mt-1 text-[8px] leading-4 text-slate-400">
+                                    {{ payment.failure_reason }}
+                                </p>
+
+                            </div>
+
+                        {% endif %}
+
+                    </section>
+
+
+                    <!-- =================================================
+                         REFUND DETAILS
+                         ONLY APPEARS WHEN A REFUND EXISTS
+                    ================================================== -->
+
+                    {% if refunds %}
+
+                        <section
+                            id="refunds"
+                            class="
+                                min-w-0
+                                overflow-hidden
+                                rounded-xl
+                                border
+                                border-violet-400/15
+                                bg-[#061326]/95
+                            "
+                        >
+
+                            <div
+                                class="
+                                    flex
+                                    items-center
+                                    justify-between
+                                    gap-2
+                                    border-b
+                                    border-white/[0.06]
+                                    bg-[#07182c]
+                                    px-3
+                                    py-2.5
+                                "
+                            >
+
+                                <div class="flex items-center gap-2">
+
+                                    <span
+                                        class="
+                                            flex
+                                            h-7
+                                            w-7
+                                            shrink-0
+                                            items-center
+                                            justify-center
+                                            rounded-lg
+                                            border
+                                            border-violet-400/20
+                                            bg-violet-400/10
+                                            text-violet-300
+                                        "
+                                    >
+                                        <i class="ri-refund-2-line text-sm"></i>
+                                    </span>
+
+                                    <div>
+
+                                        <h2 class="text-xs font-black text-white">
+                                            Refund Details
+                                        </h2>
+
+                                        <p class="mt-0.5 text-[7px] text-slate-600">
+                                            Refund request and processing history
+                                        </p>
+
+                                    </div>
+
+                                </div>
+
+
+                                <span
+                                    class="
+                                        rounded-full
+                                        border
+                                        border-violet-400/20
+                                        bg-violet-400/10
+                                        px-2
+                                        py-1
+                                        text-[7px]
+                                        font-black
+                                        text-violet-300
+                                    "
+                                >
+                                    {{ refunds|length }}
+                                </span>
+
+                            </div>
+
+
+                            <div class="space-y-2 p-3">
+
+                                {% for refund in refunds %}
+
+                                    <article
+                                        class="
+                                            rounded-xl
+                                            border
+                                            border-white/[0.07]
+                                            bg-white/[0.018]
+                                            p-3
+                                        "
+                                    >
+
+                                        <div
+                                            class="
+                                                flex
+                                                flex-col
+                                                gap-2
+                                                sm:flex-row
+                                                sm:items-start
+                                                sm:justify-between
+                                            "
+                                        >
+
+                                            <div class="min-w-0">
+
+                                                <p class="break-all text-[9px] font-black text-white">
+                                                    Refund Request #RFD-{{ refund.id|stringformat:"05d" }}
+                                                </p>
+
+                                                <p class="mt-0.5 text-[7px] text-slate-600">
+                                                    Requested
+                                                    {{ refund.requested_at|date:"d M Y, h:i A" }}
+                                                </p>
+
+                                            </div>
+
+
+                                            {% if refund.status == "completed" %}
+
+                                                <span
+                                                    class="
+                                                        w-fit
+                                                        rounded-full
+                                                        border
+                                                        border-emerald-400/20
+                                                        bg-emerald-400/10
+                                                        px-2
+                                                        py-1
+                                                        text-[7px]
+                                                        font-black
+                                                        uppercase
+                                                        text-emerald-300
+                                                    "
+                                                >
+                                                    Refunded
+                                                </span>
+
+                                            {% elif refund.status == "processing" %}
+
+                                                <span
+                                                    class="
+                                                        w-fit
+                                                        rounded-full
+                                                        border
+                                                        border-amber-400/20
+                                                        bg-amber-400/10
+                                                        px-2
+                                                        py-1
+                                                        text-[7px]
+                                                        font-black
+                                                        uppercase
+                                                        text-amber-300
+                                                    "
+                                                >
+                                                    Approved / Processing
+                                                </span>
+
+                                            {% elif refund.status == "rejected" %}
+
+                                                <span
+                                                    class="
+                                                        w-fit
+                                                        rounded-full
+                                                        border
+                                                        border-rose-400/20
+                                                        bg-rose-400/10
+                                                        px-2
+                                                        py-1
+                                                        text-[7px]
+                                                        font-black
+                                                        uppercase
+                                                        text-rose-300
+                                                    "
+                                                >
+                                                    Rejected
+                                                </span>
+
+                                            {% elif refund.status == "failed" %}
+
+                                                <span
+                                                    class="
+                                                        w-fit
+                                                        rounded-full
+                                                        border
+                                                        border-rose-400/20
+                                                        bg-rose-400/10
+                                                        px-2
+                                                        py-1
+                                                        text-[7px]
+                                                        font-black
+                                                        uppercase
+                                                        text-rose-300
+                                                    "
+                                                >
+                                                    Failed
+                                                </span>
+
+                                            {% else %}
+
+                                                <span
+                                                    class="
+                                                        w-fit
+                                                        rounded-full
+                                                        border
+                                                        border-cyan-400/20
+                                                        bg-cyan-400/10
+                                                        px-2
+                                                        py-1
+                                                        text-[7px]
+                                                        font-black
+                                                        uppercase
+                                                        text-cyan-300
+                                                    "
+                                                >
+                                                    Requested
+                                                </span>
+
+                                            {% endif %}
+
+                                        </div>
+
+
+                                        <div
+                                            class="
+                                                mt-3
+                                                grid
+                                                grid-cols-1
+                                                gap-2
+                                                sm:grid-cols-2
+                                            "
+                                        >
+
+                                            <div
+                                                class="
+                                                    rounded-lg
+                                                    border
+                                                    border-white/[0.05]
+                                                    bg-white/[0.015]
+                                                    p-2
+                                                "
+                                            >
+
+                                                <p class="text-[7px] uppercase tracking-wide text-slate-600">
+                                                    Requested Amount
+                                                </p>
+
+                                                <p class="mt-1 text-[9px] font-black text-slate-200">
+                                                    ₹{{ refund.requested_amount|floatformat:2 }}
+                                                </p>
+
+                                            </div>
+
+
+                                            <div
+                                                class="
+                                                    rounded-lg
+                                                    border
+                                                    border-white/[0.05]
+                                                    bg-white/[0.015]
+                                                    p-2
+                                                "
+                                            >
+
+                                                <p class="text-[7px] uppercase tracking-wide text-slate-600">
+                                                    Refunded Amount
+                                                </p>
+
+                                                <p class="mt-1 text-[9px] font-black text-emerald-300">
+                                                    ₹{{ refund.refunded_amount|floatformat:2 }}
+                                                </p>
+
+                                            </div>
+
+                                        </div>
+
+
+                                        {% if refund.reason %}
+
+                                            <div class="mt-2">
+
+                                                <p class="text-[7px] uppercase tracking-wide text-slate-600">
+                                                    Reason
+                                                </p>
+
+                                                <p class="mt-1 text-[8px] leading-4 text-slate-400">
+                                                    {{ refund.reason }}
+                                                </p>
+
+                                            </div>
+
+                                        {% endif %}
+
+
+                                        {% if refund.admin_note %}
+
+                                            <div class="mt-2">
+
+                                                <p class="text-[7px] uppercase tracking-wide text-slate-600">
+                                                    Admin Note
+                                                </p>
+
+                                                <p class="mt-1 text-[8px] leading-4 text-slate-400">
+                                                    {{ refund.admin_note }}
+                                                </p>
+
+                                            </div>
+
+                                        {% endif %}
+
+
+                                        {% if refund.processed_at %}
+
+                                            <div class="mt-2">
+
+                                                <p class="text-[7px] uppercase tracking-wide text-slate-600">
+                                                    Processed On
+                                                </p>
+
+                                                <p class="mt-1 text-[8px] text-slate-400">
+                                                    {{ refund.processed_at|date:"d M Y, h:i A" }}
+                                                </p>
+
+                                            </div>
+
+                                        {% endif %}
+
+
+                                        {% if refund.razorpay_refund_id %}
+
+                                            <div class="mt-2">
+
+                                                <p class="text-[7px] uppercase tracking-wide text-slate-600">
+                                                    Razorpay Refund ID
+                                                </p>
+
+                                                <p class="mt-1 break-all text-[8px] font-bold text-slate-400">
+                                                    {{ refund.razorpay_refund_id }}
+                                                </p>
+
+                                            </div>
+
+                                        {% endif %}
+
+                                    </article>
+
+                                {% endfor %}
+
+                            </div>
+
+                        </section>
+
+                    {% endif %}
+
+
+                </div>
+
+            </main>
+
+
+            <!-- =====================================================
+                 RIGHT SIDEBAR
+            ====================================================== -->
+
+            <aside
+                class="
+                    min-w-0
+                    lg:min-h-0
+                    lg:overflow-y-auto
+                    lg:overflow-x-hidden
+                    lg:overscroll-contain
+                    [scrollbar-width:none]
+                    [&::-webkit-scrollbar]:hidden
+                "
+            >
+
+                <div class="flex min-w-0 flex-col gap-2.5 pb-1">
+
+
+                    <!-- =================================================
+                         ORDER STATUS TIMELINE
+                    ================================================== -->
+
+                    <section
+                        class="
+                            min-w-0
+                            overflow-hidden
+                            rounded-xl
+                            border
+                            border-cyan-400/15
+                            bg-[#061326]/95
+                        "
+                    >
+
+                        <div
+                            class="
+                                flex
+                                items-center
+                                gap-2
+                                border-b
+                                border-white/[0.06]
+                                bg-[#07182c]
+                                px-3
+                                py-2.5
+                            "
+                        >
+
+                            <span
+                                class="
+                                    flex
+                                    h-7
+                                    w-7
+                                    shrink-0
+                                    items-center
+                                    justify-center
+                                    rounded-lg
+                                    border
+                                    border-cyan-400/20
+                                    bg-cyan-400/10
+                                    text-cyan-300
+                                "
+                            >
+                                <i class="ri-git-merge-line text-sm"></i>
+                            </span>
+
+                            <h2 class="text-xs font-black text-white">
+                                Order Status
+                            </h2>
+
+                        </div>
+
+
+                        <div class="p-3">
+
+                            <!-- ORDER CREATED -->
+
+                            <div class="relative flex gap-2.5">
+
+                                <div class="relative flex w-6 shrink-0 justify-center">
+
+                                    <span
+                                        class="
+                                            z-10
+                                            flex
+                                            h-5
+                                            w-5
+                                            items-center
+                                            justify-center
+                                            rounded-full
+                                            bg-cyan-400
+                                            text-[9px]
+                                            font-black
+                                            text-slate-950
+                                        "
+                                    >
+                                        <i class="ri-check-line"></i>
+                                    </span>
+
+                                    {% if order.status != "cancelled" and order.status != "payment_failed" %}
+                                        <span
+                                            class="
+                                                absolute
+                                                top-5
+                                                bottom-[-18px]
+                                                w-px
+                                                bg-cyan-400/25
+                                            "
+                                        ></span>
+                                    {% endif %}
+
+                                </div>
+
+
+                                <div class="min-w-0 pb-4">
+
+                                    <p class="text-[9px] font-black text-slate-200">
+                                        Order Created
+                                    </p>
+
+                                    <p class="mt-0.5 text-[7px] text-slate-500">
+                                        {{ order.created_at|date:"d M Y, h:i A" }}
+                                    </p>
+
+                                </div>
+
+                            </div>
+
+
+                            <!-- SUCCESS -->
+
+                            {% if order.status == "paid" or order.status == "partially_refunded" or order.status == "refunded" %}
+
+                                <div class="relative flex gap-2.5">
+
+                                    <div class="relative flex w-6 shrink-0 justify-center">
+
+                                        <span
+                                            class="
+                                                z-10
+                                                flex
+                                                h-5
+                                                w-5
+                                                items-center
+                                                justify-center
+                                                rounded-full
+                                                bg-cyan-400
+                                                text-[9px]
+                                                font-black
+                                                text-slate-950
+                                            "
+                                        >
+                                            <i class="ri-check-line"></i>
+                                        </span>
+
+                                        <span
+                                            class="
+                                                absolute
+                                                top-5
+                                                bottom-[-18px]
+                                                w-px
+                                                bg-cyan-400/25
+                                            "
+                                        ></span>
+
+                                    </div>
+
+
+                                    <div class="min-w-0 pb-4">
+
+                                        <p class="text-[9px] font-black text-slate-200">
+                                            Payment Successful
+                                        </p>
+
+                                        <p class="mt-0.5 text-[7px] text-slate-500">
+
+                                            {% if payment and payment.captured_at %}
+                                                {{ payment.captured_at|date:"d M Y, h:i A" }}
+                                            {% elif order.paid_at %}
+                                                {{ order.paid_at|date:"d M Y, h:i A" }}
+                                            {% else %}
+                                                Payment captured
+                                            {% endif %}
+
+                                        </p>
+
+                                    </div>
+
+                                </div>
+
+
+                                <!-- INVOICE GENERATED -->
+
+                                {% if invoice %}
+
+                                    <div class="relative flex gap-2.5">
+
+                                        <div class="relative flex w-6 shrink-0 justify-center">
+
+                                            <span
+                                                class="
+                                                    z-10
+                                                    flex
+                                                    h-5
+                                                    w-5
+                                                    items-center
+                                                    justify-center
+                                                    rounded-full
+                                                    bg-cyan-400
+                                                    text-[9px]
+                                                    font-black
+                                                    text-slate-950
+                                                "
+                                            >
+                                                <i class="ri-check-line"></i>
+                                            </span>
+
+                                            <span
+                                                class="
+                                                    absolute
+                                                    top-5
+                                                    bottom-[-18px]
+                                                    w-px
+                                                    bg-cyan-400/25
+                                                "
+                                            ></span>
+
+                                        </div>
+
+
+                                        <div class="min-w-0 pb-4">
+
+                                            <p class="text-[9px] font-black text-slate-200">
+                                                Invoice Generated
+                                            </p>
+
+                                            <p class="mt-0.5 break-all text-[7px] text-slate-500">
+                                                {{ invoice.invoice_number }}
+                                            </p>
+
+                                        </div>
+
+                                    </div>
+
+                                {% endif %}
+
+
+                                <!-- ACCESS -->
+
+                                {% if order.status == "paid" or order.status == "partially_refunded" %}
+
+                                    <div class="relative flex gap-2.5">
+
+                                        <div class="relative flex w-6 shrink-0 justify-center">
+
+                                            <span
+                                                class="
+                                                    z-10
+                                                    flex
+                                                    h-5
+                                                    w-5
+                                                    items-center
+                                                    justify-center
+                                                    rounded-full
+                                                    bg-emerald-400
+                                                    text-[9px]
+                                                    font-black
+                                                    text-slate-950
+                                                "
+                                            >
+                                                <i class="ri-check-line"></i>
+                                            </span>
+
+                                        </div>
+
+
+                                        <div class="min-w-0">
+
+                                            <p class="text-[9px] font-black text-emerald-300">
+                                                Learning Access Activated
+                                            </p>
+
+                                            <p class="mt-0.5 text-[7px] text-slate-500">
+                                                Active purchased batches are available.
+                                            </p>
+
+                                        </div>
+
+                                    </div>
+
+                                {% endif %}
+
+
+                                {% if order.status == "partially_refunded" %}
+
+                                    <div class="mt-4 flex gap-2.5">
+
+                                        <div class="flex w-6 shrink-0 justify-center">
+
+                                            <span
+                                                class="
+                                                    flex
+                                                    h-5
+                                                    w-5
+                                                    items-center
+                                                    justify-center
+                                                    rounded-full
+                                                    bg-violet-500
+                                                    text-[9px]
+                                                    font-black
+                                                    text-white
+                                                "
+                                            >
+                                                <i class="ri-refund-2-line"></i>
+                                            </span>
+
+                                        </div>
+
+
+                                        <div class="min-w-0">
+
+                                            <p class="text-[9px] font-black text-violet-300">
+                                                Partially Refunded
+                                            </p>
+
+                                            <p class="mt-0.5 text-[7px] text-slate-500">
+                                                Refunded batch access has been revoked.
+                                            </p>
+
+                                        </div>
+
+                                    </div>
+
+                                {% elif order.status == "refunded" %}
+
+                                    <div class="mt-4 flex gap-2.5">
+
+                                        <div class="flex w-6 shrink-0 justify-center">
+
+                                            <span
+                                                class="
+                                                    flex
+                                                    h-5
+                                                    w-5
+                                                    items-center
+                                                    justify-center
+                                                    rounded-full
+                                                    bg-sky-500
+                                                    text-[9px]
+                                                    font-black
+                                                    text-white
+                                                "
+                                            >
+                                                <i class="ri-refund-2-line"></i>
+                                            </span>
+
+                                        </div>
+
+
+                                        <div class="min-w-0">
+
+                                            <p class="text-[9px] font-black text-sky-300">
+                                                Fully Refunded
+                                            </p>
+
+                                            <p class="mt-0.5 text-[7px] text-slate-500">
+                                                Learning access has been revoked.
+                                            </p>
+
+                                        </div>
+
+                                    </div>
+
+                                {% endif %}
+
+
+                            {% elif order.status == "cancelled" %}
+
+                                <!-- CANCELLED -->
+
+                                <div class="relative flex gap-2.5">
+
+                                    <div class="relative flex w-6 shrink-0 justify-center">
+
+                                        <span
+                                            class="
+                                                z-10
+                                                flex
+                                                h-5
+                                                w-5
+                                                items-center
+                                                justify-center
+                                                rounded-full
+                                                bg-orange-500
+                                                text-[9px]
+                                                font-black
+                                                text-white
+                                            "
+                                        >
+                                            <i class="ri-close-line"></i>
+                                        </span>
+
+                                    </div>
+
+
+                                    <div class="min-w-0">
+
+                                        <p class="text-[9px] font-black text-orange-300">
+                                            Payment Cancelled
+                                        </p>
+
+                                        <p class="mt-0.5 text-[7px] text-slate-500">
+                                            {% if payment and payment.updated_at %}
+                                                {{ payment.updated_at|date:"d M Y, h:i A" }}
+                                            {% else %}
+                                                Payment was cancelled by the student.
+                                            {% endif %}
+                                        </p>
+
+                                    </div>
+
+                                </div>
+
+
+                            {% elif order.status == "payment_failed" %}
+
+                                <!-- FAILED -->
+
+                                <div class="relative flex gap-2.5">
+
+                                    <div class="relative flex w-6 shrink-0 justify-center">
+
+                                        <span
+                                            class="
+                                                z-10
+                                                flex
+                                                h-5
+                                                w-5
+                                                items-center
+                                                justify-center
+                                                rounded-full
+                                                bg-rose-500
+                                                text-[9px]
+                                                font-black
+                                                text-white
+                                            "
+                                        >
+                                            <i class="ri-close-line"></i>
+                                        </span>
+
+                                    </div>
+
+
+                                    <div class="min-w-0">
+
+                                        <p class="text-[9px] font-black text-rose-300">
+                                            Payment Failed
+                                        </p>
+
+                                        <p class="mt-0.5 text-[7px] text-slate-500">
+                                            {% if payment and payment.updated_at %}
+                                                {{ payment.updated_at|date:"d M Y, h:i A" }}
+                                            {% else %}
+                                                Payment was not completed.
+                                            {% endif %}
+                                        </p>
+
+                                    </div>
+
+                                </div>
+
+                            {% endif %}
+
+
+                            <!-- =================================================
+                                 REFUND STATUS TIMELINE
+                            ================================================== -->
+
+                            {% if refunds %}
+
+                                {% with refund=refunds.0 %}
+
+                                    <div class="my-3 h-px bg-white/[0.06]"></div>
+
+                                    <div class="mb-2 flex items-center gap-2">
+
+                                        <span
+                                            class="
+                                                flex
+                                                h-5
+                                                w-5
+                                                items-center
+                                                justify-center
+                                                rounded-full
+                                                bg-violet-500
+                                                text-[9px]
+                                                font-black
+                                                text-white
+                                            "
+                                        >
+                                            <i class="ri-refund-2-line"></i>
+                                        </span>
+
+                                        <p class="text-[8px] font-black uppercase tracking-wide text-violet-300">
+                                            Refund Timeline
+                                        </p>
+
+                                    </div>
+
+
+                                    <!-- REQUESTED -->
+
+                                    <div class="relative flex gap-2.5">
+
+                                        <div class="relative flex w-6 shrink-0 justify-center">
+
+                                            <span
+                                                class="
+                                                    z-10
+                                                    flex
+                                                    h-5
+                                                    w-5
+                                                    items-center
+                                                    justify-center
+                                                    rounded-full
+                                                    bg-cyan-400
+                                                    text-[9px]
+                                                    font-black
+                                                    text-slate-950
+                                                "
+                                            >
+                                                <i class="ri-check-line"></i>
+                                            </span>
+
+                                            <span
+                                                class="
+                                                    absolute
+                                                    top-5
+                                                    bottom-[-18px]
+                                                    w-px
+                                                    bg-white/10
+                                                "
+                                            ></span>
+
+                                        </div>
+
+
+                                        <div class="min-w-0 pb-4">
+
+                                            <p class="text-[9px] font-black text-slate-200">
+                                                Refund Requested
+                                            </p>
+
+                                            <p class="mt-0.5 text-[7px] text-slate-500">
+                                                {{ refund.requested_at|date:"d M Y, h:i A" }}
+                                            </p>
+
+                                        </div>
+
+                                    </div>
+
+
+                                    <!-- APPROVED / PROCESSING -->
+
+                                    {% if refund.status == "processing" or refund.status == "completed" %}
+
+                                        <div class="relative flex gap-2.5">
+
+                                            <div class="relative flex w-6 shrink-0 justify-center">
+
+                                                <span
+                                                    class="
+                                                        z-10
+                                                        flex
+                                                        h-5
+                                                        w-5
+                                                        items-center
+                                                        justify-center
+                                                        rounded-full
+                                                        bg-amber-400
+                                                        text-[9px]
+                                                        font-black
+                                                        text-slate-950
+                                                    "
+                                                >
+                                                    <i class="ri-check-line"></i>
+                                                </span>
+
+                                                {% if refund.status == "completed" %}
+                                                    <span
+                                                        class="
+                                                            absolute
+                                                            top-5
+                                                            bottom-[-18px]
+                                                            w-px
+                                                            bg-white/10
+                                                        "
+                                                    ></span>
+                                                {% endif %}
+
+                                            </div>
+
+
+                                            <div class="min-w-0 pb-4">
+
+                                                <p class="text-[9px] font-black text-amber-300">
+                                                    Refund Approved
+                                                </p>
+
+                                                <p class="mt-0.5 text-[7px] text-slate-500">
+                                                    {% if refund.processed_at %}
+                                                        {{ refund.processed_at|date:"d M Y, h:i A" }}
+                                                    {% else %}
+                                                        Refund is being processed.
+                                                    {% endif %}
+                                                </p>
+
+                                            </div>
+
+                                        </div>
+
+                                    {% elif refund.status == "rejected" %}
+
+                                        <div class="relative flex gap-2.5">
+
+                                            <div class="flex w-6 shrink-0 justify-center">
+
+                                                <span
+                                                    class="
+                                                        flex
+                                                        h-5
+                                                        w-5
+                                                        items-center
+                                                        justify-center
+                                                        rounded-full
+                                                        bg-rose-500
+                                                        text-[9px]
+                                                        font-black
+                                                        text-white
+                                                    "
+                                                >
+                                                    <i class="ri-close-line"></i>
+                                                </span>
+
+                                            </div>
+
+
+                                            <div class="min-w-0">
+
+                                                <p class="text-[9px] font-black text-rose-300">
+                                                    Refund Rejected
+                                                </p>
+
+                                                <p class="mt-0.5 text-[7px] text-slate-500">
+                                                    Refund request was rejected.
+                                                </p>
+
+                                            </div>
+
+                                        </div>
+
+                                    {% elif refund.status == "failed" %}
+
+                                        <div class="relative flex gap-2.5">
+
+                                            <div class="flex w-6 shrink-0 justify-center">
+
+                                                <span
+                                                    class="
+                                                        flex
+                                                        h-5
+                                                        w-5
+                                                        items-center
+                                                        justify-center
+                                                        rounded-full
+                                                        bg-rose-500
+                                                        text-[9px]
+                                                        font-black
+                                                        text-white
+                                                    "
+                                                >
+                                                    <i class="ri-close-line"></i>
+                                                </span>
+
+                                            </div>
+
+
+                                            <div class="min-w-0">
+
+                                                <p class="text-[9px] font-black text-rose-300">
+                                                    Refund Failed
+                                                </p>
+
+                                                <p class="mt-0.5 text-[7px] text-slate-500">
+                                                    Refund processing failed.
+                                                </p>
+
+                                            </div>
+
+                                        </div>
+
+                                    {% endif %}
+
+
+                                    <!-- REFUNDED -->
+
+                                    {% if refund.status == "completed" %}
+
+                                        <div class="relative mt-0 flex gap-2.5">
+
+                                            <div class="flex w-6 shrink-0 justify-center">
+
+                                                <span
+                                                    class="
+                                                        flex
+                                                        h-5
+                                                        w-5
+                                                        items-center
+                                                        justify-center
+                                                        rounded-full
+                                                        bg-emerald-400
+                                                        text-[9px]
+                                                        font-black
+                                                        text-slate-950
+                                                    "
+                                                >
+                                                    <i class="ri-check-line"></i>
+                                                </span>
+
+                                            </div>
+
+
+                                            <div class="min-w-0">
+
+                                                <p class="text-[9px] font-black text-emerald-300">
+                                                    Refund Completed
+                                                </p>
+
+                                                <p class="mt-0.5 text-[7px] text-slate-500">
+
+                                                    {% if refund.processed_at %}
+                                                        {{ refund.processed_at|date:"d M Y, h:i A" }}
+                                                    {% else %}
+                                                        Refund completed.
+                                                    {% endif %}
+
+                                                </p>
+
+                                            </div>
+
+                                        </div>
+
+                                    {% endif %}
+
+                                {% endwith %}
+
+                            {% endif %}
+
+                        </div>
+
+                    </section>
+
+
+                    <!-- =================================================
+                         REFUND SUMMARY
+                         ONLY WHEN REFUND EXISTS / REFUNDED AMOUNT EXISTS
+                    ================================================== -->
+
+                    {% if refunds or refunded_amount %}
+
+                        <section
+                            class="
+                                min-w-0
+                                overflow-hidden
+                                rounded-xl
+                                border
+                                border-violet-400/15
+                                bg-[#061326]/95
+                            "
+                        >
+
+                            <div
+                                class="
+                                    flex
+                                    items-center
+                                    gap-2
+                                    border-b
+                                    border-white/[0.06]
+                                    bg-[#07182c]
+                                    px-3
+                                    py-2.5
+                                "
+                            >
+
+                                <span
+                                    class="
+                                        flex
+                                        h-7
+                                        w-7
+                                        shrink-0
+                                        items-center
+                                        justify-center
+                                        rounded-lg
+                                        border
+                                        border-violet-400/20
+                                        bg-violet-400/10
+                                        text-violet-300
+                                    "
+                                >
+                                    <i class="ri-refund-2-line text-xs"></i>
+                                </span>
+
+                                <h3 class="text-[10px] font-black text-white">
+                                    Refund Summary
+                                </h3>
+
+                            </div>
+
+
+                            <div class="space-y-2 p-3">
+
+                                <div class="flex items-center justify-between gap-2">
+
+                                    <span class="text-[8px] text-slate-500">
+                                        Refunded Amount
+                                    </span>
+
+                                    <span class="text-[9px] font-black text-orange-300">
+                                        ₹{{ refunded_amount|floatformat:2 }}
+                                    </span>
+
+                                </div>
+
+
+                                <div class="flex items-center justify-between gap-2">
+
+                                    <span class="text-[8px] text-slate-500">
+                                        Remaining Amount
+                                    </span>
+
+                                    <span class="text-[9px] font-black text-cyan-300">
+                                        ₹{{ net_paid|floatformat:2 }}
+                                    </span>
+
+                                </div>
+
+                            </div>
+
+                        </section>
+
+                    {% endif %}
+
+
+                    <!-- =================================================
+                         REFUND ELIGIBLE
+                         DO NOT SHOW IF A REQUEST ALREADY EXISTS
+                    ================================================== -->
+
+                    {% if refund_eligible and not refunds %}
+
+                        <section
+                            class="
+                                min-w-0
+                                rounded-xl
+                                border
+                                border-emerald-400/20
+                                bg-emerald-400/[0.035]
+                            "
+                        >
+
+                            <div class="p-3">
+
+                                <div class="flex items-center gap-2">
+
+                                    <span
+                                        class="
+                                            flex
+                                            h-7
+                                            w-7
+                                            shrink-0
+                                            items-center
+                                            justify-center
+                                            rounded-lg
+                                            border
+                                            border-emerald-400/20
+                                            bg-emerald-400/10
+                                            text-emerald-300
+                                        "
+                                    >
+                                        <i class="ri-shield-check-line text-xs"></i>
+                                    </span>
+
+                                    <h3 class="text-[10px] font-black text-emerald-300">
+                                        Refund Eligible
+                                    </h3>
+
+                                </div>
+
+
+                                <p class="mt-2 text-[8px] leading-4 text-slate-400">
+                                    You can request a refund within 7 days of purchase.
+                                </p>
+
+
+                                <p class="mt-1 text-[8px] font-black text-emerald-300">
+                                    Valid until {{ refund_deadline|date:"d M Y, h:i A" }}
+                                </p>
+
+
+                                <a
+                                    href="#batches"
+                                    class="
+                                        mt-3
+                                        flex
+                                        min-h-[34px]
+                                        w-full
+                                        items-center
+                                        justify-center
+                                        gap-1.5
+                                        rounded-lg
+                                        bg-violet-500
+                                        px-2.5
+                                        py-1.5
+                                        text-[8px]
+                                        font-black
+                                        text-white
+                                        transition
+                                        hover:bg-violet-400
+                                    "
+                                >
+                                    <i class="ri-refund-2-line"></i>
+                                    Request Refund
+                                </a>
+
+                            </div>
+
+                        </section>
+
+                    {% endif %}
+
+
+                    <!-- =================================================
+                         ORDER ACTIONS
+                    ================================================== -->
+
+                    <section
+                        class="
+                            min-w-0
+                            overflow-hidden
+                            rounded-xl
+                            border
+                            border-cyan-400/15
+                            bg-[#061326]/95
+                        "
+                    >
+
+                        <div
+                            class="
+                                flex
+                                items-center
+                                gap-2
+                                border-b
+                                border-white/[0.06]
+                                bg-[#07182c]
+                                px-3
+                                py-2.5
+                            "
+                        >
+
+                            <span
+                                class="
+                                    flex
+                                    h-7
+                                    w-7
+                                    shrink-0
+                                    items-center
+                                    justify-center
+                                    rounded-lg
+                                    border
+                                    border-cyan-400/20
+                                    bg-cyan-400/10
+                                    text-cyan-300
+                                "
+                            >
+                                <i class="ri-settings-3-line text-sm"></i>
+                            </span>
+
+                            <h2 class="text-xs font-black text-white">
+                                Order Actions
+                            </h2>
+
+                        </div>
+
+
+                        <div class="space-y-1.5 p-3">
+
+                            <!-- INVOICE ONLY FOR REAL INVOICES -->
+
+                            {% if invoice and order.status != "cancelled" and order.status != "payment_failed" %}
+
+                                <a
+                                    href="{% url 'orders:invoice_detail' invoice.invoice_number %}"
+                                    class="
+                                        flex
+                                        h-9
+                                        w-full
+                                        items-center
+                                        justify-center
+                                        gap-2
+                                        rounded-lg
+                                        bg-gradient-to-r
+                                        from-cyan-400
+                                        to-sky-400
+                                        px-3
+                                        text-[9px]
+                                        font-black
+                                        text-slate-950
+                                        transition
+                                        hover:from-cyan-300
+                                        hover:to-sky-300
+                                    "
+                                >
+                                    <i class="ri-file-download-line text-sm"></i>
+                                    Download Invoice (PDF)
+                                </a>
+
+                            {% endif %}
+
+
+                            <!-- REFUND REQUEST -->
+
+                            {% if refund_eligible and not refunds %}
+
+                                <a
+                                    href="#refunds"
+                                    class="
+                                        flex
+                                        h-9
+                                        w-full
+                                        items-center
+                                        justify-center
+                                        gap-2
+                                        rounded-lg
+                                        bg-violet-500
+                                        px-3
+                                        text-[9px]
+                                        font-black
+                                        text-white
+                                        transition
+                                        hover:bg-violet-400
+                                    "
+                                >
+                                    <i class="ri-refund-2-line text-sm"></i>
+                                    Request Refund
+                                </a>
+
+                            {% endif %}
+
+
+                            <!-- FAILED / CANCELLED -->
+
+                            {% if order.status == "cancelled" or order.status == "payment_failed" %}
+
+                                <a
+                                    href="{% url 'orders:checkout' %}"
+                                    class="
+                                        flex
+                                        h-9
+                                        w-full
+                                        items-center
+                                        justify-center
+                                        gap-2
+                                        rounded-lg
+                                        bg-gradient-to-r
+                                        from-cyan-400
+                                        to-sky-400
+                                        px-3
+                                        text-[9px]
+                                        font-black
+                                        text-slate-950
+                                        transition
+                                        hover:from-cyan-300
+                                        hover:to-sky-300
+                                    "
+                                >
+                                    <i class="ri-refresh-line text-sm"></i>
+                                    Try Payment Again
+                                </a>
+
+                            {% endif %}
+
+
+                            <!-- CONTACT SUPPORT -->
+
+                            <a
+                                href="#"
+                                class="
+                                    flex
+                                    h-9
+                                    w-full
+                                    items-center
+                                    justify-center
+                                    gap-2
+                                    rounded-lg
+                                    border
+                                    border-white/10
+                                    bg-white/[0.025]
+                                    px-3
+                                    text-[9px]
+                                    font-black
+                                    text-slate-300
+                                    transition
+                                    hover:border-white/20
+                                    hover:bg-white/[0.05]
+                                    hover:text-white
+                                "
+                            >
+                                <i class="ri-customer-service-2-line text-sm"></i>
+                                Contact Support
+                            </a>
+
+                        </div>
+
+                    </section>
+
+
+                    <!-- =================================================
+                         CANCELLED NOTICE
+                    ================================================== -->
+
+                    {% if order.status == "cancelled" %}
+
+                        <section
+                            class="
+                                rounded-xl
+                                border
+                                border-orange-400/15
+                                bg-orange-400/[0.035]
+                                p-3
+                            "
+                        >
+
+                            <div class="flex items-start gap-2">
+
+                                <span
+                                    class="
+                                        flex
+                                        h-7
+                                        w-7
+                                        shrink-0
+                                        items-center
+                                        justify-center
+                                        rounded-lg
+                                        border
+                                        border-orange-400/20
+                                        bg-orange-400/10
+                                        text-orange-300
+                                    "
+                                >
+                                    <i class="ri-information-line"></i>
+                                </span>
+
+
+                                <div class="min-w-0">
+
+                                    <p class="text-[10px] font-black text-orange-300">
+                                        Payment Cancelled
+                                    </p>
+
+                                    <p class="mt-1 text-[8px] leading-4 text-slate-500">
+                                        This payment was cancelled. No amount was charged and no learning access was provided.
+                                    </p>
+
+                                </div>
+
+                            </div>
+
+                        </section>
+
+                    {% endif %}
+
+
+                    <!-- =================================================
+                         PAYMENT FAILED NOTICE
+                    ================================================== -->
+
+                    {% if order.status == "payment_failed" %}
+
+                        <section
+                            class="
+                                rounded-xl
+                                border
+                                border-rose-400/15
+                                bg-rose-400/[0.035]
+                                p-3
+                            "
+                        >
+
+                            <div class="flex items-start gap-2">
+
+                                <span
+                                    class="
+                                        flex
+                                        h-7
+                                        w-7
+                                        shrink-0
+                                        items-center
+                                        justify-center
+                                        rounded-lg
+                                        border
+                                        border-rose-400/20
+                                        bg-rose-400/10
+                                        text-rose-300
+                                    "
+                                >
+                                    <i class="ri-error-warning-line"></i>
+                                </span>
+
+
+                                <div class="min-w-0">
+
+                                    <p class="text-[10px] font-black text-rose-300">
+                                        Payment Failed
+                                    </p>
+
+                                    <p class="mt-1 text-[8px] leading-4 text-slate-500">
+                                        The payment failed. No amount was charged and no learning access was provided.
+                                    </p>
+
+                                </div>
+
+                            </div>
+
+                        </section>
+
+                    {% endif %}
+
+
+                    <!-- =================================================
+                         BACK TO ORDER HISTORY
+                    ================================================== -->
+
+                    <a
+                        href="{% url 'order_history' %}"
+                        class="
+                            flex
+                            min-h-[36px]
+                            w-full
+                            items-center
+                            justify-center
+                            gap-2
+                            rounded-lg
+                            border
+                            border-white/10
+                            bg-white/[0.025]
+                            px-3
+                            text-[9px]
+                            font-black
+                            text-slate-400
+                            transition
+                            hover:border-cyan-400/20
+                            hover:bg-cyan-400/[0.04]
+                            hover:text-cyan-300
+                        "
+                    >
+                        <i class="ri-history-line"></i>
+                        Back to Order History
+                    </a>
+
+                </div>
+
+            </aside>
+
+        </div>
+
+    </section>
+
+</div>
+
+{% endblock %}

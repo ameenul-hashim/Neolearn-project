@@ -1,7 +1,6 @@
 {% load static %}
 
 <!DOCTYPE html>
-
 <html lang="en">
 
 <head>
@@ -14,111 +13,120 @@
     >
 
     <title>
-
         {% block title %}
         NeoLearn
         {% endblock %}
-
     </title>
 
-    <!-- TAILWIND -->
+
+    <!-- =========================================================
+         TAILWIND
+    ========================================================== -->
 
     <script src="https://cdn.tailwindcss.com"></script>
 
-    <!-- REMIX ICON -->
+
+    <!-- =========================================================
+         REMIX ICON
+    ========================================================== -->
 
     <link
         rel="stylesheet"
         href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/4.2.0/remixicon.min.css"
     >
 
-    <!-- FONT -->
+
+    <!-- =========================================================
+         FONT
+    ========================================================== -->
 
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
         rel="stylesheet"
     >
 
-    <!-- SHARED TOAST CSS -->
-<link rel="stylesheet" href="{% static 'toast-messages.css' %}">
 
-<!-- shared js messages -->
-<script src="{% static 'toast-messages.js' %}"></script>
+    <!-- =========================================================
+         SHARED TOAST CSS
+    ========================================================== -->
+
+    <link
+        rel="stylesheet"
+        href="{% static 'toast-messages.css' %}"
+    >
+
+
+    <!-- =========================================================
+         SHARED JS MESSAGES
+    ========================================================== -->
+
+    <script src="{% static 'toast-messages.js' %}"></script>
+
+
+    <!-- =========================================================
+         SHARED BASE STYLES
+    ========================================================== -->
 
     <style>
 
-        *{
-
-            font-family:'Inter',sans-serif;
-            scrollbar-width:none;
-
+        * {
+            font-family: 'Inter', sans-serif;
+            scrollbar-width: none;
         }
 
-        *::-webkit-scrollbar{
-
-            display:none;
-
+        *::-webkit-scrollbar {
+            display: none;
         }
 
-        body{
-
-            overflow:hidden;
-            background:#020817;
-            color:white;
-
+        body {
+            overflow: hidden;
+            overflow-x: hidden;
+            background: #020817;
+            color: white;
         }
 
-        .sidebar-bg{
-
+        .sidebar-bg {
             background:
-            linear-gradient(
-                180deg,
-                #050B16 0%,
-                #020617 100%
-            );
-
+                linear-gradient(
+                    180deg,
+                    #050B16 0%,
+                    #020617 100%
+                );
         }
 
-        .navbar-bg{
-
+        .navbar-bg {
             background:
-            rgba(4,9,20,0.94);
+                rgba(4, 9, 20, 0.94);
 
-            backdrop-filter:blur(20px);
-
+            backdrop-filter: blur(20px);
         }
 
-        .main-grid{
-
+        .main-grid {
             background-image:
-            linear-gradient(
-                rgba(255,255,255,0.03) 1px,
-                transparent 1px
-            ),
+                linear-gradient(
+                    rgba(255,255,255,0.03) 1px,
+                    transparent 1px
+                ),
 
-            linear-gradient(
-                90deg,
-                rgba(255,255,255,0.03) 1px,
-                transparent 1px
-            );
+                linear-gradient(
+                    90deg,
+                    rgba(255,255,255,0.03) 1px,
+                    transparent 1px
+                );
 
-            background-size:42px 42px;
-
+            background-size: 42px 42px;
         }
 
-        .active-menu{
-
+        .active-menu {
             background:
-            linear-gradient(
-                90deg,
-                rgba(0,255,224,0.14),
-                rgba(0,255,224,0.03)
-            );
+                linear-gradient(
+                    90deg,
+                    rgba(0,255,224,0.14),
+                    rgba(0,255,224,0.03)
+                );
 
-            border-left:3px solid #00F5D4;
-
-            color:#00F5D4;
-
+            border-left: 3px solid #00F5D4;
+            color: #00F5D4;
         }
 
         .nav-label {
@@ -129,9 +137,11 @@
             padding: 16px 16px 8px 16px;
         }
 
-        
 
-        /* Profile image styling */
+        /* =====================================================
+           PROFILE IMAGE
+        ====================================================== */
+
         .profile-img {
             width: 42px;
             height: 42px;
@@ -139,15 +149,24 @@
             object-fit: cover;
             border: 2px solid rgba(0,255,224,0.2);
         }
+
         .profile-img-placeholder {
             width: 42px;
             height: 42px;
             border-radius: 50%;
-            background: linear-gradient(135deg, rgba(0,255,224,0.2), rgba(0,150,255,0.1));
+            background:
+                linear-gradient(
+                    135deg,
+                    rgba(0,255,224,0.2),
+                    rgba(0,150,255,0.1)
+                );
+
             border: 2px solid rgba(0,255,224,0.2);
+
             display: flex;
             align-items: center;
             justify-content: center;
+
             font-size: 18px;
             color: #00F5D4;
         }
@@ -156,12 +175,23 @@
 
 </head>
 
+
 <body>
-<!-- display message -->
+
+
+<!-- =============================================================
+     DISPLAY MESSAGE
+============================================================== -->
 
 {% if messages %}
-<div class="message-container" id="messageContainer">
+
+<div
+    class="message-container"
+    id="messageContainer"
+>
+
     {% for message in messages %}
+
     <div class="message-item {{ message.tags }}">
 
         <div class="message-header">
@@ -169,66 +199,115 @@
             <div class="message-left">
 
                 <div class="message-icon">
-                    <i class="ri-{% if message.tags == 'success' %}check-line{% elif message.tags == 'error' %}close-circle-line{% elif message.tags == 'warning' %}alert-line{% else %}information-line{% endif %}"></i>
+
+                    <i
+                        class="ri-{% if message.tags == 'success' %}check-line{% elif message.tags == 'error' %}close-circle-line{% elif message.tags == 'warning' %}alert-line{% else %}information-line{% endif %}"
+                    ></i>
+
                 </div>
 
+
                 <div class="message-title">
+
                     {% if message.tags == "success" %}
+
                         Success
+
                     {% elif message.tags == "error" %}
+
                         Error
+
                     {% elif message.tags == "warning" %}
+
                         Warning
+
                     {% else %}
+
                         Information
+
                     {% endif %}
+
                 </div>
 
             </div>
 
-            <button class="message-close" type="button">
+
+            <button
+                class="message-close"
+                type="button"
+            >
+
                 <i class="ri-close-line"></i>
+
             </button>
 
         </div>
 
+
         <div class="message-text">
+
             {{ message }}
+
         </div>
 
     </div>
+
     {% endfor %}
+
 </div>
+
 {% endif %}
 
-<div class="flex w-full h-screen overflow-hidden">
 
-    <!-- MOBILE OVERLAY -->
+
+<!-- =============================================================
+     APPLICATION SHELL
+============================================================== -->
+
+<div
+    class="
+        flex
+        h-screen
+        w-full
+        min-w-0
+        overflow-hidden
+    "
+>
+
+
+    <!-- =========================================================
+         MOBILE OVERLAY
+    ========================================================== -->
 
     <div
         id="overlay"
         class="
             fixed
             inset-0
-            bg-black/70
             z-40
             hidden
+            bg-black/70
             lg:hidden
         "
     ></div>
 
-    <!-- SIDEBAR -->
+
+
+    <!-- =========================================================
+         SIDEBAR
+    ========================================================== -->
 
     <aside
         id="sidebar"
         class="
             fixed
-            top-0
             left-0
+            top-0
             z-50
 
-            w-[270px]
             h-screen
+            w-[270px]
+            max-w-[85vw]
 
             sidebar-bg
 
@@ -246,28 +325,39 @@
         "
     >
 
-        <!-- LOGO -->
+
+        <!-- =====================================================
+             LOGO
+        ====================================================== -->
 
         <div
             class="
+                flex
                 h-[80px]
+                shrink-0
+                items-center
+                justify-between
 
                 border-b
                 border-white/5
 
-                px-7
-
-                flex
-                items-center
-                justify-between
+                px-5
+                sm:px-7
             "
         >
 
-            <div class="flex items-center gap-3">
+            <div
+                class="
+                    flex
+                    min-w-0
+                    items-center
+                    gap-3
+                "
+            >
 
                 <!-- GLOW -->
 
-                <div class="relative">
+                <div class="relative shrink-0">
 
                     <!-- OUTER GLOW -->
 
@@ -281,9 +371,11 @@
                             bg-cyan-400/20
 
                             blur-xl
+
                             animate-pulse
                         "
                     ></div>
+
 
                     <!-- MAIN BOX -->
 
@@ -291,8 +383,12 @@
                         class="
                             relative
 
-                            w-[48px]
+                            flex
                             h-[48px]
+                            w-[48px]
+                            shrink-0
+                            items-center
+                            justify-center
 
                             rounded-[16px]
 
@@ -300,10 +396,6 @@
                             border-cyan-400/20
 
                             bg-[#071224]
-
-                            flex
-                            items-center
-                            justify-center
                         "
                     >
 
@@ -311,15 +403,15 @@
 
                         <div
                             class="
-                                w-[22px]
                                 h-[22px]
-
-                                border-[3px]
-                                border-cyan-400
+                                w-[22px]
 
                                 rotate-45
 
                                 rounded-[6px]
+
+                                border-[3px]
+                                border-cyan-400
                             "
                         ></div>
 
@@ -327,10 +419,12 @@
 
                 </div>
 
+
                 <!-- LOGO TEXT -->
 
                 <h1
                     class="
+                        truncate
                         text-[22px]
                         font-extrabold
                         tracking-[-1px]
@@ -338,28 +432,26 @@
                 >
 
                     <span class="text-white">
-
                         Neo
-
                     </span>
 
                     <span class="text-cyan-400">
-
                         Learn
-
                     </span>
 
                 </h1>
 
             </div>
 
+
             <!-- MOBILE CLOSE -->
 
             <button
                 id="closeSidebar"
                 class="
-                    lg:hidden
+                    shrink-0
                     text-[#94A3B8]
+                    lg:hidden
                 "
             >
 
@@ -369,33 +461,47 @@
 
         </div>
 
-        <!-- NAVIGATION -->
 
-        <div class="flex-1 overflow-y-auto px-4 py-1">
+
+        <!-- =====================================================
+             NAVIGATION
+        ====================================================== -->
+
+        <div
+            class="
+                min-h-0
+                flex-1
+                overflow-y-auto
+                overflow-x-hidden
+                px-4
+                py-1
+            "
+        >
 
             <nav class="space-y-0.5">
 
-                <!-- LEARNING label -->
-                <div class="nav-label">Learning</div>
+
+                <!-- LEARNING -->
+
+                <div class="nav-label">
+                    Learning
+                </div>
+
 
                 <!-- DASHBOARD -->
+
                 <a
                     href="{% url 'dashboard' %}"
-
                     class="
-                        h-[48px]
-
-                        rounded-[14px]
-
-                        px-4
-
                         flex
+                        h-[48px]
+                        min-w-0
                         items-center
                         gap-3
-
+                        rounded-[14px]
+                        px-4
                         text-[14px]
                         font-semibold
-
                         transition-all
 
                         {% if request.resolver_match.url_name == 'dashboard' %}
@@ -412,30 +518,30 @@
                     "
                 >
 
-                    <i class="ri-layout-grid-fill text-[18px]"></i>
+                    <i class="ri-layout-grid-fill shrink-0 text-[18px]"></i>
 
-                    Dashboard
+                    <span class="truncate">
+                        Dashboard
+                    </span>
 
                 </a>
 
+
+
                 <!-- MY LEARNING -->
+
                 <a
-                    href="#"
-
+                    href="{% url 'my_learning' %}"
                     class="
-                        h-[48px]
-
-                        rounded-[14px]
-
-                        px-4
-
                         flex
+                        h-[48px]
+                        min-w-0
                         items-center
                         gap-3
-
+                        rounded-[14px]
+                        px-4
                         text-[14px]
                         font-semibold
-
                         transition-all
 
                         {% if request.resolver_match.url_name == 'my_learning' %}
@@ -452,34 +558,70 @@
                     "
                 >
 
-                    <i class="ri-book-open-line text-[18px]"></i>
+                    <i class="ri-book-open-line shrink-0 text-[18px]"></i>
 
-                    <span class="text-[14px] font-medium">
-
+                    <span class="truncate text-[14px] font-medium">
                         My Learning
-
                     </span>
 
                 </a>
 
-                <!-- MARKETPLACE -->
+
+
+                <!-- ORDER HISTORY -->
+
                 <a
-                    href="{% url 'marketplace' %}"
-
+                    href="{% url 'order_history' %}"
                     class="
-                        h-[48px]
-
-                        rounded-[14px]
-
-                        px-4
-
                         flex
+                        h-[48px]
+                        min-w-0
                         items-center
                         gap-3
-
+                        rounded-[14px]
+                        px-4
                         text-[14px]
                         font-semibold
+                        transition-all
 
+                        {% if request.resolver_match.url_name == 'order_history' %}
+
+                            active-menu
+
+                        {% else %}
+
+                            text-[#94A3B8]
+                            hover:bg-white/5
+                            hover:text-white
+
+                        {% endif %}
+                    "
+                >
+
+                    <i class="ri-file-list-3-line shrink-0 text-[18px]"></i>
+
+                    <span class="truncate text-[14px] font-medium">
+                        Order History
+                    </span>
+
+                </a>
+
+
+
+                <!-- MARKETPLACE -->
+
+                <a
+                    href="{% url 'marketplace' %}"
+                    class="
+                        flex
+                        h-[48px]
+                        min-w-0
+                        items-center
+                        gap-3
+                        rounded-[14px]
+                        px-4
+                        text-[14px]
+                        font-semibold
                         transition-all
 
                         {% if request.resolver_match.url_name == 'marketplace' %}
@@ -496,34 +638,30 @@
                     "
                 >
 
-                    <i class="ri-shopping-bag-3-line text-[18px]"></i>
+                    <i class="ri-shopping-bag-3-line shrink-0 text-[18px]"></i>
 
-                    <span class="text-[14px] font-medium">
-
+                    <span class="truncate text-[14px] font-medium">
                         Marketplace
-
                     </span>
 
                 </a>
 
+
+
                 <!-- LIVE CLASSES -->
+
                 <a
                     href="#"
-
                     class="
-                        h-[48px]
-
-                        rounded-[14px]
-
-                        px-4
-
                         flex
+                        h-[48px]
+                        min-w-0
                         items-center
                         gap-3
-
+                        rounded-[14px]
+                        px-4
                         text-[14px]
                         font-semibold
-
                         transition-all
 
                         {% if request.resolver_match.url_name == 'live_classes' %}
@@ -540,34 +678,30 @@
                     "
                 >
 
-                    <i class="ri-live-line text-[18px]"></i>
+                    <i class="ri-live-line shrink-0 text-[18px]"></i>
 
-                    <span class="text-[14px] font-medium">
-
+                    <span class="truncate text-[14px] font-medium">
                         Live Classes
-
                     </span>
 
                 </a>
 
+
+
                 <!-- TEACHERS -->
+
                 <a
                     href="#"
-
                     class="
-                        h-[48px]
-
-                        rounded-[14px]
-
-                        px-4
-
                         flex
+                        h-[48px]
+                        min-w-0
                         items-center
                         gap-3
-
+                        rounded-[14px]
+                        px-4
                         text-[14px]
                         font-semibold
-
                         transition-all
 
                         {% if request.resolver_match.url_name == 'teachers' %}
@@ -584,34 +718,30 @@
                     "
                 >
 
-                    <i class="ri-user-star-line text-[18px]"></i>
+                    <i class="ri-user-star-line shrink-0 text-[18px]"></i>
 
-                    <span class="text-[14px] font-medium">
-
+                    <span class="truncate text-[14px] font-medium">
                         Teachers
-
                     </span>
 
                 </a>
 
+
+
                 <!-- ACHIEVEMENTS -->
+
                 <a
                     href="#"
-
                     class="
-                        h-[48px]
-
-                        rounded-[14px]
-
-                        px-4
-
                         flex
+                        h-[48px]
+                        min-w-0
                         items-center
                         gap-3
-
+                        rounded-[14px]
+                        px-4
                         text-[14px]
                         font-semibold
-
                         transition-all
 
                         {% if request.resolver_match.url_name == 'achievements' %}
@@ -628,34 +758,30 @@
                     "
                 >
 
-                    <i class="ri-award-line text-[18px]"></i>
+                    <i class="ri-award-line shrink-0 text-[18px]"></i>
 
-                    <span class="text-[14px] font-medium">
-
+                    <span class="truncate text-[14px] font-medium">
                         Achievements
-
                     </span>
 
                 </a>
 
+
+
                 <!-- LEARNING PROGRESS -->
+
                 <a
                     href="#"
-
                     class="
-                        h-[48px]
-
-                        rounded-[14px]
-
-                        px-4
-
                         flex
+                        h-[48px]
+                        min-w-0
                         items-center
                         gap-3
-
+                        rounded-[14px]
+                        px-4
                         text-[14px]
                         font-semibold
-
                         transition-all
 
                         {% if request.resolver_match.url_name == 'learning_progress' %}
@@ -672,37 +798,38 @@
                     "
                 >
 
-                    <i class="ri-bar-chart-2-line text-[18px]"></i>
+                    <i class="ri-bar-chart-2-line shrink-0 text-[18px]"></i>
 
-                    <span class="text-[14px] font-medium">
-
+                    <span class="truncate text-[14px] font-medium">
                         Learning Progress
-
                     </span>
 
                 </a>
 
-                <!-- ACCOUNT label -->
-                <div class="nav-label mt-4">Account</div>
+
+
+                <!-- ACCOUNT -->
+
+                <div class="nav-label mt-4">
+                    Account
+                </div>
+
+
 
                 <!-- SUPPORT -->
+
                 <a
                     href="#"
-
                     class="
-                        h-[48px]
-
-                        rounded-[14px]
-
-                        px-4
-
                         flex
+                        h-[48px]
+                        min-w-0
                         items-center
                         gap-3
-
+                        rounded-[14px]
+                        px-4
                         text-[14px]
                         font-semibold
-
                         transition-all
 
                         {% if request.resolver_match.url_name == 'support' %}
@@ -719,34 +846,30 @@
                     "
                 >
 
-                    <i class="ri-question-line text-[18px]"></i>
+                    <i class="ri-question-line shrink-0 text-[18px]"></i>
 
-                    <span class="text-[14px] font-medium">
-
+                    <span class="truncate text-[14px] font-medium">
                         Support
-
                     </span>
 
                 </a>
 
+
+
                 <!-- SETTINGS -->
+
                 <a
                     href="#"
-
                     class="
-                        h-[48px]
-
-                        rounded-[14px]
-
-                        px-4
-
                         flex
+                        h-[48px]
+                        min-w-0
                         items-center
                         gap-3
-
+                        rounded-[14px]
+                        px-4
                         text-[14px]
                         font-semibold
-
                         transition-all
 
                         {% if request.resolver_match.url_name == 'settings' %}
@@ -763,12 +886,10 @@
                     "
                 >
 
-                    <i class="ri-settings-3-line text-[18px]"></i>
+                    <i class="ri-settings-3-line shrink-0 text-[18px]"></i>
 
-                    <span class="text-[14px] font-medium">
-
+                    <span class="truncate text-[14px] font-medium">
                         Settings
-
                     </span>
 
                 </a>
@@ -777,44 +898,47 @@
 
         </div>
 
-        <!-- LOGOUT -->
+
+
+        <!-- =====================================================
+             LOGOUT
+        ====================================================== -->
+
         <div
             class="
-                p-4
+                shrink-0
                 border-t
                 border-white/5
+                p-4
             "
         >
 
             <a
                 href="{% url 'logout' %}"
-
                 class="
-                    h-[50px]
-
-                    rounded-[16px]
-
-                    bg-red-500/10
-
-                    border
-                    border-red-500/10
-
-                    text-red-400
-
                     flex
+                    h-[50px]
                     items-center
                     justify-center
                     gap-3
 
-                    font-semibold
+                    rounded-[16px]
 
-                    hover:bg-red-500/20
+                    border
+                    border-red-500/10
+
+                    bg-red-500/10
+
+                    font-semibold
+                    text-red-400
 
                     transition-all
+
+                    hover:bg-red-500/20
                 "
             >
 
-                <i class="ri-logout-box-r-line text-[18px]"></i>
+                <i class="ri-logout-box-r-line shrink-0 text-[18px]"></i>
 
                 Logout
 
@@ -824,85 +948,121 @@
 
     </aside>
 
-    <!-- MAIN -->
 
-    <div class="flex-1 lg:ml-[270px] flex flex-col">
 
-        <!-- NAVBAR -->
+    <!-- =========================================================
+         MAIN APPLICATION AREA
+    ========================================================== -->
+
+    <div
+        class="
+            flex
+            min-w-0
+            flex-1
+            flex-col
+            lg:ml-[270px]
+        "
+    >
+
+
+        <!-- =====================================================
+             NAVBAR
+        ====================================================== -->
 
         <header
             class="
                 fixed
-                top-0
                 left-0
-                lg:left-[270px]
                 right-0
+                top-0
+                z-30
 
+                flex
                 h-[80px]
-
-                px-4
-                lg:px-7
-
-                navbar-bg
+                min-w-0
+                items-center
+                justify-between
 
                 border-b
                 border-white/5
 
-                flex
-                items-center
-                justify-between
+                navbar-bg
 
-                z-30
+                px-3
+                sm:px-4
+                lg:left-[270px]
+                lg:px-7
             "
         >
 
-            <!-- LEFT -->
 
-            <div class="flex items-center gap-4">
+            <!-- =================================================
+                 LEFT NAVBAR AREA
+            ================================================== -->
+
+            <div
+                class="
+                    flex
+                    min-w-0
+                    shrink
+                    items-center
+                    gap-3
+                    sm:gap-4
+                "
+            >
+
 
                 <!-- MOBILE MENU -->
 
                 <button
                     id="openSidebar"
-
+                    type="button"
                     class="
-                        lg:hidden
+                        flex
+                        h-[40px]
+                        w-[40px]
+                        shrink-0
+                        items-center
+                        justify-center
 
-                        w-[42px]
-                        h-[42px]
-
-                        rounded-[14px]
+                        rounded-[13px]
 
                         border
                         border-white/10
 
-                        flex
-                        items-center
-                        justify-center
-
                         text-[#94A3B8]
+
+                        lg:hidden
+                        sm:h-[42px]
+                        sm:w-[42px]
+                        sm:rounded-[14px]
                     "
+                    aria-label="Open navigation"
                 >
 
-                    <i class="ri-menu-3-line text-[22px]"></i>
+                    <i class="ri-menu-3-line text-[21px] sm:text-[22px]"></i>
 
                 </button>
 
+
+
                 <!-- SEARCH -->
 
-                <div class="relative hidden md:block">
+                <div
+                    class="
+                        relative
+                        hidden
+                        min-w-0
+                        md:block
+                    "
+                >
 
                     <input
                         type="text"
-
                         placeholder="Search courses, instructors, topics..."
-
                         class="
-                            w-[520px]
-                            xl:w-[650px]
-
                             h-[50px]
-
+                            w-[min(520px,42vw)]
                             rounded-[18px]
 
                             border
@@ -914,28 +1074,29 @@
                             pr-5
 
                             text-[13px]
-
-                            placeholder:text-[#64748B]
+                            text-white
 
                             outline-none
+
+                            placeholder:text-[#64748B]
 
                             focus:border-cyan-400/30
                         "
                     >
+
 
                     <i
                         class="
                             ri-search-line
 
                             absolute
-
                             left-4
                             top-1/2
 
                             -translate-y-1/2
 
-                            text-[#64748B]
                             text-[18px]
+                            text-[#64748B]
                         "
                     ></i>
 
@@ -943,22 +1104,33 @@
 
             </div>
 
-            <!-- RIGHT -->
 
-            <div class="flex items-center gap-5">
 
-                <!-- STREAK -->
+            <!-- =================================================
+                 RIGHT NAVBAR AREA
+            ================================================== -->
+
+            <div
+                class="
+                    flex
+                    shrink-0
+                    items-center
+                    gap-3
+                    sm:gap-4
+                    lg:gap-5
+                "
+            >
+
+
+                <!-- =================================================
+                     STREAK
+                ================================================== -->
 
                 <div
                     class="
                         hidden
-                        xl:flex
-
                         items-center
                         gap-2
-
-                        h-[38px]
-                        px-4
 
                         rounded-full
 
@@ -967,10 +1139,13 @@
 
                         bg-orange-500/10
 
-                        text-orange-300
+                        px-4
 
                         text-[12px]
                         font-semibold
+                        text-orange-300
+
+                        xl:flex
                     "
                 >
 
@@ -980,109 +1155,172 @@
 
                 </div>
 
-                <!-- WISHLIST -->
 
-<a
-    href="{% url 'wishlist' %}"
-    class="
-        relative
-        text-red-400
-        hover:text-red-300
-        transition-all
-    "
-    title="Wishlist"
->
 
-    <i class="ri-heart-3-fill text-[21px]"></i>
+                <!-- =================================================
+                     WISHLIST
+                ================================================== -->
 
-    {% if wishlist_count %}
-    <span
-        id="wishlist-count"
-        class="
-            absolute
-            -top-2
-            -right-2
-            w-5
-            h-5
-            rounded-full
-            bg-red-500
-            text-white
-            text-[10px]
-            font-bold
-            flex
-            items-center
-            justify-center
-        "
-    >
-        {{ wishlist_count }}
-    </span>
-    {% endif %}
-
-</a>
-
-             <!-- CART -->
-
-<a
-    href="{% url 'cart' %}"
-    class="
-        relative
-        text-[#CBD5E1]
-        hover:text-cyan-400
-        transition-all
-    "
-    title="Cart"
->
-    <i class="ri-shopping-cart-2-line text-[21px]"></i>
-
-    {% if cart_count %}
-        <span
-            class="
-                absolute
-                -top-2
-                -right-2
-
-                min-w-[18px]
-                h-[18px]
-                px-1
-
-                rounded-full
-
-                bg-cyan-400
-
-                text-black
-                text-[10px]
-                font-bold
-
-                flex
-                items-center
-                justify-center
-            "
-        >
-            {{ cart_count }}
-        </span>
-    {% endif %}
-</a>
-                <!-- NOTIFICATION -->
-
-                <button
+                <a
+                    href="{% url 'wishlist' %}"
                     class="
                         relative
-                        text-[#CBD5E1]
-                        hover:text-white
+                        flex
+                        h-9
+                        w-9
+                        shrink-0
+                        items-center
+                        justify-center
+
+                        text-red-400
+
                         transition-all
+                        hover:text-red-300
+
+                        sm:h-10
+                        sm:w-10
                     "
+                    title="Wishlist"
                 >
 
-                    <i class="ri-notification-3-line text-[21px]"></i>
+                    <i class="ri-heart-3-fill text-[19px] sm:text-[21px]"></i>
+
+
+                    {% if wishlist_count %}
+
+                    <span
+                        id="wishlist-count"
+                        class="
+                            absolute
+                            -right-0.5
+                            -top-0.5
+
+                            flex
+                            h-5
+                            min-w-5
+                            items-center
+                            justify-center
+
+                            rounded-full
+
+                            bg-red-500
+
+                            px-1
+
+                            text-[10px]
+                            font-bold
+                            text-white
+                        "
+                    >
+                        {{ wishlist_count }}
+                    </span>
+
+                    {% endif %}
+
+                </a>
+
+
+
+                <!-- =================================================
+                     CART
+                ================================================== -->
+
+                <a
+                    href="{% url 'cart' %}"
+                    class="
+                        relative
+                        flex
+                        h-9
+                        w-9
+                        shrink-0
+                        items-center
+                        justify-center
+
+                        text-[#CBD5E1]
+
+                        transition-all
+                        hover:text-cyan-400
+
+                        sm:h-10
+                        sm:w-10
+                    "
+                    title="Cart"
+                >
+
+                    <i class="ri-shopping-cart-2-line text-[19px] sm:text-[21px]"></i>
+
+
+                    {% if cart_count %}
 
                     <span
                         class="
                             absolute
-                            top-0
-                            right-0
+                            -right-0.5
+                            -top-0.5
 
-                            w-[8px]
+                            flex
+                            h-[18px]
+                            min-w-[18px]
+                            items-center
+                            justify-center
+
+                            rounded-full
+
+                            bg-cyan-400
+
+                            px-1
+
+                            text-[10px]
+                            font-bold
+                            text-black
+                        "
+                    >
+                        {{ cart_count }}
+                    </span>
+
+                    {% endif %}
+
+                </a>
+
+
+
+                <!-- =================================================
+                     NOTIFICATION
+                ================================================== -->
+
+                <button
+                    type="button"
+                    class="
+                        relative
+                        flex
+                        h-9
+                        w-9
+                        shrink-0
+                        items-center
+                        justify-center
+
+                        text-[#CBD5E1]
+
+                        transition-all
+                        hover:text-white
+
+                        sm:h-10
+                        sm:w-10
+                    "
+                    aria-label="Notifications"
+                >
+
+                    <i class="ri-notification-3-line text-[19px] sm:text-[21px]"></i>
+
+
+                    <span
+                        class="
+                            absolute
+                            right-1
+                            top-1
+
                             h-[8px]
+                            w-[8px]
 
                             rounded-full
 
@@ -1092,33 +1330,85 @@
 
                 </button>
 
-                <!-- PROFILE DROPDOWN - with image -->
 
-                <div class="relative group">
+
+                <!-- =================================================
+                     PROFILE DROPDOWN
+                ================================================== -->
+
+                <div
+                    class="
+                        relative
+                        shrink-0
+                        group
+                    "
+                >
 
                     <button
+                        type="button"
                         class="
                             flex
+                            shrink-0
                             items-center
-                            gap-3
+                            gap-1.5
+                            sm:gap-3
                         "
                     >
 
+
                         <!-- PROFILE IMAGE -->
+
                         {% if request.user.studentprofile.profile_image %}
-                            <img src="{{ request.user.studentprofile.profile_image }}" alt="Profile" class="profile-img">
+
+                            <img
+                                src="{{ request.user.studentprofile.profile_image }}"
+                                alt="Profile"
+                                class="
+                                    profile-img
+                                    !h-9
+                                    !w-9
+                                    sm:!h-[42px]
+                                    sm:!w-[42px]
+                                "
+                            >
+
                         {% else %}
-                            <div class="profile-img-placeholder">
+
+                            <div
+                                class="
+                                    profile-img-placeholder
+                                    !h-9
+                                    !w-9
+                                    !text-[16px]
+                                    sm:!h-[42px]
+                                    sm:!w-[42px]
+                                    sm:!text-[18px]
+                                "
+                            >
+
                                 <i class="ri-user-3-fill"></i>
+
                             </div>
+
                         {% endif %}
+
+
 
                         <!-- USER DETAILS -->
 
-                        <div class="hidden md:block text-left">
+                        <div
+                            class="
+                                hidden
+                                text-left
+                                md:block
+                            "
+                        >
 
                             <h3
                                 class="
+                                    max-w-[130px]
+                                    truncate
+
                                     text-[14px]
                                     font-semibold
                                     capitalize
@@ -1130,6 +1420,7 @@
                                 {{ request.user.username }}
 
                             </h3>
+
 
                             <p
                                 class="
@@ -1144,26 +1435,39 @@
 
                         </div>
 
+
+
+                        <!-- DROPDOWN ARROW -->
+
                         <i
                             class="
                                 ri-arrow-down-s-line
-
-                                text-[#94A3B8]
+                                hidden
                                 text-[18px]
+                                text-[#94A3B8]
+                                sm:block
                             "
                         ></i>
 
                     </button>
 
-                    <!-- DROPDOWN -->
+
+
+                    <!-- =================================================
+                         PROFILE DROPDOWN
+                    ================================================== -->
 
                     <div
                         class="
+                            invisible
                             absolute
                             right-0
                             top-[58px]
+                            z-50
 
-                            w-[250px]
+                            w-[min(250px,calc(100vw-24px))]
+
+                            overflow-hidden
 
                             rounded-[18px]
 
@@ -1174,58 +1478,70 @@
 
                             shadow-[0_0_40px_rgba(0,0,0,0.45)]
 
-                            overflow-hidden
-
                             opacity-0
-                            invisible
-
                             translate-y-3
 
                             transition-all
                             duration-300
 
-                            group-hover:opacity-100
                             group-hover:visible
                             group-hover:translate-y-0
+                            group-hover:opacity-100
                         "
                     >
+
 
                         <!-- TOP -->
 
                         <div
                             class="
-                                px-5
-                                py-5
+                                flex
+                                items-center
+                                gap-3
 
                                 border-b
                                 border-white/5
 
-                                flex
-                                items-center
-                                gap-3
+                                px-5
+                                py-5
                             "
                         >
 
+
                             <!-- PROFILE IMAGE -->
+
                             {% if request.user.studentprofile.profile_image %}
-                                <img src="{{ request.user.studentprofile.profile_image }}" alt="Profile" class="profile-img">
+
+                                <img
+                                    src="{{ request.user.studentprofile.profile_image }}"
+                                    alt="Profile"
+                                    class="profile-img shrink-0"
+                                >
+
                             {% else %}
-                                <div class="profile-img-placeholder">
+
+                                <div class="profile-img-placeholder shrink-0">
+
                                     <i class="ri-user-3-fill"></i>
+
                                 </div>
+
                             {% endif %}
+
+
 
                             <!-- DETAILS -->
 
-                            <div class="overflow-hidden">
+                            <div class="min-w-0 overflow-hidden">
 
                                 <h2
                                     class="
+                                        truncate
+
                                         text-[15px]
                                         font-semibold
-                                        text-white
                                         capitalize
-                                        truncate
+                                        text-white
                                     "
                                 >
 
@@ -1233,11 +1549,13 @@
 
                                 </h2>
 
+
                                 <p
                                     class="
-                                        text-[#94A3B8]
-                                        text-[12px]
                                         truncate
+
+                                        text-[12px]
+                                        text-[#94A3B8]
                                     "
                                 >
 
@@ -1249,100 +1567,115 @@
 
                         </div>
 
+
+
                         <!-- MENU -->
 
                         <div class="py-2">
 
+
+                            <!-- VIEW PROFILE -->
+
                             <a
                                 href="{% url 'profile' %}"
-
                                 class="
-                                    h-[46px]
-
-                                    px-5
-
                                     flex
+                                    h-[46px]
+                                    min-w-0
                                     items-center
                                     gap-3
 
-                                    text-[#94A3B8]
-
-                                    hover:text-white
-                                    hover:bg-white/5
-
-                                    transition-all
+                                    px-5
 
                                     text-[14px]
                                     font-medium
+                                    text-[#94A3B8]
+
+                                    transition-all
+
+                                    hover:bg-white/5
+                                    hover:text-white
                                 "
                             >
 
-                                <i class="ri-user-line text-[18px]"></i>
+                                <i class="ri-user-line shrink-0 text-[18px]"></i>
 
-                                View Profile
+                                <span class="truncate">
+                                    View Profile
+                                </span>
 
                             </a>
 
+
+
+                            <!-- MY ORDERS -->
+
                             <a
                                 href="#"
-
                                 class="
-                                    h-[46px]
-
-                                    px-5
-
                                     flex
+                                    h-[46px]
+                                    min-w-0
                                     items-center
                                     gap-3
 
+                                    px-5
+
+                                    text-[14px]
+                                    font-medium
                                     text-white
 
-                                    hover:bg-white/5
-
                                     transition-all
 
-                                    text-[14px]
-                                    font-medium
+                                    hover:bg-white/5
                                 "
                             >
 
-                                <i class="ri-box-3-line text-[18px]"></i>
+                                <i class="ri-box-3-line shrink-0 text-[18px]"></i>
 
-                                My Orders
+                                <span class="truncate">
+                                    My Orders
+                                </span>
 
                             </a>
 
+
+
+                            <!-- SETTINGS -->
+
                             <a
-                                href="#"
-
+                                href="{% url 'order_history' %}"
                                 class="
-                                    h-[46px]
-
-                                    px-5
-
                                     flex
+                                    h-[46px]
+                                    min-w-0
                                     items-center
                                     gap-3
 
-                                    text-[#94A3B8]
-
-                                    hover:text-white
-                                    hover:bg-white/5
-
-                                    transition-all
+                                    px-5
 
                                     text-[14px]
                                     font-medium
+                                    text-[#94A3B8]
+
+                                    transition-all
+
+                                    hover:bg-white/5
+                                    hover:text-white
                                 "
                             >
 
-                                <i class="ri-settings-3-line text-[18px]"></i>
+                                <i class="ri-settings-3-line shrink-0 text-[18px]"></i>
 
-                                Settings
+                                <span class="truncate">
+                                    Settings
+                                </span>
 
                             </a>
 
                         </div>
+
+
 
                         <!-- LOGOUT -->
 
@@ -1356,32 +1689,32 @@
 
                             <a
                                 href="{% url 'logout' %}"
-
                                 class="
+                                    flex
                                     h-[46px]
+                                    min-w-0
+                                    items-center
+                                    gap-3
 
                                     rounded-[14px]
 
                                     px-4
 
-                                    flex
-                                    items-center
-                                    gap-3
-
+                                    text-[14px]
+                                    font-medium
                                     text-red-400
-
-                                    hover:bg-red-500/10
 
                                     transition-all
 
-                                    text-[14px]
-                                    font-medium
+                                    hover:bg-red-500/10
                                 "
                             >
 
-                                <i class="ri-logout-box-r-line text-[18px]"></i>
+                                <i class="ri-logout-box-r-line shrink-0 text-[18px]"></i>
 
-                                Logout
+                                <span class="truncate">
+                                    Logout
+                                </span>
 
                             </a>
 
@@ -1395,15 +1728,21 @@
 
         </header>
 
-        <!-- CONTENT -->
+
+
+        <!-- =====================================================
+             CONTENT
+        ====================================================== -->
 
         <main
             class="
+                min-w-0
                 flex-1
 
-                mt-[80px]
-
+                overflow-x-hidden
                 overflow-y-auto
+
+                mt-[80px]
 
                 p-4
                 md:p-6
@@ -1420,6 +1759,12 @@
     </div>
 
 </div>
+
+
+
+<!-- =============================================================
+     STUDENT BASE JS
+============================================================== -->
 
 <script src="{% static 'students/js/student-base.js' %}"></script>
 

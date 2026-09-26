@@ -1,0 +1,375 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Invoice {{ invoice.invoice_number }} | NeoLearn</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <link
+        href="https://cdn.jsdelivr.net/npm/remixicon@4.6.0/fonts/remixicon.css"
+        rel="stylesheet"
+    >
+
+    <style>
+        @media print {
+            body {
+                background: white !important;
+            }
+
+            .no-print {
+                display: none !important;
+            }
+
+            .invoice-shell {
+                max-width: none !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+
+            .invoice-card {
+                border: 0 !important;
+                box-shadow: none !important;
+                border-radius: 0 !important;
+            }
+        }
+    </style>
+</head>
+
+<body class="min-h-screen bg-slate-950 text-slate-200">
+
+    <!-- Background -->
+    <div class="pointer-events-none fixed inset-0 overflow-hidden">
+        <div class="absolute -left-32 -top-32 h-96 w-96 rounded-full bg-cyan-500/10 blur-3xl"></div>
+        <div class="absolute -bottom-32 -right-32 h-96 w-96 rounded-full bg-violet-500/10 blur-3xl"></div>
+    </div>
+
+    <main class="invoice-shell relative mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
+
+        <!-- Top actions -->
+        <div class="no-print mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+
+            <a
+                href="{% url 'orders:checkout' %}"
+                class="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-5 text-sm font-bold text-slate-200 transition hover:bg-white/[0.08]"
+            >
+                <i class="ri-arrow-left-line"></i>
+                Back
+            </a>
+
+            <button
+                type="button"
+                onclick="window.print()"
+                class="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-cyan-400 px-5 text-sm font-black text-slate-950 transition hover:bg-cyan-300"
+            >
+                <i class="ri-printer-line"></i>
+                Print Invoice
+            </button>
+
+        </div>
+
+        <!-- Invoice -->
+        <section class="invoice-card overflow-hidden rounded-3xl border border-white/10 bg-[#071224] shadow-2xl">
+
+            <!-- Header -->
+            <div class="border-b border-white/10 p-6 sm:p-8">
+
+                <div class="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
+
+                    <div>
+                        <div class="flex items-center gap-3">
+                            <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-cyan-400 text-xl font-black text-slate-950">
+                                N
+                            </div>
+
+                            <div>
+                                <h1 class="text-2xl font-black tracking-tight text-white">
+                                    NeoLearn
+                                </h1>
+                                <p class="text-xs font-medium text-slate-500">
+                                    Learning beyond limits
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="sm:text-right">
+                        <p class="text-xs font-bold uppercase tracking-[0.2em] text-slate-500">
+                            Invoice
+                        </p>
+
+                        <h2 class="mt-1 text-xl font-black text-white">
+                            {{ invoice.invoice_number }}
+                        </h2>
+
+                        <p class="mt-1 text-sm text-slate-400">
+                            {{ invoice.invoice_date|date:"d M Y, h:i A" }}
+                        </p>
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- Payment status -->
+            <div class="border-b border-white/10 px-6 py-5 sm:px-8">
+                <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+
+                    <div>
+                        <p class="text-xs font-bold uppercase tracking-wider text-slate-500">
+                            Payment Status
+                        </p>
+
+                        <div class="mt-2 inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1.5 text-sm font-bold text-emerald-400">
+                            <i class="ri-checkbox-circle-fill"></i>
+                            {{ invoice.order.get_status_display }}
+                        </div>
+                    </div>
+
+                    <div class="sm:text-right">
+                        <p class="text-xs font-bold uppercase tracking-wider text-slate-500">
+                            Order Number
+                        </p>
+
+                        <p class="mt-1 font-bold text-white">
+                            {{ invoice.order.order_number }}
+                        </p>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Customer information -->
+            <div class="grid gap-6 border-b border-white/10 p-6 sm:grid-cols-2 sm:p-8">
+
+                <div>
+                    <p class="text-xs font-bold uppercase tracking-wider text-slate-500">
+                        Billed To
+                    </p>
+
+                    <div class="mt-3 space-y-1">
+                        <p class="font-black text-white">
+                            {{ invoice.order.full_name }}
+                        </p>
+
+                        <p class="text-sm text-slate-400">
+                            {{ invoice.order.email }}
+                        </p>
+
+                        <p class="text-sm text-slate-400">
+                            +91 {{ invoice.order.phone }}
+                        </p>
+
+                        {% if invoice.order.alternative_phone %}
+                            <p class="text-sm text-slate-500">
+                                Alternative: +91 {{ invoice.order.alternative_phone }}
+                            </p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="sm:text-right">
+                    <p class="text-xs font-bold uppercase tracking-wider text-slate-500">
+                        Payment Information
+                    </p>
+
+                    <div class="mt-3 space-y-1">
+
+                        {% if invoice.order.payment %}
+                            <p class="text-sm text-slate-400">
+                                Payment ID:
+                                <span class="font-semibold text-slate-200">
+                                    {{ invoice.order.payment.razorpay_payment_id|default:"—" }}
+                                </span>
+                            </p>
+
+                            <p class="text-sm text-slate-400">
+                                Payment Method:
+                                <span class="font-semibold text-slate-200">
+                                    Razorpay
+                                </span>
+                            </p>
+
+                            <p class="text-sm text-slate-400">
+                                Currency:
+                                <span class="font-semibold text-slate-200">
+                                    {{ invoice.currency }}
+                                </span>
+                            </p>
+                        {% else %}
+                            <p class="text-sm text-slate-500">
+                                Payment information unavailable.
+                            </p>
+                        {% endif %}
+
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Purchased batches -->
+            <div class="p-6 sm:p-8">
+
+                <div class="mb-4">
+                    <h3 class="text-lg font-black text-white">
+                        Purchased Batches
+                    </h3>
+
+                    <p class="mt-1 text-sm text-slate-500">
+                        Details of the batches included in this order.
+                    </p>
+                </div>
+
+                <div class="overflow-x-auto rounded-2xl border border-white/10">
+                    <table class="w-full min-w-[700px] text-left">
+
+                        <thead class="bg-white/[0.03]">
+                            <tr class="border-b border-white/10">
+                                <th class="px-4 py-4 text-xs font-black uppercase tracking-wider text-slate-500">
+                                    Batch
+                                </th>
+
+                                <th class="px-4 py-4 text-right text-xs font-black uppercase tracking-wider text-slate-500">
+                                    Original
+                                </th>
+
+                                <th class="px-4 py-4 text-right text-xs font-black uppercase tracking-wider text-slate-500">
+                                    Batch Discount
+                                </th>
+
+                                <th class="px-4 py-4 text-right text-xs font-black uppercase tracking-wider text-slate-500">
+                                    Coupon Discount
+                                </th>
+
+                                <th class="px-4 py-4 text-right text-xs font-black uppercase tracking-wider text-slate-500">
+                                    Final
+                                </th>
+                            </tr>
+                        </thead>
+
+                        <tbody class="divide-y divide-white/10">
+
+                            {% for item in invoice.order.items.all %}
+
+                                <tr class="bg-transparent">
+                                    <td class="px-4 py-5">
+                                        <p class="font-bold text-white">
+                                            {{ item.batch_name }}
+                                        </p>
+                                    </td>
+
+                                    <td class="px-4 py-5 text-right text-sm text-slate-400">
+                                        {{ invoice.currency }} {{ item.original_price|floatformat:2 }}
+                                    </td>
+
+                                    <td class="px-4 py-5 text-right text-sm text-slate-400">
+                                        - {{ invoice.currency }} {{ item.batch_discount|floatformat:2 }}
+                                    </td>
+
+                                    <td class="px-4 py-5 text-right text-sm text-slate-400">
+                                        - {{ invoice.currency }} {{ item.coupon_discount|floatformat:2 }}
+                                    </td>
+
+                                    <td class="px-4 py-5 text-right font-black text-white">
+                                        {{ invoice.currency }} {{ item.final_price|floatformat:2 }}
+                                    </td>
+                                </tr>
+
+                            {% empty %}
+
+                                <tr>
+                                    <td colspan="5" class="px-4 py-8 text-center text-sm text-slate-500">
+                                        No order items found.
+                                    </td>
+                                </tr>
+
+                            {% endfor %}
+
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Totals -->
+                <div class="mt-6 flex justify-end">
+                    <div class="w-full max-w-md space-y-3">
+
+                        <div class="flex items-center justify-between text-sm">
+                            <span class="text-slate-500">
+                                Subtotal
+                            </span>
+
+                            <span class="font-semibold text-slate-300">
+                                {{ invoice.currency }} {{ invoice.subtotal|floatformat:2 }}
+                            </span>
+                        </div>
+
+                        <div class="flex items-center justify-between text-sm">
+                            <span class="text-slate-500">
+                                Total Discount
+                            </span>
+
+                            <span class="font-semibold text-emerald-400">
+                                - {{ invoice.currency }} {{ invoice.total_discount|floatformat:2 }}
+                            </span>
+                        </div>
+
+                        {% if invoice.coupon_discount %}
+                            <div class="flex items-center justify-between text-sm">
+                                <span class="text-slate-500">
+                                    Coupon Discount
+                                </span>
+
+                                <span class="font-semibold text-emerald-400">
+                                    - {{ invoice.currency }} {{ invoice.coupon_discount|floatformat:2 }}
+                                </span>
+                            </div>
+                        {% endif %}
+
+                        <div class="border-t border-white/10 pt-4">
+                            <div class="flex items-end justify-between gap-4">
+
+                                <div>
+                                    <p class="text-xs font-bold uppercase tracking-wider text-slate-500">
+                                        Amount Paid
+                                    </p>
+
+                                    <p class="mt-1 text-sm text-slate-500">
+                                        Inclusive of applicable discounts
+                                    </p>
+                                </div>
+
+                                <p class="text-2xl font-black text-white">
+                                    {{ invoice.currency }} {{ invoice.final_amount|floatformat:2 }}
+                                </p>
+
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Footer -->
+            <div class="border-t border-white/10 bg-white/[0.02] px-6 py-6 text-center sm:px-8">
+
+                <p class="text-sm font-semibold text-slate-300">
+                    Thank you for learning with NeoLearn.
+                </p>
+
+                <p class="mt-1 text-xs text-slate-500">
+                    This invoice is generated electronically and is valid without a physical signature.
+                </p>
+
+            </div>
+
+        </section>
+
+    </main>
+
+</body>
+</html>

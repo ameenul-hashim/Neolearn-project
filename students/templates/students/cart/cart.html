@@ -1832,34 +1832,37 @@
 
                         <div class="mt-3">
 
-                            <button
-                                type="button"
-                                id="checkoutButton"
-                                disabled
-                                title="Checkout will be enabled after the checkout flow is connected."
-                                class="
-                                    flex
-                                    h-10
-                                    w-full
-                                    cursor-not-allowed
-                                    items-center
-                                    justify-center
-                                    gap-2
-                                    rounded-xl
-                                    bg-gradient-to-r
-                                    from-cyan-400
-                                    to-sky-400
-                                    px-2.5
-                                    text-[11px]
-                                    font-black
-                                    text-slate-950
-                                    opacity-60
-                                "
-                            >
-                                <i class="ri-lock-line text-base"></i>
-                                Proceed to Checkout
-                                <i class="ri-arrow-right-line text-base"></i>
-                            </button>
+                           <a
+    href="{% url 'orders:checkout' %}"
+    id="checkoutButton"
+    title="Proceed to Checkout"
+    class="
+        flex
+        h-10
+        w-full
+        items-center
+        justify-center
+        gap-2
+        rounded-xl
+        bg-gradient-to-r
+        from-cyan-400
+        to-sky-400
+        px-2.5
+        text-[11px]
+        font-black
+        text-slate-950
+        transition
+        duration-200
+        hover:from-cyan-300
+        hover:to-sky-300
+        hover:shadow-lg
+        hover:shadow-cyan-400/20
+    "
+>
+    <i class="ri-lock-line text-base"></i>
+    Proceed to Checkout
+    <i class="ri-arrow-right-line text-base"></i>
+</a>
 
 
                             <div

@@ -1,0 +1,1890 @@
+{% extends "students/base_student.html" %}
+{% load static %}
+
+{% block title %}
+    Order History | NeoLearn
+{% endblock %}
+
+{% block student_content %}
+
+<div class="w-full min-w-0 overflow-x-hidden text-white">
+
+    <!-- =========================================================
+         MAIN ORDER HISTORY CARD
+    ========================================================== -->
+
+    <section
+        class="
+            mx-auto
+            flex
+            w-full
+            min-w-0
+            flex-col
+            overflow-hidden
+            rounded-xl
+            border
+            border-cyan-400/20
+            bg-[#020b18]/95
+            shadow-[0_0_40px_rgba(8,145,178,0.08)]
+            p-2.5
+            sm:rounded-2xl
+            sm:p-3
+            md:p-4
+            lg:h-[calc(100dvh-7.5rem)]
+            lg:min-h-0
+        "
+    >
+
+        <!-- =====================================================
+             HEADER
+        ====================================================== -->
+
+        <div
+            class="
+                flex
+                shrink-0
+                min-w-0
+                flex-col
+                gap-3
+                border-b
+                border-white/5
+                pb-3
+                sm:gap-4
+                sm:pb-4
+                lg:flex-row
+                lg:items-center
+                lg:justify-between
+            "
+        >
+
+            <!-- TITLE -->
+
+            <div class="min-w-0 flex-1">
+
+                <div class="flex min-w-0 items-center gap-2.5 sm:gap-3">
+
+                    <div
+                        class="
+                            flex
+                            h-9
+                            w-9
+                            shrink-0
+                            items-center
+                            justify-center
+                            rounded-lg
+                            border
+                            border-cyan-400/20
+                            bg-cyan-400/10
+                            text-cyan-300
+                            sm:h-10
+                            sm:w-10
+                            sm:rounded-xl
+                            md:h-11
+                            md:w-11
+                        "
+                    >
+                        <i class="ri-file-list-3-line text-[18px] sm:text-[20px]"></i>
+                    </div>
+
+                    <div class="min-w-0 flex-1">
+
+                        <h1
+                            class="
+                                truncate
+                                text-[18px]
+                                font-bold
+                                tracking-[-0.3px]
+                                text-white
+                                sm:text-[20px]
+                                md:text-[22px]
+                            "
+                        >
+                            Order History
+                        </h1>
+
+                        <p
+                            class="
+                                mt-0.5
+                                max-w-full
+                                truncate
+                                text-[10px]
+                                text-[#64748B]
+                                sm:text-[11px]
+                                md:text-[12px]
+                            "
+                        >
+                            View and manage your orders, payments, invoices and refunds.
+                        </p>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- =================================================
+                 SEARCH + DATE
+            ================================================== -->
+
+            <div
+                class="
+                    flex
+                    w-full
+                    min-w-0
+                    flex-col
+                    gap-2
+                    sm:flex-row
+                    sm:items-center
+                    lg:w-auto
+                    lg:max-w-[620px]
+                "
+            >
+
+                <!-- SEARCH -->
+
+                <form
+                    method="get"
+                    class="
+                        flex
+                        w-full
+                        min-w-0
+                        gap-2
+                        sm:min-w-[280px]
+                        md:min-w-[340px]
+                        lg:w-[380px]
+                        xl:w-[420px]
+                    "
+                >
+
+                    {% if current_status != "all" %}
+                        <input
+                            type="hidden"
+                            name="status"
+                            value="{{ current_status }}"
+                        >
+                    {% endif %}
+
+                    {% if date_range != "all" %}
+                        <input
+                            type="hidden"
+                            name="date_range"
+                            value="{{ date_range }}"
+                        >
+                    {% endif %}
+
+                    {% if start_date %}
+                        <input
+                            type="hidden"
+                            name="start_date"
+                            value="{{ start_date }}"
+                        >
+                    {% endif %}
+
+                    {% if end_date %}
+                        <input
+                            type="hidden"
+                            name="end_date"
+                            value="{{ end_date }}"
+                        >
+                    {% endif %}
+
+
+                    <div class="relative min-w-0 flex-1">
+
+                        <i
+                            class="
+                                ri-search-line
+                                pointer-events-none
+                                absolute
+                                left-3
+                                top-1/2
+                                -translate-y-1/2
+                                text-[14px]
+                                text-[#64748B]
+                                sm:left-3.5
+                                sm:text-[16px]
+                            "
+                        ></i>
+
+                        <input
+                            type="text"
+                            name="search"
+                            value="{{ search_query }}"
+                            placeholder="Search order, batch or invoice..."
+                            autocomplete="off"
+                            class="
+                                h-[40px]
+                                w-full
+                                min-w-0
+                                rounded-lg
+                                border
+                                border-white/10
+                                bg-white/[0.03]
+                                pl-9
+                                pr-2.5
+                                text-[10px]
+                                text-white
+                                outline-none
+                                transition
+                                placeholder:text-[#64748B]
+                                focus:border-cyan-400/30
+                                focus:bg-white/[0.04]
+                                sm:h-[42px]
+                                sm:pl-10
+                                sm:pr-3
+                                sm:text-[11px]
+                                md:text-[12px]
+                            "
+                        >
+
+                    </div>
+
+
+                    <button
+                        type="submit"
+                        class="
+                            flex
+                            h-[40px]
+                            w-[40px]
+                            shrink-0
+                            items-center
+                            justify-center
+                            rounded-lg
+                            border
+                            border-cyan-400/20
+                            bg-cyan-400/10
+                            text-cyan-300
+                            transition
+                            hover:bg-cyan-400/15
+                            active:scale-[0.98]
+                            sm:h-[42px]
+                            sm:w-[42px]
+                        "
+                        aria-label="Search orders"
+                    >
+                        <i class="ri-search-line text-[15px] sm:text-[16px]"></i>
+                    </button>
+
+                </form>
+
+
+                <!-- DATE FILTER -->
+
+                <details class="relative w-full shrink-0 sm:w-auto">
+
+                    <summary
+                        class="
+                            flex
+                            h-[40px]
+                            w-full
+                            cursor-pointer
+                            list-none
+                            items-center
+                            justify-between
+                            gap-2
+                            rounded-lg
+                            border
+                            border-white/10
+                            bg-white/[0.03]
+                            px-3
+                            text-[10px]
+                            font-semibold
+                            text-[#CBD5E1]
+                            transition
+                            hover:border-cyan-400/20
+                            hover:bg-white/[0.04]
+                            sm:h-[42px]
+                            sm:min-w-[145px]
+                            sm:text-[11px]
+                            md:text-[12px]
+                        "
+                    >
+
+                        <span class="flex min-w-0 items-center gap-2">
+
+                            <i
+                                class="
+                                    ri-calendar-line
+                                    shrink-0
+                                    text-[14px]
+                                    text-cyan-300
+                                "
+                            ></i>
+
+                            <span class="truncate">
+                                {{ current_date_range }}
+                            </span>
+
+                        </span>
+
+                        <i
+                            class="
+                                ri-arrow-down-s-line
+                                shrink-0
+                                text-[14px]
+                                text-[#64748B]
+                            "
+                        ></i>
+
+                    </summary>
+
+
+                    <!-- RESPONSIVE DROPDOWN -->
+
+                    <div
+                        class="
+                            absolute
+                            left-0
+                            right-0
+                            z-50
+                            mt-2
+                            w-full
+                            min-w-0
+                            overflow-hidden
+                            rounded-xl
+                            border
+                            border-white/10
+                            bg-[#071526]
+                            p-1.5
+                            shadow-[0_20px_50px_rgba(0,0,0,0.45)]
+                            sm:left-auto
+                            sm:right-0
+                            sm:w-[220px]
+                        "
+                    >
+
+                        <!-- ALL TIME -->
+
+                        <a
+                            href="?date_range=all&status={{ current_status }}{% if search_query %}&search={{ search_query|urlencode }}{% endif %}"
+                            class="
+                                flex
+                                min-h-[38px]
+                                items-center
+                                justify-between
+                                rounded-lg
+                                px-3
+                                py-2
+                                text-[10px]
+                                text-[#CBD5E1]
+                                transition
+                                hover:bg-white/[0.05]
+                                hover:text-white
+                                sm:text-[11px]
+                            "
+                        >
+                            <span>All Time</span>
+
+                            {% if date_range == "all" %}
+                                <i class="ri-check-line text-cyan-300"></i>
+                            {% endif %}
+                        </a>
+
+
+                        <!-- LAST 7 DAYS -->
+
+                        <a
+                            href="?date_range=7&status={{ current_status }}{% if search_query %}&search={{ search_query|urlencode }}{% endif %}"
+                            class="
+                                flex
+                                min-h-[38px]
+                                items-center
+                                justify-between
+                                rounded-lg
+                                px-3
+                                py-2
+                                text-[10px]
+                                text-[#CBD5E1]
+                                transition
+                                hover:bg-white/[0.05]
+                                hover:text-white
+                                sm:text-[11px]
+                            "
+                        >
+                            <span>Last 7 Days</span>
+
+                            {% if date_range == "7" %}
+                                <i class="ri-check-line text-cyan-300"></i>
+                            {% endif %}
+                        </a>
+
+
+                        <!-- LAST 30 DAYS -->
+
+                        <a
+                            href="?date_range=30&status={{ current_status }}{% if search_query %}&search={{ search_query|urlencode }}{% endif %}"
+                            class="
+                                flex
+                                min-h-[38px]
+                                items-center
+                                justify-between
+                                rounded-lg
+                                px-3
+                                py-2
+                                text-[10px]
+                                text-[#CBD5E1]
+                                transition
+                                hover:bg-white/[0.05]
+                                hover:text-white
+                                sm:text-[11px]
+                            "
+                        >
+                            <span>Last 30 Days</span>
+
+                            {% if date_range == "30" %}
+                                <i class="ri-check-line text-cyan-300"></i>
+                            {% endif %}
+                        </a>
+
+
+                        <!-- LAST 3 MONTHS -->
+
+                        <a
+                            href="?date_range=3m&status={{ current_status }}{% if search_query %}&search={{ search_query|urlencode }}{% endif %}"
+                            class="
+                                flex
+                                min-h-[38px]
+                                items-center
+                                justify-between
+                                rounded-lg
+                                px-3
+                                py-2
+                                text-[10px]
+                                text-[#CBD5E1]
+                                transition
+                                hover:bg-white/[0.05]
+                                hover:text-white
+                                sm:text-[11px]
+                            "
+                        >
+                            <span>Last 3 Months</span>
+
+                            {% if date_range == "3m" %}
+                                <i class="ri-check-line text-cyan-300"></i>
+                            {% endif %}
+                        </a>
+
+
+                        <!-- LAST 6 MONTHS -->
+
+                        <a
+                            href="?date_range=6m&status={{ current_status }}{% if search_query %}&search={{ search_query|urlencode }}{% endif %}"
+                            class="
+                                flex
+                                min-h-[38px]
+                                items-center
+                                justify-between
+                                rounded-lg
+                                px-3
+                                py-2
+                                text-[10px]
+                                text-[#CBD5E1]
+                                transition
+                                hover:bg-white/[0.05]
+                                hover:text-white
+                                sm:text-[11px]
+                            "
+                        >
+                            <span>Last 6 Months</span>
+
+                            {% if date_range == "6m" %}
+                                <i class="ri-check-line text-cyan-300"></i>
+                            {% endif %}
+                        </a>
+
+
+                        <!-- THIS YEAR -->
+
+                        <a
+                            href="?date_range=year&status={{ current_status }}{% if search_query %}&search={{ search_query|urlencode }}{% endif %}"
+                            class="
+                                flex
+                                min-h-[38px]
+                                items-center
+                                justify-between
+                                rounded-lg
+                                px-3
+                                py-2
+                                text-[10px]
+                                text-[#CBD5E1]
+                                transition
+                                hover:bg-white/[0.05]
+                                hover:text-white
+                                sm:text-[11px]
+                            "
+                        >
+                            <span>This Year</span>
+
+                            {% if date_range == "year" %}
+                                <i class="ri-check-line text-cyan-300"></i>
+                            {% endif %}
+                        </a>
+
+
+                        <div class="my-1.5 border-t border-white/5"></div>
+
+
+                        <!-- CUSTOM RANGE -->
+
+                        <div class="px-2 pb-2 pt-1">
+
+                            <p
+                                class="
+                                    mb-2
+                                    px-1
+                                    text-[9px]
+                                    font-semibold
+                                    uppercase
+                                    tracking-[0.08em]
+                                    text-[#64748B]
+                                "
+                            >
+                                Custom Range
+                            </p>
+
+
+                            <form
+                                method="get"
+                                class="space-y-2"
+                            >
+
+                                <input
+                                    type="hidden"
+                                    name="date_range"
+                                    value="custom"
+                                >
+
+                                <input
+                                    type="hidden"
+                                    name="status"
+                                    value="{{ current_status }}"
+                                >
+
+                                {% if search_query %}
+                                    <input
+                                        type="hidden"
+                                        name="search"
+                                        value="{{ search_query }}"
+                                    >
+                                {% endif %}
+
+
+                                <div>
+
+                                    <label
+                                        class="
+                                            mb-1
+                                            block
+                                            text-[9px]
+                                            text-[#64748B]
+                                        "
+                                    >
+                                        From
+                                    </label>
+
+                                    <input
+                                        type="date"
+                                        name="start_date"
+                                        value="{{ start_date }}"
+                                        class="
+                                            h-[34px]
+                                            w-full
+                                            rounded-lg
+                                            border
+                                            border-white/10
+                                            bg-white/[0.03]
+                                            px-2.5
+                                            text-[10px]
+                                            text-white
+                                            outline-none
+                                            focus:border-cyan-400/30
+                                        "
+                                    >
+
+                                </div>
+
+
+                                <div>
+
+                                    <label
+                                        class="
+                                            mb-1
+                                            block
+                                            text-[9px]
+                                            text-[#64748B]
+                                        "
+                                    >
+                                        To
+                                    </label>
+
+                                    <input
+                                        type="date"
+                                        name="end_date"
+                                        value="{{ end_date }}"
+                                        class="
+                                            h-[34px]
+                                            w-full
+                                            rounded-lg
+                                            border
+                                            border-white/10
+                                            bg-white/[0.03]
+                                            px-2.5
+                                            text-[10px]
+                                            text-white
+                                            outline-none
+                                            focus:border-cyan-400/30
+                                        "
+                                    >
+
+                                </div>
+
+
+                                <button
+                                    type="submit"
+                                    class="
+                                        flex
+                                        h-[34px]
+                                        w-full
+                                        items-center
+                                        justify-center
+                                        gap-2
+                                        rounded-lg
+                                        bg-cyan-400
+                                        text-[10px]
+                                        font-bold
+                                        text-[#001018]
+                                        transition
+                                        hover:bg-cyan-300
+                                    "
+                                >
+                                    <i class="ri-filter-3-line"></i>
+                                    Apply Date Range
+                                </button>
+
+                            </form>
+
+                        </div>
+
+                    </div>
+
+                </details>
+
+            </div>
+
+        </div>
+
+
+        <!-- =====================================================
+             STATUS FILTERS
+             MOBILE/TABLET = HORIZONTAL SCROLL
+        ====================================================== -->
+
+        <div
+            class="
+                shrink-0
+                min-w-0
+                overflow-x-auto
+                overflow-y-hidden
+                border-b
+                border-white/5
+                py-2.5
+                [scrollbar-width:none]
+                [&::-webkit-scrollbar]:hidden
+                sm:py-3
+            "
+        >
+
+            <div
+                class="
+                    flex
+                    w-max
+                    min-w-full
+                    items-center
+                    gap-1.5
+                    sm:gap-2
+                "
+            >
+
+                <!-- ALL -->
+
+                <a
+                    href="?status=all&date_range={{ date_range }}{% if start_date %}&start_date={{ start_date }}{% endif %}{% if end_date %}&end_date={{ end_date }}{% endif %}{% if search_query %}&search={{ search_query|urlencode }}{% endif %}"
+                    class="
+                        inline-flex
+                        h-[32px]
+                        shrink-0
+                        items-center
+                        gap-1.5
+                        rounded-lg
+                        border
+                        px-2.5
+                        text-[10px]
+                        font-semibold
+                        transition-all
+                        sm:h-[36px]
+                        sm:gap-2
+                        sm:px-3.5
+                        sm:text-[11px]
+                        md:text-[12px]
+                        {% if current_status == 'all' %}
+                            border-cyan-400/25
+                            bg-cyan-400/10
+                            text-cyan-300
+                        {% else %}
+                            border-transparent
+                            bg-transparent
+                            text-[#94A3B8]
+                            hover:border-white/10
+                            hover:bg-white/[0.025]
+                            hover:text-white
+                        {% endif %}
+                    "
+                >
+                    <i class="ri-file-list-3-line text-[13px]"></i>
+                    All Orders
+                    <span class="opacity-60">({{ status_counts.all }})</span>
+                </a>
+
+
+                <!-- ACTIVE -->
+
+                <a
+                    href="?status=paid&date_range={{ date_range }}{% if start_date %}&start_date={{ start_date }}{% endif %}{% if end_date %}&end_date={{ end_date }}{% endif %}{% if search_query %}&search={{ search_query|urlencode }}{% endif %}"
+                    class="
+                        inline-flex
+                        h-[32px]
+                        shrink-0
+                        items-center
+                        gap-1.5
+                        rounded-lg
+                        border
+                        px-2.5
+                        text-[10px]
+                        font-semibold
+                        transition-all
+                        sm:h-[36px]
+                        sm:gap-2
+                        sm:px-3.5
+                        sm:text-[11px]
+                        md:text-[12px]
+                        {% if current_status == 'paid' %}
+                            border-emerald-400/25
+                            bg-emerald-400/10
+                            text-emerald-300
+                        {% else %}
+                            border-transparent
+                            text-[#94A3B8]
+                            hover:border-white/10
+                            hover:bg-white/[0.025]
+                            hover:text-white
+                        {% endif %}
+                    "
+                >
+                    <i class="ri-checkbox-circle-line text-[13px]"></i>
+                    Active
+                    <span class="opacity-60">({{ status_counts.paid }})</span>
+                </a>
+
+
+                <!-- PARTIALLY REFUNDED -->
+
+                <a
+                    href="?status=partially_refunded&date_range={{ date_range }}{% if start_date %}&start_date={{ start_date }}{% endif %}{% if end_date %}&end_date={{ end_date }}{% endif %}{% if search_query %}&search={{ search_query|urlencode }}{% endif %}"
+                    class="
+                        inline-flex
+                        h-[32px]
+                        shrink-0
+                        items-center
+                        gap-1.5
+                        rounded-lg
+                        border
+                        px-2.5
+                        text-[10px]
+                        font-semibold
+                        transition-all
+                        sm:h-[36px]
+                        sm:gap-2
+                        sm:px-3.5
+                        sm:text-[11px]
+                        md:text-[12px]
+                        {% if current_status == 'partially_refunded' %}
+                            border-orange-400/25
+                            bg-orange-400/10
+                            text-orange-300
+                        {% else %}
+                            border-transparent
+                            text-[#94A3B8]
+                            hover:border-white/10
+                            hover:bg-white/[0.025]
+                            hover:text-white
+                        {% endif %}
+                    "
+                >
+                    <i class="ri-contrast-2-line text-[13px]"></i>
+                    Partially Refunded
+                    <span class="opacity-60">
+                        ({{ status_counts.partially_refunded }})
+                    </span>
+                </a>
+
+
+                <!-- REFUNDED -->
+
+                <a
+                    href="?status=refunded&date_range={{ date_range }}{% if start_date %}&start_date={{ start_date }}{% endif %}{% if end_date %}&end_date={{ end_date }}{% endif %}{% if search_query %}&search={{ search_query|urlencode }}{% endif %}"
+                    class="
+                        inline-flex
+                        h-[32px]
+                        shrink-0
+                        items-center
+                        gap-1.5
+                        rounded-lg
+                        border
+                        px-2.5
+                        text-[10px]
+                        font-semibold
+                        transition-all
+                        sm:h-[36px]
+                        sm:gap-2
+                        sm:px-3.5
+                        sm:text-[11px]
+                        md:text-[12px]
+                        {% if current_status == 'refunded' %}
+                            border-violet-400/25
+                            bg-violet-400/10
+                            text-violet-300
+                        {% else %}
+                            border-transparent
+                            text-[#94A3B8]
+                            hover:border-white/10
+                            hover:bg-white/[0.025]
+                            hover:text-white
+                        {% endif %}
+                    "
+                >
+                    <i class="ri-refund-2-line text-[13px]"></i>
+                    Refunded
+                    <span class="opacity-60">({{ status_counts.refunded }})</span>
+                </a>
+
+
+                <!-- CANCELLED -->
+
+                <a
+                    href="?status=cancelled&date_range={{ date_range }}{% if start_date %}&start_date={{ start_date }}{% endif %}{% if end_date %}&end_date={{ end_date }}{% endif %}{% if search_query %}&search={{ search_query|urlencode }}{% endif %}"
+                    class="
+                        inline-flex
+                        h-[32px]
+                        shrink-0
+                        items-center
+                        gap-1.5
+                        rounded-lg
+                        border
+                        px-2.5
+                        text-[10px]
+                        font-semibold
+                        transition-all
+                        sm:h-[36px]
+                        sm:gap-2
+                        sm:px-3.5
+                        sm:text-[11px]
+                        md:text-[12px]
+                        {% if current_status == 'cancelled' %}
+                            border-slate-400/25
+                            bg-slate-400/10
+                            text-slate-300
+                        {% else %}
+                            border-transparent
+                            text-[#94A3B8]
+                            hover:border-white/10
+                            hover:bg-white/[0.025]
+                            hover:text-white
+                        {% endif %}
+                    "
+                >
+                    <i class="ri-close-circle-line text-[13px]"></i>
+                    Cancelled
+                    <span class="opacity-60">({{ status_counts.cancelled }})</span>
+                </a>
+
+
+                <!-- FAILED -->
+
+                <a
+                    href="?status=payment_failed&date_range={{ date_range }}{% if start_date %}&start_date={{ start_date }}{% endif %}{% if end_date %}&end_date={{ end_date }}{% endif %}{% if search_query %}&search={{ search_query|urlencode }}{% endif %}"
+                    class="
+                        inline-flex
+                        h-[32px]
+                        shrink-0
+                        items-center
+                        gap-1.5
+                        rounded-lg
+                        border
+                        px-2.5
+                        text-[10px]
+                        font-semibold
+                        transition-all
+                        sm:h-[36px]
+                        sm:gap-2
+                        sm:px-3.5
+                        sm:text-[11px]
+                        md:text-[12px]
+                        {% if current_status == 'payment_failed' %}
+                            border-red-400/25
+                            bg-red-400/10
+                            text-red-300
+                        {% else %}
+                            border-transparent
+                            text-[#94A3B8]
+                            hover:border-white/10
+                            hover:bg-white/[0.025]
+                            hover:text-white
+                        {% endif %}
+                    "
+                >
+                    <i class="ri-error-warning-line text-[13px]"></i>
+                    Failed
+                    <span class="opacity-60">({{ status_counts.payment_failed }})</span>
+                </a>
+
+            </div>
+
+        </div>
+
+
+        <!-- =====================================================
+             ORDER LIST
+             DESKTOP = INTERNAL SCROLL
+             MOBILE/TABLET = NATURAL PAGE SCROLL
+        ====================================================== -->
+
+        <div
+            class="
+                min-h-0
+                flex-1
+                overflow-x-hidden
+                overflow-y-auto
+                overscroll-contain
+                py-2.5
+                pr-0
+                sm:py-3
+                lg:pr-1
+            "
+        >
+
+            {% if orders %}
+
+                <div class="min-w-0 space-y-2">
+
+                    {% for order in orders %}
+
+                        <!-- =================================================
+                             ORDER CARD
+                        ================================================== -->
+
+                        <article
+                            class="
+                                group
+                                min-w-0
+                                overflow-hidden
+                                rounded-xl
+                                border
+                                border-white/8
+                                bg-[#08182A]/80
+                                p-2.5
+                                transition-all
+                                duration-200
+                                hover:border-cyan-400/20
+                                hover:bg-[#0B1E33]
+                                sm:p-3
+                                md:p-3.5
+                            "
+                        >
+
+                            <div
+                                class="
+                                    grid
+                                    min-w-0
+                                    grid-cols-1
+                                    gap-3
+                                    lg:grid-cols-2
+                                    xl:grid-cols-[minmax(190px,1fr)_minmax(220px,1.2fr)_minmax(130px,0.7fr)_auto]
+                                    xl:items-center
+                                    xl:gap-4
+                                "
+                            >
+
+                                <!-- =================================================
+                                     ORDER INFO
+                                ================================================== -->
+
+                                <div class="min-w-0">
+
+                                    <div class="flex min-w-0 items-start gap-2.5">
+
+                                        <div
+                                            class="
+                                                flex
+                                                h-9
+                                                w-9
+                                                shrink-0
+                                                items-center
+                                                justify-center
+                                                rounded-lg
+                                                border
+                                                border-white/10
+                                                bg-white/[0.035]
+                                                text-cyan-300
+                                                sm:h-10
+                                                sm:w-10
+                                            "
+                                        >
+                                            <i class="ri-shopping-bag-3-line text-[15px] sm:text-[16px]"></i>
+                                        </div>
+
+
+                                        <div class="min-w-0 flex-1">
+
+                                            <div
+                                                class="
+                                                    flex
+                                                    min-w-0
+                                                    flex-wrap
+                                                    items-center
+                                                    gap-1.5
+                                                "
+                                            >
+
+                                                <span
+                                                    class="
+                                                        min-w-0
+                                                        max-w-full
+                                                        break-all
+                                                        text-[11px]
+                                                        font-bold
+                                                        text-white
+                                                        sm:text-[12px]
+                                                        md:text-[13px]
+                                                    "
+                                                >
+                                                    Order #{{ order.order_number }}
+                                                </span>
+
+
+                                                {% if order.status == "paid" %}
+
+                                                    <span
+                                                        class="
+                                                            shrink-0
+                                                            rounded-md
+                                                            border
+                                                            border-emerald-400/20
+                                                            bg-emerald-400/10
+                                                            px-1.5
+                                                            py-0.5
+                                                            text-[8px]
+                                                            font-bold
+                                                            tracking-wide
+                                                            text-emerald-300
+                                                            sm:px-2
+                                                            sm:py-1
+                                                            sm:text-[9px]
+                                                        "
+                                                    >
+                                                        COMPLETED
+                                                    </span>
+
+                                                {% elif order.status == "partially_refunded" %}
+
+                                                    <span
+                                                        class="
+                                                            shrink-0
+                                                            rounded-md
+                                                            border
+                                                            border-orange-400/20
+                                                            bg-orange-400/10
+                                                            px-1.5
+                                                            py-0.5
+                                                            text-[8px]
+                                                            font-bold
+                                                            tracking-wide
+                                                            text-orange-300
+                                                            sm:px-2
+                                                            sm:py-1
+                                                            sm:text-[9px]
+                                                        "
+                                                    >
+                                                        PARTIALLY REFUNDED
+                                                    </span>
+
+                                                {% elif order.status == "refunded" %}
+
+                                                    <span
+                                                        class="
+                                                            shrink-0
+                                                            rounded-md
+                                                            border
+                                                            border-violet-400/20
+                                                            bg-violet-400/10
+                                                            px-1.5
+                                                            py-0.5
+                                                            text-[8px]
+                                                            font-bold
+                                                            tracking-wide
+                                                            text-violet-300
+                                                            sm:px-2
+                                                            sm:py-1
+                                                            sm:text-[9px]
+                                                        "
+                                                    >
+                                                        REFUNDED
+                                                    </span>
+
+                                                {% elif order.status == "payment_failed" %}
+
+                                                    <span
+                                                        class="
+                                                            shrink-0
+                                                            rounded-md
+                                                            border
+                                                            border-red-400/20
+                                                            bg-red-400/10
+                                                            px-1.5
+                                                            py-0.5
+                                                            text-[8px]
+                                                            font-bold
+                                                            tracking-wide
+                                                            text-red-300
+                                                            sm:px-2
+                                                            sm:py-1
+                                                            sm:text-[9px]
+                                                        "
+                                                    >
+                                                        PAYMENT FAILED
+                                                    </span>
+
+                                                {% elif order.status == "cancelled" %}
+
+                                                    <span
+                                                        class="
+                                                            shrink-0
+                                                            rounded-md
+                                                            border
+                                                            border-slate-400/20
+                                                            bg-slate-400/10
+                                                            px-1.5
+                                                            py-0.5
+                                                            text-[8px]
+                                                            font-bold
+                                                            tracking-wide
+                                                            text-slate-300
+                                                            sm:px-2
+                                                            sm:py-1
+                                                            sm:text-[9px]
+                                                        "
+                                                    >
+                                                        CANCELLED
+                                                    </span>
+
+                                                {% elif order.status == "payment_processing" %}
+
+                                                    <span
+                                                        class="
+                                                            shrink-0
+                                                            rounded-md
+                                                            border
+                                                            border-blue-400/20
+                                                            bg-blue-400/10
+                                                            px-1.5
+                                                            py-0.5
+                                                            text-[8px]
+                                                            font-bold
+                                                            tracking-wide
+                                                            text-blue-300
+                                                            sm:px-2
+                                                            sm:py-1
+                                                            sm:text-[9px]
+                                                        "
+                                                    >
+                                                        PROCESSING
+                                                    </span>
+
+                                                {% else %}
+
+                                                    <span
+                                                        class="
+                                                            shrink-0
+                                                            rounded-md
+                                                            border
+                                                            border-amber-400/20
+                                                            bg-amber-400/10
+                                                            px-1.5
+                                                            py-0.5
+                                                            text-[8px]
+                                                            font-bold
+                                                            tracking-wide
+                                                            text-amber-300
+                                                            sm:px-2
+                                                            sm:py-1
+                                                            sm:text-[9px]
+                                                        "
+                                                    >
+                                                        PENDING
+                                                    </span>
+
+                                                {% endif %}
+
+                                            </div>
+
+
+                                            <p
+                                                class="
+                                                    mt-1
+                                                    flex
+                                                    flex-wrap
+                                                    items-center
+                                                    gap-1.5
+                                                    text-[9px]
+                                                    text-[#64748B]
+                                                    sm:text-[10px]
+                                                "
+                                            >
+                                                <i class="ri-calendar-line text-[10px]"></i>
+                                                {{ order.created_at|date:"d M Y, h:i A" }}
+                                            </p>
+
+                                        </div>
+
+                                    </div>
+
+                                </div>
+
+
+                                <!-- =================================================
+                                     BATCH PREVIEW
+                                ================================================== -->
+
+                                <div
+                                    class="
+                                        min-w-0
+                                        rounded-lg
+                                        border
+                                        border-white/5
+                                        bg-white/[0.015]
+                                        p-2
+                                        sm:p-2.5
+                                        lg:col-span-1
+                                        xl:border-0
+                                        xl:bg-transparent
+                                        xl:p-0
+                                    "
+                                >
+
+                                    <div class="flex min-w-0 items-center gap-2.5">
+
+                                        <!-- THUMBNAILS -->
+
+                                        <div class="flex shrink-0 items-center">
+
+                                            {% for item in order.items.all|slice:":2" %}
+
+                                                {% if item.batch.batch_thumbnail %}
+
+                                                    <img
+                                                        src="{{ item.batch.batch_thumbnail.url }}"
+                                                        alt="{{ item.batch_name }}"
+                                                        loading="lazy"
+                                                        class="
+                                                            h-9
+                                                            w-9
+                                                            rounded-lg
+                                                            border-2
+                                                            border-[#08182A]
+                                                            object-cover
+                                                            sm:h-10
+                                                            sm:w-10
+                                                            {% if not forloop.first %}
+                                                                -ml-2
+                                                            {% endif %}
+                                                        "
+                                                    >
+
+                                                {% else %}
+
+                                                    <div
+                                                        class="
+                                                            flex
+                                                            h-9
+                                                            w-9
+                                                            items-center
+                                                            justify-center
+                                                            rounded-lg
+                                                            border-2
+                                                            border-[#08182A]
+                                                            bg-white/[0.05]
+                                                            text-[#64748B]
+                                                            sm:h-10
+                                                            sm:w-10
+                                                            {% if not forloop.first %}
+                                                                -ml-2
+                                                            {% endif %}
+                                                        "
+                                                    >
+                                                        <i class="ri-book-2-line text-[14px]"></i>
+                                                    </div>
+
+                                                {% endif %}
+
+                                            {% endfor %}
+
+
+                                            {% if order.items.all|length > 2 %}
+
+                                                <span
+                                                    class="
+                                                        -ml-2
+                                                        flex
+                                                        h-9
+                                                        w-9
+                                                        items-center
+                                                        justify-center
+                                                        rounded-lg
+                                                        border-2
+                                                        border-[#08182A]
+                                                        bg-[#172A40]
+                                                        text-[9px]
+                                                        font-bold
+                                                        text-cyan-300
+                                                        sm:h-10
+                                                        sm:w-10
+                                                        sm:text-[10px]
+                                                    "
+                                                >
+                                                    +{{ order.items.all|length|add:"-2" }}
+                                                </span>
+
+                                            {% endif %}
+
+                                        </div>
+
+
+                                        <!-- BATCH TEXT -->
+
+                                        <div class="min-w-0 flex-1">
+
+                                            <p
+                                                class="
+                                                    text-[11px]
+                                                    font-bold
+                                                    text-white
+                                                    sm:text-[12px]
+                                                "
+                                            >
+                                                {{ order.items.all|length }}
+
+                                                {% if order.items.all|length == 1 %}
+                                                    Batch
+                                                {% else %}
+                                                    Batches
+                                                {% endif %}
+                                            </p>
+
+
+                                            <p
+                                                class="
+                                                    mt-0.5
+                                                    max-w-full
+                                                    truncate
+                                                    text-[9px]
+                                                    text-[#94A3B8]
+                                                    sm:text-[10px]
+                                                "
+                                            >
+
+                                                {% with first_item=order.items.all|first %}
+
+                                                    {% if first_item %}
+
+                                                        {{ first_item.batch_name }}
+
+                                                        {% if order.items.all|length > 1 %}
+                                                            +{{ order.items.all|length|add:"-1" }} more
+                                                        {% endif %}
+
+                                                    {% else %}
+
+                                                        No items
+
+                                                    {% endif %}
+
+                                                {% endwith %}
+
+                                            </p>
+
+                                        </div>
+
+                                    </div>
+
+                                </div>
+
+
+                                <!-- =================================================
+                                     PAYMENT
+                                ================================================== -->
+
+                                <div
+                                    class="
+                                        flex
+                                        min-w-0
+                                        items-center
+                                        justify-between
+                                        gap-4
+                                        border-t
+                                        border-white/5
+                                        pt-2.5
+                                        lg:col-span-1
+                                        lg:border-t-0
+                                        lg:pt-0
+                                        xl:block
+                                        xl:text-right
+                                    "
+                                >
+
+                                    <div class="min-w-0">
+
+                                        <p
+                                            class="
+                                                text-[8px]
+                                                text-[#64748B]
+                                                sm:text-[9px]
+                                            "
+                                        >
+
+                                            {% if order.status == "refunded" %}
+                                                Refunded
+                                            {% elif order.status == "partially_refunded" %}
+                                                Net / Paid
+                                            {% else %}
+                                                Paid
+                                            {% endif %}
+
+                                        </p>
+
+
+                                        <p
+                                            class="
+                                                mt-0.5
+                                                text-[16px]
+                                                font-bold
+                                                tracking-[-0.3px]
+                                                text-white
+                                                sm:text-[17px]
+                                            "
+                                        >
+                                            ₹{{ order.final_amount|floatformat:0 }}
+                                        </p>
+
+
+                                        <p
+                                            class="
+                                                mt-0.5
+                                                max-w-[220px]
+                                                truncate
+                                                text-[8px]
+                                                text-[#64748B]
+                                                sm:text-[9px]
+                                                xl:ml-auto
+                                            "
+                                        >
+
+                                            {% if order.status == "paid" %}
+                                                Paid via Razorpay
+                                            {% elif order.status == "payment_failed" %}
+                                                Payment failed
+                                            {% elif order.status == "cancelled" %}
+                                                Payment cancelled
+                                            {% elif order.status == "refunded" %}
+                                                Refunded
+                                            {% elif order.status == "partially_refunded" %}
+                                                Partially refunded
+                                            {% else %}
+                                                Payment pending
+                                            {% endif %}
+
+                                        </p>
+
+
+                                        {% if order.invoice %}
+
+                                            <p
+                                                class="
+                                                    mt-0.5
+                                                    max-w-[220px]
+                                                    truncate
+                                                    text-[8px]
+                                                    text-[#64748B]
+                                                    sm:text-[9px]
+                                                    xl:ml-auto
+                                                "
+                                            >
+                                                Invoice:
+                                                {{ order.invoice.invoice_number }}
+                                            </p>
+
+                                        {% endif %}
+
+                                    </div>
+
+                                </div>
+
+
+                                <!-- =================================================
+                                     ACTIONS
+                                ================================================== -->
+
+                                <div
+                                    class="
+                                        grid
+                                        min-w-0
+                                        grid-cols-1
+                                        gap-2
+                                        lg:col-span-2
+                                        sm:grid-cols-2
+                                        xl:col-span-1
+                                        xl:flex
+                                        xl:flex-col
+                                        xl:justify-end
+                                    "
+                                >
+
+                                    <!-- VIEW DETAILS -->
+
+                                    <a
+                                        href="{% url 'order_details' order.order_number %}"
+                                        class="
+                                            inline-flex
+                                            h-[36px]
+                                            min-w-0
+                                            items-center
+                                            justify-center
+                                            gap-1.5
+                                            rounded-lg
+                                            border
+                                            border-white/10
+                                            bg-white/[0.025]
+                                            px-3
+                                            text-[9px]
+                                            font-semibold
+                                            text-[#CBD5E1]
+                                            transition-all
+                                            hover:border-cyan-400/25
+                                            hover:bg-cyan-400/5
+                                            hover:text-cyan-300
+                                            active:scale-[0.99]
+                                            sm:text-[10px]
+                                        "
+                                    >
+                                        <i class="ri-file-list-3-line text-[13px]"></i>
+                                        View Details
+                                    </a>
+
+
+                                    <!-- INVOICE -->
+
+                                    {% if order.invoice %}
+
+                                        <a
+                                            href="{% url 'orders:invoice_detail' order.invoice.invoice_number %}"
+                                            class="
+                                                inline-flex
+                                                h-[36px]
+                                                min-w-0
+                                                items-center
+                                                justify-center
+                                                gap-1.5
+                                                rounded-lg
+                                                bg-cyan-400
+                                                px-3
+                                                text-[9px]
+                                                font-bold
+                                                text-[#001018]
+                                                shadow-[0_0_18px_rgba(34,211,238,0.10)]
+                                                transition-all
+                                                hover:bg-cyan-300
+                                                active:scale-[0.99]
+                                                sm:text-[10px]
+                                            "
+                                        >
+                                            <i class="ri-download-2-line text-[13px]"></i>
+                                            Download Invoice
+                                        </a>
+
+                                    {% endif %}
+
+                                </div>
+
+                            </div>
+
+                        </article>
+
+                    {% endfor %}
+
+                </div>
+
+
+                <!-- =================================================
+                     PAGINATION
+                ================================================== -->
+
+                {% if orders.paginator.num_pages > 1 %}
+
+                    <div
+                        class="
+                            mt-3
+                            flex
+                            flex-wrap
+                            items-center
+                            justify-center
+                            gap-1.5
+                            pb-1
+                            sm:mt-4
+                            sm:gap-2
+                        "
+                    >
+
+                        {% if orders.has_previous %}
+
+                            <a
+                                href="?page={{ orders.previous_page_number }}&status={{ current_status }}&date_range={{ date_range }}{% if start_date %}&start_date={{ start_date }}{% endif %}{% if end_date %}&end_date={{ end_date }}{% endif %}{% if search_query %}&search={{ search_query|urlencode }}{% endif %}"
+                                class="
+                                    flex
+                                    h-8
+                                    w-8
+                                    shrink-0
+                                    items-center
+                                    justify-center
+                                    rounded-lg
+                                    border
+                                    border-white/10
+                                    bg-white/[0.02]
+                                    text-[#94A3B8]
+                                    transition
+                                    hover:border-cyan-400/20
+                                    hover:text-cyan-300
+                                "
+                                aria-label="Previous page"
+                            >
+                                <i class="ri-arrow-left-s-line text-[14px]"></i>
+                            </a>
+
+                        {% endif %}
+
+
+                        <span
+                            class="
+                                max-w-full
+                                truncate
+                                rounded-lg
+                                border
+                                border-cyan-400/20
+                                bg-cyan-400/10
+                                px-2.5
+                                py-1.5
+                                text-[9px]
+                                font-semibold
+                                text-cyan-300
+                                sm:px-3
+                                sm:text-[10px]
+                            "
+                        >
+                            Page {{ orders.number }} of {{ orders.paginator.num_pages }}
+                        </span>
+
+
+                        {% if orders.has_next %}
+
+                            <a
+                                href="?page={{ orders.next_page_number }}&status={{ current_status }}&date_range={{ date_range }}{% if start_date %}&start_date={{ start_date }}{% endif %}{% if end_date %}&end_date={{ end_date }}{% endif %}{% if search_query %}&search={{ search_query|urlencode }}{% endif %}"
+                                class="
+                                    flex
+                                    h-8
+                                    w-8
+                                    shrink-0
+                                    items-center
+                                    justify-center
+                                    rounded-lg
+                                    border
+                                    border-white/10
+                                    bg-white/[0.02]
+                                    text-[#94A3B8]
+                                    transition
+                                    hover:border-cyan-400/20
+                                    hover:text-cyan-300
+                                "
+                                aria-label="Next page"
+                            >
+                                <i class="ri-arrow-right-s-line text-[14px]"></i>
+                            </a>
+
+                        {% endif %}
+
+                    </div>
+
+                {% endif %}
+
+
+            {% else %}
+
+                <!-- =================================================
+                     EMPTY STATE
+                ================================================== -->
+
+                <div
+                    class="
+                        flex
+                        min-h-[320px]
+                        w-full
+                        flex-col
+                        items-center
+                        justify-center
+                        px-4
+                        py-10
+                        text-center
+                        sm:min-h-[380px]
+                        sm:px-6
+                    "
+                >
+
+                    <div
+                        class="
+                            flex
+                            h-14
+                            w-14
+                            items-center
+                            justify-center
+                            rounded-2xl
+                            border
+                            border-cyan-400/20
+                            bg-cyan-400/10
+                            text-cyan-300
+                            sm:h-16
+                            sm:w-16
+                        "
+                    >
+                        <i class="ri-file-list-3-line text-[24px] sm:text-[28px]"></i>
+                    </div>
+
+
+                    <h2
+                        class="
+                            mt-4
+                            text-[16px]
+                            font-bold
+                            text-white
+                            sm:mt-5
+                            sm:text-[17px]
+                        "
+                    >
+                        No orders found
+                    </h2>
+
+
+                    <p
+                        class="
+                            mt-2
+                            max-w-[420px]
+                            text-[10px]
+                            leading-5
+                            text-[#64748B]
+                            sm:text-[11px]
+                            sm:leading-6
+                            md:text-[12px]
+                        "
+                    >
+
+                        {% if search_query or current_status != "all" or date_range != "all" %}
+
+                            No orders match your current search or filters.
+                            Try another search, status or date range.
+
+                        {% else %}
+
+                            Your purchases will appear here after you complete an order.
+
+                        {% endif %}
+
+                    </p>
+
+
+                    {% if search_query or current_status != "all" or date_range != "all" %}
+
+                        <a
+                            href="{% url 'order_history' %}"
+                            class="
+                                mt-4
+                                inline-flex
+                                h-[38px]
+                                items-center
+                                gap-2
+                                rounded-lg
+                                border
+                                border-cyan-400/20
+                                bg-cyan-400/10
+                                px-3.5
+                                text-[10px]
+                                font-semibold
+                                text-cyan-300
+                                transition
+                                hover:bg-cyan-400/15
+                                sm:mt-5
+                                sm:h-[40px]
+                                sm:px-4
+                                sm:text-[11px]
+                            "
+                        >
+                            <i class="ri-refresh-line"></i>
+                            Clear Filters
+                        </a>
+
+                    {% else %}
+
+                        <a
+                            href="{% url 'marketplace' %}"
+                            class="
+                                mt-4
+                                inline-flex
+                                h-[38px]
+                                items-center
+                                gap-2
+                                rounded-lg
+                                bg-cyan-400
+                                px-3.5
+                                text-[10px]
+                                font-bold
+                                text-[#001018]
+                                transition
+                                hover:bg-cyan-300
+                                sm:mt-5
+                                sm:h-[40px]
+                                sm:px-4
+                                sm:text-[11px]
+                            "
+                        >
+                            <i class="ri-shopping-bag-3-line"></i>
+                            Explore Marketplace
+                        </a>
+
+                    {% endif %}
+
+                </div>
+
+            {% endif %}
+
+        </div>
+
+    </section>
+
+</div>
+
+{% endblock %}

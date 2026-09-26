@@ -5,12 +5,18 @@ from django.contrib import messages
 from django.http import JsonResponse
 from django.db.models import Q
 from django.utils import timezone
+from datetime import datetime, timedelta
 from admins.models import (
     Batch,
     Subject,
     Coupon,
 )
-
+from orders.models import (
+    StudentBatchPurchase,
+    Order,
+    OrderCoupon,
+    Refund,
+)
 from admins.helpers import (
     normalize_coupon_code,
     calculate_student_cart_totals,
@@ -209,7 +215,6 @@ def update_profile_image_view(request):
             )
 
     return redirect('profile')
-
 
 # ============================================================
 # MARKETPLACE
@@ -669,6 +674,30 @@ def marketplace_view(request):
         cart_batch_ids = set()
 
     # ========================================================
+    # PURCHASED BATCH IDS
+    #
+    # These are the batches already purchased by the
+    # currently logged-in student.
+    #
+    # Marketplace will use this to show:
+    #
+    #   ✓ Purchased
+    #   View My Learning
+    #
+    # instead of Add to Cart.
+    # ========================================================
+
+    purchased_batch_ids = set(
+        StudentBatchPurchase.objects.filter(
+            student=request.user,
+            status=StudentBatchPurchase.Status.ACTIVE,
+        ).values_list(
+            'batch_id',
+            flat=True,
+        )
+    )
+
+    # ========================================================
     # FLAT SUBJECT LIST
     #
     # Kept for compatibility with existing templates.
@@ -753,9 +782,20 @@ def marketplace_view(request):
             # ------------------------------------------------
 
             'cart_batch_ids': cart_batch_ids,
+
+            # ------------------------------------------------
+            # PURCHASED BATCHES
+            #
+            # Page-specific purchased state.
+            #
+            # This is what Marketplace needs to determine
+            # whether the student already owns the batch.
+            # ------------------------------------------------
+
+            'purchased_batch_ids': purchased_batch_ids,
         }
     )
-    
+
 # ============================================================
 # MARKETPLACE DETAIL
 # ============================================================
@@ -1073,6 +1113,29 @@ def add_to_cart_view(request, batch_id):
 
         return redirect('marketplace')
 
+    # ========================================================
+    # ALREADY PURCHASED
+    # ========================================================
+    # A student who already owns an active purchase must never
+    # be able to add the same batch to the cart again.
+    #
+    # This is enforced server-side so it cannot be bypassed by
+    # manually submitting the add-to-cart request.
+    # ========================================================
+
+    if StudentBatchPurchase.objects.filter(
+        student=request.user,
+        batch=batch,
+        status=StudentBatchPurchase.Status.ACTIVE,
+    ).exists():
+
+        messages.info(
+            request,
+            f'"{batch.batch_name}" is already in your learning.'
+        )
+
+        return redirect('my_learning')
+
     cart, created = Cart.objects.get_or_create(
         student=request.user
     )
@@ -1193,7 +1256,7 @@ def cart_view(request):
             "available_coupons": coupon_catalog,
         },
     )
-    
+
 # ============================================================
 # REMOVE FROM CART
 # ============================================================
@@ -1707,3 +1770,848 @@ def remove_coupon_view(request, coupon_id):
 
     return redirect("cart")
 
+# ============================================================
+# MY LEARNING
+# ============================================================
+
+@login_required(login_url='signin')
+@cache_control(
+    no_cache=True,
+    must_revalidate=True,
+    no_store=True
+)
+def my_learning_view(request):
+
+    # ========================================================
+    # STUDENT ACCESS
+    # ========================================================
+
+    if not is_student_user(request.user):
+
+        messages.error(
+            request,
+            'Admin login is not allowed here. Please use the admin login area.'
+        )
+
+        return redirect('signin')
+
+    # ========================================================
+    # PURCHASED BATCHES
+    # ========================================================
+
+    purchased_batches = (
+        StudentBatchPurchase.objects
+        .filter(
+            student=request.user,
+            status=StudentBatchPurchase.Status.ACTIVE,
+        )
+        .select_related(
+            'batch',
+            'order',
+            'order_item',
+        )
+        .order_by(
+            '-purchased_at'
+        )
+    )
+
+    # ========================================================
+    # RENDER MY LEARNING
+    # ========================================================
+
+    return render(
+        request,
+        'students/my_learning/my_learning.html',
+        {
+            'purchased_batches': purchased_batches,
+        },
+    )
+
+# ============================================================
+# STUDENT ORDER HISTORY
+# ============================================================
+
+@login_required(login_url="signin")
+@cache_control(
+    no_cache=True,
+    must_revalidate=True,
+    no_store=True,
+)
+def order_history_view(request):
+
+    # ========================================================
+    # STUDENT ACCESS
+    # ========================================================
+
+    if not is_student_user(request.user):
+
+        messages.error(
+            request,
+            "Admin login is not allowed here. Please use the admin login area.",
+        )
+
+        return redirect("signin")
+
+    # ========================================================
+    # QUERY PARAMETERS
+    # ========================================================
+
+    search_query = request.GET.get(
+        "search",
+        "",
+    ).strip()
+
+    current_status = request.GET.get(
+        "status",
+        "all",
+    ).strip().lower()
+
+    date_range = request.GET.get(
+        "date_range",
+        "all",
+    ).strip().lower()
+
+    start_date_value = request.GET.get(
+        "start_date",
+        "",
+    ).strip()
+
+    end_date_value = request.GET.get(
+        "end_date",
+        "",
+    ).strip()
+
+    # ========================================================
+    # VALID STATUS FILTERS
+    # ========================================================
+
+    allowed_statuses = {
+        "all",
+        "pending",
+        "payment_processing",
+        "paid",
+        "payment_failed",
+        "cancelled",
+        "partially_refunded",
+        "refunded",
+    }
+
+    if current_status not in allowed_statuses:
+        current_status = "all"
+
+    # ========================================================
+    # VALID DATE FILTERS
+    # ========================================================
+
+    allowed_date_ranges = {
+        "all",
+        "7",
+        "30",
+        "3m",
+        "6m",
+        "year",
+        "custom",
+    }
+
+    if date_range not in allowed_date_ranges:
+        date_range = "all"
+
+    # ========================================================
+    # CURRENT TIME
+    # ========================================================
+
+    now = timezone.now()
+
+    # ========================================================
+    # DATE FILTER STATE
+    # ========================================================
+
+    start_datetime = None
+    end_datetime = None
+
+    current_date_range = "All Time"
+
+    # ========================================================
+    # PRESET DATE FILTERS
+    # ========================================================
+
+    if date_range == "7":
+
+        start_datetime = now - timedelta(days=7)
+
+        current_date_range = "Last 7 Days"
+
+    elif date_range == "30":
+
+        start_datetime = now - timedelta(days=30)
+
+        current_date_range = "Last 30 Days"
+
+    elif date_range == "3m":
+
+        start_datetime = now - timedelta(days=90)
+
+        current_date_range = "Last 3 Months"
+
+    elif date_range == "6m":
+
+        start_datetime = now - timedelta(days=180)
+
+        current_date_range = "Last 6 Months"
+
+    elif date_range == "year":
+
+        local_now = timezone.localtime(now)
+
+        year_start = datetime(
+            local_now.year,
+            1,
+            1,
+        )
+
+        start_datetime = timezone.make_aware(
+            year_start,
+            timezone.get_current_timezone(),
+        )
+
+        current_date_range = "This Year"
+
+    # ========================================================
+    # CUSTOM DATE RANGE
+    # ========================================================
+
+    elif date_range == "custom":
+
+        try:
+
+            start_date = datetime.strptime(
+                start_date_value,
+                "%Y-%m-%d",
+            ).date()
+
+            end_date = datetime.strptime(
+                end_date_value,
+                "%Y-%m-%d",
+            ).date()
+
+            if start_date > end_date:
+
+                date_range = "all"
+                start_date_value = ""
+                end_date_value = ""
+                current_date_range = "All Time"
+
+            else:
+
+                start_datetime = timezone.make_aware(
+                    datetime.combine(
+                        start_date,
+                        datetime.min.time(),
+                    ),
+                    timezone.get_current_timezone(),
+                )
+
+                # End date is inclusive.
+                # We use the next midnight as an exclusive boundary.
+                end_datetime = timezone.make_aware(
+                    datetime.combine(
+                        end_date + timedelta(days=1),
+                        datetime.min.time(),
+                    ),
+                    timezone.get_current_timezone(),
+                )
+
+                current_date_range = (
+                    f"{start_date.strftime('%d %b %Y')}"
+                    f" – "
+                    f"{end_date.strftime('%d %b %Y')}"
+                )
+
+        except (
+            TypeError,
+            ValueError,
+        ):
+
+            date_range = "all"
+            start_date_value = ""
+            end_date_value = ""
+            current_date_range = "All Time"
+
+    # ========================================================
+    # BASE ORDER QUERY
+    #
+    # IMPORTANT:
+    # Only the currently logged-in student's orders.
+    # ========================================================
+
+    orders = (
+        Order.objects
+        .filter(
+            user=request.user,
+        )
+        .prefetch_related(
+            "items__batch",
+        )
+        .select_related(
+            "payment",
+            "invoice",
+        )
+        .order_by(
+            "-created_at",
+        )
+    )
+
+    # ========================================================
+    # STATUS FILTER
+    # ========================================================
+
+    if current_status != "all":
+
+        orders = orders.filter(
+            status=current_status,
+        )
+
+    # ========================================================
+    # DATE FILTER
+    # ========================================================
+
+    if start_datetime is not None:
+
+        orders = orders.filter(
+            created_at__gte=start_datetime,
+        )
+
+    if end_datetime is not None:
+
+        orders = orders.filter(
+            created_at__lt=end_datetime,
+        )
+
+    # ========================================================
+    # SEARCH
+    #
+    # Search:
+    #   - Order number
+    #   - Batch name
+    #   - Invoice number
+    # ========================================================
+
+    if search_query:
+
+        orders = orders.filter(
+            Q(
+                order_number__icontains=search_query,
+            )
+            |
+            Q(
+                items__batch_name__icontains=search_query,
+            )
+            |
+            Q(
+                invoice__invoice_number__icontains=search_query,
+            )
+        ).distinct()
+
+    # ========================================================
+    # PAGINATION
+    # ========================================================
+
+    from django.core.paginator import Paginator
+
+    paginator = Paginator(
+        orders,
+        8,
+    )
+
+    page_number = request.GET.get(
+        "page",
+        1,
+    )
+
+    orders_page = paginator.get_page(
+        page_number,
+    )
+
+    # ========================================================
+    # STATUS COUNTS
+    #
+    # Counts respect the selected DATE RANGE.
+    #
+    # They intentionally do not depend on the currently
+    # selected status or search text.
+    # ========================================================
+
+    all_orders = Order.objects.filter(
+        user=request.user,
+    )
+
+    if start_datetime is not None:
+
+        all_orders = all_orders.filter(
+            created_at__gte=start_datetime,
+        )
+
+    if end_datetime is not None:
+
+        all_orders = all_orders.filter(
+            created_at__lt=end_datetime,
+        )
+
+    status_counts = {
+        "all": all_orders.count(),
+
+        "paid": all_orders.filter(
+            status=Order.Status.PAID,
+        ).count(),
+
+        "pending": all_orders.filter(
+            status=Order.Status.PENDING,
+        ).count(),
+
+        "payment_processing": all_orders.filter(
+            status=Order.Status.PAYMENT_PROCESSING,
+        ).count(),
+
+        "payment_failed": all_orders.filter(
+            status=Order.Status.PAYMENT_FAILED,
+        ).count(),
+
+        "cancelled": all_orders.filter(
+            status=Order.Status.CANCELLED,
+        ).count(),
+
+        "partially_refunded": all_orders.filter(
+            status=Order.Status.PARTIALLY_REFUNDED,
+        ).count(),
+
+        "refunded": all_orders.filter(
+            status=Order.Status.REFUNDED,
+        ).count(),
+    }
+
+    # ========================================================
+    # RENDER ORDER HISTORY
+    # ========================================================
+
+    return render(
+        request,
+        "students/order_history/order_history.html",
+        {
+            "orders": orders_page,
+
+            # Search
+            "search_query": search_query,
+
+            # Status
+            "current_status": current_status,
+
+            # Date filtering
+            "date_range": date_range,
+            "current_date_range": current_date_range,
+            "start_date": start_date_value,
+            "end_date": end_date_value,
+
+            # Counts
+            "status_counts": status_counts,
+        },
+    )
+
+# ============================================================
+# STUDENT ORDER DETAILS
+# ============================================================
+
+
+@login_required(login_url="signin")
+@cache_control(
+    no_cache=True,
+    must_revalidate=True,
+    no_store=True,
+)
+def order_details_view(request, order_number):
+
+    # ========================================================
+    # STUDENT ACCESS
+    # ========================================================
+
+    if not is_student_user(request.user):
+
+        messages.error(
+            request,
+            "Admin login is not allowed here. Please use the admin login area.",
+        )
+
+        return redirect("signin")
+
+    # ========================================================
+    # ORDER
+    #
+    # IMPORTANT:
+    # The order must belong to the currently logged-in student.
+    # ========================================================
+
+    order = get_object_or_404(
+        Order.objects.select_related(
+            "payment",
+            "invoice",
+        ),
+        order_number=order_number,
+        user=request.user,
+    )
+
+    # ========================================================
+    # ORDER ITEMS
+    #
+    # These are historical OrderItem records.
+    # They represent what was stored when the order was created.
+    # ========================================================
+
+    order_items = list(
+        order.items
+        .select_related("batch")
+        .order_by("id")
+    )
+
+    # ========================================================
+    # HISTORICAL COUPON SNAPSHOTS
+    #
+    # IMPORTANT:
+    # Never read the current Coupon/CartCoupon state for an
+    # already-created order.
+    #
+    # OrderCoupon contains the historical coupon information
+    # captured at checkout.
+    # ========================================================
+
+    order_coupons = list(
+        OrderCoupon.objects
+        .filter(order=order)
+        .select_related("applied_batch")
+        .order_by("id")
+    )
+
+    # ========================================================
+    # PAYMENT
+    # ========================================================
+
+    payment = getattr(
+        order,
+        "payment",
+        None,
+    )
+
+    # ========================================================
+    # INVOICE
+    # ========================================================
+
+    invoice = getattr(
+        order,
+        "invoice",
+        None,
+    )
+
+    # ========================================================
+    # REFUNDS
+    #
+    # Only refunds belonging to this order are loaded.
+    # ========================================================
+
+    refunds = list(
+        Refund.objects
+        .filter(
+            order=order,
+        )
+        .prefetch_related(
+            "items__order_item",
+        )
+        .order_by(
+            "-requested_at",
+        )
+    )
+
+    # ========================================================
+    # COMPLETED REFUNDS
+    # ========================================================
+
+    completed_refunds = [
+        refund
+        for refund in refunds
+        if refund.status == Refund.Status.COMPLETED
+    ]
+
+    # ========================================================
+    # REFUNDED AMOUNT
+    #
+    # Always use the historical refunded amount.
+    #
+    # Do NOT recalculate this using the current batch price.
+    # ========================================================
+
+    refunded_amount = sum(
+        (
+            refund.refunded_amount or 0
+            for refund in completed_refunds
+        ),
+        0,
+    )
+
+    # ========================================================
+    # NET PAID
+    # ========================================================
+
+    net_paid = max(
+        (order.final_amount or 0)
+        - refunded_amount,
+        0,
+    )
+
+    # ========================================================
+    # REFUND WINDOW
+    #
+    # Refund is available for exactly 7 days from the
+    # original order creation time.
+    # ========================================================
+
+    refund_deadline = (
+        order.created_at
+        + timedelta(days=7)
+    )
+
+    now = timezone.now()
+
+    # ========================================================
+    # REFUND WINDOW EXPIRED
+    # ========================================================
+
+    refund_window_open = (
+        now <= refund_deadline
+    )
+
+    # ========================================================
+    # EXISTING REFUND STATE
+    # ========================================================
+
+    has_refund_request = bool(
+        refunds
+    )
+
+    has_completed_refund = bool(
+        completed_refunds
+    )
+
+    # ========================================================
+    # REFUND ELIGIBILITY
+    #
+    # At this stage this is only the basic order-level
+    # eligibility check.
+    #
+    # The actual refund-request POST workflow will be added
+    # separately.
+    # ========================================================
+
+    refund_eligible = (
+        order.status == Order.Status.PAID
+        and refund_window_open
+        and not has_completed_refund
+        and not has_refund_request
+    )
+
+    # ========================================================
+    # ORDER STATUS LABEL
+    # ========================================================
+
+    status_labels = {
+        Order.Status.PENDING: "PENDING",
+        Order.Status.PAYMENT_PROCESSING: "PAYMENT PROCESSING",
+        Order.Status.PAID: "COMPLETED",
+        Order.Status.PAYMENT_FAILED: "PAYMENT FAILED",
+        Order.Status.CANCELLED: "CANCELLED",
+        Order.Status.PARTIALLY_REFUNDED: "PARTIALLY REFUNDED",
+        Order.Status.REFUNDED: "REFUNDED",
+    }
+
+    status_label = status_labels.get(
+        order.status,
+        str(order.status).replace(
+            "_",
+            " ",
+        ).upper(),
+    )
+
+    # ========================================================
+    # ORDER ITEM + PURCHASE INFORMATION
+    #
+    # Attach the corresponding StudentBatchPurchase to each
+    # OrderItem.
+    #
+    # This allows the template to display whether the student's
+    # access is currently ACTIVE or REFUNDED.
+    # ========================================================
+
+    purchases = {
+        purchase.order_item_id: purchase
+        for purchase in (
+            StudentBatchPurchase.objects
+            .filter(
+                order=order,
+                student=request.user,
+            )
+        )
+    }
+
+    order_item_rows = []
+
+    for item in order_items:
+
+        order_item_rows.append(
+            {
+                "item": item,
+                "purchase": purchases.get(
+                    item.id
+                ),
+            }
+        )
+
+    # ========================================================
+    # COUPON SUMMARY
+    #
+    # These values come from the historical OrderCoupon
+    # snapshots.
+    # ========================================================
+
+    coupon_discount = sum(
+        (
+            coupon.discount_amount or 0
+            for coupon in order_coupons
+        ),
+        0,
+    )
+
+    coupon_count = len(
+        order_coupons
+    )
+
+    # ========================================================
+    # COUPON TYPES
+    #
+    # Keep the raw historical type available to the template.
+    # ========================================================
+
+    coupon_types = [
+        coupon.coupon_type
+        for coupon in order_coupons
+        if coupon.coupon_type
+    ]
+
+    # ========================================================
+    # FULL ORDER REFUND CHECK
+    #
+    # A multi-checkout coupon means the order must be treated
+    # as a full-order refund.
+    #
+    # We are only exposing the state here.
+    # Actual refund processing comes later.
+    # ========================================================
+
+    has_multi_checkout_coupon = any(
+        coupon.coupon_type == "multi_checkout"
+        for coupon in order_coupons
+    )
+
+    # ========================================================
+    # PARTIAL REFUND POSSIBILITY
+    #
+    # Batch-specific and general coupons can later participate
+    # in the individual-batch refund workflow.
+    #
+    # Multi-checkout orders are full-order only.
+    # ========================================================
+
+    partial_refund_allowed = (
+        not has_multi_checkout_coupon
+        and bool(order_items)
+    )
+
+    # ========================================================
+    # RENDER ORDER DETAILS
+    # ========================================================
+
+    return render(
+        request,
+        "students/order_details/order_details.html",
+        {
+            # ------------------------------------------------
+            # ORDER
+            # ------------------------------------------------
+
+            "order": order,
+
+            # ------------------------------------------------
+            # ORDER ITEMS
+            # ------------------------------------------------
+
+            "order_items": order_item_rows,
+
+            # ------------------------------------------------
+            # PAYMENT
+            # ------------------------------------------------
+
+            "payment": payment,
+
+            # ------------------------------------------------
+            # INVOICE
+            # ------------------------------------------------
+
+            "invoice": invoice,
+
+            # ------------------------------------------------
+            # HISTORICAL COUPONS
+            # ------------------------------------------------
+
+            "order_coupons": order_coupons,
+            "coupon_discount": coupon_discount,
+            "coupon_count": coupon_count,
+            "coupon_types": coupon_types,
+
+            # ------------------------------------------------
+            # REFUND DATA
+            # ------------------------------------------------
+
+            "refunds": refunds,
+            "completed_refunds": completed_refunds,
+            "refunded_amount": refunded_amount,
+            "net_paid": net_paid,
+
+            # ------------------------------------------------
+            # REFUND WINDOW
+            # ------------------------------------------------
+
+            "refund_deadline": refund_deadline,
+            "refund_window_open": refund_window_open,
+            "refund_eligible": refund_eligible,
+
+            # ------------------------------------------------
+            # REFUND STATE
+            # ------------------------------------------------
+
+            "has_refund_request": has_refund_request,
+            "has_completed_refund": has_completed_refund,
+
+            # ------------------------------------------------
+            # REFUND RULES
+            # ------------------------------------------------
+
+            "has_multi_checkout_coupon": (
+                has_multi_checkout_coupon
+            ),
+
+            "partial_refund_allowed": (
+                partial_refund_allowed
+            ),
+
+            # ------------------------------------------------
+            # ORDER STATUS
+            # ------------------------------------------------
+
+            "status_label": status_label,
+        },
+    )
