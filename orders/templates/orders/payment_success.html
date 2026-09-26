@@ -962,54 +962,43 @@
 
 
                             <a
-                                href="#"
-                                title="Payment History"
+    href="{% url 'order_details' order.order_number %}"
+    title="View Order Details"
 
-                                class="
-                                    inline-flex
-                                    shrink-0
-                                    items-center
-                                    gap-1
+    class="
+        inline-flex
+        shrink-0
+        items-center
+        gap-1
+        rounded-lg
+        border
+        border-violet-400/25
+        bg-gradient-to-r
+        from-violet-500/15
+        to-indigo-500/15
+        px-1.5
+        py-1
+        text-[7px]
+        font-black
+        text-violet-300
+        transition
+        duration-200
+        hover:border-violet-300/40
+        hover:bg-violet-500/20
+        hover:text-violet-200
+        sm:px-2
+        sm:py-1.5
+        sm:text-[8px]
+    "
+>
+    <i class="ri-file-list-3-line"></i>
 
-                                    rounded-lg
+    <span class="payment-history-label hidden sm:inline">
+        Order Details
+    </span>
 
-                                    border
-                                    border-violet-400/25
-
-                                    bg-gradient-to-r
-                                    from-violet-500/15
-                                    to-indigo-500/15
-
-                                    px-1.5
-                                    py-1
-
-                                    text-[7px]
-                                    font-black
-                                    text-violet-300
-
-                                    transition
-                                    duration-200
-
-                                    hover:border-violet-300/40
-                                    hover:bg-violet-500/20
-                                    hover:text-violet-200
-
-                                    sm:px-2
-                                    sm:py-1.5
-
-                                    sm:text-[8px]
-                                "
-                            >
-
-                                <i class="ri-history-line"></i>
-
-                                <span class="payment-history-label hidden sm:inline">
-                                    Payment History
-                                </span>
-
-                                <i class="ri-arrow-right-line"></i>
-
-                            </a>
+    <i class="ri-arrow-right-line"></i>
+</a>
 
                         </div>
 

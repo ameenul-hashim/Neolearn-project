@@ -38,7 +38,7 @@ class Order(models.Model):
 
     # Checkout snapshot
     full_name = models.CharField(max_length=200)
-    
+
     phone = models.CharField(
     max_length=10,
     )
@@ -189,6 +189,181 @@ class OrderItem(models.Model):
             self.coupon_discount
         )
 
+class OrderCoupon(models.Model):
+    """
+    Historical snapshot of a coupon applied to an order.
+
+    IMPORTANT:
+    This model stores the coupon information exactly as it was
+    when the order was created.
+
+    It must not depend on the current Coupon configuration for
+    historical order/refund decisions.
+    """
+
+    # ---------------------------------------------------------
+    # Order
+    # ---------------------------------------------------------
+
+    order = models.ForeignKey(
+        Order,
+        on_delete=models.CASCADE,
+        related_name="coupons",
+    )
+
+    # ---------------------------------------------------------
+    # Historical Coupon Identity
+    # ---------------------------------------------------------
+
+    coupon_code = models.CharField(
+        max_length=50,
+    )
+
+    coupon_description = models.TextField(
+        blank=True,
+        default="",
+    )
+
+    coupon_type = models.CharField(
+        max_length=20,
+    )
+
+    # ---------------------------------------------------------
+    # Historical Discount Configuration
+    # ---------------------------------------------------------
+
+    discount_type = models.CharField(
+        max_length=20,
+    )
+
+    discount_value = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=Decimal("0.00"),
+    )
+
+    # ---------------------------------------------------------
+    # ACTUAL DISCOUNT GIVEN TO THIS ORDER
+    # ---------------------------------------------------------
+
+    discount_amount = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=Decimal("0.00"),
+    )
+
+    # ---------------------------------------------------------
+    # Historical Checkout Restrictions
+    # ---------------------------------------------------------
+
+    minimum_order_amount = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=Decimal("0.00"),
+    )
+
+    maximum_order_amount = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        blank=True,
+        null=True,
+    )
+
+    maximum_discount_amount = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        blank=True,
+        null=True,
+    )
+
+    # ---------------------------------------------------------
+    # Historical Usage Rules
+    # ---------------------------------------------------------
+
+    usage_limit = models.PositiveIntegerField(
+        blank=True,
+        null=True,
+    )
+
+    per_user_limit = models.PositiveIntegerField(
+        blank=True,
+        null=True,
+    )
+
+    # ---------------------------------------------------------
+    # Historical Validity
+    # ---------------------------------------------------------
+
+    valid_from = models.DateTimeField(
+        blank=True,
+        null=True,
+    )
+
+    valid_until = models.DateTimeField(
+        blank=True,
+        null=True,
+    )
+
+    # ---------------------------------------------------------
+    # Batch Context
+    #
+    # Batch-specific coupons can be connected to a particular
+    # batch. General and multi-checkout coupons may not need one.
+    #
+    # We save the batch name as a historical snapshot so the
+    # order details remain understandable even if the current
+    # coupon/batch configuration changes later.
+    # ---------------------------------------------------------
+
+    applied_batch = models.ForeignKey(
+        "admins.Batch",
+        on_delete=models.SET_NULL,
+        related_name="order_coupon_snapshots",
+        blank=True,
+        null=True,
+    )
+
+    applied_batch_name = models.CharField(
+        max_length=200,
+        blank=True,
+        default="",
+    )
+
+    # ---------------------------------------------------------
+    # Snapshot Timestamp
+    # ---------------------------------------------------------
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    # ---------------------------------------------------------
+    # Meta
+    # ---------------------------------------------------------
+
+    class Meta:
+        db_table = "orders_order_coupon"
+        ordering = ["id"]
+        indexes = [
+            models.Index(
+                fields=["order"],
+                name="order_coupon_order_idx",
+            ),
+            models.Index(
+                fields=["coupon_code"],
+                name="order_coupon_code_idx",
+            ),
+            models.Index(
+                fields=["coupon_type"],
+                name="order_coupon_type_idx",
+            ),
+        ]
+
+    def __str__(self):
+        return (
+            f"{self.order.order_number} - "
+            f"{self.coupon_code}"
+        )
 
 class Payment(models.Model):
     class Status(models.TextChoices):
@@ -511,4 +686,4 @@ class RefundItem(models.Model):
             f"{self.refund_id} - "
             f"{self.order_item.batch_name}"
         )
-        
+

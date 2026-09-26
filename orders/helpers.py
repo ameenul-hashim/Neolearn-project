@@ -12,9 +12,9 @@ from students.models import Cart
 from .models import (
     Order,
     OrderItem,
+    OrderCoupon,
     StudentBatchPurchase,
 )
-
 
 # ============================================================
 # CHECKOUT CONSTANTS
@@ -511,7 +511,9 @@ def build_order_from_cart(
     # NORMALIZE PHONE VALUES
     # --------------------------------------------------------
 
-    phone_clean = (phone or "").strip()
+    phone_clean = (
+        phone or ""
+    ).strip()
 
     alternative_phone_clean = (
         alternative_phone or ""
@@ -564,6 +566,198 @@ def build_order_from_cart(
             terms_accepted
         ),
     )
+
+    # --------------------------------------------------------
+    # SAVE HISTORICAL COUPON SNAPSHOTS
+    # --------------------------------------------------------
+    #
+    # IMPORTANT:
+    # This stores the coupon information that was actually
+    # applied at the time this order was created.
+    #
+    # Refund logic should use this historical snapshot later,
+    # instead of depending on the current Coupon model/cart.
+    # --------------------------------------------------------
+
+    for applied_coupon in totals.get(
+        "applied_coupons",
+        [],
+    ):
+
+        if not isinstance(
+            applied_coupon,
+            dict,
+        ):
+            continue
+
+        coupon = applied_coupon.get(
+            "coupon"
+        )
+
+        if coupon is None:
+            continue
+
+        discount_amount = (
+            applied_coupon.get(
+                "discount_amount"
+            )
+            or applied_coupon.get(
+                "discount"
+            )
+            or ZERO
+        )
+
+        try:
+
+            discount_amount = Decimal(
+                str(
+                    discount_amount
+                )
+            )
+
+        except (
+            InvalidOperation,
+            TypeError,
+            ValueError,
+        ):
+
+            discount_amount = ZERO
+
+        applied_batch = applied_coupon.get(
+            "batch"
+        )
+
+        applied_batch_name = ""
+
+        if applied_batch is not None:
+
+            applied_batch_name = (
+                getattr(
+                    applied_batch,
+                    "batch_name",
+                    "",
+                )
+                or ""
+            )
+
+        OrderCoupon.objects.create(
+
+            order=order,
+
+            coupon_code=(
+                getattr(
+                    coupon,
+                    "code",
+                    "",
+                )
+                or ""
+            ),
+
+            coupon_description=(
+                getattr(
+                    coupon,
+                    "description",
+                    "",
+                )
+                or ""
+            ),
+
+            coupon_type=(
+                getattr(
+                    coupon,
+                    "coupon_type",
+                    "",
+                )
+                or ""
+            ),
+
+            discount_type=(
+                getattr(
+                    coupon,
+                    "discount_type",
+                    "",
+                )
+                or ""
+            ),
+
+            discount_value=(
+                getattr(
+                    coupon,
+                    "discount_value",
+                    ZERO,
+                )
+                or ZERO
+            ),
+
+            discount_amount=(
+                discount_amount
+            ),
+
+            minimum_order_amount=(
+                getattr(
+                    coupon,
+                    "minimum_order_amount",
+                    ZERO,
+                )
+                or ZERO
+            ),
+
+            maximum_order_amount=(
+                getattr(
+                    coupon,
+                    "maximum_order_amount",
+                    None,
+                )
+            ),
+
+            maximum_discount_amount=(
+                getattr(
+                    coupon,
+                    "maximum_discount_amount",
+                    None,
+                )
+            ),
+
+            usage_limit=(
+                getattr(
+                    coupon,
+                    "usage_limit",
+                    None,
+                )
+            ),
+
+            per_user_limit=(
+                getattr(
+                    coupon,
+                    "per_user_limit",
+                    None,
+                )
+            ),
+
+            valid_from=(
+                getattr(
+                    coupon,
+                    "valid_from",
+                    None,
+                )
+            ),
+
+            valid_until=(
+                getattr(
+                    coupon,
+                    "valid_until",
+                    None,
+                )
+            ),
+
+            applied_batch=(
+                applied_batch
+            ),
+
+            applied_batch_name=(
+                applied_batch_name
+            ),
+        )
 
     # --------------------------------------------------------
     # CREATE ORDER ITEMS

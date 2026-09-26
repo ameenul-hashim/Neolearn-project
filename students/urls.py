@@ -21,6 +21,7 @@ from .views import (
     remove_coupon_view,
 
     order_history_view,
+    order_details_view,
 )
 
 
@@ -152,5 +153,15 @@ urlpatterns = [
         "orders/",
         order_history_view,
         name="order_history",
+    ),
+
+    # ============================================================
+    # ORDER DETAILS
+    # ============================================================
+
+    path(
+        "orders/<str:order_number>/",
+        order_details_view,
+        name="order_details",
     ),
 ]
