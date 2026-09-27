@@ -13,32 +13,24 @@ import logging
 
 from django.contrib.auth.decorators import login_required
 from .helpers import (
-
     is_student_user,
-
     get_checkout_data,
-
     validate_checkout_data,
-
     build_order_from_cart,
 
+    # Refund helpers
+    validate_refund_request,
+    get_order_item_refund_amount,
 )
-
-
 from .models import (
-
     Order,
-
     OrderItem,
-
     Payment,
-
     Invoice,
-
     StudentBatchPurchase,
-
+    Refund,
+    RefundItem,
 )
-
 
 from students.models import Cart
 
@@ -195,29 +187,10 @@ def checkout_view(request):
 
 
     if not cart_items:
-
-
-
-
-
         messages.warning(
-
-
-
             request,
-
-
-
             "Your cart is empty. Add a batch before continuing.",
-
-
-
         )
-
-
-
-
-
         return redirect("cart")
 
 
@@ -2794,6 +2767,690 @@ def update_payment_status_view(request):
                 "success": False,
                 "message":
                     "Unable to update payment status.",
+            },
+            status=500,
+        )
+        
+# ============================================================
+# STUDENT REFUND REQUEST
+# ============================================================
+
+@login_required(login_url="signin")
+@require_POST
+def request_refund_view(request):
+    """
+    Create a student refund request.
+
+    Important rules:
+    - Student must own the order.
+    - Order must be PAID or PARTIALLY_REFUNDED.
+    - Refund must be within the server-side 7-day window.
+    - Student never submits the refund amount.
+    - Backend calculates the historical refundable amount.
+    - Full refund requests refund every currently refundable item.
+    - Partial refund requests only the selected OrderItems.
+    - Refund is created as REQUESTED.
+    - No Razorpay refund is performed here.
+    - No access is removed here.
+    - No order status is changed here.
+    """
+
+    # ========================================================
+    # STUDENT ACCESS
+    # ========================================================
+
+    if not is_student_user(request.user):
+        return JsonResponse(
+            {
+                "success": False,
+                "message": "Student access is required.",
+            },
+            status=403,
+        )
+
+    # ========================================================
+    # REQUEST DATA
+    # ========================================================
+
+    order_number = (
+        request.POST.get("order_number") or ""
+    ).strip()
+
+    refund_type = (
+        request.POST.get("refund_type") or ""
+    ).strip().lower()
+
+    reason = (
+        request.POST.get("reason") or ""
+    ).strip()
+
+    order_item_ids = request.POST.getlist(
+        "order_item_ids"
+    )
+
+    # ========================================================
+    # BASIC VALIDATION
+    # ========================================================
+
+    if not order_number:
+        return JsonResponse(
+            {
+                "success": False,
+                "message": "Order number is required.",
+            },
+            status=400,
+        )
+
+    if refund_type not in {
+        "full",
+        "partial",
+    }:
+        return JsonResponse(
+            {
+                "success": False,
+                "message": "Invalid refund type.",
+            },
+            status=400,
+        )
+
+    if not reason:
+        return JsonResponse(
+            {
+                "success": False,
+                "message": "Please provide a refund reason.",
+            },
+            status=400,
+        )
+
+    # ========================================================
+    # FIND STUDENT'S ORDER
+    # ========================================================
+
+    try:
+        with transaction.atomic():
+
+            # ------------------------------------------------
+            # LOCK THE ORDER
+            # ------------------------------------------------
+            #
+            # This prevents two refund requests from being
+            # created simultaneously for the same order.
+            # ------------------------------------------------
+
+            try:
+                order = (
+                    Order.objects
+                    .select_for_update()
+                    .get(
+                        order_number=order_number,
+                        user=request.user,
+                    )
+                )
+
+            except Order.DoesNotExist:
+                return JsonResponse(
+                    {
+                        "success": False,
+                        "message": "Order could not be found.",
+                    },
+                    status=404,
+                )
+
+            # ------------------------------------------------
+            # VALIDATE REFUND
+            # ------------------------------------------------
+            #
+            # IMPORTANT:
+            # The helper calculates the amount from historical
+            # OrderItem.final_price / Order.final_amount.
+            #
+            # We do NOT trust an amount sent by the browser.
+            # ------------------------------------------------
+
+            try:
+
+                if refund_type == "full":
+
+                    refund_data = validate_refund_request(
+                        order,
+                        full_order=True,
+                    )
+
+                else:
+
+                    refund_data = validate_refund_request(
+                        order,
+                        order_item_ids=order_item_ids,
+                        full_order=False,
+                    )
+
+            except ValueError as exc:
+
+                return JsonResponse(
+                    {
+                        "success": False,
+                        "message": str(exc),
+                    },
+                    status=400,
+                )
+
+            # ------------------------------------------------
+            # EXTRACT VALIDATED DATA
+            # ------------------------------------------------
+
+            refund_amount = refund_data["amount"]
+            refundable_items = refund_data["items"]
+            validated_refund_type = refund_data["refund_type"]
+
+            # ------------------------------------------------
+            # FINAL SAFETY CHECK
+            # ------------------------------------------------
+
+            if not refundable_items:
+                return JsonResponse(
+                    {
+                        "success": False,
+                        "message": (
+                            "There are no refundable batches "
+                            "available in this order."
+                        ),
+                    },
+                    status=400,
+                )
+
+            if refund_amount <= Decimal("0.00"):
+                return JsonResponse(
+                    {
+                        "success": False,
+                        "message": (
+                            "The calculated refund amount "
+                            "must be greater than zero."
+                        ),
+                    },
+                    status=400,
+                )
+
+            # ------------------------------------------------
+            # CREATE REFUND REQUEST
+            # ------------------------------------------------
+
+            refund = Refund.objects.create(
+                order=order,
+                student=request.user,
+                reason=reason,
+                status=Refund.Status.REQUESTED,
+                requested_amount=refund_amount,
+                refunded_amount=Decimal("0.00"),
+            )
+
+            # ------------------------------------------------
+            # CREATE REFUND ITEMS
+            # ------------------------------------------------
+            #
+            # Store the exact historical refund amount for
+            # every selected batch.
+            #
+            # This gives us a permanent snapshot even if
+            # current batch/coupon prices change later.
+            # ------------------------------------------------
+
+            for order_item in refundable_items:
+
+                item_refund_amount = (
+                    get_order_item_refund_amount(
+                        order_item
+                    )
+                )
+
+                if item_refund_amount <= Decimal("0.00"):
+                    continue
+
+                RefundItem.objects.create(
+                    refund=refund,
+                    order_item=order_item,
+                    refund_amount=item_refund_amount,
+                )
+
+            # ------------------------------------------------
+            # SAFETY CHECK AFTER REFUND ITEM CREATION
+            # ------------------------------------------------
+
+            refund_item_count = RefundItem.objects.filter(
+                refund=refund
+            ).count()
+
+            if refund_item_count == 0:
+                refund.delete()
+
+                return JsonResponse(
+                    {
+                        "success": False,
+                        "message": (
+                            "No refundable batches were "
+                            "available for this request."
+                        ),
+                    },
+                    status=400,
+                )
+
+            # ------------------------------------------------
+            # RESPONSE
+            # ------------------------------------------------
+
+            return JsonResponse(
+                {
+                    "success": True,
+                    "refund_id": refund.id,
+                    "order_number": order.order_number,
+                    "refund_type": validated_refund_type,
+                    "requested_amount": str(
+                        refund.requested_amount
+                    ),
+                    "status": refund.status,
+                    "message": (
+                        "Your refund request has been "
+                        "submitted successfully."
+                    ),
+                }
+            )
+
+    # ========================================================
+    # UNEXPECTED ERROR
+    # ========================================================
+
+    except Exception as exc:
+
+        logging.getLogger(__name__).exception(
+            "NeoLearn refund request failed "
+            "for order %s: %s",
+            order_number,
+            exc,
+        )
+
+        return JsonResponse(
+            {
+                "success": False,
+                "message": (
+                    "Unable to submit the refund request. "
+                    "Please try again."
+                ),
+            },
+            status=500,
+        )
+        
+# ============================================================
+# EDIT STUDENT REFUND REQUEST
+# ============================================================
+
+@login_required(login_url="signin")
+@require_POST
+def edit_refund_request_view(request, refund_id):
+    """
+    Edit an existing student refund request.
+
+    Important rules:
+
+    - Student must own the refund request.
+    - Refund must still be in REQUESTED status.
+    - PROCESSING refunds cannot be edited.
+    - COMPLETED refunds cannot be edited.
+    - REJECTED refunds cannot be edited.
+    - FAILED refunds cannot be edited.
+    - The order is locked during the update.
+    - The existing refund is excluded from reservation checks.
+    - The refund amount is recalculated server-side.
+    - Browser-submitted amounts are never trusted.
+    - Existing RefundItems are replaced only after validation succeeds.
+    - No Razorpay refund is performed here.
+    - No order status is changed here.
+    """
+
+    # ========================================================
+    # STUDENT ACCESS
+    # ========================================================
+
+    if not is_student_user(request.user):
+        return JsonResponse(
+            {
+                "success": False,
+                "message": "Student access is required.",
+            },
+            status=403,
+        )
+
+    # ========================================================
+    # REQUEST DATA
+    # ========================================================
+
+    order_number = (
+        request.POST.get("order_number") or ""
+    ).strip()
+
+    refund_type = (
+        request.POST.get("refund_type") or ""
+    ).strip().lower()
+
+    reason = (
+        request.POST.get("reason") or ""
+    ).strip()
+
+    order_item_ids = request.POST.getlist(
+        "order_item_ids"
+    )
+
+    # ========================================================
+    # BASIC VALIDATION
+    # ========================================================
+
+    if not order_number:
+        return JsonResponse(
+            {
+                "success": False,
+                "message": "Order number is required.",
+            },
+            status=400,
+        )
+
+    if refund_type not in {
+        "full",
+        "partial",
+    }:
+        return JsonResponse(
+            {
+                "success": False,
+                "message": "Invalid refund type.",
+            },
+            status=400,
+        )
+
+    if not reason:
+        return JsonResponse(
+            {
+                "success": False,
+                "message": "Please provide a refund reason.",
+            },
+            status=400,
+        )
+
+    # ========================================================
+    # DATABASE TRANSACTION
+    # ========================================================
+
+    try:
+        with transaction.atomic():
+
+            # ------------------------------------------------
+            # LOCK THE REFUND
+            # ------------------------------------------------
+
+            try:
+                refund = (
+                    Refund.objects
+                    .select_for_update()
+                    .select_related(
+                        "order",
+                    )
+                    .get(
+                        pk=refund_id,
+                        student=request.user,
+                    )
+                )
+
+            except Refund.DoesNotExist:
+                return JsonResponse(
+                    {
+                        "success": False,
+                        "message": (
+                            "Refund request could not be found."
+                        ),
+                    },
+                    status=404,
+                )
+
+            # ------------------------------------------------
+            # REFUND MUST STILL BE REQUESTED
+            # ------------------------------------------------
+
+            if refund.status != Refund.Status.REQUESTED:
+                return JsonResponse(
+                    {
+                        "success": False,
+                        "message": (
+                            "This refund request can no longer "
+                            "be edited."
+                        ),
+                    },
+                    status=400,
+                )
+
+            # ------------------------------------------------
+            # LOCK THE ORDER
+            # ------------------------------------------------
+
+            try:
+                order = (
+                    Order.objects
+                    .select_for_update()
+                    .get(
+                        pk=refund.order_id,
+                        user=request.user,
+                    )
+                )
+
+            except Order.DoesNotExist:
+                return JsonResponse(
+                    {
+                        "success": False,
+                        "message": (
+                            "The order associated with this "
+                            "refund could not be found."
+                        ),
+                    },
+                    status=404,
+                )
+
+            # ------------------------------------------------
+            # VALIDATE UPDATED REFUND
+            #
+            # IMPORTANT:
+            #
+            # exclude_refund_id allows this refund's existing
+            # RefundItems to become refundable again while
+            # recalculating the edited request.
+            # ------------------------------------------------
+
+            try:
+
+                if refund_type == "full":
+
+                    refund_data = validate_refund_request(
+                        order,
+                        full_order=True,
+                        exclude_refund_id=refund.id,
+                    )
+
+                else:
+
+                    refund_data = validate_refund_request(
+                        order,
+                        order_item_ids=order_item_ids,
+                        full_order=False,
+                        exclude_refund_id=refund.id,
+                    )
+
+            except ValueError as exc:
+                return JsonResponse(
+                    {
+                        "success": False,
+                        "message": str(exc),
+                    },
+                    status=400,
+                )
+
+            # ------------------------------------------------
+            # EXTRACT VALIDATED DATA
+            # ------------------------------------------------
+
+            refund_amount = refund_data["amount"]
+
+            refundable_items = refund_data["items"]
+
+            validated_refund_type = (
+                refund_data["refund_type"]
+            )
+
+            # ------------------------------------------------
+            # FINAL SAFETY CHECK
+            # ------------------------------------------------
+
+            if not refundable_items:
+                return JsonResponse(
+                    {
+                        "success": False,
+                        "message": (
+                            "There are no refundable batches "
+                            "available for this request."
+                        ),
+                    },
+                    status=400,
+                )
+
+            if refund_amount <= Decimal("0.00"):
+                return JsonResponse(
+                    {
+                        "success": False,
+                        "message": (
+                            "The calculated refund amount "
+                            "must be greater than zero."
+                        ),
+                    },
+                    status=400,
+                )
+
+            # =================================================
+            # UPDATE REFUND HEADER
+            # =================================================
+
+            refund.reason = reason
+
+            refund.requested_amount = (
+                refund_amount
+            )
+
+            # Keep the refund in REQUESTED status.
+            refund.status = Refund.Status.REQUESTED
+
+            refund.save(
+            update_fields=[
+            "reason",
+            "requested_amount",
+            "status",
+            ])
+
+            # =================================================
+            # REPLACE REFUND ITEMS
+            # =================================================
+            #
+            # At this point validation has already succeeded.
+            #
+            # Therefore it is safe to remove the old snapshot
+            # and recreate it using the newly selected items.
+            #
+            # The amount for every item comes from the historical
+            # OrderItem.final_price.
+            # =================================================
+
+            refund.items.all().delete()
+
+            created_refund_item_count = 0
+
+            for order_item in refundable_items:
+
+                item_refund_amount = (
+                    get_order_item_refund_amount(
+                        order_item
+                    )
+                )
+
+                if item_refund_amount <= Decimal("0.00"):
+                    continue
+
+                RefundItem.objects.create(
+                    refund=refund,
+                    order_item=order_item,
+                    refund_amount=item_refund_amount,
+                )
+
+                created_refund_item_count += 1
+
+            # ------------------------------------------------
+            # SAFETY CHECK
+            # ------------------------------------------------
+
+            if created_refund_item_count == 0:
+                raise ValueError(
+                    "No refundable batches were available "
+                    "for this request."
+                )
+
+            # =================================================
+            # RESPONSE
+            # =================================================
+
+            return JsonResponse(
+                {
+                    "success": True,
+                    "refund_id": refund.id,
+                    "order_number": order.order_number,
+                    "refund_type": validated_refund_type,
+                    "requested_amount": str(
+                        refund.requested_amount
+                    ),
+                    "status": refund.status,
+                    "message": (
+                        "Your refund request has been "
+                        "updated successfully."
+                    ),
+                }
+            )
+
+    # ========================================================
+    # UNEXPECTED ERROR
+    # ========================================================
+
+    except ValueError as exc:
+
+        logging.getLogger(__name__).warning(
+            "NeoLearn refund edit validation failed "
+            "for refund %s: %s",
+            refund_id,
+            exc,
+        )
+
+        return JsonResponse(
+            {
+                "success": False,
+                "message": str(exc),
+            },
+            status=400,
+        )
+
+    except Exception as exc:
+
+        logging.getLogger(__name__).exception(
+            "NeoLearn refund edit failed "
+            "for refund %s: %s",
+            refund_id,
+            exc,
+        )
+
+        return JsonResponse(
+            {
+                "success": False,
+                "message": (
+                    "Unable to update the refund request. "
+                    "Please try again."
+                ),
             },
             status=500,
         )
