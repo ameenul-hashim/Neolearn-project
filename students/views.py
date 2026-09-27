@@ -17,6 +17,10 @@ from orders.models import (
     OrderCoupon,
     Refund,
 )
+
+from orders.helpers import (
+    get_refundable_order_items,
+)
 from admins.helpers import (
     normalize_coupon_code,
     calculate_student_cart_totals,
@@ -1886,14 +1890,12 @@ def order_history_view(request):
     # ========================================================
 
     allowed_statuses = {
-        "all",
-        "pending",
-        "payment_processing",
-        "paid",
-        "payment_failed",
-        "cancelled",
-        "partially_refunded",
-        "refunded",
+    "all",
+    "paid",
+    "payment_failed",
+    "cancelled",
+    "partially_refunded",
+    "refunded",
     }
 
     if current_status not in allowed_statuses:
@@ -2158,35 +2160,27 @@ def order_history_view(request):
         )
 
     status_counts = {
-        "all": all_orders.count(),
+    "all": all_orders.count(),
 
-        "paid": all_orders.filter(
-            status=Order.Status.PAID,
-        ).count(),
+    "paid": all_orders.filter(
+        status=Order.Status.PAID,
+    ).count(),
 
-        "pending": all_orders.filter(
-            status=Order.Status.PENDING,
-        ).count(),
+    "payment_failed": all_orders.filter(
+        status=Order.Status.PAYMENT_FAILED,
+    ).count(),
 
-        "payment_processing": all_orders.filter(
-            status=Order.Status.PAYMENT_PROCESSING,
-        ).count(),
+    "cancelled": all_orders.filter(
+        status=Order.Status.CANCELLED,
+    ).count(),
 
-        "payment_failed": all_orders.filter(
-            status=Order.Status.PAYMENT_FAILED,
-        ).count(),
+    "partially_refunded": all_orders.filter(
+        status=Order.Status.PARTIALLY_REFUNDED,
+    ).count(),
 
-        "cancelled": all_orders.filter(
-            status=Order.Status.CANCELLED,
-        ).count(),
-
-        "partially_refunded": all_orders.filter(
-            status=Order.Status.PARTIALLY_REFUNDED,
-        ).count(),
-
-        "refunded": all_orders.filter(
-            status=Order.Status.REFUNDED,
-        ).count(),
+    "refunded": all_orders.filter(
+        status=Order.Status.REFUNDED,
+    ).count(),
     }
 
     # ========================================================
@@ -2219,7 +2213,6 @@ def order_history_view(request):
 # ============================================================
 # STUDENT ORDER DETAILS
 # ============================================================
-
 
 @login_required(login_url="signin")
 @cache_control(
@@ -2329,7 +2322,7 @@ def order_details_view(request, order_number):
     )
 
     # ========================================================
-    # COMPLETED REFUNDS
+    # REFUND STATUS GROUPS
     # ========================================================
 
     completed_refunds = [
@@ -2337,6 +2330,75 @@ def order_details_view(request, order_number):
         for refund in refunds
         if refund.status == Refund.Status.COMPLETED
     ]
+
+    requested_refunds = [
+        refund
+        for refund in refunds
+        if refund.status == Refund.Status.REQUESTED
+    ]
+
+    processing_refunds = [
+        refund
+        for refund in refunds
+        if refund.status == Refund.Status.PROCESSING
+    ]
+
+    rejected_refunds = [
+        refund
+        for refund in refunds
+        if refund.status == Refund.Status.REJECTED
+    ]
+
+    failed_refunds = [
+        refund
+        for refund in refunds
+        if refund.status == Refund.Status.FAILED
+    ]
+
+    # ========================================================
+    # REFUND STATE FLAGS
+    # ========================================================
+
+    has_requested_refund = bool(
+        requested_refunds
+    )
+
+    has_processing_refund = bool(
+        processing_refunds
+    )
+
+    has_completed_refund = bool(
+        completed_refunds
+    )
+
+    has_rejected_refund = bool(
+        rejected_refunds
+    )
+
+    has_failed_refund = bool(
+        failed_refunds
+    )
+
+    # ========================================================
+    # EDITABLE REFUND
+    #
+    # Only REQUESTED refunds can be edited.
+    #
+    # PROCESSING / COMPLETED / REJECTED / FAILED refunds are
+    # locked.
+    # ========================================================
+
+    editable_refund = next(
+        (
+            refund
+            for refund in requested_refunds
+        ),
+        None,
+    )
+
+    refund_edit_allowed = (
+        editable_refund is not None
+    )
 
     # ========================================================
     # REFUNDED AMOUNT
@@ -2378,45 +2440,140 @@ def order_details_view(request, order_number):
 
     now = timezone.now()
 
-    # ========================================================
-    # REFUND WINDOW EXPIRED
-    # ========================================================
-
     refund_window_open = (
         now <= refund_deadline
     )
 
     # ========================================================
-    # EXISTING REFUND STATE
+    # COUPON TYPES
+    #
+    # Keep the raw historical type available to the template.
     # ========================================================
 
-    has_refund_request = bool(
-        refunds
+    coupon_types = [
+        coupon.coupon_type
+        for coupon in order_coupons
+        if coupon.coupon_type
+    ]
+
+    # ========================================================
+    # FULL ORDER REFUND CHECK
+    #
+    # A multi-checkout coupon means the order must be treated
+    # as a full-order refund.
+    #
+    # Single-batch orders are also full-refund only.
+    # ========================================================
+
+    has_multi_checkout_coupon = any(
+        coupon.coupon_type == "multi_checkout"
+        for coupon in order_coupons
     )
 
-    has_completed_refund = bool(
-        completed_refunds
+    # ========================================================
+    # CURRENT REFUNDABLE ORDER ITEMS
+    #
+    # IMPORTANT:
+    # This is calculated from the refund helper.
+    #
+    # The helper excludes items that are already reserved by
+    # REQUESTED / PROCESSING / COMPLETED refunds.
+    #
+    # Therefore:
+    #
+    # PAID
+    #     -> all refundable batches are available
+    #
+    # PARTIALLY_REFUNDED
+    #     -> only the remaining refundable batches are available
+    #
+    # REFUNDED
+    #     -> no refundable batches remain
+    # ========================================================
+
+    refundable_order_items = []
+
+    if (
+        order.status in {
+            Order.Status.PAID,
+            Order.Status.PARTIALLY_REFUNDED,
+        }
+        and refund_window_open
+    ):
+        refundable_order_items = list(
+            get_refundable_order_items(order)
+        )
+
+    refundable_order_item_ids = {
+        item.id
+        for item in refundable_order_items
+    }
+
+    refundable_item_count = len(
+        refundable_order_items
+    )
+
+    # ========================================================
+    # PARTIAL REFUND POSSIBILITY
+    #
+    # Rules:
+    #
+    # 1. Multi-checkout coupon
+    #       -> FULL REFUND ONLY
+    #
+    # 2. One refundable batch
+    #       -> FULL REFUND ONLY
+    #
+    # 3. More than one refundable batch
+    #       -> PARTIAL REFUND AVAILABLE
+    #
+    # IMPORTANT:
+    # The actual validation is still done server-side by the
+    # refund helper.
+    # ========================================================
+
+    partial_refund_allowed = (
+        not has_multi_checkout_coupon
+        and refundable_item_count > 1
     )
 
     # ========================================================
     # REFUND ELIGIBILITY
     #
-    # At this stage this is only the basic order-level
-    # eligibility check.
+    # Refund is available when:
     #
-    # The actual refund-request POST workflow will be added
-    # separately.
+    # - order is PAID or PARTIALLY_REFUNDED
+    # - refund window is still open
+    # - there is no currently REQUESTED refund
+    # - there is no currently PROCESSING refund
+    # - at least one refundable batch remains
+    #
+    # IMPORTANT:
+    # We intentionally do NOT block PARTIALLY_REFUNDED orders
+    # just because a previous refund was COMPLETED.
+    #
+    # This allows the student to refund remaining batches.
     # ========================================================
 
     refund_eligible = (
-        order.status == Order.Status.PAID
+        order.status in {
+            Order.Status.PAID,
+            Order.Status.PARTIALLY_REFUNDED,
+        }
         and refund_window_open
-        and not has_completed_refund
-        and not has_refund_request
+        and not has_requested_refund
+        and not has_processing_refund
+        and bool(refundable_order_items)
     )
 
     # ========================================================
     # ORDER STATUS LABEL
+    #
+    # Customer-facing order status.
+    #
+    # Internal PENDING / PAYMENT_PROCESSING are retained in
+    # the model but are not intended as normal customer-facing
+    # refund states.
     # ========================================================
 
     status_labels = {
@@ -2491,47 +2648,6 @@ def order_details_view(request, order_number):
     )
 
     # ========================================================
-    # COUPON TYPES
-    #
-    # Keep the raw historical type available to the template.
-    # ========================================================
-
-    coupon_types = [
-        coupon.coupon_type
-        for coupon in order_coupons
-        if coupon.coupon_type
-    ]
-
-    # ========================================================
-    # FULL ORDER REFUND CHECK
-    #
-    # A multi-checkout coupon means the order must be treated
-    # as a full-order refund.
-    #
-    # We are only exposing the state here.
-    # Actual refund processing comes later.
-    # ========================================================
-
-    has_multi_checkout_coupon = any(
-        coupon.coupon_type == "multi_checkout"
-        for coupon in order_coupons
-    )
-
-    # ========================================================
-    # PARTIAL REFUND POSSIBILITY
-    #
-    # Batch-specific and general coupons can later participate
-    # in the individual-batch refund workflow.
-    #
-    # Multi-checkout orders are full-order only.
-    # ========================================================
-
-    partial_refund_allowed = (
-        not has_multi_checkout_coupon
-        and bool(order_items)
-    )
-
-    # ========================================================
     # RENDER ORDER DETAILS
     # ========================================================
 
@@ -2582,19 +2698,66 @@ def order_details_view(request, order_number):
             "net_paid": net_paid,
 
             # ------------------------------------------------
+            # REFUND STATUS GROUPS
+            # ------------------------------------------------
+
+            "requested_refunds": requested_refunds,
+            "processing_refunds": processing_refunds,
+            "rejected_refunds": rejected_refunds,
+            "failed_refunds": failed_refunds,
+
+            # ------------------------------------------------
+            # REFUND STATE FLAGS
+            # ------------------------------------------------
+
+            "has_requested_refund": (
+                has_requested_refund
+            ),
+            "has_processing_refund": (
+                has_processing_refund
+            ),
+            "has_completed_refund": (
+                has_completed_refund
+            ),
+            "has_rejected_refund": (
+                has_rejected_refund
+            ),
+            "has_failed_refund": (
+                has_failed_refund
+            ),
+
+            # ------------------------------------------------
+            # EDITABLE REFUND
+            # ------------------------------------------------
+
+            "editable_refund": editable_refund,
+            "refund_edit_allowed": (
+                refund_edit_allowed
+            ),
+
+            # ------------------------------------------------
             # REFUND WINDOW
             # ------------------------------------------------
 
             "refund_deadline": refund_deadline,
-            "refund_window_open": refund_window_open,
+            "refund_window_open": (
+                refund_window_open
+            ),
             "refund_eligible": refund_eligible,
 
             # ------------------------------------------------
-            # REFUND STATE
+            # REFUNDABLE ITEMS
             # ------------------------------------------------
 
-            "has_refund_request": has_refund_request,
-            "has_completed_refund": has_completed_refund,
+            "refundable_order_items": (
+                refundable_order_items
+            ),
+            "refundable_order_item_ids": (
+                refundable_order_item_ids
+            ),
+            "refundable_item_count": (
+                refundable_item_count
+            ),
 
             # ------------------------------------------------
             # REFUND RULES
@@ -2603,7 +2766,6 @@ def order_details_view(request, order_number):
             "has_multi_checkout_coupon": (
                 has_multi_checkout_coupon
             ),
-
             "partial_refund_allowed": (
                 partial_refund_allowed
             ),
