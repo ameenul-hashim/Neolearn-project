@@ -1,12 +1,23 @@
 from decimal import Decimal, InvalidOperation
-
+from students.models import StudentProfile
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.db.models import F, Q
 from django.utils import timezone
-from .models import Batch, Coupon, CouponBatchRule
 from datetime import datetime
-
+from orders.models import (
+    Order,
+    OrderItem,
+    Payment,
+    StudentBatchPurchase,
+    Refund,
+)
+from .models import (
+    Batch,
+    Coupon,
+    CouponBatchRule,
+    AdminOrderSelection,
+)
 
 # =========================================================
 # BATCH HELPERS
@@ -3111,8 +3122,6 @@ def delete_coupon(coupon):
     return True
 
 # =========================================================
-
-# =========================================================
 # ADMIN REFUND HELPERS — REFUND NUMBER + ATTEMPT LIFECYCLE
 # =========================================================
 
@@ -3434,3 +3443,892 @@ def get_admin_refund_detail(refund_id):
         )
         .get(pk=refund_id)
     )
+
+# ============================================================
+# REFUND DETAIL
+# ============================================================
+
+
+def get_admin_refund_detail(refund_id):
+    """
+    Return one refund with all information required
+    by the admin refund detail page.
+    """
+
+    return (
+        Refund.objects
+        .select_related(
+            "student",
+            "order",
+            "order__payment",
+        )
+        .prefetch_related(
+            "items__order_item__batch",
+        )
+        .get(
+            pk=refund_id,
+        )
+    )
+
+# =========================================================
+# ADMIN ORDER SELECTION HELPERS
+# =========================================================
+
+def get_admin_selected_order_ids(admin):
+    """
+    Return the order IDs currently selected by this admin.
+
+    Selection is stored in the AdminOrderSelection table,
+    so it survives page refreshes, pagination and login sessions.
+    """
+
+    if not admin or not admin.is_authenticated:
+        return set()
+
+    return set(
+        AdminOrderSelection.objects
+        .filter(admin=admin)
+        .values_list(
+            "order_id",
+            flat=True,
+        )
+    )
+
+
+def save_admin_order_selection(
+    admin,
+    order_id,
+):
+    """
+    Save one order as selected for the current admin.
+
+    get_or_create() prevents duplicate selection rows.
+    """
+
+    if not admin or not admin.is_authenticated:
+        return False
+
+    if not Order.objects.filter(
+        pk=order_id,
+    ).exists():
+        return False
+
+    AdminOrderSelection.objects.get_or_create(
+        admin=admin,
+        order_id=order_id,
+    )
+
+    return True
+
+
+def remove_admin_order_selection(
+    admin,
+    order_id,
+):
+    """
+    Remove one order from the current admin's selection.
+    """
+
+    if not admin or not admin.is_authenticated:
+        return False
+
+    deleted_count, _ = (
+        AdminOrderSelection.objects
+        .filter(
+            admin=admin,
+            order_id=order_id,
+        )
+        .delete()
+    )
+
+    return deleted_count > 0
+
+
+def clear_admin_order_selections(admin):
+    """
+    Remove all selected orders belonging to the current admin.
+
+    Returns the number of deleted selection records.
+    """
+
+    if not admin or not admin.is_authenticated:
+        return 0
+
+    deleted_count, _ = (
+        AdminOrderSelection.objects
+        .filter(
+            admin=admin,
+        )
+        .delete()
+    )
+
+    return deleted_count
+
+# =========================================================
+# ADMIN ORDER MANAGEMENT
+# =========================================================
+
+
+ORDER_ACCESS_FILTERS = {
+    "active",
+    "partial",
+    "revoked",
+    "none",
+}
+
+
+def get_order_access_status(order):
+    """
+    Return the current batch-access state for an order.
+
+    active:
+        All order items currently have active student access.
+
+    partial:
+        Some order items have active access and some do not.
+
+    revoked:
+        No order item currently has active access and at least
+        one existing purchase is explicitly revoked.
+
+    none:
+        No StudentBatchPurchase record exists for the order.
+
+    Refund state remains separate from access state.
+    A refunded purchase is not automatically treated as revoked.
+    """
+
+    total_items = order.items.count()
+
+    if total_items == 0:
+        return "none"
+
+    purchases = list(
+        StudentBatchPurchase.objects.filter(
+            order=order,
+            student=order.user,
+        ).values(
+            "order_item_id",
+            "status",
+        )
+    )
+
+    if not purchases:
+        return "none"
+
+    active_item_ids = {
+        purchase["order_item_id"]
+        for purchase in purchases
+        if purchase["status"]
+        == StudentBatchPurchase.Status.ACTIVE
+    }
+
+    active_count = len(active_item_ids)
+
+    revoked_count = sum(
+        1
+        for purchase in purchases
+        if purchase["status"]
+        == StudentBatchPurchase.Status.REVOKED
+    )
+
+    if active_count >= total_items:
+        return "active"
+
+    if active_count > 0:
+        return "partial"
+
+    if revoked_count > 0:
+        return "revoked"
+
+    return "none"
+
+
+def get_order_access_status_label(status):
+    """
+    Convert the internal access status into the label
+    used by the Admin Order Management UI.
+    """
+
+    return {
+        "active": "Active",
+        "partial": "Partial",
+        "revoked": "Revoked",
+        "none": "No Access",
+    }.get(
+        status,
+        "No Access",
+    )
+
+
+def get_admin_order_queryset():
+    """
+    Base queryset for Admin Order Management.
+
+    This helper is read-only and prepares the related
+    objects required by the order listing and detail pages.
+    """
+
+    return (
+        Order.objects
+        .select_related(
+            "user",
+            "payment",
+        )
+        .prefetch_related(
+            "items__batch",
+            "coupons",
+            "batch_purchases__batch",
+            "batch_purchases__order_item",
+        )
+        .order_by(
+            "-created_at",
+            "-pk",
+        )
+    )
+
+
+def get_admin_order_summary():
+    """
+    Return the top-level Order Management statistics.
+
+    Summary values are calculated from the complete order
+    database and are not affected by the current filters.
+    """
+
+    orders = Order.objects.all()
+
+    total_orders = orders.count()
+
+    paid_orders = orders.filter(
+        status=Order.Status.PAID,
+    ).count()
+
+    pending_orders = orders.filter(
+        status__in=[
+            Order.Status.PENDING,
+            Order.Status.PAYMENT_PROCESSING,
+        ],
+    ).count()
+
+    failed_orders = orders.filter(
+        status=Order.Status.PAYMENT_FAILED,
+    ).count()
+
+    cancelled_orders = orders.filter(
+        status=Order.Status.CANCELLED,
+    ).count()
+
+    partially_refunded_orders = orders.filter(
+        status=Order.Status.PARTIALLY_REFUNDED,
+    ).count()
+
+    refunded_orders = orders.filter(
+        status=Order.Status.REFUNDED,
+    ).count()
+
+    active_access_orders = (
+        orders
+        .filter(
+            batch_purchases__status=(
+                StudentBatchPurchase.Status.ACTIVE
+            ),
+        )
+        .distinct()
+        .count()
+    )
+
+    return {
+        "total_orders": total_orders,
+        "paid_orders": paid_orders,
+        "pending_orders": pending_orders,
+        "failed_orders": failed_orders,
+        "cancelled_orders": cancelled_orders,
+        "partially_refunded_orders": (
+            partially_refunded_orders
+        ),
+        "refunded_orders": refunded_orders,
+        "active_access_orders": (
+            active_access_orders
+        ),
+    }
+
+
+def get_admin_order_listing_context(request):
+    """
+    Build the complete Admin Order Management listing context.
+
+    Supported GET parameters:
+
+        search
+        order_status
+        payment_status
+        access_status
+        date_from
+        date_to
+        page
+
+    Filters are preserved during pagination.
+    """
+
+    orders = get_admin_order_queryset()
+
+    # ---------------------------------------------------------
+    # SEARCH
+    # ---------------------------------------------------------
+
+    search = (
+        request.GET.get(
+            "search",
+            "",
+        )
+        .strip()
+    )
+
+    if search:
+        orders = orders.filter(
+            Q(order_number__icontains=search)
+            | Q(full_name__icontains=search)
+            | Q(phone__icontains=search)
+            | Q(user__username__icontains=search)
+            | Q(user__email__icontains=search)
+        )
+
+    # ---------------------------------------------------------
+    # ORDER STATUS
+    # ---------------------------------------------------------
+
+    order_status = (
+        request.GET.get(
+            "order_status",
+            "",
+        )
+        .strip()
+    )
+
+    valid_order_statuses = {
+        choice[0]
+        for choice in Order.Status.choices
+    }
+
+    if order_status in valid_order_statuses:
+        orders = orders.filter(
+            status=order_status,
+        )
+    else:
+        order_status = ""
+
+    # ---------------------------------------------------------
+    # PAYMENT STATUS
+    # ---------------------------------------------------------
+
+    payment_status = (
+        request.GET.get(
+            "payment_status",
+            "",
+        )
+        .strip()
+    )
+
+    valid_payment_statuses = {
+        choice[0]
+        for choice in Payment.Status.choices
+    }
+
+    if payment_status in valid_payment_statuses:
+        orders = orders.filter(
+            payment__status=payment_status,
+        )
+    else:
+        payment_status = ""
+
+    # ---------------------------------------------------------
+    # ACCESS STATUS
+    # ---------------------------------------------------------
+
+    access_status = (
+        request.GET.get(
+            "access_status",
+            "",
+        )
+        .strip()
+        .lower()
+    )
+
+    if access_status not in ORDER_ACCESS_FILTERS:
+        access_status = ""
+
+    if access_status:
+        matching_order_ids = []
+
+        for order in orders:
+            current_access_status = (
+                get_order_access_status(order)
+            )
+
+            if current_access_status == access_status:
+                matching_order_ids.append(
+                    order.pk
+                )
+
+        orders = orders.filter(
+            pk__in=matching_order_ids
+        )
+
+    # ---------------------------------------------------------
+    # DATE FROM
+    # ---------------------------------------------------------
+
+    date_from = (
+        request.GET.get(
+            "date_from",
+            "",
+        )
+        .strip()
+    )
+
+    if date_from:
+        try:
+            parsed_date_from = datetime.strptime(
+                date_from,
+                "%Y-%m-%d",
+            ).date()
+
+            orders = orders.filter(
+                created_at__date__gte=parsed_date_from,
+            )
+
+        except ValueError:
+            date_from = ""
+
+    # ---------------------------------------------------------
+    # DATE TO
+    # ---------------------------------------------------------
+
+    date_to = (
+        request.GET.get(
+            "date_to",
+            "",
+        )
+        .strip()
+    )
+
+    if date_to:
+        try:
+            parsed_date_to = datetime.strptime(
+                date_to,
+                "%Y-%m-%d",
+            ).date()
+
+            orders = orders.filter(
+                created_at__date__lte=parsed_date_to,
+            )
+
+        except ValueError:
+            date_to = ""
+
+    # ---------------------------------------------------------
+    # PAGINATION
+    # ---------------------------------------------------------
+
+    page_number = (
+        request.GET.get(
+            "page",
+            1,
+        )
+    )
+
+    paginator = Paginator(
+        orders,
+        10,
+    )
+
+    page_obj = paginator.get_page(
+        page_number
+    )
+
+    # ---------------------------------------------------------
+    # ATTACH ADMIN DISPLAY VALUES
+    # ---------------------------------------------------------
+
+    order_status_labels = dict(
+        Order.Status.choices
+    )
+
+    payment_status_labels = dict(
+        Payment.Status.choices
+    )
+
+    for order in page_obj.object_list:
+
+        access = get_order_access_status(
+            order
+        )
+
+        order.admin_access_status = access
+
+        order.admin_access_status_label = (
+            get_order_access_status_label(
+                access
+            )
+        )
+
+        payment = getattr(
+            order,
+            "payment",
+            None,
+        )
+
+        if payment is not None:
+            order.admin_payment_status = (
+                payment.status
+            )
+
+            order.admin_payment_status_label = (
+                payment_status_labels.get(
+                    payment.status,
+                    payment.status,
+                )
+            )
+
+        else:
+            order.admin_payment_status = None
+
+            order.admin_payment_status_label = (
+                "No Payment Record"
+            )
+
+        order.admin_order_status_label = (
+            order_status_labels.get(
+                order.status,
+                order.status,
+            )
+        )
+
+    # ---------------------------------------------------------
+    # PRESERVE FILTERS
+    # ---------------------------------------------------------
+
+    preserved_params = []
+
+    if search:
+        preserved_params.append(
+            f"search={search}"
+        )
+
+    if order_status:
+        preserved_params.append(
+            f"order_status={order_status}"
+        )
+
+    if payment_status:
+        preserved_params.append(
+            f"payment_status={payment_status}"
+        )
+
+    if access_status:
+        preserved_params.append(
+            f"access_status={access_status}"
+        )
+
+    if date_from:
+        preserved_params.append(
+            f"date_from={date_from}"
+        )
+
+    if date_to:
+        preserved_params.append(
+            f"date_to={date_to}"
+        )
+
+    # ---------------------------------------------------------
+    # CURRENT ADMIN SELECTIONS
+    # ---------------------------------------------------------
+
+    selected_order_ids = (
+        get_admin_selected_order_ids(
+            request.user
+        )
+    )
+
+    # ---------------------------------------------------------
+    # CONTEXT
+    # ---------------------------------------------------------
+
+    return {
+        "selected_order_ids": selected_order_ids,
+
+        "orders": page_obj.object_list,
+
+        "page_obj": page_obj,
+
+        "paginator": paginator,
+
+        "search": search,
+
+        "selected_order_status": order_status,
+
+        "selected_payment_status": payment_status,
+
+        "selected_access_status": access_status,
+
+        "date_from": date_from,
+
+        "date_to": date_to,
+
+        "order_statuses": [
+            choice[0]
+            for choice in Order.Status.choices
+        ],
+
+        "order_status_labels": {
+            choice[0]: choice[1]
+            for choice in Order.Status.choices
+        },
+
+        "payment_statuses": [
+            choice[0]
+            for choice in Payment.Status.choices
+        ],
+
+        "payment_status_labels": {
+            choice[0]: choice[1]
+            for choice in Payment.Status.choices
+        },
+
+        "access_statuses": [
+            "active",
+            "partial",
+            "revoked",
+            "none",
+        ],
+
+        "access_status_labels": {
+            status: get_order_access_status_label(
+                status
+            )
+            for status in ORDER_ACCESS_FILTERS
+        },
+
+        "summary": get_admin_order_summary(),
+
+        "preserved_query": "&".join(
+            preserved_params
+        ),
+    }
+
+
+def get_admin_order_detail(order_id):
+    """
+    Return one complete order for the Admin Order
+    Detail page.
+
+    This helper is read-only.
+
+    It prepares:
+        - Student information
+        - NeoLearn Student ID
+        - Payment information
+        - Invoice information
+        - Order status
+        - Access status
+        - Access counts
+        - Order items
+        - Batch information
+    """
+
+    # ========================================================
+    # ORDER
+    # ========================================================
+
+    order = (
+        get_admin_order_queryset()
+        .select_related(
+            "user",
+            "payment",
+            "invoice",
+        )
+        .prefetch_related(
+            "items__batch",
+            "coupons",
+            "batch_purchases__batch",
+            "batch_purchases__order_item",
+        )
+        .get(
+            pk=order_id,
+        )
+    )
+
+    # ========================================================
+    # STUDENT INFORMATION
+    # ========================================================
+
+    student_profile = (
+        StudentProfile.objects
+        .filter(
+            user=order.user,
+        )
+        .only(
+            "neo_student_id",
+        )
+        .first()
+    )
+
+    if student_profile is not None:
+        order.admin_student_id = (
+            student_profile.neo_student_id
+        )
+    else:
+        order.admin_student_id = None
+
+    # ========================================================
+    # INVOICE INFORMATION
+    # ========================================================
+
+    invoice = getattr(
+        order,
+        "invoice",
+        None,
+    )
+
+    order.admin_invoice = invoice
+
+    if invoice is not None:
+        order.admin_invoice_number = (
+            invoice.invoice_number
+        )
+
+        order.admin_invoice_date = (
+            invoice.invoice_date
+        )
+    else:
+        order.admin_invoice_number = None
+        order.admin_invoice_date = None
+
+    # ========================================================
+    # ACCESS STATUS
+    # ========================================================
+
+    access_status = get_order_access_status(
+        order,
+    )
+
+    order.admin_access_status = (
+        access_status
+    )
+
+    order.admin_access_status_label = (
+        get_order_access_status_label(
+            access_status,
+        )
+    )
+
+    # ========================================================
+    # PAYMENT STATUS
+    # ========================================================
+
+    payment = getattr(
+        order,
+        "payment",
+        None,
+    )
+
+    if payment is not None:
+
+        order.admin_payment_status = (
+            payment.status
+        )
+
+        order.admin_payment_status_label = (
+            dict(
+                Payment.Status.choices
+            ).get(
+                payment.status,
+                payment.status,
+            )
+        )
+
+    else:
+
+        order.admin_payment_status = None
+
+        order.admin_payment_status_label = (
+            "No Payment Record"
+        )
+
+    # ========================================================
+    # ORDER STATUS
+    # ========================================================
+
+    order.admin_order_status_label = (
+        dict(
+            Order.Status.choices
+        ).get(
+            order.status,
+            order.status,
+        )
+    )
+
+    # ========================================================
+    # ACCESS COUNTS
+    # ========================================================
+
+    total_items = (
+        order.items.count()
+    )
+
+    active_purchase_count = (
+        order.batch_purchases.filter(
+            status=(
+                StudentBatchPurchase.Status.ACTIVE
+            ),
+        ).count()
+    )
+
+    revoked_purchase_count = (
+        order.batch_purchases.filter(
+            status=(
+                StudentBatchPurchase.Status.REVOKED
+            ),
+        ).count()
+    )
+
+    refunded_purchase_count = (
+        order.batch_purchases.filter(
+            status=(
+                StudentBatchPurchase.Status.REFUNDED
+            ),
+        ).count()
+    )
+
+    # ========================================================
+    # STORE COUNTS ON ORDER FOR TEMPLATE
+    # ========================================================
+
+    order.admin_total_item_count = (
+        total_items
+    )
+
+    order.admin_active_access_count = (
+        active_purchase_count
+    )
+
+    order.admin_revoked_access_count = (
+        revoked_purchase_count
+    )
+
+    order.admin_refunded_access_count = (
+        refunded_purchase_count
+    )
+
+    order.admin_no_access_count = max(
+        total_items
+        - active_purchase_count,
+        0,
+    )
+
+    # ========================================================
+    # RETURN
+    # ========================================================
+
+    return order

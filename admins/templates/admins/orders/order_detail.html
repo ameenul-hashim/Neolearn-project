@@ -1,0 +1,2962 @@
+{% extends "admins/admin_base.html" %}
+
+{% block title %}
+    Order Details | NeoLearn Admin
+{% endblock %}
+
+{% block admin_content %}
+
+{% with payment=order.payment %}
+
+<div
+    class="
+        neo-admin-order-page
+        w-full
+        min-w-0
+        h-[calc(100dvh-6.5rem)]
+        max-h-[calc(100dvh-6.5rem)]
+        overflow-hidden
+        text-white
+    "
+>
+
+    <section
+        class="
+            mx-auto
+            flex
+            h-full
+            min-h-0
+            w-full
+            max-w-[1400px]
+            min-w-0
+            flex-col
+            overflow-hidden
+            rounded-2xl
+            border
+            border-cyan-400/20
+            bg-[#020b18]/95
+            shadow-[0_0_40px_rgba(8,145,178,0.08)]
+            p-2
+            sm:p-2.5
+            lg:p-3
+            xl:p-3.5
+        "
+    >
+
+        <!-- =========================================================
+             TOP HEADER
+        ========================================================== -->
+
+        <div
+            class="
+                shrink-0
+                flex
+                items-center
+                justify-between
+                gap-3
+                px-1
+                pb-2
+                sm:px-2
+            "
+        >
+
+            <a
+                href="{% url 'admin_orders' %}"
+                class="
+                    inline-flex
+                    min-h-[32px]
+                    items-center
+                    gap-1.5
+                    rounded-lg
+                    px-1.5
+                    text-[10px]
+                    font-black
+                    text-cyan-300
+                    transition
+                    hover:text-cyan-100
+                "
+            >
+                <i class="ri-arrow-left-line text-sm"></i>
+                Back to Orders
+            </a>
+
+            <span
+                class="
+                    hidden
+                    rounded-full
+                    border
+                    border-white/10
+                    bg-white/[0.035]
+                    px-2.5
+                    py-1
+                    text-[7px]
+                    font-black
+                    uppercase
+                    tracking-[0.12em]
+                    text-slate-400
+                    sm:inline-flex
+                "
+            >
+                Order Details
+            </span>
+
+        </div>
+
+
+        <!-- =========================================================
+             ORDER IDENTITY HEADER
+        ========================================================== -->
+
+        <section
+            class="
+                shrink-0
+                overflow-hidden
+                rounded-xl
+                border
+                {% if order.status == 'paid' %}
+                    border-emerald-400/30
+                    bg-emerald-400/[0.025]
+                {% elif order.status == 'partially_refunded' %}
+                    border-violet-400/30
+                    bg-violet-400/[0.025]
+                {% elif order.status == 'refunded' %}
+                    border-sky-400/30
+                    bg-sky-400/[0.025]
+                {% elif order.status == 'cancelled' %}
+                    border-orange-400/30
+                    bg-orange-400/[0.025]
+                {% elif order.status == 'payment_failed' %}
+                    border-rose-400/30
+                    bg-rose-400/[0.025]
+                {% else %}
+                    border-amber-400/30
+                    bg-amber-400/[0.025]
+                {% endif %}
+            "
+        >
+
+            <div
+                class="
+                    flex
+                    min-w-0
+                    flex-col
+                    gap-3
+                    px-3
+                    py-3
+                    sm:px-4
+                    lg:flex-row
+                    lg:items-center
+                    lg:justify-between
+                "
+            >
+
+                <div class="flex min-w-0 items-center gap-3">
+
+                    <span
+                        class="
+                            flex
+                            h-11
+                            w-11
+                            shrink-0
+                            items-center
+                            justify-center
+                            rounded-xl
+                            border
+                            border-cyan-400/30
+                            bg-cyan-400/10
+                            text-cyan-300
+                            shadow-[0_0_18px_rgba(34,211,238,0.08)]
+                        "
+                    >
+                        <i class="ri-shopping-cart-2-line text-xl"></i>
+                    </span>
+
+                    <div class="min-w-0">
+
+                        <div class="flex min-w-0 flex-wrap items-center gap-2">
+
+                            <h1
+                                class="
+                                    min-w-0
+                                    break-all
+                                    text-lg
+                                    font-black
+                                    tracking-tight
+                                    text-white
+                                    sm:text-xl
+                                    lg:text-2xl
+                                "
+                            >
+                                Order #{{ order.order_number }}
+                            </h1>
+
+                            <!-- ORDER STATUS -->
+
+                            {% if order.status == "paid" %}
+                                <span class="inline-flex shrink-0 items-center gap-1 rounded-full border border-emerald-400/25 bg-emerald-400/10 px-2.5 py-1 text-[7px] font-black uppercase text-emerald-300">
+                                    <i class="ri-checkbox-circle-fill"></i>
+                                    Paid
+                                </span>
+                            {% elif order.status == "partially_refunded" %}
+                                <span class="inline-flex shrink-0 items-center gap-1 rounded-full border border-violet-400/25 bg-violet-400/10 px-2.5 py-1 text-[7px] font-black uppercase text-violet-300">
+                                    <i class="ri-refund-2-line"></i>
+                                    Partially Refunded
+                                </span>
+                            {% elif order.status == "refunded" %}
+                                <span class="inline-flex shrink-0 items-center gap-1 rounded-full border border-sky-400/25 bg-sky-400/10 px-2.5 py-1 text-[7px] font-black uppercase text-sky-300">
+                                    <i class="ri-refund-2-line"></i>
+                                    Refunded
+                                </span>
+                            {% elif order.status == "cancelled" %}
+                                <span class="inline-flex shrink-0 items-center gap-1 rounded-full border border-orange-400/25 bg-orange-400/10 px-2.5 py-1 text-[7px] font-black uppercase text-orange-300">
+                                    <i class="ri-close-circle-fill"></i>
+                                    Cancelled
+                                </span>
+                            {% elif order.status == "payment_failed" %}
+                                <span class="inline-flex shrink-0 items-center gap-1 rounded-full border border-rose-400/25 bg-rose-400/10 px-2.5 py-1 text-[7px] font-black uppercase text-rose-300">
+                                    <i class="ri-error-warning-fill"></i>
+                                    Payment Failed
+                                </span>
+                            {% elif order.status == "payment_processing" %}
+                                <span class="inline-flex shrink-0 items-center gap-1 rounded-full border border-amber-400/25 bg-amber-400/10 px-2.5 py-1 text-[7px] font-black uppercase text-amber-300">
+                                    <i class="ri-loader-4-line"></i>
+                                    Payment Processing
+                                </span>
+                            {% else %}
+                                <span class="inline-flex shrink-0 items-center gap-1 rounded-full border border-cyan-400/25 bg-cyan-400/10 px-2.5 py-1 text-[7px] font-black uppercase text-cyan-300">
+                                    <i class="ri-time-line"></i>
+                                    Pending
+                                </span>
+                            {% endif %}
+
+                        </div>
+
+
+                        <div
+                            class="
+                                mt-1.5
+                                flex
+                                min-w-0
+                                flex-wrap
+                                items-center
+                                gap-x-2.5
+                                gap-y-1
+                                text-[8px]
+                                text-slate-400
+                                sm:text-[9px]
+                            "
+                        >
+
+                            <span class="inline-flex items-center gap-1">
+                                <i class="ri-calendar-line text-cyan-400/70"></i>
+                                Placed on {{ order.created_at|date:"d M Y, h:i A" }}
+                            </span>
+
+                            <span class="hidden h-3 w-px bg-white/10 sm:block"></span>
+
+                            <span class="inline-flex items-center gap-1">
+                                <i class="ri-book-open-line text-cyan-400/70"></i>
+                                {{ order.items.all|length }}
+                                {% if order.items.all|length == 1 %}Batch{% else %}Batches{% endif %}
+                            </span>
+
+                            {% if order.invoice %}
+
+                                <span class="hidden h-3 w-px bg-white/10 sm:block"></span>
+
+                                <span class="inline-flex min-w-0 items-center gap-1">
+                                    <i class="ri-file-text-line text-cyan-400/70"></i>
+                                    <span class="truncate">
+                                        Invoice: {{ order.invoice.invoice_number }}
+                                    </span>
+                                </span>
+
+                            {% endif %}
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <!-- ACCESS + AMOUNT -->
+
+                <div
+                    class="
+                        grid
+                        w-full
+                        shrink-0
+                        grid-cols-2
+                        gap-2
+                        sm:flex
+                        sm:w-auto
+                    "
+                >
+
+                    <div
+                        class="
+                            min-w-[125px]
+                            rounded-xl
+                            border
+                            border-cyan-400/20
+                            bg-cyan-400/[0.035]
+                            px-3
+                            py-2
+                        "
+                    >
+                        <p class="text-[7px] font-black uppercase tracking-[0.12em] text-slate-500">
+                            Final Amount
+                        </p>
+
+                        <p class="mt-0.5 text-base font-black text-cyan-300">
+                            ₹{{ order.final_amount|floatformat:2 }}
+                        </p>
+                    </div>
+
+
+                    <div
+                        class="
+                            min-w-[125px]
+                            rounded-xl
+                            border
+                            {% if order.status == 'paid' %}
+                                border-emerald-400/25 bg-emerald-400/[0.045]
+                            {% elif order.status == 'partially_refunded' %}
+                                border-violet-400/25 bg-violet-400/[0.045]
+                            {% elif order.status == 'refunded' %}
+                                border-sky-400/25 bg-sky-400/[0.045]
+                            {% elif order.status == 'cancelled' or order.status == 'payment_failed' %}
+                                border-rose-400/20 bg-rose-400/[0.035]
+                            {% else %}
+                                border-amber-400/20 bg-amber-400/[0.035]
+                            {% endif %}
+                            px-3
+                            py-2
+                        "
+                    >
+                        <p class="text-[7px] font-black uppercase tracking-[0.12em] text-slate-500">
+                            Access
+                        </p>
+
+                        {% if order.status == "paid" %}
+                            <p class="mt-0.5 text-sm font-black text-emerald-300">
+                                Active
+                            </p>
+                        {% elif order.status == "partially_refunded" %}
+                            <p class="mt-0.5 text-sm font-black text-violet-300">
+                                Partial
+                            </p>
+                        {% elif order.status == "refunded" %}
+                            <p class="mt-0.5 text-sm font-black text-sky-300">
+                                Refunded
+                            </p>
+                        {% elif order.status == "cancelled" or order.status == "payment_failed" %}
+                            <p class="mt-0.5 text-sm font-black text-rose-300">
+                                No Access
+                            </p>
+                        {% else %}
+                            <p class="mt-0.5 text-sm font-black text-amber-300">
+                                Pending
+                            </p>
+                        {% endif %}
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- =========================================================
+             TWO INDEPENDENT SCROLL COLUMNS
+        ========================================================== -->
+
+        <div
+            class="
+                mt-2.5
+                grid
+                min-h-0
+                min-w-0
+                flex-1
+                grid-cols-1
+                gap-2.5
+                overflow-hidden
+                lg:grid-cols-[minmax(0,1fr)_320px]
+                xl:grid-cols-[minmax(0,1fr)_350px]
+                2xl:grid-cols-[minmax(0,1fr)_370px]
+            "
+        >
+
+            <!-- =====================================================
+                 LEFT COLUMN
+            ====================================================== -->
+
+            <main
+                class="
+                    neo-order-column-scroll
+                    min-h-0
+                    min-w-0
+                    overflow-y-auto
+                    overflow-x-hidden
+                    pr-0.5
+                    overscroll-contain
+                "
+            >
+
+                <div class="flex min-w-0 flex-col gap-2.5 pb-1">
+
+
+                    <!-- =================================================
+                         STUDENT INFORMATION
+                    ================================================== -->
+
+                    <section class="neo-card">
+
+                        <div class="neo-card-header">
+
+                            <div class="neo-icon">
+                                <i class="ri-user-3-line"></i>
+                            </div>
+
+                            <div class="min-w-0">
+                                <h2 class="neo-card-title">Student Information</h2>
+                                <p class="neo-card-subtitle">
+                                    Details of the student who placed this order
+                                </p>
+                            </div>
+
+                        </div>
+
+
+                        <div class="p-3">
+
+                            <div
+                                class="
+                                    grid
+                                    grid-cols-1
+                                    gap-px
+                                    overflow-hidden
+                                    rounded-xl
+                                    border
+                                    border-white/[0.07]
+                                    bg-white/[0.06]
+                                    sm:grid-cols-2
+                                    xl:grid-cols-5
+                                "
+                            >
+
+                                <div class="neo-info-cell">
+                                    <p class="neo-label">Student</p>
+                                    <p class="neo-value">{{ order.full_name|default:order.user.get_full_name|default:order.user.username }}</p>
+                                </div>
+
+                                <div class="neo-info-cell">
+                                    <p class="neo-label">Email</p>
+                                    <p class="neo-value break-all">{{ order.user.email|default:"—" }}</p>
+                                </div>
+
+                                <div class="neo-info-cell">
+                                    <p class="neo-label">Phone</p>
+                                    <p class="neo-value">{{ order.phone|default:"—" }}</p>
+                                </div>
+
+                                <div class="neo-info-cell">
+                                    <p class="neo-label">Alternative Phone</p>
+                                    <p class="neo-value">{{ order.alternative_phone|default:"—" }}</p>
+                                </div>
+
+                                <div class="neo-info-cell">
+    <p class="neo-label">Student ID</p>
+    <p class="neo-value">
+        {{ order.admin_student_id|default:"—" }}
+    </p>
+</div>
+
+                            </div>
+
+                        </div>
+
+                    </section>
+
+
+                    <!-- =================================================
+                         ORDER ITEMS
+                    ================================================== -->
+
+                    <section class="neo-card">
+
+                        <div class="neo-card-header">
+
+                            <div class="neo-icon">
+                                <i class="ri-box-3-line"></i>
+                            </div>
+
+                            <div class="min-w-0">
+                                <h2 class="neo-card-title">Order Items</h2>
+                                <p class="neo-card-subtitle">
+                                    Batches / courses included in this order
+                                </p>
+                            </div>
+
+                        </div>
+
+
+                        <div class="p-3">
+
+                            <div
+                                class="
+                                    min-w-[760px]
+                                    overflow-hidden
+                                    rounded-xl
+                                    border
+                                    border-white/[0.07]
+                                    bg-white/[0.018]
+                                "
+                            >
+
+                                <!-- TABLE HEADER -->
+
+                                <div
+                                    class="
+                                        grid
+                                        grid-cols-[34px_minmax(190px,1.7fr)_105px_105px_105px_105px_88px]
+                                        items-center
+                                        gap-2
+                                        border-b
+                                        border-white/[0.07]
+                                        bg-cyan-400/[0.045]
+                                        px-3
+                                        py-2.5
+                                    "
+                                >
+                                    <span class="neo-table-head">#</span>
+                                    <span class="neo-table-head">Batch / Course</span>
+                                    <span class="neo-table-head">Original</span>
+                                    <span class="neo-table-head">Batch Disc.</span>
+                                    <span class="neo-table-head">Coupon Disc.</span>
+                                    <span class="neo-table-head">Final Price</span>
+                                    <span class="neo-table-head">Access</span>
+                                </div>
+
+
+                                {% for item in order.items.all %}
+
+                                    {% with purchase=item.purchase %}
+
+                                        <div
+                                            class="
+                                                grid
+                                                grid-cols-[34px_minmax(190px,1.7fr)_105px_105px_105px_105px_88px]
+                                                items-center
+                                                gap-2
+                                                border-b
+                                                border-white/[0.06]
+                                                px-3
+                                                py-2.5
+                                                last:border-b-0
+                                            "
+                                        >
+
+                                            <span class="text-[8px] font-black text-slate-500">
+                                                {{ forloop.counter }}
+                                            </span>
+
+
+                                            <div class="flex min-w-0 items-center gap-2">
+
+                                                {% if item.batch.batch_thumbnail %}
+
+                                                    <img
+                                                        src="{{ item.batch.batch_thumbnail.url }}"
+                                                        alt="{{ item.batch_name }}"
+                                                        class="
+                                                            h-10
+                                                            w-10
+                                                            shrink-0
+                                                            rounded-lg
+                                                            border
+                                                            border-white/10
+                                                            object-cover
+                                                        "
+                                                    >
+
+                                                {% else %}
+
+                                                    <span
+                                                        class="
+                                                            flex
+                                                            h-10
+                                                            w-10
+                                                            shrink-0
+                                                            items-center
+                                                            justify-center
+                                                            rounded-lg
+                                                            border
+                                                            border-white/10
+                                                            bg-white/[0.04]
+                                                            text-cyan-300/70
+                                                        "
+                                                    >
+                                                        <i class="ri-image-line"></i>
+                                                    </span>
+
+                                                {% endif %}
+
+
+                                                <div class="min-w-0">
+
+                                                    <p
+                                                        class="truncate text-[9px] font-black text-white"
+                                                        title="{{ item.batch_name }}"
+                                                    >
+                                                        {{ item.batch_name }}
+                                                    </p>
+
+                                                    <p class="mt-0.5 text-[7px] text-slate-500">
+                                                        Batch ID #{{ item.batch_id }}
+                                                    </p>
+
+                                                </div>
+
+                                            </div>
+
+
+                                            <span class="neo-money">
+                                                ₹{{ item.original_price|floatformat:2 }}
+                                            </span>
+
+                                            <span class="neo-discount">
+                                                {% if item.batch_discount %}
+                                                    - ₹{{ item.batch_discount|floatformat:2 }}
+                                                {% else %}
+                                                    ₹0.00
+                                                {% endif %}
+                                            </span>
+
+                                            <span class="neo-discount">
+                                                {% if item.coupon_discount %}
+                                                    - ₹{{ item.coupon_discount|floatformat:2 }}
+                                                {% else %}
+                                                    ₹0.00
+                                                {% endif %}
+                                            </span>
+
+                                            <span class="text-[9px] font-black text-white">
+                                                ₹{{ item.final_price|floatformat:2 }}
+                                            </span>
+
+
+                                            {% if purchase and purchase.status == "active" %}
+
+                                                <span class="neo-badge neo-badge-green">
+                                                    Active
+                                                </span>
+
+                                            {% elif purchase and purchase.status == "refunded" %}
+
+                                                <span class="neo-badge neo-badge-violet">
+                                                    Refunded
+                                                </span>
+
+                                            {% elif order.status == "paid" %}
+
+                                                <span class="neo-badge neo-badge-green">
+                                                    Active
+                                                </span>
+
+                                            {% elif order.status == "partially_refunded" %}
+
+                                                <span class="neo-badge neo-badge-violet">
+                                                    Partial
+                                                </span>
+
+                                            {% else %}
+
+                                                <span class="neo-badge neo-badge-muted">
+                                                    No Access
+                                                </span>
+
+                                            {% endif %}
+
+                                        </div>
+
+                                    {% endwith %}
+
+                                {% empty %}
+
+                                    <div class="px-4 py-10 text-center">
+                                        <i class="ri-inbox-2-line text-2xl text-slate-700"></i>
+                                        <p class="mt-2 text-[9px] font-bold text-slate-500">
+                                            No order items available.
+                                        </p>
+                                    </div>
+
+                                {% endfor %}
+
+                            </div>
+
+                        </div>
+
+                    </section>
+
+
+                    <!-- =================================================
+                         ACCESS OVERVIEW
+                    ================================================== -->
+
+                    <section class="neo-card">
+
+                        <div class="neo-card-header">
+
+                            <div class="neo-icon">
+                                <i class="ri-lock-unlock-line"></i>
+                            </div>
+
+                            <div class="min-w-0">
+                                <h2 class="neo-card-title">Access Overview</h2>
+                                <p class="neo-card-subtitle">
+                                    Overall access status for this order
+                                </p>
+                            </div>
+
+                        </div>
+
+
+                        <div class="p-3">
+
+                            {% if order.status == "paid" %}
+
+                                <div class="neo-access-box neo-access-green">
+
+                                    <span class="neo-access-icon neo-access-icon-green">
+                                        <i class="ri-check-line"></i>
+                                    </span>
+
+                                    <div class="min-w-0 flex-1">
+                                        <p class="text-sm font-black text-emerald-300">
+                                            Access Active
+                                        </p>
+                                        <p class="mt-0.5 text-[8px] text-slate-300">
+                                            Student has access to the purchased batches.
+                                        </p>
+                                    </div>
+
+                                    <div class="shrink-0 text-right">
+                                        <p class="text-xl font-black text-emerald-300">
+                                            {{ order.batch_purchases.all|length }} / {{ order.items.all|length }}
+                                        </p>
+                                        <p class="text-[7px] font-black uppercase tracking-wide text-emerald-400">
+                                            Batches Active
+                                        </p>
+                                    </div>
+
+                                </div>
+
+                            {% elif order.status == "partially_refunded" %}
+
+                                <div class="neo-access-box neo-access-violet">
+
+                                    <span class="neo-access-icon neo-access-icon-violet">
+                                        <i class="ri-refund-2-line"></i>
+                                    </span>
+
+                                    <div class="min-w-0 flex-1">
+                                        <p class="text-sm font-black text-violet-300">
+                                            Partial Access
+                                        </p>
+                                        <p class="mt-0.5 text-[8px] text-slate-300">
+                                            Some purchased batches have been refunded.
+                                        </p>
+                                    </div>
+
+                                    <div class="shrink-0 text-right">
+                                        <p class="text-xl font-black text-violet-300">
+                                            —
+                                        </p>
+                                        <p class="text-[7px] font-black uppercase tracking-wide text-violet-400">
+                                            Review Batches
+                                        </p>
+                                    </div>
+
+                                </div>
+
+                            {% elif order.status == "refunded" %}
+
+                                <div class="neo-access-box neo-access-sky">
+
+                                    <span class="neo-access-icon neo-access-icon-sky">
+                                        <i class="ri-refund-2-line"></i>
+                                    </span>
+
+                                    <div class="min-w-0 flex-1">
+                                        <p class="text-sm font-black text-sky-300">
+                                            Access Refunded
+                                        </p>
+                                        <p class="mt-0.5 text-[8px] text-slate-300">
+                                            The order is fully refunded.
+                                        </p>
+                                    </div>
+
+                                    <div class="shrink-0 text-right">
+                                        <p class="text-xl font-black text-sky-300">
+                                            0 / {{ order.items.all|length }}
+                                        </p>
+                                        <p class="text-[7px] font-black uppercase tracking-wide text-sky-400">
+                                            Active
+                                        </p>
+                                    </div>
+
+                                </div>
+
+                            {% elif order.status == "payment_failed" %}
+
+                                <div class="neo-access-box neo-access-red">
+
+                                    <span class="neo-access-icon neo-access-icon-red">
+                                        <i class="ri-close-line"></i>
+                                    </span>
+
+                                    <div class="min-w-0 flex-1">
+                                        <p class="text-sm font-black text-rose-300">
+                                            No Access
+                                        </p>
+                                        <p class="mt-0.5 text-[8px] text-slate-300">
+                                            Payment failed and access was not granted.
+                                        </p>
+                                    </div>
+
+                                    <div class="shrink-0 text-right">
+                                        <p class="text-xl font-black text-rose-300">
+                                            0 / {{ order.items.all|length }}
+                                        </p>
+                                        <p class="text-[7px] font-black uppercase tracking-wide text-rose-400">
+                                            Active
+                                        </p>
+                                    </div>
+
+                                </div>
+
+                            {% elif order.status == "cancelled" %}
+
+                                <div class="neo-access-box neo-access-orange">
+
+                                    <span class="neo-access-icon neo-access-icon-orange">
+                                        <i class="ri-close-circle-line"></i>
+                                    </span>
+
+                                    <div class="min-w-0 flex-1">
+                                        <p class="text-sm font-black text-orange-300">
+                                            No Access
+                                        </p>
+                                        <p class="mt-0.5 text-[8px] text-slate-300">
+                                            The order was cancelled before access was granted.
+                                        </p>
+                                    </div>
+
+                                    <div class="shrink-0 text-right">
+                                        <p class="text-xl font-black text-orange-300">
+                                            0 / {{ order.items.all|length }}
+                                        </p>
+                                        <p class="text-[7px] font-black uppercase tracking-wide text-orange-400">
+                                            Active
+                                        </p>
+                                    </div>
+
+                                </div>
+
+                            {% else %}
+
+                                <div class="neo-access-box neo-access-amber">
+
+                                    <span class="neo-access-icon neo-access-icon-amber">
+                                        <i class="ri-time-line"></i>
+                                    </span>
+
+                                    <div class="min-w-0 flex-1">
+                                        <p class="text-sm font-black text-amber-300">
+                                            Access Pending
+                                        </p>
+                                        <p class="mt-0.5 text-[8px] text-slate-300">
+                                            Payment has not yet completed successfully.
+                                        </p>
+                                    </div>
+
+                                    <div class="shrink-0 text-right">
+                                        <p class="text-xl font-black text-amber-300">
+                                            0 / {{ order.items.all|length }}
+                                        </p>
+                                        <p class="text-[7px] font-black uppercase tracking-wide text-amber-400">
+                                            Active
+                                        </p>
+                                    </div>
+
+                                </div>
+
+                            {% endif %}
+
+                        </div>
+
+                    </section>
+
+
+                    <!-- =================================================
+                         BATCH ACCESS DETAILS
+                    ================================================== -->
+
+                    <section class="neo-card">
+
+                        <div class="neo-card-header">
+
+                            <div class="neo-icon">
+                                <i class="ri-stack-line"></i>
+                            </div>
+
+                            <div class="min-w-0">
+                                <h2 class="neo-card-title">Batch Access Details</h2>
+                                <p class="neo-card-subtitle">
+                                    Detailed access information for each purchased batch
+                                </p>
+                            </div>
+
+                        </div>
+
+
+                        <div class="space-y-1.5 p-3">
+
+                            {% for purchase in order.batch_purchases.all %}
+
+                                <div
+                                    class="
+                                        flex
+                                        min-w-0
+                                        flex-col
+                                        gap-2
+                                        rounded-xl
+                                        border
+                                        border-white/[0.07]
+                                        bg-white/[0.018]
+                                        p-2.5
+                                        sm:flex-row
+                                        sm:items-center
+                                    "
+                                >
+
+                                    {% if purchase.batch.batch_thumbnail %}
+
+                                        <img
+                                            src="{{ purchase.batch.batch_thumbnail.url }}"
+                                            alt="{{ purchase.batch.batch_name }}"
+                                            class="
+                                                h-10
+                                                w-10
+                                                shrink-0
+                                                rounded-lg
+                                                border
+                                                border-white/10
+                                                object-cover
+                                            "
+                                        >
+
+                                    {% else %}
+
+                                        <span
+                                            class="
+                                                flex
+                                                h-10
+                                                w-10
+                                                shrink-0
+                                                items-center
+                                                justify-center
+                                                rounded-lg
+                                                border
+                                                border-white/10
+                                                bg-white/[0.04]
+                                                text-cyan-300/70
+                                            "
+                                        >
+                                            <i class="ri-book-2-line"></i>
+                                        </span>
+
+                                    {% endif %}
+
+
+                                    <div class="min-w-0 flex-1">
+
+                                        <p class="truncate text-[9px] font-black text-white">
+                                            {{ purchase.batch.batch_name }}
+                                        </p>
+
+                                        <p class="mt-0.5 text-[7px] text-slate-500">
+                                            Purchased through this order
+                                            {% if purchase.purchased_at %}
+                                                · {{ purchase.purchased_at|date:"d M Y, h:i A" }}
+                                            {% endif %}
+                                        </p>
+
+                                    </div>
+
+
+                                    {% if purchase.status == "active" %}
+
+                                        <span class="neo-badge neo-badge-green">
+                                            Active
+                                        </span>
+
+                                        <span class="text-[8px] font-bold text-emerald-300">
+                                            Access Granted
+                                        </span>
+
+                                    {% elif purchase.status == "refunded" %}
+
+                                        <span class="neo-badge neo-badge-violet">
+                                            Refunded
+                                        </span>
+
+                                        <span class="text-[8px] font-bold text-violet-300">
+                                            Access Removed by Refund
+                                        </span>
+
+                                    {% else %}
+
+                                        <span class="neo-badge neo-badge-muted">
+                                            No Access
+                                        </span>
+
+                                    {% endif %}
+
+                                </div>
+
+                            {% empty %}
+
+                                <div class="rounded-xl border border-white/[0.06] bg-white/[0.015] px-3 py-8 text-center">
+                                    <i class="ri-lock-line text-xl text-slate-700"></i>
+                                    <p class="mt-2 text-[9px] font-bold text-slate-500">
+                                        No batch access records available.
+                                    </p>
+                                </div>
+
+                            {% endfor %}
+
+                        </div>
+
+                    </section>
+
+
+                    <!-- =================================================
+                         ORDER TIMELINE
+                    ================================================== -->
+
+                    <section class="neo-card">
+
+                        <div class="neo-card-header">
+
+                            <div class="neo-icon">
+                                <i class="ri-time-line"></i>
+                            </div>
+
+                            <div class="min-w-0">
+                                <h2 class="neo-card-title">Order Timeline</h2>
+                                <p class="neo-card-subtitle">
+                                    Important events related to this order
+                                </p>
+                            </div>
+
+                        </div>
+
+
+                        <div class="p-3">
+
+                            <div class="relative">
+
+                                <!-- CREATED -->
+
+                                <div class="relative flex gap-3 pb-6">
+
+                                    <div class="relative flex w-6 shrink-0 justify-center">
+
+                                        <span class="z-10 flex h-6 w-6 items-center justify-center rounded-full bg-cyan-300 text-[9px] font-black text-slate-950">
+                                            <i class="ri-shopping-bag-3-fill"></i>
+                                        </span>
+
+                                        <span class="neo-timeline-line absolute left-1/2 top-6 bottom-0 -translate-x-1/2"></span>
+
+                                    </div>
+
+                                    <div class="min-w-0 flex-1">
+
+                                        <p class="text-[9px] font-black text-white">
+                                            Order Created
+                                        </p>
+
+                                        <p class="mt-0.5 text-[7px] font-semibold text-slate-400">
+                                            {{ order.created_at|date:"d M Y, h:i A" }}
+                                        </p>
+
+                                        <p class="mt-1 text-[7px] leading-4 text-slate-500">
+                                            Order #{{ order.order_number }} was created by the student.
+                                        </p>
+
+                                    </div>
+
+                                </div>
+
+
+                                <!-- PAYMENT -->
+
+                                <div class="relative flex gap-3 pb-6">
+
+                                    <div class="relative flex w-6 shrink-0 justify-center">
+
+                                        {% if payment and payment.status == "captured" %}
+
+                                            <span class="z-10 flex h-6 w-6 items-center justify-center rounded-full bg-emerald-300 text-[9px] font-black text-slate-950">
+                                                <i class="ri-bank-card-fill"></i>
+                                            </span>
+
+                                        {% elif order.status == "cancelled" %}
+
+                                            <span class="z-10 flex h-6 w-6 items-center justify-center rounded-full bg-orange-300 text-[9px] font-black text-slate-950">
+                                                <i class="ri-close-circle-fill"></i>
+                                            </span>
+
+                                        {% elif order.status == "payment_failed" %}
+
+                                            <span class="z-10 flex h-6 w-6 items-center justify-center rounded-full bg-rose-300 text-[9px] font-black text-slate-950">
+                                                <i class="ri-error-warning-fill"></i>
+                                            </span>
+
+                                        {% else %}
+
+                                            <span class="z-10 flex h-6 w-6 items-center justify-center rounded-full bg-amber-300 text-[9px] font-black text-slate-950">
+                                                <i class="ri-time-line"></i>
+                                            </span>
+
+                                        {% endif %}
+
+                                        <span class="neo-timeline-line absolute left-1/2 top-6 bottom-0 -translate-x-1/2"></span>
+
+                                    </div>
+
+
+                                    <div class="min-w-0 flex-1">
+
+                                        {% if payment and payment.status == "captured" %}
+
+                                            <p class="text-[9px] font-black text-emerald-200">
+                                                Payment Captured
+                                            </p>
+
+                                            <p class="mt-0.5 text-[7px] font-semibold text-slate-400">
+                                                {% if payment.captured_at %}
+                                                    {{ payment.captured_at|date:"d M Y, h:i A" }}
+                                                {% elif order.paid_at %}
+                                                    {{ order.paid_at|date:"d M Y, h:i A" }}
+                                                {% else %}
+                                                    —
+                                                {% endif %}
+                                            </p>
+
+                                            <p class="mt-1 text-[7px] leading-4 text-slate-500">
+                                                Payment was successfully captured.
+                                            </p>
+
+                                        {% elif order.status == "cancelled" %}
+
+                                            <p class="text-[9px] font-black text-orange-200">
+                                                Payment Cancelled
+                                            </p>
+
+                                            <p class="mt-0.5 text-[7px] font-semibold text-slate-400">
+                                                {{ order.updated_at|date:"d M Y, h:i A" }}
+                                            </p>
+
+                                            <p class="mt-1 text-[7px] leading-4 text-slate-500">
+                                                The order was cancelled before successful payment.
+                                            </p>
+
+                                        {% elif order.status == "payment_failed" %}
+
+                                            <p class="text-[9px] font-black text-rose-200">
+                                                Payment Failed
+                                            </p>
+
+                                            <p class="mt-0.5 text-[7px] font-semibold text-slate-400">
+                                                {{ order.updated_at|date:"d M Y, h:i A" }}
+                                            </p>
+
+                                            <p class="mt-1 text-[7px] leading-4 text-slate-500">
+                                                Payment was not captured.
+                                            </p>
+
+                                        {% else %}
+
+                                            <p class="text-[9px] font-black text-amber-200">
+                                                Payment Pending
+                                            </p>
+
+                                            <p class="mt-1 text-[7px] leading-4 text-slate-500">
+                                                Waiting for successful payment confirmation.
+                                            </p>
+
+                                        {% endif %}
+
+                                    </div>
+
+                                </div>
+
+
+                                <!-- ACCESS -->
+
+                                {% if order.status == "paid" or order.status == "partially_refunded" or order.status == "refunded" %}
+
+                                    <div class="relative flex gap-3">
+
+                                        <div class="relative flex w-6 shrink-0 justify-center">
+
+                                            {% if order.status == "paid" %}
+
+                                                <span class="z-10 flex h-6 w-6 items-center justify-center rounded-full bg-emerald-300 text-[9px] font-black text-slate-950">
+                                                    <i class="ri-graduation-cap-fill"></i>
+                                                </span>
+
+                                            {% elif order.status == "partially_refunded" %}
+
+                                                <span class="z-10 flex h-6 w-6 items-center justify-center rounded-full bg-violet-300 text-[9px] font-black text-slate-950">
+                                                    <i class="ri-refund-2-fill"></i>
+                                                </span>
+
+                                            {% else %}
+
+                                                <span class="z-10 flex h-6 w-6 items-center justify-center rounded-full bg-sky-300 text-[9px] font-black text-slate-950">
+                                                    <i class="ri-refund-2-fill"></i>
+                                                </span>
+
+                                            {% endif %}
+
+                                        </div>
+
+
+                                        <div class="min-w-0 flex-1">
+
+                                            {% if order.status == "paid" %}
+
+                                                <p class="text-[9px] font-black text-emerald-200">
+                                                    Access Granted
+                                                </p>
+
+                                                <p class="mt-1 text-[7px] leading-4 text-slate-500">
+                                                    Student access is active for the purchased batches.
+                                                </p>
+
+                                            {% elif order.status == "partially_refunded" %}
+
+                                                <p class="text-[9px] font-black text-violet-200">
+                                                    Partial Refund / Access Updated
+                                                </p>
+
+                                                <p class="mt-1 text-[7px] leading-4 text-slate-500">
+                                                    Some batch access may have been removed through refund processing.
+                                                </p>
+
+                                            {% else %}
+
+                                                <p class="text-[9px] font-black text-sky-200">
+                                                    Refund Completed
+                                                </p>
+
+                                                <p class="mt-1 text-[7px] leading-4 text-slate-500">
+                                                    The order has been fully refunded.
+                                                </p>
+
+                                            {% endif %}
+
+                                        </div>
+
+                                    </div>
+
+                                {% endif %}
+
+
+                                <!-- REFUND EVENTS -->
+
+                                {% for refund in order.refunds.all %}
+
+                                    <div class="relative mt-6 flex gap-3">
+
+                                        <div class="relative flex w-6 shrink-0 justify-center">
+
+                                            {% if refund.status == "requested" %}
+
+                                                <span class="z-10 flex h-6 w-6 items-center justify-center rounded-full bg-violet-300 text-[9px] font-black text-slate-950">
+                                                    <i class="ri-refund-2-fill"></i>
+                                                </span>
+
+                                            {% elif refund.status == "processing" %}
+
+                                                <span class="z-10 flex h-6 w-6 items-center justify-center rounded-full bg-amber-300 text-[9px] font-black text-slate-950">
+                                                    <i class="ri-loader-4-line"></i>
+                                                </span>
+
+                                            {% elif refund.status == "completed" %}
+
+                                                <span class="z-10 flex h-6 w-6 items-center justify-center rounded-full bg-emerald-300 text-[9px] font-black text-slate-950">
+                                                    <i class="ri-checkbox-circle-fill"></i>
+                                                </span>
+
+                                            {% else %}
+
+                                                <span class="z-10 flex h-6 w-6 items-center justify-center rounded-full bg-rose-300 text-[9px] font-black text-slate-950">
+                                                    <i class="ri-close-circle-fill"></i>
+                                                </span>
+
+                                            {% endif %}
+
+                                        </div>
+
+
+                                        <div class="min-w-0 flex-1">
+
+                                            <div class="flex flex-wrap items-center gap-1.5">
+
+                                                <p class="text-[9px] font-black text-violet-200">
+                                                    Refund #{{ refund.id }}
+                                                </p>
+
+                                                <span class="neo-badge neo-badge-violet">
+                                                    {{ refund.status|title }}
+                                                </span>
+
+                                            </div>
+
+                                            <p class="mt-0.5 text-[7px] font-semibold text-slate-400">
+                                                {{ refund.requested_at|date:"d M Y, h:i A" }}
+                                            </p>
+
+                                            <p class="mt-1 text-[7px] leading-4 text-slate-500">
+                                                Requested amount:
+                                                ₹{{ refund.requested_amount|floatformat:2 }}
+                                            </p>
+
+                                        </div>
+
+                                    </div>
+
+                                {% endfor %}
+
+                            </div>
+
+                        </div>
+
+                    </section>
+
+
+                </div>
+
+            </main>
+
+
+            <!-- =====================================================
+                 RIGHT COLUMN
+            ====================================================== -->
+
+            <aside
+                class="
+                    neo-order-column-scroll
+                    min-h-0
+                    min-w-0
+                    overflow-y-auto
+                    overflow-x-hidden
+                    pr-0.5
+                    overscroll-contain
+                "
+            >
+
+                <div class="flex min-w-0 flex-col gap-2.5 pb-1">
+
+
+                    <!-- =================================================
+                         ORDER SUMMARY
+                    ================================================== -->
+
+                    <section class="neo-card">
+
+                        <div class="neo-card-header">
+
+                            <div class="neo-icon">
+                                <i class="ri-file-list-3-line"></i>
+                            </div>
+
+                            <div class="min-w-0">
+                                <h2 class="neo-card-title">Order Summary</h2>
+                                <p class="neo-card-subtitle">
+                                    Price and discount summary for this order
+                                </p>
+                            </div>
+
+                        </div>
+
+
+                        <div class="space-y-2 p-3">
+
+                            {% for item in order.items.all %}
+
+                                <div class="flex min-w-0 items-center justify-between gap-2 rounded-lg border border-white/[0.05] bg-white/[0.015] px-2.5 py-2">
+
+                                    <p class="min-w-0 truncate text-[8px] font-bold text-slate-300">
+                                        {{ item.batch_name }}
+                                    </p>
+
+                                    <span class="shrink-0 text-[9px] font-black text-white">
+                                        ₹{{ item.final_price|floatformat:2 }}
+                                    </span>
+
+                                </div>
+
+                            {% endfor %}
+
+
+                            <div class="my-2 h-px bg-white/[0.07]"></div>
+
+
+                            <div class="flex items-center justify-between gap-2">
+                                <span class="neo-row-label">Subtotal</span>
+                                <span class="neo-row-value">
+                                    ₹{{ order.subtotal|floatformat:2 }}
+                                </span>
+                            </div>
+
+
+                            <div class="flex items-center justify-between gap-2">
+                                <span class="neo-row-label">Total Discount</span>
+                                <span class="neo-row-value text-emerald-400">
+                                    - ₹{{ order.total_discount|floatformat:2 }}
+                                </span>
+                            </div>
+
+
+                            <div class="flex items-center justify-between gap-2">
+                                <span class="neo-row-label">Coupon Discount</span>
+                                <span class="neo-row-value text-emerald-400">
+                                    - ₹{{ order.total_coupon_discount|floatformat:2 }}
+                                </span>
+                            </div>
+
+
+                            <div
+                                class="
+                                    flex
+                                    items-center
+                                    justify-between
+                                    gap-2
+                                    rounded-lg
+                                    border
+                                    border-cyan-400/15
+                                    bg-cyan-400/[0.045]
+                                    px-2.5
+                                    py-2.5
+                                "
+                            >
+
+                                <span class="text-sm font-black text-white">
+                                    Final Amount
+                                </span>
+
+                                <span class="text-lg font-black text-cyan-300">
+                                    ₹{{ order.final_amount|floatformat:2 }}
+                                </span>
+
+                            </div>
+
+
+                            <div class="flex items-center justify-between gap-2">
+                                <span class="neo-row-label">Currency</span>
+                                <span class="neo-row-value">{{ order.currency }}</span>
+                            </div>
+
+                        </div>
+
+                    </section>
+
+
+                    <!-- =================================================
+                         PAYMENT INFORMATION
+                    ================================================== -->
+
+                    <section class="neo-card">
+
+                        <div class="neo-card-header">
+
+                            <div class="neo-icon">
+                                <i class="ri-secure-payment-line"></i>
+                            </div>
+
+                            <div class="min-w-0">
+                                <h2 class="neo-card-title">Payment Information</h2>
+                                <p class="neo-card-subtitle">
+                                    Payment details and transaction information
+                                </p>
+                            </div>
+
+                        </div>
+
+
+                        <div class="space-y-0 px-3 pb-3">
+
+                            <div class="neo-row">
+
+                                <span class="neo-row-label">Payment Status</span>
+
+                                {% if payment and payment.status == "captured" %}
+                                    <span class="neo-badge neo-badge-green">Captured</span>
+                                {% elif payment and payment.status == "failed" %}
+                                    <span class="neo-badge neo-badge-red">Failed</span>
+                                {% elif payment and payment.status == "refunded" %}
+                                    <span class="neo-badge neo-badge-violet">Refunded</span>
+                                {% elif payment and payment.status == "partially_refunded" %}
+                                    <span class="neo-badge neo-badge-violet">Partially Refunded</span>
+                                {% elif payment and payment.status == "processing" %}
+                                    <span class="neo-badge neo-badge-amber">Processing</span>
+                                {% elif payment and payment.status == "created" %}
+                                    <span class="neo-badge neo-badge-cyan">Created</span>
+                                {% else %}
+                                    <span class="neo-row-value">No Payment Record</span>
+                                {% endif %}
+
+                            </div>
+
+
+                            <div class="neo-row">
+                                <span class="neo-row-label">Payment Amount</span>
+                                <span class="neo-row-value">
+                                    ₹{{ order.final_amount|floatformat:2 }}
+                                </span>
+                            </div>
+
+
+                            <div class="neo-row">
+                                <span class="neo-row-label">Currency</span>
+                                <span class="neo-row-value">{{ order.currency }}</span>
+                            </div>
+
+
+                            <div class="neo-row">
+                                <span class="neo-row-label">Payment Method</span>
+                                <span class="neo-row-value">Razorpay</span>
+                            </div>
+
+
+                            <div class="neo-row neo-row-stack">
+
+                                <span class="neo-row-label">Razorpay Order ID</span>
+
+                                <span class="neo-copy-value">
+                                    {{ payment.razorpay_order_id|default:order.razorpay_order_id|default:"—" }}
+                                </span>
+
+                            </div>
+
+
+                            <div class="neo-row neo-row-stack">
+
+                                <span class="neo-row-label">Razorpay Payment ID</span>
+
+                                <span class="neo-copy-value">
+                                    {{ payment.razorpay_payment_id|default:"—" }}
+                                </span>
+
+                            </div>
+
+
+                            <div class="neo-row">
+
+                                <span class="neo-row-label">Captured At</span>
+
+                                <span class="neo-row-value text-right">
+                                    {% if payment and payment.captured_at %}
+                                        {{ payment.captured_at|date:"d M Y, h:i A" }}
+                                    {% elif order.paid_at %}
+                                        {{ order.paid_at|date:"d M Y, h:i A" }}
+                                    {% else %}
+                                        —
+                                    {% endif %}
+                                </span>
+
+                            </div>
+
+
+                            {% if payment and payment.failure_reason %}
+
+                                <div
+                                    class="
+                                        mt-2
+                                        rounded-lg
+                                        border
+                                        border-rose-400/15
+                                        bg-rose-400/[0.035]
+                                        px-2.5
+                                        py-2
+                                    "
+                                >
+                                    <p class="text-[7px] font-black uppercase tracking-wide text-rose-300">
+                                        Failure / Cancellation Reason
+                                    </p>
+
+                                    <p class="mt-1 break-words text-[8px] leading-4 text-slate-300">
+                                        {{ payment.failure_reason }}
+                                    </p>
+                                </div>
+
+                            {% endif %}
+
+                        </div>
+
+                    </section>
+
+
+                    <!-- =================================================
+                         INVOICE INFORMATION
+                    ================================================== -->
+
+                    <section class="neo-card">
+
+                        <div class="neo-card-header">
+
+                            <div class="neo-icon">
+                                <i class="ri-file-text-line"></i>
+                            </div>
+
+                            <div class="min-w-0">
+                                <h2 class="neo-card-title">Invoice Information</h2>
+                                <p class="neo-card-subtitle">
+                                    Invoice generated for this order
+                                </p>
+                            </div>
+
+                        </div>
+
+
+                        <div class="space-y-0 px-3 pb-3">
+
+                            {% if order.invoice %}
+
+                                <div class="neo-row">
+
+                                    <span class="neo-row-label">
+                                        Invoice Number
+                                    </span>
+
+                                    <span class="neo-row-value break-all">
+                                        {{ order.invoice.invoice_number }}
+                                    </span>
+
+                                </div>
+
+
+                                <div class="neo-row">
+
+                                    <span class="neo-row-label">
+                                        Invoice Date
+                                    </span>
+
+                                    <span class="neo-row-value">
+                                        {% if order.invoice.invoice_date %}
+                                            {{ order.invoice.invoice_date|date:"d M Y, h:i A" }}
+                                        {% else %}
+                                            —
+                                        {% endif %}
+                                    </span>
+
+                                </div>
+
+
+                                <div class="neo-row">
+
+                                    <span class="neo-row-label">
+                                        Subtotal
+                                    </span>
+
+                                    <span class="neo-row-value">
+                                        ₹{{ order.invoice.subtotal|floatformat:2 }}
+                                    </span>
+
+                                </div>
+
+
+                                <div class="neo-row">
+
+                                    <span class="neo-row-label">
+                                        Coupon Discount
+                                    </span>
+
+                                    <span class="neo-row-value text-emerald-400">
+                                        - ₹{{ order.invoice.coupon_discount|floatformat:2 }}
+                                    </span>
+
+                                </div>
+
+
+                                <div class="neo-row">
+
+                                    <span class="neo-row-label">
+                                        Total Discount
+                                    </span>
+
+                                    <span class="neo-row-value text-emerald-400">
+                                        - ₹{{ order.invoice.total_discount|floatformat:2 }}
+                                    </span>
+
+                                </div>
+
+
+                                <div
+                                    class="
+                                        mt-2
+                                        flex
+                                        items-center
+                                        justify-between
+                                        gap-2
+                                        rounded-lg
+                                        border
+                                        border-cyan-400/15
+                                        bg-cyan-400/[0.045]
+                                        px-2.5
+                                        py-2.5
+                                    "
+                                >
+
+                                    <span class="text-sm font-black text-white">
+                                        Invoice Total
+                                    </span>
+
+                                    <span class="text-lg font-black text-cyan-300">
+                                        ₹{{ order.invoice.final_amount|floatformat:2 }}
+                                    </span>
+
+                                </div>
+
+
+                                <div class="neo-row">
+
+                                    <span class="neo-row-label">
+                                        Currency
+                                    </span>
+
+                                    <span class="neo-row-value">
+                                        {{ order.invoice.currency }}
+                                    </span>
+
+                                </div>
+
+
+                                <div class="mt-3">
+
+                                    <a
+                                        href="{% url 'admin_invoice_detail' order.invoice.invoice_number %}"
+                                        class="
+                                            flex
+                                            w-full
+                                            items-center
+                                            justify-center
+                                            gap-2
+                                            rounded-xl
+                                            border
+                                            border-cyan-400/20
+                                            bg-cyan-400/[0.06]
+                                            px-3
+                                            py-2.5
+                                            text-[9px]
+                                            font-black
+                                            text-cyan-300
+                                            transition
+                                            hover:border-cyan-300/40
+                                            hover:bg-cyan-400/10
+                                            hover:text-cyan-200
+                                        "
+                                    >
+
+                                        <i class="ri-file-search-line text-sm"></i>
+
+                                        View Full Invoice
+
+                                        <i class="ri-arrow-right-line"></i>
+
+                                    </a>
+
+                                </div>
+
+                            {% else %}
+
+                                <div
+                                    class="
+                                        flex
+                                        min-h-[130px]
+                                        flex-col
+                                        items-center
+                                        justify-center
+                                        rounded-xl
+                                        border
+                                        border-amber-400/10
+                                        bg-amber-400/[0.025]
+                                        px-4
+                                        py-6
+                                        text-center
+                                    "
+                                >
+
+                                    <span
+                                        class="
+                                            flex
+                                            h-10
+                                            w-10
+                                            items-center
+                                            justify-center
+                                            rounded-xl
+                                            border
+                                            border-amber-400/15
+                                            bg-amber-400/10
+                                            text-amber-300
+                                        "
+                                    >
+                                        <i class="ri-file-warning-line text-lg"></i>
+                                    </span>
+
+                                    <p class="mt-2 text-[9px] font-black text-amber-300">
+                                        No Invoice Available
+                                    </p>
+
+                                    <p class="mt-1 text-[7px] leading-4 text-slate-500">
+                                        An invoice has not been generated for this order yet.
+                                    </p>
+
+                                </div>
+
+                            {% endif %}
+
+                        </div>
+
+                    </section>
+
+
+                    <!-- =================================================
+                         COUPON DETAILS
+                    ================================================== -->
+
+                    <section class="neo-card">
+
+                        <div class="neo-card-header">
+
+                            <div class="neo-icon neo-icon-violet">
+                                <i class="ri-coupon-3-line"></i>
+                            </div>
+
+                            <div class="min-w-0">
+                                <h2 class="neo-card-title">Coupon &amp; Discount Details</h2>
+                                <p class="neo-card-subtitle">
+                                    Coupon information used in this order
+                                </p>
+                            </div>
+
+                        </div>
+
+
+                        <div class="space-y-2 p-3">
+
+                            {% for coupon in order.coupons.all %}
+
+                                <div class="rounded-xl border border-violet-400/10 bg-violet-400/[0.025] p-2.5">
+
+                                    <div class="flex items-center justify-between gap-2">
+
+                                        <span class="rounded-md border border-violet-400/15 bg-violet-400/10 px-2 py-1 text-[8px] font-black uppercase text-violet-300">
+                                            {{ coupon.coupon_code }}
+                                        </span>
+
+                                        <span class="shrink-0 text-[9px] font-black text-emerald-400">
+                                            - ₹{{ coupon.discount_amount|floatformat:2 }}
+                                        </span>
+
+                                    </div>
+
+
+                                    <div class="mt-2 grid grid-cols-2 gap-x-3 gap-y-2">
+
+                                        <div>
+                                            <p class="neo-mini-label">Type</p>
+                                            <p class="neo-mini-value">
+                                                {% if coupon.coupon_type == "batch_specific" %}
+                                                    Batch Specific
+                                                {% elif coupon.coupon_type == "multi_checkout" %}
+                                                    Multi Checkout
+                                                {% else %}
+                                                    General
+                                                {% endif %}
+                                            </p>
+                                        </div>
+
+                                        <div>
+                                            <p class="neo-mini-label">Discount</p>
+                                            <p class="neo-mini-value">
+                                                {% if coupon.discount_type == "percentage" %}
+                                                    {{ coupon.discount_value|floatformat:0 }}%
+                                                {% else %}
+                                                    ₹{{ coupon.discount_value|floatformat:2 }}
+                                                {% endif %}
+                                            </p>
+                                        </div>
+
+                                        <div>
+                                            <p class="neo-mini-label">Min Purchase</p>
+                                            <p class="neo-mini-value">
+                                                ₹{{ coupon.minimum_order_amount|floatformat:2 }}
+                                            </p>
+                                        </div>
+
+                                        {% if coupon.maximum_order_amount %}
+                                            <div>
+                                                <p class="neo-mini-label">Max Purchase</p>
+                                                <p class="neo-mini-value">
+                                                    ₹{{ coupon.maximum_order_amount|floatformat:2 }}
+                                                </p>
+                                            </div>
+                                        {% endif %}
+
+                                        {% if coupon.applied_batch_name %}
+                                            <div class="col-span-2 min-w-0">
+                                                <p class="neo-mini-label">Applied Batch</p>
+                                                <p class="neo-mini-value truncate" title="{{ coupon.applied_batch_name }}">
+                                                    {{ coupon.applied_batch_name }}
+                                                </p>
+                                            </div>
+                                        {% endif %}
+
+                                    </div>
+
+                                </div>
+
+                            {% empty %}
+
+                                <div class="flex min-h-[110px] flex-col items-center justify-center text-center">
+                                    <i class="ri-coupon-3-line text-2xl text-slate-700"></i>
+                                    <p class="mt-2 text-[9px] font-bold text-slate-500">
+                                        No Coupon Applied
+                                    </p>
+                                </div>
+
+                            {% endfor %}
+
+                        </div>
+
+                    </section>
+
+
+                    <!-- =================================================
+                         REFUND SUMMARY — DISPLAY ONLY
+                    ================================================== -->
+
+                    <section class="neo-card">
+
+                        <div class="neo-card-header">
+
+                            <div class="neo-icon neo-icon-violet">
+                                <i class="ri-refund-2-line"></i>
+                            </div>
+
+                            <div class="min-w-0">
+                                <h2 class="neo-card-title">Refund Summary</h2>
+                                <p class="neo-card-subtitle">
+                                    Refund activity for this order
+                                </p>
+                            </div>
+
+                        </div>
+
+
+                        <div class="p-3">
+
+                            {% for refund in order.refunds.all %}
+
+                                <div class="mb-2 last:mb-0 rounded-xl border border-violet-400/10 bg-violet-400/[0.025] p-2.5">
+
+                                    <div class="flex items-center justify-between gap-2">
+
+                                        <span class="text-[8px] font-black text-violet-200">
+                                            Refund #{{ refund.id }}
+                                        </span>
+
+                                        {% if refund.status == "completed" %}
+                                            <span class="neo-badge neo-badge-green">Completed</span>
+                                        {% elif refund.status == "processing" %}
+                                            <span class="neo-badge neo-badge-amber">Processing</span>
+                                        {% elif refund.status == "requested" %}
+                                            <span class="neo-badge neo-badge-violet">Requested</span>
+                                        {% elif refund.status == "rejected" %}
+                                            <span class="neo-badge neo-badge-red">Rejected</span>
+                                        {% else %}
+                                            <span class="neo-badge neo-badge-red">Failed</span>
+                                        {% endif %}
+
+                                    </div>
+
+
+                                    <div class="mt-2 grid grid-cols-2 gap-2">
+
+                                        <div>
+                                            <p class="neo-mini-label">Requested</p>
+                                            <p class="neo-mini-value">
+                                                ₹{{ refund.requested_amount|floatformat:2 }}
+                                            </p>
+                                        </div>
+
+                                        <div>
+                                            <p class="neo-mini-label">Refunded</p>
+                                            <p class="neo-mini-value">
+                                                ₹{{ refund.refunded_amount|floatformat:2 }}
+                                            </p>
+                                        </div>
+
+                                    </div>
+
+                                </div>
+
+                            {% empty %}
+
+                                <div class="rounded-xl border border-white/[0.06] bg-white/[0.015] px-3 py-6 text-center">
+                                    <i class="ri-refund-2-line text-xl text-slate-700"></i>
+                                    <p class="mt-2 text-[9px] font-bold text-slate-500">
+                                        No refund activity
+                                    </p>
+                                    <p class="mt-1 text-[7px] text-slate-600">
+                                        Refund processing is handled separately.
+                                    </p>
+                                </div>
+
+                            {% endfor %}
+
+                        </div>
+
+                    </section>
+
+
+                    <!-- =================================================
+                         ADMIN ACTIONS
+                    ================================================== -->
+
+                    <section class="neo-card">
+
+                        <div class="neo-card-header">
+
+                            <div class="neo-icon">
+                                <i class="ri-settings-4-line"></i>
+                            </div>
+
+                            <div class="min-w-0">
+                                <h2 class="neo-card-title">Admin Actions</h2>
+                                <p class="neo-card-subtitle">
+                                    Manage payment and student access
+                                </p>
+                            </div>
+
+                        </div>
+
+
+                        <div class="space-y-2 p-3">
+
+                            <div
+                                class="
+                                    rounded-lg
+                                    border
+                                    border-cyan-400/15
+                                    bg-cyan-400/[0.035]
+                                    px-2.5
+                                    py-2
+                                "
+                            >
+                                <div class="flex items-start gap-2">
+
+                                    <i class="ri-information-line mt-0.5 text-cyan-300"></i>
+
+                                    <p class="text-[7px] leading-4 text-slate-300">
+                                        These actions update the order, payment and student access.
+                                        Refund processing is handled separately.
+                                    </p>
+
+                                </div>
+                            </div>
+
+
+                            <!-- PAYMENT RECEIVED -->
+
+                            {% if order.status == "paid" %}
+
+                                <button
+                                    type="button"
+                                    disabled
+                                    class="
+                                        w-full
+                                        rounded-xl
+                                        border
+                                        border-emerald-400/20
+                                        bg-emerald-400/[0.045]
+                                        px-3
+                                        py-2.5
+                                        text-left
+                                        opacity-70
+                                        cursor-not-allowed
+                                    "
+                                >
+                                    <span class="flex items-center gap-2.5">
+
+                                        <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-400/10 text-emerald-300">
+                                            <i class="ri-checkbox-circle-line"></i>
+                                        </span>
+
+                                        <span class="min-w-0 flex-1">
+                                            <span class="block text-[9px] font-black text-emerald-200">
+                                                Payment Received
+                                            </span>
+                                            <span class="mt-0.5 block text-[7px] text-slate-500">
+                                                Payment is already marked as received and access is active.
+                                            </span>
+                                        </span>
+
+                                        <i class="ri-check-line text-emerald-300"></i>
+
+                                    </span>
+                                </button>
+
+                            {% elif order.status == "refunded" or order.status == "partially_refunded" %}
+
+                                <button
+                                    type="button"
+                                    disabled
+                                    class="
+                                        w-full
+                                        rounded-xl
+                                        border
+                                        border-slate-500/15
+                                        bg-white/[0.02]
+                                        px-3
+                                        py-2.5
+                                        text-left
+                                        opacity-55
+                                        cursor-not-allowed
+                                    "
+                                >
+                                    <span class="flex items-center gap-2.5">
+
+                                        <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-400/10 text-slate-400">
+                                            <i class="ri-checkbox-circle-line"></i>
+                                        </span>
+
+                                        <span class="min-w-0 flex-1">
+                                            <span class="block text-[9px] font-black text-slate-300">
+                                                Payment Received
+                                            </span>
+                                            <span class="mt-0.5 block text-[7px] text-slate-500">
+                                                Payment/access changes are restricted after refund activity.
+                                            </span>
+                                        </span>
+
+                                    </span>
+                                </button>
+
+                            {% else %}
+
+                                <button
+                                    type="button"
+                                    data-admin-action="payment-received"
+                                    data-confirm-url="{% url 'admin_mark_payment_received' order.id %}"
+                                    class="
+                                        w-full
+                                        rounded-xl
+                                        border
+                                        border-emerald-400/30
+                                        bg-emerald-400/[0.055]
+                                        px-3
+                                        py-2.5
+                                        text-left
+                                        transition
+                                        hover:border-emerald-300/55
+                                        hover:bg-emerald-400/[0.09]
+                                    "
+                                >
+                                    <span class="flex items-center gap-2.5">
+
+                                        <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-400/10 text-emerald-300">
+                                            <i class="ri-check-line"></i>
+                                        </span>
+
+                                        <span class="min-w-0 flex-1">
+                                            <span class="block text-[9px] font-black text-emerald-200">
+                                                Payment Received
+                                            </span>
+                                            <span class="mt-0.5 block text-[7px] text-slate-400">
+                                                Mark payment as received and grant access.
+                                            </span>
+                                        </span>
+
+                                        <i class="ri-arrow-right-s-line text-emerald-300"></i>
+
+                                    </span>
+                                </button>
+
+                            {% endif %}
+
+
+                            <!-- REVERT PAYMENT -->
+
+                            {% if order.status == "paid" %}
+
+                                <button
+                                    type="button"
+                                    data-admin-action="revert-payment"
+                                    data-confirm-url="{% url 'admin_revert_payment' order.id %}"
+                                    class="
+                                        w-full
+                                        rounded-xl
+                                        border
+                                        border-rose-400/30
+                                        bg-rose-400/[0.045]
+                                        px-3
+                                        py-2.5
+                                        text-left
+                                        transition
+                                        hover:border-rose-300/55
+                                        hover:bg-rose-400/[0.08]
+                                    "
+                                >
+                                    <span class="flex items-center gap-2.5">
+
+                                        <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-rose-400/10 text-rose-300">
+                                            <i class="ri-arrow-go-back-line"></i>
+                                        </span>
+
+                                        <span class="min-w-0 flex-1">
+                                            <span class="block text-[9px] font-black text-rose-200">
+                                                Revert Payment
+                                            </span>
+                                            <span class="mt-0.5 block text-[7px] text-slate-400">
+                                                Revert payment and remove student access.
+                                            </span>
+                                        </span>
+
+                                        <i class="ri-arrow-right-s-line text-rose-300"></i>
+
+                                    </span>
+                                </button>
+
+                            {% else %}
+
+                                <button
+                                    type="button"
+                                    disabled
+                                    class="
+                                        w-full
+                                        rounded-xl
+                                        border
+                                        border-slate-500/15
+                                        bg-white/[0.02]
+                                        px-3
+                                        py-2.5
+                                        text-left
+                                        opacity-55
+                                        cursor-not-allowed
+                                    "
+                                >
+                                    <span class="flex items-center gap-2.5">
+
+                                        <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-400/10 text-slate-400">
+                                            <i class="ri-arrow-go-back-line"></i>
+                                        </span>
+
+                                        <span class="min-w-0 flex-1">
+                                            <span class="block text-[9px] font-black text-slate-300">
+                                                Revert Payment
+                                            </span>
+                                            <span class="mt-0.5 block text-[7px] text-slate-500">
+                                                Available only for a successfully paid order.
+                                            </span>
+                                        </span>
+
+                                    </span>
+                                </button>
+
+                            {% endif %}
+
+
+                            <div class="pt-1">
+
+                                <a
+                                    href="{% url 'admin_orders' %}"
+                                    class="
+                                        inline-flex
+                                        w-full
+                                        items-center
+                                        justify-center
+                                        gap-1.5
+                                        rounded-lg
+                                        border
+                                        border-white/[0.08]
+                                        bg-white/[0.025]
+                                        px-3
+                                        py-2
+                                        text-[8px]
+                                        font-black
+                                        text-slate-400
+                                        transition
+                                        hover:border-cyan-400/20
+                                        hover:text-cyan-300
+                                    "
+                                >
+                                    <i class="ri-arrow-left-line"></i>
+                                    Back to Order Management
+                                </a>
+
+                            </div>
+
+                        </div>
+
+                    </section>
+
+                </div>
+
+            </aside>
+
+        </div>
+
+    </section>
+
+</div>
+
+
+
+<!-- =========================================================
+     ADMIN ACTION CONFIRMATION MODAL
+========================================================== -->
+
+<div
+    id="neoAdminActionModal"
+    class="fixed inset-0 z-[9999] hidden items-center justify-center bg-slate-950/75 px-4 backdrop-blur-sm"
+    aria-hidden="true"
+>
+    <div
+        id="neoAdminActionDialog"
+        class="w-full max-w-md rounded-2xl border border-cyan-400/15 bg-[#061326] p-4 shadow-[0_0_50px_rgba(8,145,178,0.18)]"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="neoAdminActionTitle"
+    >
+        <div class="flex items-start gap-3">
+            <span
+                id="neoAdminActionIcon"
+                class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-cyan-400/10 text-cyan-300"
+            >
+                <i class="ri-question-line"></i>
+            </span>
+
+            <div class="min-w-0 flex-1">
+                <h3 id="neoAdminActionTitle" class="text-sm font-black text-white">
+                    Confirm Action
+                </h3>
+                <p id="neoAdminActionSubtitle" class="mt-0.5 text-[8px] text-slate-400">
+                    Please confirm this admin action.
+                </p>
+            </div>
+        </div>
+
+        <p id="neoAdminActionMessage" class="mt-4 text-[9px] leading-5 text-slate-200">
+            Are you sure?
+        </p>
+
+        <div id="neoAdminActionWarning" class="mt-3 rounded-xl border border-cyan-400/15 bg-cyan-400/[0.035] px-3 py-2.5">
+            <p id="neoAdminActionWarningText" class="text-[8px] leading-4 text-cyan-100/80">
+                This action will update the order.
+            </p>
+        </div>
+
+        <form id="neoAdminActionForm" method="post" class="mt-4 flex items-center justify-end gap-2">
+            {% csrf_token %}
+
+            <button
+                id="neoAdminActionCancel"
+                type="button"
+                class="rounded-xl border border-white/10 bg-white/[0.035] px-4 py-2.5 text-[9px] font-black text-slate-300 transition hover:bg-white/[0.07] hover:text-white"
+            >
+                Cancel
+            </button>
+
+            <button
+                id="neoAdminActionConfirm"
+                type="submit"
+                class="rounded-xl bg-cyan-400 px-4 py-2.5 text-[9px] font-black text-slate-950 transition hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+                Confirm
+            </button>
+        </form>
+    </div>
+</div>
+
+<script>
+(function () {
+    "use strict";
+
+    function initAdminActionModal() {
+        const modal = document.getElementById("neoAdminActionModal");
+        const form = document.getElementById("neoAdminActionForm");
+        const cancelButton = document.getElementById("neoAdminActionCancel");
+        const confirmButton = document.getElementById("neoAdminActionConfirm");
+        const title = document.getElementById("neoAdminActionTitle");
+        const subtitle = document.getElementById("neoAdminActionSubtitle");
+        const message = document.getElementById("neoAdminActionMessage");
+        const warning = document.getElementById("neoAdminActionWarning");
+        const warningText = document.getElementById("neoAdminActionWarningText");
+        const icon = document.getElementById("neoAdminActionIcon");
+
+        if (!modal || !form || !cancelButton || !confirmButton) {
+            return;
+        }
+
+        let activeButton = null;
+
+        function closeModal() {
+            modal.classList.add("hidden");
+            modal.classList.remove("flex");
+            modal.setAttribute("aria-hidden", "true");
+            document.body.classList.remove("overflow-hidden");
+            activeButton = null;
+            confirmButton.disabled = false;
+            confirmButton.textContent = "Confirm";
+        }
+
+        function openModal(button) {
+            const action = button.dataset.adminAction || "";
+            const url = button.dataset.confirmUrl || "";
+
+            if (!url) {
+                console.error("NeoLearn admin action URL is missing.");
+                return;
+            }
+
+            activeButton = button;
+            form.action = url;
+            confirmButton.disabled = false;
+
+            if (action === "payment-received") {
+                title.textContent = "Confirm Payment Received";
+                subtitle.textContent = "Grant payment confirmation and batch access.";
+                message.textContent = "Are you sure you want to mark this order as payment received?";
+                warningText.textContent = "This will mark the payment as captured, mark the order as paid, ensure the invoice, and grant active access to the purchased batches.";
+                confirmButton.textContent = "Yes, Mark Received";
+                confirmButton.className = "rounded-xl bg-emerald-400 px-4 py-2.5 text-[9px] font-black text-slate-950 transition hover:bg-emerald-300 disabled:cursor-not-allowed disabled:opacity-60";
+                icon.className = "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-400/10 text-emerald-300";
+                icon.innerHTML = '<i class="ri-check-line"></i>';
+                warning.className = "mt-3 rounded-xl border border-emerald-400/15 bg-emerald-400/[0.035] px-3 py-2.5";
+                warningText.className = "text-[8px] leading-4 text-emerald-100/80";
+            } else if (action === "revert-payment") {
+                title.textContent = "Confirm Revert Payment";
+                subtitle.textContent = "Revert payment and revoke student access.";
+                message.textContent = "Are you sure you want to revert this successfully paid order?";
+                warningText.textContent = "This will mark the payment as failed, move the order to payment failed, and revoke active batch access. Refund processing remains separate.";
+                confirmButton.textContent = "Yes, Revert Payment";
+                confirmButton.className = "rounded-xl bg-rose-400 px-4 py-2.5 text-[9px] font-black text-slate-950 transition hover:bg-rose-300 disabled:cursor-not-allowed disabled:opacity-60";
+                icon.className = "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-rose-400/10 text-rose-300";
+                icon.innerHTML = '<i class="ri-arrow-go-back-line"></i>';
+                warning.className = "mt-3 rounded-xl border border-rose-400/15 bg-rose-400/[0.035] px-3 py-2.5";
+                warningText.className = "text-[8px] leading-4 text-rose-100/80";
+            } else {
+                return;
+            }
+
+            modal.classList.remove("hidden");
+            modal.classList.add("flex");
+            modal.setAttribute("aria-hidden", "false");
+            document.body.classList.add("overflow-hidden");
+
+            window.setTimeout(function () {
+                cancelButton.focus();
+            }, 0);
+        }
+
+        document.querySelectorAll("[data-admin-action][data-confirm-url]").forEach(function (button) {
+            button.addEventListener("click", function () {
+                openModal(button);
+            });
+        });
+
+        cancelButton.addEventListener("click", closeModal);
+
+        modal.addEventListener("click", function (event) {
+            if (event.target === modal) {
+                closeModal();
+            }
+        });
+
+        document.addEventListener("keydown", function (event) {
+            if (event.key === "Escape" && !modal.classList.contains("hidden")) {
+                closeModal();
+            }
+        });
+
+        form.addEventListener("submit", function () {
+            confirmButton.disabled = true;
+            confirmButton.innerHTML = '<i class="ri-loader-4-line mr-1 animate-spin"></i> Processing...';
+        });
+    }
+
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", initAdminActionModal);
+    } else {
+        initAdminActionModal();
+    }
+})();
+</script>
+
+<style>
+/* =========================================================
+   NeoLearn Admin Order Details
+   - Fixed page shell
+   - Independent left/right scrolling
+   - No main body scroll from this page
+   - Responsive
+========================================================= */
+
+.neo-admin-order-page {
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
+}
+
+/*
+   This detail page owns its scrolling.
+   The outer document must stay fixed; only the left/right
+   order-detail columns are allowed to scroll.
+*/
+html:has(.neo-admin-order-page),
+body:has(.neo-admin-order-page) {
+    overflow: hidden !important;
+}
+
+.neo-admin-order-page * {
+    box-sizing: border-box;
+}
+
+.neo-order-column-scroll {
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+    -webkit-overflow-scrolling: touch !important;
+    overscroll-behavior: contain !important;
+    touch-action: pan-y !important;
+}
+
+.neo-order-column-scroll::-webkit-scrollbar {
+    width: 0 !important;
+    height: 0 !important;
+    display: none !important;
+}
+
+
+/* =========================================================
+   CARD SYSTEM
+========================================================= */
+
+.neo-card {
+    min-width: 0;
+    overflow: hidden;
+    border: 1px solid rgba(34, 211, 238, .15);
+    border-radius: .75rem;
+    background: rgba(6, 19, 38, .95);
+}
+
+.neo-card-header {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: .55rem;
+    border-bottom: 1px solid rgba(255,255,255,.055);
+    background: rgba(7,24,44,.92);
+    padding: .65rem .75rem;
+}
+
+.neo-icon {
+    display: flex;
+    width: 1.9rem;
+    height: 1.9rem;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(34,211,238,.22);
+    border-radius: .65rem;
+    background: rgba(34,211,238,.08);
+    color: rgb(103,232,249);
+}
+
+.neo-icon-violet {
+    border-color: rgba(167,139,250,.22);
+    background: rgba(167,139,250,.08);
+    color: rgb(196,181,253);
+}
+
+.neo-card-title {
+    color: #fff;
+    font-size: .75rem;
+    line-height: 1rem;
+    font-weight: 900;
+}
+
+.neo-card-subtitle {
+    margin-top: .12rem;
+    color: rgba(148,163,184,.82);
+    font-size: 7px;
+    line-height: 1rem;
+}
+
+.neo-label,
+.neo-mini-label {
+    color: rgba(100,116,139,.9);
+    font-size: 7px;
+    line-height: 1rem;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+}
+
+.neo-value,
+.neo-mini-value {
+    margin-top: .15rem;
+    color: rgba(226,232,240,.96);
+    font-size: 8px;
+    line-height: 1rem;
+    font-weight: 800;
+}
+
+.neo-info-cell {
+    min-width: 0;
+    background: rgba(6,19,38,.96);
+    padding: .65rem .75rem;
+}
+
+.neo-table-head {
+    color: rgba(148,163,184,.8);
+    font-size: 7px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: .035em;
+}
+
+.neo-money {
+    color: rgba(226,232,240,.96);
+    font-size: 8px;
+    font-weight: 800;
+}
+
+.neo-discount {
+    color: rgb(52,211,153);
+    font-size: 8px;
+    font-weight: 800;
+}
+
+
+/* =========================================================
+   ROWS
+========================================================= */
+
+.neo-row {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    justify-content: space-between;
+    gap: .6rem;
+    border-bottom: 1px solid rgba(255,255,255,.055);
+    padding: .58rem .1rem;
+}
+
+.neo-row:last-child {
+    border-bottom: 0;
+}
+
+.neo-row-stack {
+    align-items: flex-start;
+    flex-direction: column;
+}
+
+.neo-row-label {
+    color: rgba(203,213,225,.9);
+    font-size: 8px;
+    line-height: 1rem;
+}
+
+.neo-row-value {
+    color: rgba(248,250,252,.96);
+    font-size: 8px;
+    line-height: 1rem;
+    font-weight: 800;
+    text-align: right;
+}
+
+.neo-copy-value {
+    width: 100%;
+    overflow-wrap: anywhere;
+    color: rgba(226,232,240,.9);
+    font-size: 7px;
+    line-height: 1rem;
+    font-weight: 700;
+}
+
+
+/* =========================================================
+   BADGES
+========================================================= */
+
+.neo-badge {
+    display: inline-flex;
+    width: fit-content;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    padding: .22rem .48rem;
+    font-size: 7px;
+    line-height: 1;
+    font-weight: 900;
+    white-space: nowrap;
+}
+
+.neo-badge-green {
+    border: 1px solid rgba(52,211,153,.28);
+    background: rgba(52,211,153,.1);
+    color: rgb(110,231,183);
+}
+
+.neo-badge-violet {
+    border: 1px solid rgba(167,139,250,.28);
+    background: rgba(167,139,250,.1);
+    color: rgb(196,181,253);
+}
+
+.neo-badge-red {
+    border: 1px solid rgba(251,113,133,.28);
+    background: rgba(251,113,133,.1);
+    color: rgb(253,164,175);
+}
+
+.neo-badge-amber {
+    border: 1px solid rgba(251,191,36,.28);
+    background: rgba(251,191,36,.1);
+    color: rgb(253,224,71);
+}
+
+.neo-badge-cyan {
+    border: 1px solid rgba(34,211,238,.28);
+    background: rgba(34,211,238,.1);
+    color: rgb(103,232,249);
+}
+
+.neo-badge-muted {
+    border: 1px solid rgba(148,163,184,.18);
+    background: rgba(148,163,184,.06);
+    color: rgba(203,213,225,.78);
+}
+
+
+/* =========================================================
+   ACCESS BOXES
+========================================================= */
+
+.neo-access-box {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: .75rem;
+    border-radius: .75rem;
+    padding: .75rem;
+}
+
+.neo-access-green {
+    border: 1px solid rgba(16,185,129,.7);
+    background: rgba(16,185,129,.09);
+}
+
+.neo-access-violet {
+    border: 1px solid rgba(139,92,246,.65);
+    background: rgba(139,92,246,.08);
+}
+
+.neo-access-sky {
+    border: 1px solid rgba(56,189,248,.55);
+    background: rgba(56,189,248,.06);
+}
+
+.neo-access-red {
+    border: 1px solid rgba(244,63,94,.5);
+    background: rgba(244,63,94,.06);
+}
+
+.neo-access-orange {
+    border: 1px solid rgba(249,115,22,.5);
+    background: rgba(249,115,22,.06);
+}
+
+.neo-access-amber {
+    border: 1px solid rgba(245,158,11,.5);
+    background: rgba(245,158,11,.06);
+}
+
+.neo-access-icon {
+    display: flex;
+    width: 2.45rem;
+    height: 2.45rem;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    font-size: 1rem;
+    font-weight: 900;
+}
+
+.neo-access-icon-green {
+    background: rgb(16,185,129);
+    color: #02150f;
+}
+
+.neo-access-icon-violet {
+    background: rgb(139,92,246);
+    color: #fff;
+}
+
+.neo-access-icon-sky {
+    background: rgb(56,189,248);
+    color: #03131e;
+}
+
+.neo-access-icon-red {
+    background: rgb(244,63,94);
+    color: #fff;
+}
+
+.neo-access-icon-orange {
+    background: rgb(249,115,22);
+    color: #fff;
+}
+
+.neo-access-icon-amber {
+    background: rgb(245,158,11);
+    color: #211300;
+}
+
+
+/* =========================================================
+   TIMELINE
+========================================================= */
+
+.neo-timeline-line {
+    width: 1px;
+    background: linear-gradient(
+        to bottom,
+        rgba(34,211,238,.75),
+        rgba(34,211,238,.12)
+    );
+    box-shadow: 0 0 7px rgba(34,211,238,.16);
+}
+
+
+/* =========================================================
+   DESKTOP / MOBILE SCROLL MODEL
+========================================================= */
+
+@media (min-width: 1024px) {
+
+    .neo-admin-order-page {
+        height: calc(100dvh - 6.5rem) !important;
+        max-height: calc(100dvh - 6.5rem) !important;
+        width: 100% !important;
+        margin-inline: auto !important;
+        overflow: hidden !important;
+    }
+
+    .neo-admin-order-page > section {
+        height: 100% !important;
+        min-height: 0 !important;
+    }
+
+    .neo-order-column-scroll {
+        height: 100% !important;
+        max-height: 100% !important;
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+    }
+
+}
+
+@media (max-width: 1023px) {
+
+    .neo-admin-order-page {
+        height: calc(100dvh - 6rem) !important;
+        max-height: calc(100dvh - 6rem) !important;
+        width: 100% !important;
+        margin-inline: auto !important;
+        overflow: hidden !important;
+    }
+
+    .neo-admin-order-page > section {
+        height: 100% !important;
+        min-height: 0 !important;
+    }
+
+    /*
+       On tablet/mobile the two columns become two stacked
+       independent panels. The browser body itself does not
+       become the page scroll surface.
+    */
+
+    .neo-admin-order-page > section > div:last-child {
+        grid-template-rows: minmax(0,1fr) minmax(0,1fr);
+    }
+
+    .neo-order-column-scroll {
+        min-height: 0 !important;
+        max-height: 100% !important;
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+    }
+
+}
+
+@media (max-width: 639px) {
+
+    .neo-admin-order-page {
+        height: calc(100dvh - 5.5rem) !important;
+        max-height: calc(100dvh - 5.5rem) !important;
+    }
+
+    .neo-card-header {
+        padding: .6rem .65rem;
+    }
+
+    .neo-access-box {
+        align-items: flex-start;
+    }
+
+    .neo-access-box > .shrink-0.text-right {
+        display: none;
+    }
+
+}
+
+
+/* =========================================================
+   REDUCE MOTION
+========================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+
+    .neo-order-column-scroll {
+        scroll-behavior: auto !important;
+    }
+
+}
+</style>
+
+{% endwith %}
+
+{% endblock %}

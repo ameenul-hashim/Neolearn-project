@@ -1,0 +1,2360 @@
+{% extends "admins/admin_base.html" %}
+
+
+{% block title %}
+    Order Management | NeoLearn Admin
+{% endblock %}
+
+
+{% block admin_content %}
+
+<div class="w-full min-w-0">
+
+
+    <!-- =========================================================
+         PAGE HEADER
+    ========================================================== -->
+
+    <div class="mb-6 flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
+
+        <div class="flex min-w-0 items-center gap-4">
+
+            <div
+                class="
+                    flex h-[58px] w-[58px] shrink-0 items-center justify-center
+                    rounded-[16px]
+                    border border-cyan-400/50
+                    bg-cyan-400/10
+                    shadow-[0_0_22px_rgba(0,245,212,0.14)]
+                "
+            >
+                <i class="ri-shopping-cart-2-line text-[28px] text-[#00F5D4]"></i>
+            </div>
+
+
+            <div class="min-w-0">
+
+                <div class="mb-1 flex items-center gap-2 text-[12px] text-[#64748B]">
+                    <span>Dashboard</span>
+                    <i class="ri-arrow-right-s-line"></i>
+
+                    <span class="text-[#CBD5E1]">
+                        Order Management
+                    </span>
+                </div>
+
+
+                <h1
+                    class="
+                        text-[26px]
+                        font-extrabold
+                        tracking-[-0.6px]
+                        text-white
+                        sm:text-[30px]
+                    "
+                >
+                    Order Management
+                </h1>
+
+
+                <p class="mt-1 text-[12px] text-[#94A3B8] sm:text-[14px]">
+                    Manage student orders, payments and batch access.
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <!-- EXPORT PLACEHOLDER -->
+
+        <button
+            type="button"
+            class="
+                inline-flex h-[44px] shrink-0 items-center justify-center gap-2
+                rounded-[12px]
+                border border-cyan-400/50
+                bg-cyan-400/5
+                px-5
+                text-[13px]
+                font-semibold
+                text-white
+                transition
+                hover:border-cyan-400
+                hover:bg-cyan-400/10
+            "
+        >
+            <i class="ri-download-2-line text-[17px]"></i>
+            Export Orders
+        </button>
+
+    </div>
+
+
+
+    <!-- =========================================================
+         SUMMARY CARDS
+    ========================================================== -->
+
+    <div class="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
+
+
+        <!-- ALL ORDERS -->
+
+        <div
+            class="
+                relative overflow-hidden rounded-[14px]
+                border border-blue-400/40
+                bg-gradient-to-br from-blue-500/10 to-[#07152d]
+                p-4
+            "
+        >
+
+            <div class="flex items-center gap-3">
+
+                <div
+                    class="
+                        flex h-[42px] w-[42px] shrink-0 items-center justify-center
+                        rounded-[11px]
+                        bg-blue-500/20
+                        text-blue-300
+                    "
+                >
+                    <i class="ri-shopping-cart-2-line text-[21px]"></i>
+                </div>
+
+
+                <div class="min-w-0">
+
+                    <p class="text-[12px] text-[#CBD5E1]">
+                        All Orders
+                    </p>
+
+                    <p class="mt-0.5 text-[25px] font-bold text-white">
+                        {{ summary.total_orders|default:0 }}
+                    </p>
+
+                    <p class="text-[10px] text-[#64748B]">
+                        Total orders
+                    </p>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+
+        <!-- PAID -->
+
+        <div
+            class="
+                relative overflow-hidden rounded-[14px]
+                border border-emerald-400/40
+                bg-gradient-to-br from-emerald-500/10 to-[#071b1b]
+                p-4
+            "
+        >
+
+            <div class="flex items-center gap-3">
+
+                <div
+                    class="
+                        flex h-[42px] w-[42px] shrink-0 items-center justify-center
+                        rounded-[11px]
+                        bg-emerald-400/20
+                        text-emerald-300
+                    "
+                >
+                    <i class="ri-checkbox-circle-line text-[21px]"></i>
+                </div>
+
+
+                <div class="min-w-0">
+
+                    <p class="text-[12px] text-[#CBD5E1]">
+                        Paid Orders
+                    </p>
+
+                    <p class="mt-0.5 text-[25px] font-bold text-white">
+                        {{ summary.paid_orders|default:0 }}
+                    </p>
+
+                    <p class="text-[10px] text-[#64748B]">
+                        Payment successful
+                    </p>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+
+        <!-- FAILED -->
+
+        <div
+            class="
+                relative overflow-hidden rounded-[14px]
+                border border-red-400/40
+                bg-gradient-to-br from-red-500/10 to-[#210b13]
+                p-4
+            "
+        >
+
+            <div class="flex items-center gap-3">
+
+                <div
+                    class="
+                        flex h-[42px] w-[42px] shrink-0 items-center justify-center
+                        rounded-[11px]
+                        bg-red-400/20
+                        text-red-300
+                    "
+                >
+                    <i class="ri-close-circle-line text-[21px]"></i>
+                </div>
+
+
+                <div class="min-w-0">
+
+                    <p class="text-[12px] text-[#CBD5E1]">
+                        Payment Failed
+                    </p>
+
+                    <p class="mt-0.5 text-[25px] font-bold text-white">
+                        {{ summary.failed_orders|default:0 }}
+                    </p>
+
+                    <p class="text-[10px] text-[#64748B]">
+                        Payment failed
+                    </p>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+
+        <!-- PARTIALLY REFUNDED -->
+
+        <div
+            class="
+                relative overflow-hidden rounded-[14px]
+                border border-amber-400/40
+                bg-gradient-to-br from-amber-500/10 to-[#20170a]
+                p-4
+            "
+        >
+
+            <div class="flex items-center gap-3">
+
+                <div
+                    class="
+                        flex h-[42px] w-[42px] shrink-0 items-center justify-center
+                        rounded-[11px]
+                        bg-amber-400/20
+                        text-amber-300
+                    "
+                >
+                    <i class="ri-loop-right-line text-[21px]"></i>
+                </div>
+
+
+                <div class="min-w-0">
+
+                    <p class="text-[12px] text-[#CBD5E1]">
+                        Partial Refunds
+                    </p>
+
+                    <p class="mt-0.5 text-[25px] font-bold text-white">
+                        {{ summary.partially_refunded_orders|default:0 }}
+                    </p>
+
+                    <p class="text-[10px] text-[#64748B]">
+                        Partially refunded
+                    </p>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+
+        <!-- REFUNDED -->
+
+        <div
+            class="
+                relative overflow-hidden rounded-[14px]
+                border border-violet-400/40
+                bg-gradient-to-br from-violet-500/10 to-[#160d2a]
+                p-4
+            "
+        >
+
+            <div class="flex items-center gap-3">
+
+                <div
+                    class="
+                        flex h-[42px] w-[42px] shrink-0 items-center justify-center
+                        rounded-[11px]
+                        bg-violet-400/20
+                        text-violet-300
+                    "
+                >
+                    <i class="ri-arrow-go-back-line text-[21px]"></i>
+                </div>
+
+
+                <div class="min-w-0">
+
+                    <p class="text-[12px] text-[#CBD5E1]">
+                        Refunded Orders
+                    </p>
+
+                    <p class="mt-0.5 text-[25px] font-bold text-white">
+                        {{ summary.refunded_orders|default:0 }}
+                    </p>
+
+                    <p class="text-[10px] text-[#64748B]">
+                        Fully refunded
+                    </p>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+
+    <!-- =========================================================
+         SEARCH + FILTERS
+    ========================================================== -->
+
+    <div
+        class="
+            mb-4 rounded-[14px]
+            border border-white/[0.08]
+            bg-[#07111f]/90
+            p-3 sm:p-4
+        "
+    >
+
+        <form method="get" class="w-full">
+
+
+            <!-- SEARCH + DATE -->
+
+            <div
+                class="
+                    mb-2 grid grid-cols-1 gap-2
+                    xl:grid-cols-[minmax(0,1fr)_310px]
+                "
+            >
+
+
+                <!-- SEARCH -->
+
+                <div class="relative min-w-0">
+
+                    <i
+                        class="
+                            ri-search-line
+                            absolute left-4 top-1/2
+                            -translate-y-1/2
+                            text-[18px]
+                            text-[#64748B]
+                        "
+                    ></i>
+
+
+                    <input
+                        type="text"
+                        name="search"
+                        value="{{ search }}"
+                        placeholder="Search order number, student name, email, phone, payment ID..."
+                        class="
+                            h-[46px] w-full rounded-[12px]
+                            border border-white/10
+                            bg-[#081321]
+                            pl-11 pr-4
+                            text-[13px] text-white
+                            outline-none
+                            placeholder:text-[#64748B]
+                            focus:border-cyan-400/60
+                            focus:ring-1
+                            focus:ring-cyan-400/20
+                        "
+                    >
+
+                </div>
+
+
+
+                <!-- DATE -->
+
+                <div
+                    class="
+                        flex min-h-[46px] min-w-0 items-center gap-2
+                        rounded-[12px]
+                        border border-white/10
+                        bg-[#081321]
+                        px-3
+                    "
+                >
+
+                    <i class="ri-calendar-line shrink-0 text-[17px] text-[#94A3B8]"></i>
+
+
+                    <input
+                        type="date"
+                        name="date_from"
+                        value="{{ date_from }}"
+                        title="From date"
+                        class="
+                            min-w-0 w-1/2
+                            bg-transparent
+                            text-[11px] text-[#CBD5E1]
+                            outline-none
+                        "
+                    >
+
+
+                    <span class="shrink-0 text-[#475569]">
+                        —
+                    </span>
+
+
+                    <input
+                        type="date"
+                        name="date_to"
+                        value="{{ date_to }}"
+                        title="To date"
+                        class="
+                            min-w-0 w-1/2
+                            bg-transparent
+                            text-[11px] text-[#CBD5E1]
+                            outline-none
+                        "
+                    >
+
+                </div>
+
+            </div>
+
+
+
+            <!-- FILTERS -->
+
+            <div
+                class="
+                    grid grid-cols-1 gap-2
+                    sm:grid-cols-2
+                    lg:grid-cols-4
+                "
+            >
+
+
+                <!-- ORDER STATUS -->
+
+                <select
+                    name="order_status"
+                    class="
+                        h-[44px] w-full rounded-[11px]
+                        border border-white/10
+                        bg-[#081321]
+                        px-3
+                        text-[12px] text-[#CBD5E1]
+                        outline-none
+                        focus:border-cyan-400/50
+                    "
+                >
+
+                    <option value="">
+                        All Order Statuses
+                    </option>
+
+
+                    {% for status in order_statuses %}
+
+                        <option
+                            value="{{ status }}"
+                            {% if selected_order_status == status %}
+                                selected
+                            {% endif %}
+                        >
+
+                            {% if status == "pending" %}
+                                Pending
+
+                            {% elif status == "payment_processing" %}
+                                Payment Processing
+
+                            {% elif status == "paid" %}
+                                Paid
+
+                            {% elif status == "payment_failed" %}
+                                Payment Failed
+
+                            {% elif status == "cancelled" %}
+                                Cancelled
+
+                            {% elif status == "partially_refunded" %}
+                                Partially Refunded
+
+                            {% elif status == "refunded" %}
+                                Refunded
+
+                            {% else %}
+                                {{ status|title }}
+                            {% endif %}
+
+                        </option>
+
+                    {% endfor %}
+
+                </select>
+
+
+
+                <!-- PAYMENT STATUS -->
+
+                <select
+                    name="payment_status"
+                    class="
+                        h-[44px] w-full rounded-[11px]
+                        border border-white/10
+                        bg-[#081321]
+                        px-3
+                        text-[12px] text-[#CBD5E1]
+                        outline-none
+                        focus:border-cyan-400/50
+                    "
+                >
+
+                    <option value="">
+                        All Payment Statuses
+                    </option>
+
+
+                    {% for status in payment_statuses %}
+
+                        <option
+                            value="{{ status }}"
+                            {% if selected_payment_status == status %}
+                                selected
+                            {% endif %}
+                        >
+
+                            {% if status == "created" %}
+                                Created
+
+                            {% elif status == "processing" %}
+                                Processing
+
+                            {% elif status == "captured" %}
+                                Captured
+
+                            {% elif status == "failed" %}
+                                Failed
+
+                            {% elif status == "refunded" %}
+                                Refunded
+
+                            {% elif status == "partially_refunded" %}
+                                Partially Refunded
+
+                            {% else %}
+                                {{ status|title }}
+                            {% endif %}
+
+                        </option>
+
+                    {% endfor %}
+
+                </select>
+
+
+
+                <!-- ACCESS STATUS -->
+
+                <select
+                    name="access_status"
+                    class="
+                        h-[44px] w-full rounded-[11px]
+                        border border-white/10
+                        bg-[#081321]
+                        px-3
+                        text-[12px] text-[#CBD5E1]
+                        outline-none
+                        focus:border-cyan-400/50
+                    "
+                >
+
+                    <option value="">
+                        All Access Statuses
+                    </option>
+
+
+                    {% for status in access_statuses %}
+
+                        <option
+                            value="{{ status }}"
+                            {% if selected_access_status == status %}
+                                selected
+                            {% endif %}
+                        >
+
+                            {% if status == "active" %}
+                                Active
+
+                            {% elif status == "partial" %}
+                                Partially Active
+
+                            {% elif status == "revoked" %}
+                                Revoked
+
+                            {% elif status == "none" %}
+                                No Access
+
+                            {% else %}
+                                {{ status|title }}
+                            {% endif %}
+
+                        </option>
+
+                    {% endfor %}
+
+                </select>
+
+
+
+                <!-- FILTER ACTIONS -->
+
+                <div class="flex gap-2">
+
+                    <button
+                        type="submit"
+                        class="
+                            inline-flex h-[44px] flex-1
+                            items-center justify-center gap-2
+                            rounded-[11px]
+                            bg-[#00D9F5]
+                            px-4
+                            text-[12px]
+                            font-bold
+                            text-[#00131a]
+                            transition
+                            hover:bg-[#16e3ff]
+                        "
+                    >
+                        <i class="ri-filter-3-line text-[16px]"></i>
+                        Apply Filters
+                    </button>
+
+
+                    <a
+                        href="{% url 'admin_orders' %}"
+                        class="
+                            inline-flex h-[44px] shrink-0
+                            items-center justify-center gap-2
+                            rounded-[11px]
+                            border border-white/10
+                            bg-[#0B1727]
+                            px-4
+                            text-[12px]
+                            font-semibold
+                            text-[#CBD5E1]
+                            transition
+                            hover:bg-white/5
+                            hover:text-white
+                        "
+                    >
+                        <i class="ri-refresh-line text-[16px]"></i>
+
+                        <span class="hidden sm:inline">
+                            Clear
+                        </span>
+                    </a>
+
+                </div>
+
+            </div>
+
+        </form>
+
+    </div>
+
+
+
+    <!-- =========================================================
+         DESKTOP TABLE
+    ========================================================== -->
+
+    <div
+        class="
+            hidden
+            w-full
+            min-w-0
+            overflow-hidden
+            rounded-[14px]
+            border border-white/[0.08]
+            bg-[#07111f]/90
+            lg:block
+        "
+    >
+
+        <table class="w-full table-fixed border-collapse">
+
+            <colgroup>
+                <col style="width: 4%;">
+                <col style="width: 14%;">
+                <col style="width: 19%;">
+                <col style="width: 7%;">
+                <col style="width: 9%;">
+                <col style="width: 11%;">
+                <col style="width: 11%;">
+                <col style="width: 9%;">
+                <col style="width: 16%;">
+            </colgroup>
+
+
+            <!-- TABLE HEADER -->
+
+            <thead>
+
+                <tr class="border-b border-white/[0.08] bg-[#091625]">
+
+                    <th class="px-2 py-3 text-center">
+
+                        <input
+                            type="checkbox"
+                            id="selectAllOrders"
+                            class="
+                                h-[15px] w-[15px]
+                                cursor-pointer
+                                rounded
+                                border-white/20
+                                bg-[#0B1727]
+                                accent-cyan-400
+                            "
+                        >
+
+                    </th>
+
+
+                    <th class="px-2 py-3 text-left">
+                        <span class="table-heading">
+                            ORDER NUMBER
+                        </span>
+                    </th>
+
+
+                    <th class="px-2 py-3 text-left">
+                        <span class="table-heading">
+                            STUDENT
+                        </span>
+                    </th>
+
+
+                    <th class="px-2 py-3 text-left">
+                        <span class="table-heading">
+                            ITEMS
+                        </span>
+                    </th>
+
+
+                    <th class="px-2 py-3 text-left">
+                        <span class="table-heading">
+                            AMOUNT
+                        </span>
+                    </th>
+
+
+                    <th class="px-2 py-3 text-left">
+                        <span class="table-heading">
+                            PAYMENT
+                        </span>
+                    </th>
+
+
+                    <th class="px-2 py-3 text-left">
+                        <span class="table-heading">
+                            ORDER STATUS
+                        </span>
+                    </th>
+
+
+                    <th class="px-2 py-3 text-left">
+                        <span class="table-heading">
+                            ACCESS
+                        </span>
+                    </th>
+
+
+                    <th class="px-2 py-3 text-left">
+                        <span class="table-heading">
+                            ACTION
+                        </span>
+                    </th>
+
+                </tr>
+
+            </thead>
+
+
+
+            <!-- TABLE BODY -->
+
+            <tbody>
+
+                {% for order in orders %}
+
+                    <tr
+                        class="
+                            border-b border-white/[0.055]
+                            transition
+                            hover:bg-white/[0.025]
+                        "
+                    >
+
+
+                        <!-- CHECKBOX -->
+
+                        <td class="px-2 py-3 text-center align-middle">
+
+                            <input
+                                type="checkbox"
+                                name="selected_orders"
+                                value="{{ order.id }}"
+                                class="
+                                    order-checkbox
+                                    h-[15px] w-[15px]
+                                    cursor-pointer
+                                    rounded
+                                    border-white/20
+                                    bg-[#0B1727]
+                                    accent-cyan-400
+                                "
+                                {% if order.id in selected_order_ids %}
+                                    checked
+                                {% endif %}
+                            >
+
+                        </td>
+
+
+
+                        <!-- ORDER NUMBER -->
+
+                        <td class="px-2 py-3 align-middle">
+
+                            <div class="min-w-0">
+
+                                <p
+                                    class="
+                                        truncate
+                                        text-[10px]
+                                        font-bold
+                                        text-white
+                                    "
+                                    title="{{ order.order_number }}"
+                                >
+                                    {{ order.order_number }}
+                                </p>
+
+
+                                {% if order.razorpay_order_id %}
+
+                                    <p
+                                        class="
+                                            mt-1 truncate
+                                            text-[8px]
+                                            text-[#64748B]
+                                        "
+                                        title="{{ order.razorpay_order_id }}"
+                                    >
+                                        {{ order.razorpay_order_id }}
+                                    </p>
+
+                                {% endif %}
+
+                            </div>
+
+                        </td>
+
+
+
+                        <!-- STUDENT -->
+
+                        <td class="px-2 py-3 align-middle">
+
+                            <div class="flex min-w-0 items-center gap-2">
+
+                                <div
+                                    class="
+                                        flex h-[31px] w-[31px] shrink-0
+                                        items-center justify-center
+                                        rounded-full
+                                        border border-cyan-400/30
+                                        bg-cyan-400/10
+                                        text-[11px]
+                                        font-bold
+                                        text-cyan-300
+                                    "
+                                >
+
+                                    {% if order.full_name %}
+                                        {{ order.full_name|slice:":1"|upper }}
+                                    {% else %}
+                                        {{ order.user.username|slice:":1"|upper }}
+                                    {% endif %}
+
+                                </div>
+
+
+                                <div class="min-w-0">
+
+                                    <p
+                                        class="
+                                            truncate
+                                            text-[10px]
+                                            font-semibold
+                                            text-white
+                                        "
+                                        title="{{ order.full_name }}"
+                                    >
+                                        {{ order.full_name|default:order.user.username }}
+                                    </p>
+
+
+                                    <p
+                                        class="
+                                            truncate
+                                            text-[8px]
+                                            text-[#64748B]
+                                        "
+                                        title="{{ order.user.email }}"
+                                    >
+                                        {{ order.user.email }}
+                                    </p>
+
+
+                                    {% if order.phone %}
+
+                                        <p class="truncate text-[8px] text-[#64748B]">
+                                            {{ order.phone }}
+                                        </p>
+
+                                    {% endif %}
+
+                                </div>
+
+                            </div>
+
+                        </td>
+
+
+
+                        <!-- ITEMS -->
+
+                        <td class="px-2 py-3 align-middle">
+
+                            <span class="text-[10px] text-[#CBD5E1]">
+                                {{ order.item_count|default:0 }}
+                            </span>
+
+                            <span class="text-[9px] text-[#64748B]">
+
+                                {% if order.item_count == 1 %}
+                                    Batch
+                                {% else %}
+                                    Batches
+                                {% endif %}
+
+                            </span>
+
+                        </td>
+
+
+
+                        <!-- AMOUNT -->
+
+                        <td class="px-2 py-3 align-middle">
+
+                            <span
+                                class="
+                                    whitespace-nowrap
+                                    text-[10px]
+                                    font-bold
+                                    text-white
+                                "
+                            >
+                                ₹{{ order.final_amount|floatformat:2 }}
+                            </span>
+
+                        </td>
+
+
+
+                        <!-- PAYMENT -->
+
+                        <td class="px-2 py-3 align-middle">
+
+                            {% if order.admin_payment_status == "captured" %}
+
+                                <span class="status-badge status-green">
+                                    <span class="status-dot bg-emerald-400"></span>
+                                    Captured
+                                </span>
+
+
+                            {% elif order.admin_payment_status == "failed" %}
+
+                                <span class="status-badge status-red">
+                                    <span class="status-dot bg-red-400"></span>
+                                    Failed
+                                </span>
+
+
+                            {% elif order.admin_payment_status == "refunded" %}
+
+                                <span class="status-badge status-purple">
+                                    <span class="status-dot bg-violet-400"></span>
+                                    Refunded
+                                </span>
+
+
+                            {% elif order.admin_payment_status == "partially_refunded" %}
+
+                                <span class="status-badge status-yellow">
+                                    <span class="status-dot bg-amber-400"></span>
+                                    Partial
+                                </span>
+
+
+                            {% elif order.admin_payment_status == "processing" %}
+
+                                <span class="status-badge status-blue">
+                                    <span class="status-dot bg-cyan-400"></span>
+                                    Processing
+                                </span>
+
+
+                            {% elif order.admin_payment_status == "created" %}
+
+                                <span class="status-badge status-gray">
+                                    <span class="status-dot bg-slate-400"></span>
+                                    Created
+                                </span>
+
+
+                            {% else %}
+
+                                <span class="status-badge status-gray">
+                                    <span class="status-dot bg-slate-400"></span>
+                                    No Payment
+                                </span>
+
+                            {% endif %}
+
+                        </td>
+
+
+
+                        <!-- ORDER STATUS -->
+
+                        <td class="px-2 py-3 align-middle">
+
+                            {% if order.status == "paid" %}
+
+                                <span class="status-badge status-green">
+                                    <span class="status-dot bg-emerald-400"></span>
+                                    Paid
+                                </span>
+
+
+                            {% elif order.status == "payment_failed" %}
+
+                                <span class="status-badge status-red">
+                                    <span class="status-dot bg-red-400"></span>
+                                    Payment Failed
+                                </span>
+
+
+                            {% elif order.status == "refunded" %}
+
+                                <span class="status-badge status-purple">
+                                    <span class="status-dot bg-violet-400"></span>
+                                    Refunded
+                                </span>
+
+
+                            {% elif order.status == "partially_refunded" %}
+
+                                <span class="status-badge status-yellow">
+                                    <span class="status-dot bg-amber-400"></span>
+                                    Partial Refund
+                                </span>
+
+
+                            {% elif order.status == "pending" %}
+
+                                <span class="status-badge status-yellow">
+                                    <span class="status-dot bg-amber-400"></span>
+                                    Pending
+                                </span>
+
+
+                            {% elif order.status == "payment_processing" %}
+
+                                <span class="status-badge status-blue">
+                                    <span class="status-dot bg-cyan-400"></span>
+                                    Processing
+                                </span>
+
+
+                            {% elif order.status == "cancelled" %}
+
+                                <span class="status-badge status-gray">
+                                    <span class="status-dot bg-slate-400"></span>
+                                    Cancelled
+                                </span>
+
+
+                            {% else %}
+
+                                <span class="status-badge status-gray">
+                                    <span class="status-dot bg-slate-400"></span>
+                                    {{ order.status|title }}
+                                </span>
+
+                            {% endif %}
+
+                        </td>
+
+
+
+                        <!-- ACCESS -->
+
+                        <td class="px-2 py-3 align-middle">
+
+                            {% if order.admin_access_status == "active" %}
+
+                                <span class="status-badge status-green">
+                                    <i class="ri-lock-unlock-line text-[11px]"></i>
+                                    Active
+                                </span>
+
+
+                            {% elif order.admin_access_status == "partial" %}
+
+                                <span class="status-badge status-yellow">
+                                    <i class="ri-lock-unlock-line text-[11px]"></i>
+                                    Partial
+                                </span>
+
+
+                            {% elif order.admin_access_status == "revoked" %}
+
+                                <span class="status-badge status-red">
+                                    <i class="ri-lock-line text-[11px]"></i>
+                                    Revoked
+                                </span>
+
+
+                            {% else %}
+
+                                <span class="status-badge status-gray">
+                                    <i class="ri-lock-line text-[11px]"></i>
+                                    No Access
+                                </span>
+
+                            {% endif %}
+
+                        </td>
+
+
+
+                        <!-- ACTION -->
+
+                        <td class="px-2 py-3 align-middle">
+
+                            <a
+                                href="{% url 'admin_order_detail' order.id %}"
+                                class="
+                                    inline-flex h-[32px] w-full
+                                    items-center justify-center gap-1.5
+                                    rounded-[8px]
+                                    border border-white/10
+                                    bg-[#0B1727]
+                                    text-[9px]
+                                    font-semibold
+                                    text-[#CBD5E1]
+                                    transition
+                                    hover:border-cyan-400/40
+                                    hover:bg-cyan-400/5
+                                    hover:text-white
+                                "
+                            >
+                                <i class="ri-eye-line text-[13px]"></i>
+
+                                View Details
+
+                                <i class="ri-arrow-right-s-line text-[12px]"></i>
+                            </a>
+
+                        </td>
+
+                    </tr>
+
+
+                {% empty %}
+
+                    <tr>
+
+                        <td colspan="9" class="px-6 py-16 text-center">
+
+                            <div
+                                class="
+                                    mx-auto flex h-[52px] w-[52px]
+                                    items-center justify-center
+                                    rounded-full
+                                    bg-white/5
+                                    text-[#64748B]
+                                "
+                            >
+                                <i class="ri-inbox-line text-[25px]"></i>
+                            </div>
+
+
+                            <p class="mt-4 text-[14px] font-semibold text-white">
+                                No orders found
+                            </p>
+
+
+                            <p class="mt-1 text-[11px] text-[#64748B]">
+                                Try changing your search or filters.
+                            </p>
+
+                        </td>
+
+                    </tr>
+
+                {% endfor %}
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+
+
+    <!-- =========================================================
+         MOBILE / TABLET CARDS
+    ========================================================== -->
+
+    <div class="space-y-2 lg:hidden">
+
+        {% for order in orders %}
+
+            <div
+                class="
+                    rounded-[13px]
+                    border border-white/[0.08]
+                    bg-[#07111f]/90
+                    p-3
+                "
+            >
+
+                <div class="flex items-start justify-between gap-3">
+
+                    <div class="flex min-w-0 items-start gap-3">
+
+                        <input
+                            type="checkbox"
+                            name="selected_orders_mobile"
+                            value="{{ order.id }}"
+                            class="
+                                order-checkbox
+                                mt-1
+                                h-[15px] w-[15px]
+                                shrink-0
+                                cursor-pointer
+                                accent-cyan-400
+                            "
+                            {% if order.id in selected_order_ids %}
+                                checked
+                            {% endif %}
+                        >
+
+
+                        <div class="min-w-0">
+
+                            <p class="truncate text-[12px] font-bold text-white">
+                                {{ order.order_number }}
+                            </p>
+
+                            <p class="mt-1 truncate text-[9px] text-[#64748B]">
+                                {{ order.user.email }}
+                            </p>
+
+                        </div>
+
+                    </div>
+
+
+                    <a
+                        href="{% url 'admin_order_detail' order.id %}"
+                        class="
+                            inline-flex h-[32px] shrink-0
+                            items-center gap-1
+                            rounded-[8px]
+                            border border-white/10
+                            bg-[#0B1727]
+                            px-3
+                            text-[10px]
+                            font-semibold
+                            text-[#CBD5E1]
+                        "
+                    >
+                        <i class="ri-eye-line text-[13px]"></i>
+                        View
+                    </a>
+
+                </div>
+
+
+
+                <div
+                    class="
+                        mt-3 grid grid-cols-2 gap-3
+                        border-t border-white/[0.06]
+                        pt-3
+                    "
+                >
+
+                    <div class="min-w-0">
+
+                        <p class="label-text">
+                            Student
+                        </p>
+
+                        <p class="mt-1 truncate text-[11px] text-[#CBD5E1]">
+                            {{ order.full_name|default:order.user.username }}
+                        </p>
+
+                    </div>
+
+
+                    <div>
+
+                        <p class="label-text">
+                            Amount
+                        </p>
+
+                        <p class="mt-1 text-[11px] font-bold text-white">
+                            ₹{{ order.final_amount|floatformat:2 }}
+                        </p>
+
+                    </div>
+
+
+                    <div>
+
+                        <p class="label-text">
+                            Items
+                        </p>
+
+                        <p class="mt-1 text-[11px] text-[#CBD5E1]">
+                            {{ order.item_count|default:0 }}
+                        </p>
+
+                    </div>
+
+
+                    <div>
+
+                        <p class="label-text">
+                            Payment
+                        </p>
+
+                        <p class="mt-1 text-[11px] text-[#CBD5E1]">
+                            {{ order.admin_payment_status_label|default:"No Payment" }}
+                        </p>
+
+                    </div>
+
+
+                    <div>
+
+                        <p class="label-text">
+                            Order Status
+                        </p>
+
+                        <p class="mt-1 text-[11px] text-[#CBD5E1]">
+                            {{ order.admin_order_status_label|default:order.status|title }}
+                        </p>
+
+                    </div>
+
+
+                    <div>
+
+                        <p class="label-text">
+                            Access
+                        </p>
+
+                        <p class="mt-1 text-[11px] text-[#CBD5E1]">
+                            {{ order.admin_access_status_label|default:"No Access" }}
+                        </p>
+
+                    </div>
+
+
+                    <div class="col-span-2">
+
+                        <p class="label-text">
+                            Date
+                        </p>
+
+                        <p class="mt-1 text-[11px] text-[#CBD5E1]">
+                            {{ order.created_at|date:"d M Y, h:i A" }}
+                        </p>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+        {% empty %}
+
+            <div
+                class="
+                    rounded-[13px]
+                    border border-white/[0.08]
+                    bg-[#07111f]/90
+                    px-6 py-14
+                    text-center
+                "
+            >
+
+                <i class="ri-inbox-line text-[30px] text-[#64748B]"></i>
+
+
+                <p class="mt-3 text-[14px] font-semibold text-white">
+                    No orders found
+                </p>
+
+
+                <p class="mt-1 text-[11px] text-[#64748B]">
+                    Try changing your search or filters.
+                </p>
+
+            </div>
+
+        {% endfor %}
+
+    </div>
+
+
+
+    <!-- =========================================================
+         PAGINATION
+    ========================================================== -->
+
+    {% if page_obj.paginator.count %}
+
+        <div
+            class="
+                mt-4 flex flex-col gap-3
+                sm:flex-row
+                sm:items-center
+                sm:justify-between
+            "
+        >
+
+            <!-- RESULT COUNT -->
+
+            <p class="text-[11px] text-[#64748B]">
+
+                Showing
+
+                <span class="font-semibold text-[#CBD5E1]">
+                    {{ page_obj.start_index }}
+                </span>
+
+                –
+
+                <span class="font-semibold text-[#CBD5E1]">
+                    {{ page_obj.end_index }}
+                </span>
+
+                of
+
+                <span class="font-semibold text-[#CBD5E1]">
+                    {{ page_obj.paginator.count }}
+                </span>
+
+                orders
+
+            </p>
+
+
+
+            <!-- PAGINATION -->
+
+            <div class="flex max-w-full items-center gap-1 overflow-hidden">
+
+
+                <!-- PREVIOUS -->
+
+                {% if page_obj.has_previous %}
+
+                    <a
+                        href="?{% if preserved_query %}{{ preserved_query }}&{% endif %}page={{ page_obj.previous_page_number }}"
+                        class="
+                            pagination-button
+                            px-2
+                        "
+                        aria-label="Previous page"
+                    >
+                        <i class="ri-arrow-left-s-line text-[16px]"></i>
+
+                        <span class="hidden sm:inline">
+                            Previous
+                        </span>
+                    </a>
+
+                {% else %}
+
+                    <span class="pagination-button pagination-disabled px-2">
+                        <i class="ri-arrow-left-s-line text-[16px]"></i>
+
+                        <span class="hidden sm:inline">
+                            Previous
+                        </span>
+                    </span>
+
+                {% endif %}
+
+
+
+                <!-- PAGE NUMBERS -->
+
+                {% for number in page_obj.paginator.page_range %}
+
+                    {% if number == page_obj.number %}
+
+                        <span class="pagination-number pagination-current">
+                            {{ number }}
+                        </span>
+
+
+                    {% elif number <= 5 %}
+
+                        <a
+                            href="?{% if preserved_query %}{{ preserved_query }}&{% endif %}page={{ number }}"
+                            class="pagination-number"
+                        >
+                            {{ number }}
+                        </a>
+
+
+                    {% elif number == page_obj.paginator.num_pages %}
+
+                        {% if page_obj.paginator.num_pages > 6 %}
+
+                            <span class="pagination-ellipsis">
+                                …
+                            </span>
+
+                            <a
+                                href="?{% if preserved_query %}{{ preserved_query }}&{% endif %}page={{ number }}"
+                                class="pagination-number"
+                            >
+                                {{ number }}
+                            </a>
+
+                        {% else %}
+
+                            <a
+                                href="?{% if preserved_query %}{{ preserved_query }}&{% endif %}page={{ number }}"
+                                class="pagination-number"
+                            >
+                                {{ number }}
+                            </a>
+
+                        {% endif %}
+
+                    {% endif %}
+
+                {% endfor %}
+
+
+
+                <!-- NEXT -->
+
+                {% if page_obj.has_next %}
+
+                    <a
+                        href="?{% if preserved_query %}{{ preserved_query }}&{% endif %}page={{ page_obj.next_page_number }}"
+                        class="
+                            pagination-button
+                            px-2
+                        "
+                        aria-label="Next page"
+                    >
+                        <span class="hidden sm:inline">
+                            Next
+                        </span>
+
+                        <i class="ri-arrow-right-s-line text-[16px]"></i>
+                    </a>
+
+                {% else %}
+
+                    <span class="pagination-button pagination-disabled px-2">
+
+                        <span class="hidden sm:inline">
+                            Next
+                        </span>
+
+                        <i class="ri-arrow-right-s-line text-[16px]"></i>
+
+                    </span>
+
+                {% endif %}
+
+            </div>
+
+        </div>
+
+    {% endif %}
+
+</div>
+
+
+
+<!-- =========================================================
+     PAGE STYLES
+========================================================== -->
+
+<style>
+
+    .table-heading {
+        display: inline-flex;
+        align-items: center;
+        white-space: nowrap;
+        font-size: 8px;
+        line-height: 1;
+        font-weight: 700;
+        letter-spacing: 0.055em;
+        color: #64748B;
+    }
+
+
+    .status-badge {
+        display: inline-flex;
+        max-width: 100%;
+        min-height: 23px;
+        align-items: center;
+        justify-content: center;
+        gap: 5px;
+        overflow: hidden;
+        border-radius: 7px;
+        padding: 0 7px;
+        font-size: 8px;
+        line-height: 1;
+        font-weight: 700;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+    }
+
+
+    .status-dot {
+        width: 6px;
+        height: 6px;
+        flex-shrink: 0;
+        border-radius: 9999px;
+    }
+
+
+    .status-green {
+        color: #6ee7b7;
+        background: rgba(16, 185, 129, 0.12);
+        border: 1px solid rgba(16, 185, 129, 0.20);
+    }
+
+
+    .status-red {
+        color: #fca5a5;
+        background: rgba(239, 68, 68, 0.12);
+        border: 1px solid rgba(239, 68, 68, 0.20);
+    }
+
+
+    .status-purple {
+        color: #c4b5fd;
+        background: rgba(139, 92, 246, 0.13);
+        border: 1px solid rgba(139, 92, 246, 0.22);
+    }
+
+
+    .status-yellow {
+        color: #fcd34d;
+        background: rgba(245, 158, 11, 0.13);
+        border: 1px solid rgba(245, 158, 11, 0.22);
+    }
+
+
+    .status-blue {
+        color: #67e8f9;
+        background: rgba(6, 182, 212, 0.12);
+        border: 1px solid rgba(6, 182, 212, 0.20);
+    }
+
+
+    .status-gray {
+        color: #cbd5e1;
+        background: rgba(71, 85, 105, 0.20);
+        border: 1px solid rgba(100, 116, 139, 0.20);
+    }
+
+
+    .label-text {
+        font-size: 9px;
+        line-height: 1;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: #475569;
+    }
+
+
+    .pagination-button {
+        display: inline-flex;
+        height: 34px;
+        min-width: 34px;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        border-radius: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.10);
+        background: #0B1727;
+        font-size: 10px;
+        font-weight: 600;
+        color: #CBD5E1;
+        transition: 0.15s ease;
+    }
+
+
+    .pagination-button:hover {
+        border-color: rgba(255, 255, 255, 0.18);
+        background: rgba(255, 255, 255, 0.05);
+        color: white;
+    }
+
+
+    .pagination-number {
+        display: inline-flex;
+        height: 34px;
+        min-width: 34px;
+        align-items: center;
+        justify-content: center;
+        border-radius: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.10);
+        background: #0B1727;
+        padding: 0 8px;
+        font-size: 10px;
+        color: #94A3B8;
+        transition: 0.15s ease;
+    }
+
+
+    .pagination-number:hover {
+        border-color: rgba(255, 255, 255, 0.18);
+        background: rgba(255, 255, 255, 0.05);
+        color: white;
+    }
+
+
+    .pagination-current {
+        border-color: transparent;
+        background: #00D9F5;
+        color: #00131a;
+        font-weight: 800;
+        box-shadow: 0 0 14px rgba(0, 217, 245, 0.18);
+    }
+
+
+    .pagination-current:hover {
+        border-color: transparent;
+        background: #00D9F5;
+        color: #00131a;
+    }
+
+
+    .pagination-disabled {
+        border-color: rgba(255, 255, 255, 0.05);
+        background: #07111f;
+        color: #334155;
+        cursor: default;
+    }
+
+
+    .pagination-ellipsis {
+        display: inline-flex;
+        height: 34px;
+        min-width: 20px;
+        align-items: center;
+        justify-content: center;
+        color: #475569;
+        font-size: 11px;
+    }
+
+
+    input[type="date"]::-webkit-calendar-picker-indicator {
+        filter: invert(0.65);
+        opacity: 0.7;
+        cursor: pointer;
+    }
+
+
+    .w-full {
+        min-width: 0;
+    }
+
+</style>
+
+
+
+<!-- =========================================================
+     ADMIN ORDER SELECTION CSRF TOKEN
+========================================================== -->
+
+<form id="adminOrderSelectionCsrfForm" class="hidden">
+    {% csrf_token %}
+</form>
+
+
+
+<!-- =========================================================
+     ADMIN ORDER SELECTION
+     Database-backed persistent selection.
+========================================================== -->
+
+<script>
+
+    document.addEventListener("DOMContentLoaded", function () {
+
+
+        const selectAll = document.getElementById(
+            "selectAllOrders"
+        );
+
+
+        const orderCheckboxes = Array.from(
+            document.querySelectorAll(
+                ".order-checkbox"
+            )
+        );
+
+
+        const selectionUrl =
+            "{% url 'admin_order_selection' %}";
+
+
+
+        /* ======================================================
+           CSRF TOKEN
+        ====================================================== */
+
+        function getCsrfToken() {
+
+            const csrfInput =
+                document.querySelector(
+                    'input[name="csrfmiddlewaretoken"]'
+                );
+
+
+            if (!csrfInput) {
+                return null;
+            }
+
+
+            return csrfInput.value;
+        }
+
+
+
+        /* ======================================================
+           KEEP DESKTOP + MOBILE CHECKBOXES SYNCHRONIZED
+        ====================================================== */
+
+        function syncOrderCheckboxes(
+            orderId,
+            checked,
+            sourceCheckbox
+        ) {
+
+            orderCheckboxes.forEach(
+                function (checkbox) {
+
+                    if (
+                        checkbox !== sourceCheckbox &&
+                        String(checkbox.value) ===
+                            String(orderId)
+                    ) {
+
+                        checkbox.checked = checked;
+
+                    }
+
+                }
+            );
+
+        }
+
+
+
+        /* ======================================================
+           UPDATE SELECT-ALL STATE
+        ====================================================== */
+
+        function updateSelectAllState() {
+
+            if (!selectAll) {
+                return;
+            }
+
+
+            if (orderCheckboxes.length === 0) {
+
+                selectAll.checked = false;
+                selectAll.indeterminate = false;
+
+                return;
+            }
+
+
+            const checkedCount =
+                orderCheckboxes.filter(
+                    function (checkbox) {
+                        return checkbox.checked;
+                    }
+                ).length;
+
+
+            selectAll.checked =
+                checkedCount ===
+                orderCheckboxes.length;
+
+
+            selectAll.indeterminate =
+                checkedCount > 0 &&
+                checkedCount < orderCheckboxes.length;
+
+        }
+
+
+
+        /* ======================================================
+           SAVE ONE ORDER SELECTION
+        ====================================================== */
+
+        async function saveSelection(
+            orderId,
+            action
+        ) {
+
+            const csrfToken =
+                getCsrfToken();
+
+
+            if (!csrfToken) {
+
+                throw new Error(
+                    "CSRF token is missing."
+                );
+
+            }
+
+
+            const formData =
+                new FormData();
+
+
+            formData.append(
+                "action",
+                action
+            );
+
+
+            formData.append(
+                "order_id",
+                orderId
+            );
+
+
+            const response =
+                await fetch(
+                    selectionUrl,
+                    {
+                        method: "POST",
+
+                        headers: {
+                            "X-CSRFToken": csrfToken,
+                            "X-Requested-With": "XMLHttpRequest"
+                        },
+
+                        body: formData,
+
+                        credentials: "same-origin"
+                    }
+                );
+
+
+            let data;
+
+
+            try {
+
+                data =
+                    await response.json();
+
+            } catch (error) {
+
+                throw new Error(
+                    "Invalid server response."
+                );
+
+            }
+
+
+            if (
+                !response.ok ||
+                !data.success
+            ) {
+
+                throw new Error(
+                    data.message ||
+                    "Unable to save order selection."
+                );
+
+            }
+
+
+            return data;
+
+        }
+
+
+
+        /* ======================================================
+           INDIVIDUAL ORDER CHECKBOX
+        ====================================================== */
+
+        orderCheckboxes.forEach(
+            function (checkbox) {
+
+                checkbox.addEventListener(
+                    "change",
+                    async function () {
+
+                        const currentCheckbox =
+                            this;
+
+
+                        const orderId =
+                            currentCheckbox.value;
+
+
+                        const checked =
+                            currentCheckbox.checked;
+
+
+                        const action =
+                            checked
+                                ? "select"
+                                : "unselect";
+
+
+
+                        /*
+                         * Immediately synchronize
+                         * desktop/mobile checkbox.
+                         */
+
+                        syncOrderCheckboxes(
+                            orderId,
+                            checked,
+                            currentCheckbox
+                        );
+
+
+                        updateSelectAllState();
+
+
+
+                        /*
+                         * Disable both copies
+                         * while request runs.
+                         */
+
+                        const matchingCheckboxes =
+                            orderCheckboxes.filter(
+                                function (item) {
+
+                                    return (
+                                        String(item.value) ===
+                                        String(orderId)
+                                    );
+
+                                }
+                            );
+
+
+                        matchingCheckboxes.forEach(
+                            function (item) {
+                                item.disabled = true;
+                            }
+                        );
+
+
+
+                        try {
+
+                            await saveSelection(
+                                orderId,
+                                action
+                            );
+
+                        } catch (error) {
+
+
+                            /*
+                             * Restore previous state.
+                             */
+
+                            const previousState =
+                                !checked;
+
+
+                            matchingCheckboxes.forEach(
+                                function (item) {
+
+                                    item.checked =
+                                        previousState;
+
+                                }
+                            );
+
+
+                            updateSelectAllState();
+
+
+                            console.error(
+                                "Order selection error:",
+                                error
+                            );
+
+
+                            alert(
+                                "Unable to save this order selection. Please try again."
+                            );
+
+
+                        } finally {
+
+                            matchingCheckboxes.forEach(
+                                function (item) {
+
+                                    item.disabled =
+                                        false;
+
+                                }
+                            );
+
+                        }
+
+                    }
+                );
+
+            }
+        );
+
+
+
+        /* ======================================================
+           SELECT / UNSELECT ALL ORDERS
+           CURRENT PAGE ONLY
+        ====================================================== */
+
+        if (selectAll) {
+
+            selectAll.addEventListener(
+                "change",
+                async function () {
+
+                    const shouldSelect =
+                        this.checked;
+
+
+
+                    /*
+                     * Collect unique IDs from
+                     * the visible page.
+                     */
+
+                    const uniqueOrderIds = [];
+
+
+                    orderCheckboxes.forEach(
+                        function (checkbox) {
+
+                            const orderId =
+                                String(
+                                    checkbox.value
+                                );
+
+
+                            if (
+                                !uniqueOrderIds.includes(
+                                    orderId
+                                )
+                            ) {
+
+                                uniqueOrderIds.push(
+                                    orderId
+                                );
+
+                            }
+
+                        }
+                    );
+
+
+                    this.disabled = true;
+
+
+
+                    /*
+                     * Optimistic UI update.
+                     */
+
+                    orderCheckboxes.forEach(
+                        function (checkbox) {
+
+                            checkbox.checked =
+                                shouldSelect;
+
+                            checkbox.disabled =
+                                true;
+
+                        }
+                    );
+
+
+                    updateSelectAllState();
+
+
+
+                    try {
+
+                        for (
+                            const orderId
+                            of uniqueOrderIds
+                        ) {
+
+                            await saveSelection(
+                                orderId,
+                                shouldSelect
+                                    ? "select"
+                                    : "unselect"
+                            );
+
+                        }
+
+                    } catch (error) {
+
+                        console.error(
+                            "Bulk order selection error:",
+                            error
+                        );
+
+
+                        alert(
+                            "Some order selections could not be saved. The page will refresh."
+                        );
+
+
+                        window.location.reload();
+
+                        return;
+
+                    } finally {
+
+                        this.disabled = false;
+
+
+                        orderCheckboxes.forEach(
+                            function (checkbox) {
+
+                                checkbox.disabled =
+                                    false;
+
+                            }
+                        );
+
+                    }
+
+
+
+                    /*
+                     * Keep desktop/mobile
+                     * layouts synchronized.
+                     */
+
+                    orderCheckboxes.forEach(
+                        function (checkbox) {
+
+                            checkbox.checked =
+                                shouldSelect;
+
+                        }
+                    );
+
+
+                    updateSelectAllState();
+
+                }
+            );
+
+        }
+
+
+
+        /* ======================================================
+           INITIAL STATE
+        ====================================================== */
+
+        updateSelectAllState();
+
+    });
+
+</script>
+
+
+{% endblock %}

@@ -19,13 +19,14 @@ from .views import (
     edit_batch_view,
     delete_batch_view,
     batch_subjects,
-
+    
     # SUBJECTS
     admin_subjects_view,
     create_subject_view,
     edit_subject_view,
     delete_subject_view,
-
+    
+    
     # TEACHERS
     admin_teachers,
     create_teacher_view,
@@ -51,6 +52,16 @@ from .views import (
     admin_refund_detail_view,
     admin_refund_action_view,
     admin_refund_status_view,
+
+    # ==========================================================
+    # ORDER MANAGEMENT
+    # ==========================================================
+    admin_orders_view,
+    admin_order_detail_view,
+    admin_order_selection_view,
+    admin_mark_payment_received_view,
+    admin_revert_payment_view,
+    admin_invoice_detail_view,
 
     # ADMIN COURSE BUILDER
     admin_course_builder_entry_view,
@@ -307,6 +318,68 @@ urlpatterns = [
         "refunds/<int:refund_id>/status/",
         admin_refund_status_view,
         name="admin_refund_status",
+    ),
+    # ORDER MANAGEMENT
+    # ==========================================================
+
+    # ----------------------------------------------------------
+    # Order list
+    # ----------------------------------------------------------
+
+    path(
+        "orders/",
+        admin_orders_view,
+        name="admin_orders",
+    ),
+
+    # ----------------------------------------------------------
+    # Persistent order selection
+    # ----------------------------------------------------------
+
+    path(
+        "orders/selection/",
+        admin_order_selection_view,
+        name="admin_order_selection",
+    ),
+
+    # ----------------------------------------------------------
+    # Mark payment as received
+    # ----------------------------------------------------------
+
+    path(
+        "orders/<int:order_id>/payment-received/",
+        admin_mark_payment_received_view,
+        name="admin_mark_payment_received",
+    ),
+
+    # ----------------------------------------------------------
+    # Revert payment / remove student access
+    # ----------------------------------------------------------
+
+    path(
+        "orders/<int:order_id>/revert-payment/",
+        admin_revert_payment_view,
+        name="admin_revert_payment",
+    ),
+
+    # ----------------------------------------------------------
+    # Admin invoice detail
+    # ----------------------------------------------------------
+
+    path(
+        "orders/invoice/<str:invoice_number>/",
+        admin_invoice_detail_view,
+        name="admin_invoice_detail",
+    ),
+
+    # ----------------------------------------------------------
+    # Order details
+    # ----------------------------------------------------------
+
+    path(
+        "orders/<int:order_id>/",
+        admin_order_detail_view,
+        name="admin_order_detail",
     ),
 
 

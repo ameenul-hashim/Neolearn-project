@@ -516,6 +516,7 @@ class Invoice(models.Model):
 class StudentBatchPurchase(models.Model):
     class Status(models.TextChoices):
         ACTIVE = "active", "Active"
+        REVOKED = "revoked", "Revoked"
         REFUNDED = "refunded", "Refunded"
 
     student = models.ForeignKey(
