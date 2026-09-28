@@ -594,6 +594,13 @@ class Refund(models.Model):
         REJECTED = "rejected", "Rejected"
         FAILED = "failed", "Failed"
 
+    refund_number = models.CharField(
+    max_length=40,
+    unique=True,
+    editable=False,
+    db_index=True,
+    )
+
     order = models.ForeignKey(
         Order,
         on_delete=models.PROTECT,
@@ -650,8 +657,113 @@ class Refund(models.Model):
         db_table = "orders_refund"
         ordering = ["-requested_at"]
 
+    def save(self, *args, **kwargs):
+        if not self.refund_number:
+            year = (
+                self.requested_at.year
+                if self.requested_at
+                else timezone.now().year
+            )
+
+            while True:
+                number = f"NLREF-{year}-{uuid.uuid4().hex[:8].upper()}"
+
+                if not Refund.objects.filter(
+                    refund_number=number
+                ).exclude(pk=self.pk).exists():
+                    self.refund_number = number
+                    break
+
+        super().save(*args, **kwargs)
+
     def __str__(self):
-        return f"Refund #{self.pk} - {self.order.order_number}"
+        return (
+            self.refund_number
+            or f"Refund #{self.pk} - {self.order.order_number}"
+        )
+
+
+class RefundAttempt(models.Model):
+    class Status(models.TextChoices):
+        PROCESSING = "processing", "Processing"
+        COMPLETED = "completed", "Completed"
+        FAILED = "failed", "Failed"
+        CANCELLED = "cancelled", "Cancelled"
+
+    refund = models.ForeignKey(
+        Refund,
+        on_delete=models.CASCADE,
+        related_name="attempts",
+    )
+
+    attempt_number = models.PositiveIntegerField()
+
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.PROCESSING,
+        db_index=True,
+    )
+
+    requested_amount = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=Decimal("0.00"),
+    )
+
+    refunded_amount = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=Decimal("0.00"),
+    )
+
+    razorpay_refund_id = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        db_index=True,
+    )
+
+    admin_note = models.TextField(
+        blank=True,
+        default="",
+    )
+
+    error_message = models.TextField(
+        blank=True,
+        default="",
+    )
+
+    started_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    processed_at = models.DateTimeField(
+        blank=True,
+        null=True,
+    )
+
+    class Meta:
+        db_table = "orders_refund_attempt"
+        ordering = ["attempt_number"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["refund", "attempt_number"],
+                name="unique_refund_attempt_number",
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=["refund", "status"],
+                name="refund_att_status_idx",
+            ),
+        ]
+
+    def __str__(self):
+        return (
+            f"{self.refund.refund_number or self.refund_id} - "
+            f"Attempt {self.attempt_number} - {self.status}"
+        )
 
 
 class RefundItem(models.Model):

@@ -1,0 +1,729 @@
+{% extends "admins/admin_base.html" %}
+
+{% block title %}
+    {{ refund.refund_number|default:"Refund" }} | Refund Management | NeoLearn Admin
+{% endblock %}
+
+{% block admin_content %}
+
+<div class="min-h-full space-y-3 pb-6">
+
+    <!-- ==========================================================
+         HEADER
+    =========================================================== -->
+    <section class="relative overflow-hidden rounded-2xl border border-cyan-300/20 bg-gradient-to-r from-slate-900 via-blue-950 to-violet-950 px-4 py-4 shadow-2xl shadow-blue-950/30 sm:px-5">
+        <div class="pointer-events-none absolute -left-16 -top-20 h-40 w-40 rounded-full bg-cyan-400/15 blur-3xl"></div>
+        <div class="pointer-events-none absolute -right-16 -top-20 h-48 w-48 rounded-full bg-violet-400/15 blur-3xl"></div>
+
+        <div class="relative z-10 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div class="min-w-0">
+                <a
+                    href="{% url 'admin_refunds' %}"
+                    class="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.04] px-2.5 py-1.5 text-[9px] font-black text-slate-300 transition hover:bg-white/[0.08] hover:text-white"
+                >
+                    <i class="ri-arrow-left-line"></i>
+                    Refunds
+                </a>
+
+                <div class="mt-2 flex min-w-0 items-center gap-3">
+                    <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-cyan-400/10 text-cyan-300 ring-1 ring-cyan-300/10">
+                        <i class="ri-refund-2-fill text-xl"></i>
+                    </div>
+
+                    <div class="min-w-0">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <h1 class="truncate text-xl font-black tracking-tight text-white sm:text-2xl">
+                                Refund Request
+                            </h1>
+
+                            <span class="rounded-lg border border-cyan-300/15 bg-cyan-400/[0.06] px-2 py-1 text-[8px] font-black text-cyan-300">
+                                {{ refund.refund_number|default:"REFUND"|upper }}
+                            </span>
+                        </div>
+
+                        <p class="mt-0.5 text-[9px] font-medium text-white/55 sm:text-[10px]">
+                            Student refund, order snapshot, payment and provider-attempt details.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="shrink-0">
+                {% if refund.status == 'requested' %}
+                    <span class="inline-flex items-center gap-1.5 rounded-xl border border-amber-300/20 bg-amber-400/10 px-3 py-2 text-[10px] font-black text-amber-300">
+                        <span class="h-1.5 w-1.5 rounded-full bg-amber-300"></span>
+                        Requested
+                    </span>
+                {% elif refund.status == 'processing' %}
+                    <span class="inline-flex items-center gap-1.5 rounded-xl border border-blue-300/20 bg-blue-400/10 px-3 py-2 text-[10px] font-black text-blue-300">
+                        <span class="h-1.5 w-1.5 rounded-full bg-blue-300"></span>
+                        Processing
+                    </span>
+                {% elif refund.status == 'completed' %}
+                    <span class="inline-flex items-center gap-1.5 rounded-xl border border-emerald-300/20 bg-emerald-400/10 px-3 py-2 text-[10px] font-black text-emerald-300">
+                        <span class="h-1.5 w-1.5 rounded-full bg-emerald-300"></span>
+                        Completed
+                    </span>
+                {% elif refund.status == 'rejected' %}
+                    <span class="inline-flex items-center gap-1.5 rounded-xl border border-rose-300/20 bg-rose-400/10 px-3 py-2 text-[10px] font-black text-rose-300">
+                        <span class="h-1.5 w-1.5 rounded-full bg-rose-300"></span>
+                        Rejected
+                    </span>
+                {% else %}
+                    <span class="inline-flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-[10px] font-black text-slate-300">
+                        {{ refund.status|title }}
+                    </span>
+                {% endif %}
+            </div>
+        </div>
+    </section>
+
+
+    <!-- ==========================================================
+         COMPACT STATUS BANNER
+    =========================================================== -->
+    {% if refund.status == 'requested' %}
+        <section class="flex items-start gap-3 rounded-xl border border-amber-300/15 bg-amber-400/[0.045] p-3.5">
+            <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-400/10 text-amber-300">
+                <i class="ri-time-line text-lg"></i>
+            </div>
+            <div class="min-w-0">
+                <h2 class="text-xs font-black text-amber-200">Admin review required</h2>
+                <p class="mt-0.5 text-[9px] leading-4 text-amber-100/60">
+                    Verify the historical order and refund items before processing or rejecting.
+                </p>
+            </div>
+        </section>
+
+    {% elif refund.status == 'processing' %}
+        <section class="flex items-start gap-3 rounded-xl border border-blue-300/15 bg-blue-400/[0.045] p-3.5">
+            <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-400/10 text-blue-300">
+                <i class="ri-loader-4-line text-lg"></i>
+            </div>
+            <div class="min-w-0">
+                <h2 class="text-xs font-black text-blue-200">Refund is processing</h2>
+                <p class="mt-0.5 text-[9px] leading-4 text-blue-100/60">
+                    Provider attempts are tracked below. Failed or cancelled attempts do not cancel this refund request.
+                </p>
+            </div>
+        </section>
+
+    {% elif refund.status == 'completed' %}
+        <section class="flex items-start gap-3 rounded-xl border border-emerald-300/15 bg-emerald-400/[0.045] p-3.5">
+            <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-400/10 text-emerald-300">
+                <i class="ri-checkbox-circle-fill text-lg"></i>
+            </div>
+            <div class="min-w-0">
+                <h2 class="text-xs font-black text-emerald-200">Refund completed</h2>
+                <p class="mt-0.5 text-[9px] leading-4 text-emerald-100/60">
+                    The successful refund has been recorded and the related order/payment state was finalized.
+                </p>
+            </div>
+        </section>
+
+    {% elif refund.status == 'rejected' %}
+        <section class="flex items-start gap-3 rounded-xl border border-rose-300/15 bg-rose-400/[0.045] p-3.5">
+            <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-rose-400/10 text-rose-300">
+                <i class="ri-close-circle-fill text-lg"></i>
+            </div>
+            <div class="min-w-0">
+                <h2 class="text-xs font-black text-rose-200">Refund request rejected</h2>
+                <p class="mt-0.5 text-[9px] leading-4 text-rose-100/60">
+                    This request is closed. A later student request creates a new Refund Number.
+                </p>
+            </div>
+        </section>
+    {% endif %}
+
+
+    <!-- ==========================================================
+         AMOUNTS
+    =========================================================== -->
+    <section class="grid grid-cols-1 gap-2 sm:grid-cols-3">
+        <div class="rounded-xl border border-white/[0.08] bg-slate-900/80 p-3.5 shadow-xl">
+            <p class="text-[8px] font-black uppercase tracking-[0.12em] text-slate-500">Requested</p>
+            <p class="mt-1 text-xl font-black text-white">₹{{ refund.requested_amount|floatformat:2 }}</p>
+            <p class="mt-0.5 text-[8px] font-medium text-slate-600">Server-calculated request</p>
+        </div>
+
+        <div class="rounded-xl border border-emerald-400/10 bg-emerald-400/[0.035] p-3.5 shadow-xl">
+            <p class="text-[8px] font-black uppercase tracking-[0.12em] text-slate-500">Refunded</p>
+            <p class="mt-1 text-xl font-black {% if refund.refunded_amount and refund.refunded_amount > 0 %}text-emerald-300{% else %}text-slate-500{% endif %}">
+                ₹{{ refund.refunded_amount|floatformat:2 }}
+            </p>
+            <p class="mt-0.5 text-[8px] font-medium text-slate-600">Successfully completed amount</p>
+        </div>
+
+        <div class="rounded-xl border border-cyan-400/10 bg-cyan-400/[0.035] p-3.5 shadow-xl">
+            <p class="text-[8px] font-black uppercase tracking-[0.12em] text-slate-500">Order Total</p>
+            <p class="mt-1 text-xl font-black text-cyan-300">₹{{ refund.order.final_amount|floatformat:2 }}</p>
+            <p class="mt-0.5 text-[8px] font-medium text-slate-600">Historical final amount</p>
+        </div>
+    </section>
+
+
+    <!-- ==========================================================
+         MAIN GRID
+    =========================================================== -->
+    <div class="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_330px]">
+
+        <!-- ======================================================
+             MAIN
+        ======================================================= -->
+        <main class="min-w-0 space-y-3">
+
+            <!-- STUDENT + ORDER -->
+            <section class="overflow-hidden rounded-xl border border-white/[0.08] bg-slate-900/80 shadow-xl">
+                <div class="grid grid-cols-1 divide-y divide-white/[0.06] md:grid-cols-2 md:divide-x md:divide-y-0">
+
+                    <div class="p-4">
+                        <div class="mb-3 flex items-center gap-2.5">
+                            <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-400/10 text-violet-300">
+                                <i class="ri-user-3-line"></i>
+                            </div>
+                            <div>
+                                <h2 class="text-xs font-black text-white">Student</h2>
+                                <p class="text-[8px] text-slate-600">Refund requester</p>
+                            </div>
+                        </div>
+
+                        <p class="text-sm font-black text-slate-200">
+                            {{ refund.student.get_full_name|default:refund.student.email }}
+                        </p>
+                        <p class="mt-0.5 break-all text-[9px] text-slate-500">
+                            {{ refund.student.email|default:"Not available" }}
+                        </p>
+
+                        <div class="mt-2 flex flex-wrap gap-1.5">
+                            <span class="rounded-lg border border-white/[0.06] bg-white/[0.025] px-2 py-1 text-[8px] font-bold text-slate-500">
+                                Student #{{ refund.student.id }}
+                            </span>
+                            {% if refund.student.phone_number %}
+                                <span class="rounded-lg border border-white/[0.06] bg-white/[0.025] px-2 py-1 text-[8px] font-bold text-slate-500">
+                                    {{ refund.student.phone_number }}
+                                </span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="p-4">
+                        <div class="mb-3 flex items-center gap-2.5">
+                            <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-cyan-400/10 text-cyan-300">
+                                <i class="ri-shopping-bag-3-line"></i>
+                            </div>
+                            <div>
+                                <h2 class="text-xs font-black text-white">Order</h2>
+                                <p class="text-[8px] text-slate-600">Historical order snapshot</p>
+                            </div>
+                        </div>
+
+                        <p class="break-all text-sm font-black text-cyan-300">
+                            {{ refund.order.order_number }}
+                        </p>
+
+                        <div class="mt-2 grid grid-cols-2 gap-1.5">
+                            <div class="rounded-lg bg-white/[0.025] p-2">
+                                <p class="text-[7px] font-black uppercase tracking-wide text-slate-600">Status</p>
+                                <p class="mt-0.5 text-[9px] font-black text-slate-300">{{ refund.order.get_status_display }}</p>
+                            </div>
+                            <div class="rounded-lg bg-white/[0.025] p-2">
+                                <p class="text-[7px] font-black uppercase tracking-wide text-slate-600">Placed</p>
+                                <p class="mt-0.5 text-[9px] font-bold text-slate-300">{{ refund.order.created_at|date:"d M Y" }}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="grid grid-cols-3 divide-x divide-white/[0.06] border-t border-white/[0.06]">
+                    <div class="p-3">
+                        <p class="text-[7px] font-black uppercase tracking-wide text-slate-600">Original</p>
+                        <p class="mt-1 text-xs font-black text-slate-300">₹{{ refund.order.original_amount|floatformat:2 }}</p>
+                    </div>
+                    <div class="p-3">
+                        <p class="text-[7px] font-black uppercase tracking-wide text-slate-600">Discount</p>
+                        <p class="mt-1 text-xs font-black text-slate-300">₹{{ refund.order.discount_amount|floatformat:2 }}</p>
+                    </div>
+                    <div class="p-3">
+                        <p class="text-[7px] font-black uppercase tracking-wide text-slate-600">Final</p>
+                        <p class="mt-1 text-xs font-black text-white">₹{{ refund.order.final_amount|floatformat:2 }}</p>
+                    </div>
+                </div>
+            </section>
+
+
+            <!-- REFUND ITEMS -->
+            <section class="overflow-hidden rounded-xl border border-white/[0.08] bg-slate-900/80 shadow-xl">
+                <div class="flex items-center justify-between border-b border-white/[0.07] bg-slate-950/40 px-4 py-3">
+                    <div class="flex items-center gap-2.5">
+                        <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-400/10 text-emerald-300">
+                            <i class="ri-stack-line"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-xs font-black text-white">Refund Items</h2>
+                            <p class="text-[8px] text-slate-600">Batches included in this request</p>
+                        </div>
+                    </div>
+
+                    <span class="rounded-lg border border-white/[0.07] bg-white/[0.025] px-2 py-1 text-[8px] font-black text-slate-500">
+                        {{ refund.items.all|length }} item{{ refund.items.all|length|pluralize }}
+                    </span>
+                </div>
+
+                <div class="divide-y divide-white/[0.055]">
+                    {% for refund_item in refund.items.all %}
+                        <article class="p-3.5">
+                            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                <div class="flex min-w-0 items-center gap-2.5">
+                                    <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-400/[0.06] text-emerald-300">
+                                        <i class="ri-book-open-line"></i>
+                                    </div>
+                                    <div class="min-w-0">
+                                        <p class="truncate text-xs font-black text-slate-100">
+                                            {{ refund_item.order_item.batch_name|default:refund_item.order_item.batch.batch_name }}
+                                        </p>
+                                        <p class="mt-0.5 text-[8px] text-slate-600">
+                                            Order Item #{{ refund_item.order_item.id }}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div class="shrink-0 rounded-lg border border-emerald-300/10 bg-emerald-400/[0.035] px-3 py-2 sm:min-w-[130px] sm:text-right">
+                                    <p class="text-[7px] font-black uppercase tracking-wide text-slate-600">Refund</p>
+                                    <p class="mt-0.5 text-sm font-black text-emerald-300">
+                                        ₹{{ refund_item.refund_amount|floatformat:2 }}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div class="mt-2 grid grid-cols-2 gap-1.5 sm:grid-cols-4">
+                                <div class="rounded-lg bg-white/[0.02] p-2">
+                                    <p class="text-[7px] font-black uppercase tracking-wide text-slate-600">Original</p>
+                                    <p class="mt-0.5 text-[9px] font-black text-slate-300">₹{{ refund_item.order_item.original_price|floatformat:2 }}</p>
+                                </div>
+                                <div class="rounded-lg bg-white/[0.02] p-2">
+                                    <p class="text-[7px] font-black uppercase tracking-wide text-slate-600">Batch Disc.</p>
+                                    <p class="mt-0.5 text-[9px] font-black text-slate-300">₹{{ refund_item.order_item.batch_discount|floatformat:2 }}</p>
+                                </div>
+                                <div class="rounded-lg bg-white/[0.02] p-2">
+                                    <p class="text-[7px] font-black uppercase tracking-wide text-slate-600">Coupon</p>
+                                    <p class="mt-0.5 text-[9px] font-black text-slate-300">₹{{ refund_item.order_item.coupon_discount|floatformat:2 }}</p>
+                                </div>
+                                <div class="rounded-lg bg-white/[0.02] p-2">
+                                    <p class="text-[7px] font-black uppercase tracking-wide text-slate-600">Paid Price</p>
+                                    <p class="mt-0.5 text-[9px] font-black text-white">₹{{ refund_item.order_item.final_price|floatformat:2 }}</p>
+                                </div>
+                            </div>
+                        </article>
+                    {% empty %}
+                        <div class="p-7 text-center">
+                            <i class="ri-inbox-line text-xl text-slate-700"></i>
+                            <p class="mt-2 text-xs font-black text-slate-500">No refund items recorded</p>
+                        </div>
+                    {% endfor %}
+                </div>
+            </section>
+
+
+            <!-- REQUEST DETAILS -->
+            <section class="overflow-hidden rounded-xl border border-white/[0.08] bg-slate-900/80 shadow-xl">
+                <div class="border-b border-white/[0.07] bg-slate-950/40 px-4 py-3">
+                    <div class="flex items-center gap-2.5">
+                        <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-400/10 text-amber-300">
+                            <i class="ri-file-text-line"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-xs font-black text-white">Request Details</h2>
+                            <p class="text-[8px] text-slate-600">Reason and lifecycle timestamps</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="space-y-2.5 p-3.5">
+                    <div class="grid grid-cols-2 gap-2">
+                        <div class="rounded-lg bg-white/[0.02] p-2.5">
+                            <p class="text-[7px] font-black uppercase tracking-wide text-slate-600">Requested</p>
+                            <p class="mt-1 text-[9px] font-bold text-slate-300">{{ refund.requested_at|date:"d M Y, h:i A" }}</p>
+                        </div>
+                        <div class="rounded-lg bg-white/[0.02] p-2.5">
+                            <p class="text-[7px] font-black uppercase tracking-wide text-slate-600">Processed</p>
+                            <p class="mt-1 text-[9px] font-bold text-slate-300">
+                                {% if refund.processed_at %}{{ refund.processed_at|date:"d M Y, h:i A" }}{% else %}Not processed{% endif %}
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="rounded-lg border border-white/[0.06] bg-white/[0.018] p-3">
+                        <p class="text-[7px] font-black uppercase tracking-[0.12em] text-slate-600">Student Reason</p>
+                        <p class="mt-1.5 whitespace-pre-line text-[10px] leading-5 text-slate-300">
+                            {{ refund.reason|default:"No reason was provided." }}
+                        </p>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+
+
+        <!-- ======================================================
+             SIDEBAR
+        ======================================================= -->
+        <aside class="space-y-3">
+
+            <!-- PAYMENT -->
+            <section class="overflow-hidden rounded-xl border border-white/[0.08] bg-slate-900/80 shadow-xl">
+                <div class="border-b border-white/[0.07] bg-slate-950/40 px-3.5 py-3">
+                    <div class="flex items-center gap-2.5">
+                        <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-400/10 text-blue-300">
+                            <i class="ri-bank-card-line"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-xs font-black text-white">Payment</h2>
+                            <p class="text-[8px] text-slate-600">Order payment record</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="space-y-2 p-3.5">
+                    {% if refund.order.payment %}
+                        <div class="rounded-lg bg-white/[0.02] p-2.5">
+                            <p class="text-[7px] font-black uppercase tracking-wide text-slate-600">Status</p>
+                            <p class="mt-1 text-[10px] font-black text-slate-200">
+                                {{ refund.order.payment.get_status_display }}
+                            </p>
+                        </div>
+
+                        <div class="rounded-lg bg-white/[0.02] p-2.5">
+                            <p class="text-[7px] font-black uppercase tracking-wide text-slate-600">Razorpay Payment ID</p>
+                            <p class="mt-1 break-all text-[9px] font-bold text-slate-300">
+                                {{ refund.order.payment.razorpay_payment_id|default:"Not available" }}
+                            </p>
+                        </div>
+                    {% else %}
+                        <div class="rounded-lg border border-rose-300/10 bg-rose-400/[0.035] p-2.5">
+                            <p class="text-[9px] font-bold text-rose-300">Payment record not found.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </section>
+
+
+            <!-- REFUND NUMBER / RAZORPAY -->
+            <section class="overflow-hidden rounded-xl border border-white/[0.08] bg-slate-900/80 shadow-xl">
+                <div class="border-b border-white/[0.07] bg-slate-950/40 px-3.5 py-3">
+                    <div class="flex items-center gap-2.5">
+                        <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-400/10 text-emerald-300">
+                            <i class="ri-secure-payment-line"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-xs font-black text-white">Refund Reference</h2>
+                            <p class="text-[8px] text-slate-600">Permanent request identity</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="space-y-2 p-3.5">
+                    <div class="rounded-lg border border-cyan-300/10 bg-cyan-400/[0.035] p-2.5">
+                        <p class="text-[7px] font-black uppercase tracking-wide text-slate-600">Refund Number</p>
+                        <p class="mt-1 break-all text-[10px] font-black text-cyan-300">
+                            {{ refund.refund_number|default:"Not assigned" }}
+                        </p>
+                    </div>
+
+                    <div class="rounded-lg bg-white/[0.02] p-2.5">
+                        <p class="text-[7px] font-black uppercase tracking-wide text-slate-600">Latest Razorpay Refund ID</p>
+                        <p class="mt-1 break-all text-[9px] font-bold text-emerald-300">
+                            {{ refund.razorpay_refund_id|default:"Not generated" }}
+                        </p>
+                    </div>
+                </div>
+            </section>
+
+
+            <!-- ATTEMPT HISTORY -->
+            <section class="overflow-hidden rounded-xl border border-white/[0.08] bg-slate-900/80 shadow-xl">
+                <div class="border-b border-white/[0.07] bg-slate-950/40 px-3.5 py-3">
+                    <div class="flex items-center gap-2.5">
+                        <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-400/10 text-blue-300">
+                            <i class="ri-history-line"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-xs font-black text-white">Provider Attempts</h2>
+                            <p class="text-[8px] text-slate-600">Internal Razorpay retry history</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="divide-y divide-white/[0.055]">
+                    {% for attempt in refund.attempts.all %}
+                        <div class="p-3">
+                            <div class="flex items-start justify-between gap-2">
+                                <div>
+                                    <p class="text-[10px] font-black text-slate-200">
+                                        Attempt #{{ attempt.attempt_number }}
+                                    </p>
+                                    <p class="mt-0.5 text-[8px] text-slate-600">
+                                        {{ attempt.started_at|date:"d M Y, h:i A" }}
+                                    </p>
+                                </div>
+
+                                {% if attempt.status == 'processing' %}
+                                    <span class="rounded-lg border border-blue-300/15 bg-blue-400/10 px-2 py-1 text-[7px] font-black text-blue-300">Processing</span>
+                                {% elif attempt.status == 'completed' %}
+                                    <span class="rounded-lg border border-emerald-300/15 bg-emerald-400/10 px-2 py-1 text-[7px] font-black text-emerald-300">Completed</span>
+                                {% elif attempt.status == 'failed' %}
+                                    <span class="rounded-lg border border-rose-300/15 bg-rose-400/10 px-2 py-1 text-[7px] font-black text-rose-300">Failed</span>
+                                {% elif attempt.status == 'cancelled' %}
+                                    <span class="rounded-lg border border-orange-300/15 bg-orange-400/10 px-2 py-1 text-[7px] font-black text-orange-300">Cancelled</span>
+                                {% endif %}
+                            </div>
+
+                            <div class="mt-2 grid grid-cols-2 gap-1.5">
+                                <div class="rounded-lg bg-white/[0.02] p-2">
+                                    <p class="text-[7px] font-black uppercase tracking-wide text-slate-600">Requested</p>
+                                    <p class="mt-0.5 text-[9px] font-black text-slate-300">₹{{ attempt.requested_amount|floatformat:2 }}</p>
+                                </div>
+                                <div class="rounded-lg bg-white/[0.02] p-2">
+                                    <p class="text-[7px] font-black uppercase tracking-wide text-slate-600">Refunded</p>
+                                    <p class="mt-0.5 text-[9px] font-black text-emerald-300">₹{{ attempt.refunded_amount|floatformat:2 }}</p>
+                                </div>
+                            </div>
+
+                            {% if attempt.razorpay_refund_id %}
+                                <p class="mt-2 break-all text-[8px] font-bold text-slate-500">
+                                    RP: <span class="text-emerald-300/80">{{ attempt.razorpay_refund_id }}</span>
+                                </p>
+                            {% endif %}
+
+                            {% if attempt.error_message %}
+                                <p class="mt-2 rounded-lg border border-rose-300/10 bg-rose-400/[0.03] p-2 text-[8px] leading-4 text-rose-200/70">
+                                    {{ attempt.error_message }}
+                                </p>
+                            {% endif %}
+
+                            {% if forloop.first and refund.status == 'processing' %}
+                                {% if attempt.status == 'processing' and attempt.razorpay_refund_id %}
+                                    <form method="post" action="{% url 'admin_refund_status' refund.id %}" class="mt-2">
+                                        {% csrf_token %}
+                                        <button
+                                            type="submit"
+                                            class="inline-flex h-8 w-full items-center justify-center gap-1.5 rounded-lg bg-cyan-400 px-3 text-[9px] font-black text-slate-950 transition hover:bg-cyan-300"
+                                        >
+                                            <i class="ri-refresh-line"></i>
+                                            Check Razorpay Status
+                                        </button>
+                                    </form>
+                                    <p class="mt-1.5 text-[7px] leading-4 text-blue-200/50">
+                                        Checks the existing Razorpay refund. It will not create another refund.
+                                    </p>
+                                {% elif attempt.status == 'failed' or attempt.status == 'cancelled' %}
+                                    <form method="post" action="{% url 'admin_refund_action' refund.id %}" class="mt-2">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="action" value="process">
+                                        <button
+                                            type="submit"
+                                            class="inline-flex h-8 w-full items-center justify-center gap-1.5 rounded-lg bg-cyan-400 px-3 text-[9px] font-black text-slate-950 transition hover:bg-cyan-300"
+                                        >
+                                            <i class="ri-refresh-line"></i>
+                                            Retry Refund
+                                        </button>
+                                    </form>
+                                {% endif %}
+                            {% endif %}
+                        </div>
+                    {% empty %}
+                        <div class="p-4 text-center">
+                            <i class="ri-history-line text-xl text-slate-700"></i>
+                            <p class="mt-1.5 text-[9px] font-bold text-slate-500">No provider attempts yet.</p>
+                        </div>
+                    {% endfor %}
+                </div>
+            </section>
+
+
+            <!-- ADMIN NOTE -->
+            <section class="overflow-hidden rounded-xl border border-white/[0.08] bg-slate-900/80 shadow-xl">
+                <div class="border-b border-white/[0.07] bg-slate-950/40 px-3.5 py-3">
+                    <div class="flex items-center gap-2.5">
+                        <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-400/10 text-violet-300">
+                            <i class="ri-sticky-note-line"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-xs font-black text-white">Admin Note</h2>
+                            <p class="text-[8px] text-slate-600">Internal processing note</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="p-3.5">
+                    {% if refund.admin_note %}
+                        <div class="rounded-lg border border-violet-300/10 bg-violet-400/[0.035] p-2.5">
+                            <p class="whitespace-pre-line text-[9px] leading-5 text-slate-300">{{ refund.admin_note }}</p>
+                        </div>
+                    {% else %}
+                        <p class="text-[9px] text-slate-600">No admin note recorded.</p>
+                    {% endif %}
+                </div>
+            </section>
+
+
+            <!-- ======================================================
+                 ACTIONS
+            ======================================================= -->
+            {% if refund.status == 'requested' %}
+                <section class="overflow-hidden rounded-xl border border-cyan-300/15 bg-slate-900/90 shadow-xl shadow-cyan-950/10">
+                    <div class="border-b border-white/[0.07] bg-cyan-400/[0.035] px-3.5 py-3">
+                        <div class="flex items-center gap-2.5">
+                            <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-cyan-400/10 text-cyan-300">
+                                <i class="ri-shield-check-line"></i>
+                            </div>
+                            <div>
+                                <h2 class="text-xs font-black text-white">Admin Decision</h2>
+                                <p class="text-[8px] text-slate-600">Process or reject this request</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="space-y-3 p-3.5">
+
+                        <form method="post" action="{% url 'admin_refund_action' refund.id %}" class="space-y-2">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="process">
+
+                            <label for="processAdminNote" class="block text-[7px] font-black uppercase tracking-[0.12em] text-slate-600">
+                                Optional Processing Note
+                            </label>
+
+                            <textarea
+                                id="processAdminNote"
+                                name="admin_note"
+                                rows="2"
+                                maxlength="2000"
+                                placeholder="Optional processing note..."
+                                class="w-full rounded-lg border border-white/10 bg-slate-950/70 px-3 py-2 text-[9px] font-medium text-slate-200 outline-none placeholder:text-slate-700 focus:border-cyan-400/40 focus:ring-2 focus:ring-cyan-400/10"
+                            ></textarea>
+
+                            <button
+                                type="submit"
+                                class="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-emerald-400 px-4 text-[10px] font-black text-slate-950 shadow-lg shadow-emerald-500/10 transition hover:bg-emerald-300"
+                            >
+                                <i class="ri-refund-2-line"></i>
+                                Process Refund
+                            </button>
+                        </form>
+
+                        <div class="border-t border-white/[0.06] pt-3">
+                            <form method="post" action="{% url 'admin_refund_action' refund.id %}" class="space-y-2">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="reject">
+
+                                <label for="rejectAdminNote" class="block text-[7px] font-black uppercase tracking-[0.12em] text-slate-600">
+                                    Rejection Reason <span class="text-rose-400">*</span>
+                                </label>
+
+                                <textarea
+                                    id="rejectAdminNote"
+                                    name="admin_note"
+                                    rows="2"
+                                    maxlength="2000"
+                                    required
+                                    placeholder="Reason for rejection..."
+                                    class="w-full rounded-lg border border-white/10 bg-slate-950/70 px-3 py-2 text-[9px] font-medium text-slate-200 outline-none placeholder:text-slate-700 focus:border-rose-400/40 focus:ring-2 focus:ring-rose-400/10"
+                                ></textarea>
+
+                                <button
+                                    type="submit"
+                                    class="inline-flex h-9 w-full items-center justify-center gap-2 rounded-lg border border-rose-300/20 bg-rose-400/[0.07] px-4 text-[10px] font-black text-rose-300 transition hover:bg-rose-400/15"
+                                >
+                                    <i class="ri-close-circle-line"></i>
+                                    Reject Refund
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </section>
+
+            {% elif refund.status == 'processing' %}
+                <section class="rounded-xl border border-blue-300/15 bg-blue-400/[0.035] p-3.5">
+                    <div class="flex items-start gap-2.5">
+                        <i class="ri-information-line mt-0.5 text-blue-300"></i>
+                        <p class="text-[9px] leading-5 text-blue-100/60">
+                            If the latest Razorpay attempt is still processing, use
+                            <span class="font-black text-blue-200">Check Razorpay Status</span>.
+                            If the provider attempt failed or was cancelled, use
+                            <span class="font-black text-blue-200">Retry Refund</span>.
+                            A new provider refund is never created while an existing one is still processing.
+                        </p>
+                    </div>
+                </section>
+            {% endif %}
+
+
+            <!-- COMPACT LIFECYCLE -->
+            <section class="rounded-xl border border-white/[0.08] bg-slate-900/80 p-3.5 shadow-xl">
+                <div class="mb-3 flex items-center gap-2.5">
+                    <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-400/10 text-blue-300">
+                        <i class="ri-route-line"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-xs font-black text-white">Refund Lifecycle</h2>
+                        <p class="text-[8px] text-slate-600">Parent request state</p>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-1.5">
+                    <div class="flex min-w-0 flex-1 flex-col items-center text-center">
+                        <span class="flex h-7 w-7 items-center justify-center rounded-full bg-amber-400/15 text-amber-300">
+                            <i class="ri-time-line text-xs"></i>
+                        </span>
+                        <span class="mt-1 text-[7px] font-black text-slate-500">Requested</span>
+                    </div>
+
+                    <div class="h-px flex-1 bg-white/10"></div>
+
+                    <div class="flex min-w-0 flex-1 flex-col items-center text-center">
+                        <span class="flex h-7 w-7 items-center justify-center rounded-full bg-blue-400/15 text-blue-300">
+                            <i class="ri-loader-4-line text-xs"></i>
+                        </span>
+                        <span class="mt-1 text-[7px] font-black text-slate-500">Processing</span>
+                    </div>
+
+                    <div class="h-px flex-1 bg-white/10"></div>
+
+                    <div class="flex min-w-0 flex-1 flex-col items-center text-center">
+                        <span class="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-400/15 text-emerald-300">
+                            <i class="ri-check-line text-xs"></i>
+                        </span>
+                        <span class="mt-1 text-[7px] font-black text-slate-500">Completed</span>
+                    </div>
+                </div>
+
+                {% if refund.status == 'rejected' %}
+                    <div class="mt-3 rounded-lg border border-rose-300/10 bg-rose-400/[0.035] px-2.5 py-2 text-[8px] font-bold text-rose-300">
+                        This parent refund request ended as Rejected.
+                    </div>
+                {% endif %}
+            </section>
+
+        </aside>
+    </div>
+
+
+    <!-- FOOTER -->
+    <div class="flex items-center justify-between gap-2">
+        <a
+            href="{% url 'admin_refunds' %}"
+            class="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.03] px-3 text-[9px] font-black text-slate-400 transition hover:bg-white/[0.07] hover:text-white"
+        >
+            <i class="ri-arrow-left-line"></i>
+            Back to Refunds
+        </a>
+
+        <span class="text-[8px] font-semibold text-slate-700">
+            NeoLearn Refund Management
+        </span>
+    </div>
+
+</div>
+
+{% endblock %}

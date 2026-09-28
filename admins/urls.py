@@ -1,41 +1,32 @@
 from django.urls import path
 
+
 from .views import (
-    # ==========================================================
     # AUTH
-    # ==========================================================
     admin_signin_view,
     admin_dashboard_view,
     admin_logout_view,
 
-    # ==========================================================
     # STUDENTS
-    # ==========================================================
     admin_students_view,
     block_student_view,
     unblock_student_view,
     delete_student_view,
 
-    # ==========================================================
     # BATCHES
-    # ==========================================================
     admin_batches_view,
     create_batch_view,
     edit_batch_view,
     delete_batch_view,
     batch_subjects,
 
-    # ==========================================================
     # SUBJECTS
-    # ==========================================================
     admin_subjects_view,
     create_subject_view,
     edit_subject_view,
     delete_subject_view,
 
-    # ==========================================================
     # TEACHERS
-    # ==========================================================
     admin_teachers,
     create_teacher_view,
     admin_assign_teacher_batch,
@@ -48,18 +39,20 @@ from .views import (
     admin_delete_teacher,
     get_teacher_batches_data,
 
-    # ==========================================================
     # COUPONS
-    # ==========================================================
     admin_coupons_view,
     create_coupon_view,
     edit_coupon_view,
     toggle_coupon_status_view,
     delete_coupon_view,
 
-    # ==========================================================
+    # REFUNDS
+    admin_refunds_view,
+    admin_refund_detail_view,
+    admin_refund_action_view,
+    admin_refund_status_view,
+
     # ADMIN COURSE BUILDER
-    # ==========================================================
     admin_course_builder_entry_view,
 )
 
@@ -254,43 +247,67 @@ urlpatterns = [
 
 
     # ==========================================================
-# COUPONS
-# ==========================================================
+    # COUPONS
+    # ==========================================================
 
-# Coupon listing page
-path(
-    "coupons/",
-    admin_coupons_view,
-    name="admin_coupons",
-),
+    path(
+        "coupons/",
+        admin_coupons_view,
+        name="admin_coupons",
+    ),
 
-# Create coupon page
-path(
-    "coupons/create/",
-    create_coupon_view,
-    name="create_coupon",
-),
+    path(
+        "coupons/create/",
+        create_coupon_view,
+        name="create_coupon",
+    ),
 
-# Edit coupon page
-path(
-    "coupons/edit/<int:coupon_id>/",
-    edit_coupon_view,
-    name="edit_coupon",
-),
+    path(
+        "coupons/edit/<int:coupon_id>/",
+        edit_coupon_view,
+        name="edit_coupon",
+    ),
 
-# Activate / Deactivate coupon
-path(
-    "coupons/<int:coupon_id>/toggle/",
-    toggle_coupon_status_view,
-    name="toggle_coupon_status",
-),
+    path(
+        "coupons/<int:coupon_id>/toggle/",
+        toggle_coupon_status_view,
+        name="toggle_coupon_status",
+    ),
 
-# Delete coupon
-path(
-    "coupons/<int:coupon_id>/delete/",
-    delete_coupon_view,
-    name="delete_coupon",
-),
+    path(
+        "coupons/<int:coupon_id>/delete/",
+        delete_coupon_view,
+        name="delete_coupon",
+    ),
+
+
+    # ==========================================================
+    # REFUND MANAGEMENT
+    # ==========================================================
+
+    path(
+        "refunds/",
+        admin_refunds_view,
+        name="admin_refunds",
+    ),
+
+    path(
+        "refunds/<int:refund_id>/",
+        admin_refund_detail_view,
+        name="admin_refund_detail",
+    ),
+
+    path(
+        "refunds/<int:refund_id>/action/",
+        admin_refund_action_view,
+        name="admin_refund_action",
+    ),
+
+    path(
+        "refunds/<int:refund_id>/status/",
+        admin_refund_status_view,
+        name="admin_refund_status",
+    ),
 
 
     # ==========================================================

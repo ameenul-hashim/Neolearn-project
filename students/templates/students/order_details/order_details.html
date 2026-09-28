@@ -176,117 +176,55 @@
             main .text-slate-300\/70 { color: rgba(226, 232, 240, .76) !important; }
             main .text-slate-300\/75 { color: rgba(241, 245, 249, .80) !important; }
 
-            /* =====================================================
-               Timeline: one continuous aqua connection + live end node
-            ====================================================== */
             .neo-timeline-connector {
-                position: absolute;
-                overflow: hidden;
-                width: 2px !important;
-                background: rgba(34, 211, 238, .22) !important;
-                box-shadow: 0 0 7px rgba(34, 211, 238, .16);
-            }
-
-            .neo-timeline-connector::after {
-                content: "";
-                position: absolute;
-                left: 0;
-                top: -30%;
-                width: 100%;
-                height: 30%;
-                border-radius: 999px;
                 background: linear-gradient(
                     to bottom,
-                    transparent 0%,
-                    rgba(165, 243, 252, .95) 45%,
-                    rgba(34, 211, 238, 1) 100%
+                    rgba(103, 232, 249, .15),
+                    rgba(255, 255, 255, .34),
+                    rgba(103, 232, 249, .10)
                 );
-                box-shadow: 0 0 7px rgba(34, 211, 238, .65);
-                animation: neoTimelinePulseDown 1.65s linear infinite;
-                will-change: transform;
+                background-size: 100% 220%;
+                animation: neoTimelineFlow 2.8s linear infinite;
+                box-shadow: 0 0 8px rgba(103, 232, 249, .08);
             }
 
             .neo-timeline-node {
-                animation: neoTimelineNode 2.8s ease-in-out infinite;
-                transition: transform .2s ease, box-shadow .2s ease;
+                animation: neoTimelineNode 2.6s ease-in-out infinite;
             }
 
-            /* Only the final/current state pulses. Previous completed
-               nodes remain stable so the timeline reads left-to-right/top-to-bottom. */
             .neo-timeline-current {
-                animation: neoTimelineCurrentPulse 1.55s ease-in-out infinite !important;
-                box-shadow:
-                    0 0 0 0 rgba(34, 211, 238, .28),
-                    0 0 14px rgba(34, 211, 238, .28);
-            }
-
-            .neo-timeline-current.current-green {
-                box-shadow:
-                    0 0 0 0 rgba(52, 211, 153, .30),
-                    0 0 16px rgba(52, 211, 153, .30);
-            }
-
-            .neo-timeline-current.current-red {
-                animation: neoTimelineHeartbeat 1.35s ease-in-out infinite !important;
+                animation: neoTimelineHeartbeat 1.35s ease-in-out infinite;
                 box-shadow:
                     0 0 0 0 rgba(248, 113, 113, .28),
-                    0 0 14px rgba(248, 113, 113, .24);
-            }
-
-            .neo-timeline-current.current-orange {
-                box-shadow:
-                    0 0 0 0 rgba(251, 146, 60, .28),
-                    0 0 14px rgba(251, 146, 60, .24);
-            }
-
-            .neo-timeline-current.current-amber {
-                box-shadow:
-                    0 0 0 0 rgba(251, 191, 36, .28),
-                    0 0 14px rgba(251, 191, 36, .24);
+                    0 0 10px rgba(248, 113, 113, .16);
             }
 
             .neo-timeline-current-ring {
                 animation: neoTimelineRing 1.55s ease-out infinite;
-                border-color: rgba(34, 211, 238, .34) !important;
+                border-color: rgba(248, 113, 113, .28) !important;
             }
 
-            @keyframes neoTimelinePulseDown {
-                0% { transform: translateY(0); opacity: 0; }
-                12% { opacity: 1; }
-                88% { opacity: 1; }
-                100% { transform: translateY(460%); opacity: 0; }
+            @keyframes neoTimelineFlow {
+                from { background-position: 0 0; }
+                to { background-position: 0 220%; }
             }
 
             @keyframes neoTimelineNode {
                 0%, 100% { transform: scale(1); }
-                50% { transform: scale(1.018); }
-            }
-
-            @keyframes neoTimelineCurrentPulse {
-                0%, 100% { transform: scale(1); }
-                50% { transform: scale(1.075); }
+                50% { transform: scale(1.035); }
             }
 
             @keyframes neoTimelineHeartbeat {
                 0%, 100% { transform: scale(1); }
-                18% { transform: scale(1.12); }
+                18% { transform: scale(1.10); }
                 32% { transform: scale(.96); }
-                48% { transform: scale(1.08); }
+                48% { transform: scale(1.07); }
                 65% { transform: scale(1); }
             }
 
             @keyframes neoTimelineRing {
-                0% { transform: scale(.85); opacity: .65; }
+                0% { transform: scale(.85); opacity: .70; }
                 70%, 100% { transform: scale(1.65); opacity: 0; }
-            }
-
-            @media (prefers-reduced-motion: reduce) {
-                .neo-timeline-connector::after,
-                .neo-timeline-node,
-                .neo-timeline-current,
-                .neo-timeline-current-ring {
-                    animation: none !important;
-                }
             }
 
             .neo-scroll-surface {
@@ -3518,15 +3456,15 @@
                                 <div class="relative flex gap-2.5 pb-5">
                                     <div class="relative flex w-6 shrink-0 justify-center">
                                         {% if payment and payment.status == "captured" %}
-                                            <span class="z-10 neo-timeline-node {% if order.status == "payment_processing" %}neo-timeline-current current-amber{% endif %} flex h-6 w-6 items-center justify-center rounded-full bg-emerald-300 text-[9px] font-black text-slate-950">
+                                            <span class="z-10 neo-timeline-node flex h-6 w-6 items-center justify-center rounded-full bg-emerald-300 text-[9px] font-black text-slate-950">
                                                 <i class="ri-bank-card-fill"></i>
                                             </span>
                                         {% elif order.status == "cancelled" %}
-                                            <span class="z-10 neo-timeline-node neo-timeline-current current-orange flex h-6 w-6 items-center justify-center rounded-full bg-orange-300 text-[9px] font-black text-slate-950">
+                                            <span class="z-10 neo-timeline-node flex h-6 w-6 items-center justify-center rounded-full bg-orange-300 text-[9px] font-black text-slate-950">
                                                 <i class="ri-close-circle-fill"></i>
                                             </span>
                                         {% else %}
-                                            <span class="z-10 neo-timeline-node neo-timeline-current current-red flex h-6 w-6 items-center justify-center rounded-full bg-rose-300 text-[9px] font-black text-slate-950">
+                                            <span class="z-10 neo-timeline-node flex h-6 w-6 items-center justify-center rounded-full bg-rose-300 text-[9px] font-black text-slate-950">
                                                 <i class="ri-error-warning-fill"></i>
                                             </span>
                                         {% endif %}
@@ -3565,7 +3503,7 @@
                                 {% if payment and payment.status == "captured" %}
                                     <div class="relative flex gap-2.5 pb-5">
                                         <div class="relative flex w-6 shrink-0 justify-center">
-                                            <span class="z-10 neo-timeline-node {% if not refunds %}neo-timeline-current current-green{% endif %} flex h-6 w-6 items-center justify-center rounded-full bg-emerald-300 text-[9px] font-black text-slate-950">
+                                            <span class="z-10 neo-timeline-node flex h-6 w-6 items-center justify-center rounded-full bg-emerald-300 text-[9px] font-black text-slate-950">
                                                 <i class="ri-graduation-cap-fill"></i>
                                             </span>
                                             <span class="absolute left-1/2 top-6 bottom-0 w-px -translate-x-1/2 neo-timeline-connector"></span>
@@ -3586,19 +3524,19 @@
                                     <div class="relative flex gap-2.5 {% if not forloop.last %}pb-5{% endif %}">
                                         <div class="relative flex w-6 shrink-0 justify-center">
                                             {% if refund.status == "requested" %}
-                                                <span class="z-10 neo-timeline-node neo-timeline-current current-red flex h-6 w-6 items-center justify-center rounded-full bg-violet-300 text-[9px] font-black text-slate-950">
+                                                <span class="z-10 neo-timeline-node flex h-6 w-6 items-center justify-center rounded-full bg-violet-300 text-[9px] font-black text-slate-950">
                                                     <i class="ri-refund-2-fill"></i>
                                                 </span>
                                             {% elif refund.status == "processing" %}
-                                                <span class="z-10 neo-timeline-node neo-timeline-current current-amber flex h-6 w-6 items-center justify-center rounded-full bg-amber-300 text-[9px] font-black text-slate-950">
+                                                <span class="z-10 neo-timeline-node flex h-6 w-6 items-center justify-center rounded-full bg-amber-300 text-[9px] font-black text-slate-950">
                                                     <i class="ri-loader-4-line"></i>
                                                 </span>
                                             {% elif refund.status == "completed" %}
-                                                <span class="z-10 neo-timeline-node neo-timeline-current current-green flex h-6 w-6 items-center justify-center rounded-full bg-emerald-300 text-[9px] font-black text-slate-950">
+                                                <span class="z-10 neo-timeline-node flex h-6 w-6 items-center justify-center rounded-full bg-emerald-300 text-[9px] font-black text-slate-950">
                                                     <i class="ri-checkbox-circle-fill"></i>
                                                 </span>
                                             {% else %}
-                                                <span class="z-10 neo-timeline-node neo-timeline-current current-red flex h-6 w-6 items-center justify-center rounded-full bg-rose-300 text-[9px] font-black text-slate-950">
+                                                <span class="z-10 neo-timeline-node flex h-6 w-6 items-center justify-center rounded-full bg-rose-300 text-[9px] font-black text-slate-950">
                                                     <i class="ri-close-circle-fill"></i>
                                                 </span>
                                             {% endif %}
@@ -3942,181 +3880,6 @@
     </section>
 
 </div>
-
-
-<style>
-/* =========================================================
-   FINAL ORDER DETAILS — RIGHT COLUMN / TIMELINE HARDENING
-   One right-side scroll surface, no nested timeline scroll.
-========================================================= */
-.neo-order-workspace {
-    min-width: 0 !important;
-}
-
-.neo-right-order-scroll {
-    min-width: 0 !important;
-    width: 100% !important;
-    box-sizing: border-box !important;
-    scrollbar-width: none !important;
-    -ms-overflow-style: none !important;
-}
-
-.neo-right-order-scroll::-webkit-scrollbar {
-    width: 0 !important;
-    height: 0 !important;
-    display: none !important;
-}
-
-.neo-right-order-scroll > .flex,
-.neo-right-order-scroll section,
-.neo-right-order-scroll article,
-.neo-right-order-scroll a,
-.neo-right-order-scroll button,
-.neo-right-order-scroll div {
-    min-width: 0;
-    box-sizing: border-box;
-}
-
-/* Never create a nested scrollbar inside the timeline. */
-.neo-right-order-scroll .neo-timeline-scroll {
-    height: auto !important;
-    min-height: 0 !important;
-    max-height: none !important;
-    overflow: visible !important;
-}
-
-/* Every long status/support sentence must remain inside its card. */
-.neo-right-order-scroll p,
-.neo-right-order-scroll span,
-.neo-right-order-scroll h2,
-.neo-right-order-scroll h3 {
-    overflow-wrap: anywhere;
-    word-break: normal;
-}
-
-/* Cancelled / failed support card must contain all text. */
-.neo-right-order-scroll > .flex > section {
-    max-width: 100% !important;
-    overflow: hidden !important;
-}
-
-/* Current-status footer is always contained at the bottom of the timeline card. */
-.neo-right-order-scroll .border-t {
-    min-width: 0 !important;
-}
-
-/* Aqua animated connector: starts at the first node and flows toward the next. */
-.neo-timeline-connector {
-    background: linear-gradient(
-        to bottom,
-        rgba(34, 211, 238, .18) 0%,
-        rgba(103, 232, 249, .95) 28%,
-        rgba(34, 211, 238, .72) 52%,
-        rgba(103, 232, 249, .22) 78%,
-        rgba(34, 211, 238, .08) 100%
-    ) !important;
-    background-size: 100% 240% !important;
-    animation: neoAquaTimelineFlow 2.2s linear infinite !important;
-    box-shadow: 0 0 8px rgba(34, 211, 238, .18) !important;
-    opacity: .95;
-}
-
-@keyframes neoAquaTimelineFlow {
-    0% { background-position: 0 -120%; }
-    100% { background-position: 0 120%; }
-}
-
-/* Timeline nodes stay alive, but the active refund endpoint gets the red heartbeat. */
-.neo-timeline-node {
-    transform-origin: center;
-}
-
-.neo-timeline-current {
-    animation: neoRefundHeartbeat 1.35s ease-in-out infinite !important;
-    box-shadow:
-        0 0 0 0 rgba(251, 113, 133, .18),
-        0 0 12px rgba(251, 113, 133, .18) !important;
-}
-
-.neo-timeline-current-ring {
-    animation: neoRefundRing 1.55s ease-out infinite !important;
-    border-color: rgba(251, 113, 133, .24) !important;
-}
-
-@keyframes neoRefundHeartbeat {
-    0%, 100% { transform: scale(1); }
-    16% { transform: scale(1.08); }
-    30% { transform: scale(.97); }
-    46% { transform: scale(1.06); }
-    64% { transform: scale(1); }
-}
-
-@keyframes neoRefundRing {
-    0% { transform: scale(.85); opacity: .58; }
-    72%, 100% { transform: scale(1.6); opacity: 0; }
-}
-
-/* Desktop: only the right column scrolls. Timeline itself never does. */
-@media (min-width: 1024px) {
-    .neo-order-workspace {
-        height: 100% !important;
-        min-height: 0 !important;
-    }
-
-    .neo-right-order-scroll {
-        height: 100% !important;
-        max-height: 100% !important;
-        overflow-y: auto !important;
-        overflow-x: hidden !important;
-        overscroll-behavior: contain !important;
-        -webkit-overflow-scrolling: touch !important;
-        touch-action: pan-y !important;
-    }
-}
-
-/* Tablet/mobile: no fixed-height sidebar; normal page/touch scroll. */
-@media (max-width: 1023px) {
-    .neo-order-workspace {
-        height: auto !important;
-        min-height: 0 !important;
-    }
-
-    .neo-right-order-scroll {
-        height: auto !important;
-        max-height: none !important;
-        overflow: visible !important;
-        touch-action: pan-y !important;
-        -webkit-overflow-scrolling: touch !important;
-    }
-
-    .neo-right-order-scroll .neo-timeline-scroll {
-        overflow: visible !important;
-    }
-}
-
-/* Very small screens: prevent invoice/status controls from widening the page. */
-@media (max-width: 639px) {
-    .neo-right-order-scroll,
-    .neo-right-order-scroll > .flex,
-    .neo-right-order-scroll section {
-        width: 100% !important;
-        max-width: 100% !important;
-    }
-
-    .neo-right-order-scroll .flex.items-center.justify-between {
-        flex-wrap: wrap;
-    }
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .neo-timeline-connector,
-    .neo-timeline-current,
-    .neo-timeline-current-ring {
-        animation: none !important;
-    }
-}
-</style>
-
 <!-- =========================================================
      REFUND REQUEST / EDIT MODAL
      Bright / clean student-facing form

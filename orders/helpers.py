@@ -17,6 +17,8 @@ from .models import (
     StudentBatchPurchase,
     Refund,
     RefundItem,
+    RefundAttempt,
+    Payment,
 )
 # ============================================================
 # CHECKOUT CONSTANTS
@@ -1919,4 +1921,595 @@ def get_refundable_order_items(
             id__in=refundable_item_ids,
         )
         .order_by("id")
+    )
+
+# ============================================================
+# REFUND REQUEST LIFECYCLE
+# ============================================================
+#
+# Refund       = one student refund request / one permanent
+#                refund_number.
+# RefundAttempt = one provider/Razorpay processing attempt for
+#                 that same refund request.
+#
+# Therefore:
+#   Edit REQUESTED refund       -> same Refund + same number
+#   Provider retry             -> same Refund + new Attempt
+#   Provider failure/cancel    -> Attempt changes only; parent
+#                                 Refund remains PROCESSING
+#   Successful provider refund -> Attempt COMPLETED + parent
+#                                 Refund COMPLETED
+#   Rejected request + new request later -> NEW Refund + NEW
+#                                           refund_number
+#
+# ============================================================
+
+
+def get_active_refund_requests(order):
+    """
+    Return refund requests that currently reserve refundable items.
+
+    REJECTED refunds do not block a new request.
+    New provider failures/cancellations are stored on RefundAttempt,
+    so the parent Refund remains PROCESSING and continues to reserve
+    its RefundItems.
+    """
+    return (
+        Refund.objects.filter(
+            order=order,
+            status__in=get_refund_blocking_statuses(),
+        )
+        .prefetch_related("items", "attempts")
+        .order_by("-requested_at", "-pk")
+    )
+
+
+def get_latest_refund_attempt(refund):
+    """Return the latest provider attempt for a refund, or None."""
+    return (
+        refund.attempts
+        .order_by("-attempt_number", "-started_at", "-pk")
+        .first()
+    )
+
+
+def get_next_refund_attempt_number(refund):
+    """Return the next attempt number for this parent Refund."""
+    latest = get_latest_refund_attempt(refund)
+    if latest is None:
+        return 1
+    return latest.attempt_number + 1
+
+
+def get_refund_request_state(refund):
+    """
+    Return stable parent/attempt state for views and templates.
+
+    The parent Refund status is the student-facing state.
+    Attempt status is internal provider/audit state.
+    """
+    latest_attempt = get_latest_refund_attempt(refund)
+
+    if refund.status == Refund.Status.REQUESTED:
+        student_status = "requested"
+    elif refund.status == Refund.Status.PROCESSING:
+        student_status = "processing"
+    elif refund.status == Refund.Status.COMPLETED:
+        student_status = "completed"
+    elif refund.status == Refund.Status.REJECTED:
+        student_status = "rejected"
+    else:
+        # Legacy parent-level FAILED records are retained only for
+        # compatibility. New provider failures must use attempts.
+        student_status = "failed"
+
+    retryable = (
+        refund.status == Refund.Status.PROCESSING
+        and (
+            latest_attempt is None
+            or latest_attempt.status
+            in (
+                RefundAttempt.Status.FAILED,
+                RefundAttempt.Status.CANCELLED,
+            )
+        )
+    )
+
+    return {
+        "refund": refund,
+        "status": refund.status,
+        "latest_attempt": latest_attempt,
+        "has_retryable_attempt": retryable,
+        "student_status": student_status,
+    }
+
+
+def get_student_refund_for_order(order, *, include_rejected=True):
+    """
+    Return the newest Refund request for an order.
+
+    Rejected requests remain historical records. A later student
+    request creates a new Refund with a new permanent refund_number.
+    """
+    queryset = Refund.objects.filter(order=order)
+
+    if not include_rejected:
+        queryset = queryset.exclude(status=Refund.Status.REJECTED)
+
+    return (
+        queryset
+        .prefetch_related("items", "attempts")
+        .order_by("-requested_at", "-pk")
+        .first()
+    )
+
+
+def has_blocking_refund_request(order, *, exclude_refund_id=None):
+    """
+    Return True when a REQUESTED, PROCESSING, or COMPLETED refund
+    currently reserves refundable items on the order.
+
+    REJECTED refunds do not block a new request.
+    """
+    queryset = Refund.objects.filter(
+        order=order,
+        status__in=get_refund_blocking_statuses(),
+    )
+
+    if exclude_refund_id is not None:
+        queryset = queryset.exclude(pk=exclude_refund_id)
+
+    return queryset.exists()
+
+
+@transaction.atomic
+def create_refund_request(
+    order,
+    student,
+    *,
+    reason,
+    order_item_ids=None,
+    full_order=False,
+):
+    """
+    Create one new student refund request.
+
+    A new Refund is created only for a genuinely new request. The
+    Refund model generates its permanent unique refund_number.
+
+    Existing REQUESTED / PROCESSING / COMPLETED refunds block an
+    overlapping request. REJECTED refunds do not.
+    """
+    locked_order = (
+        Order.objects
+        .select_for_update()
+        .get(pk=order.pk)
+    )
+
+    if locked_order.user_id != student.pk:
+        raise ValueError(
+            "You are not allowed to request a refund for this order."
+        )
+
+    if has_blocking_refund_request(locked_order):
+        raise ValueError(
+            "A refund request is already active for this order."
+        )
+
+    reason = (reason or "").strip()
+    if not reason:
+        raise ValueError("Refund reason is required.")
+
+    validation = validate_refund_request(
+        locked_order,
+        order_item_ids=order_item_ids,
+        full_order=full_order,
+    )
+
+    refund = Refund.objects.create(
+        order=locked_order,
+        student=student,
+        reason=reason,
+        status=Refund.Status.REQUESTED,
+        requested_amount=validation["amount"],
+        refunded_amount=ZERO,
+    )
+
+    RefundItem.objects.bulk_create([
+        RefundItem(
+            refund=refund,
+            order_item=order_item,
+            refund_amount=get_order_item_refund_amount(order_item),
+        )
+        for order_item in validation["items"]
+    ])
+
+    return refund
+
+
+@transaction.atomic
+def update_requested_refund(
+    refund,
+    *,
+    reason,
+    order_item_ids=None,
+    full_order=False,
+):
+    """
+    Edit an existing REQUESTED refund.
+
+    IMPORTANT: this does NOT create a second Refund and does NOT
+    change refund_number. It updates the same Refund and replaces
+    its RefundItems.
+    """
+    locked_refund = (
+        Refund.objects
+        .select_for_update()
+        .select_related("order", "student")
+        .get(pk=refund.pk)
+    )
+
+    if locked_refund.status != Refund.Status.REQUESTED:
+        raise ValueError(
+            "Only a pending refund request can be edited."
+        )
+
+    reason = (reason or "").strip()
+    if not reason:
+        raise ValueError("Refund reason is required.")
+
+    validation = validate_refund_request(
+        locked_refund.order,
+        order_item_ids=order_item_ids,
+        full_order=full_order,
+        exclude_refund_id=locked_refund.pk,
+    )
+
+    locked_refund.reason = reason
+    locked_refund.requested_amount = validation["amount"]
+    locked_refund.refunded_amount = ZERO
+    locked_refund.save(
+        update_fields=[
+            "reason",
+            "requested_amount",
+            "refunded_amount",
+        ]
+    )
+
+    locked_refund.items.all().delete()
+
+    RefundItem.objects.bulk_create([
+        RefundItem(
+            refund=locked_refund,
+            order_item=order_item,
+            refund_amount=get_order_item_refund_amount(order_item),
+        )
+        for order_item in validation["items"]
+    ])
+
+    return locked_refund
+
+
+def can_create_new_refund_request(order):
+    """Return whether a new refund request is currently allowed."""
+    return not has_blocking_refund_request(order)
+
+
+@transaction.atomic
+def begin_refund_attempt(refund, *, requested_amount=None):
+    """
+    Create the next provider attempt for an existing Refund.
+
+    First processing:
+        Refund REQUESTED -> PROCESSING + Attempt #1 PROCESSING
+
+    Retry after failure/cancellation:
+        Same Refund -> new Attempt #N PROCESSING
+
+    A second simultaneous PROCESSING attempt is blocked.
+    """
+    locked_refund = (
+        Refund.objects
+        .select_for_update()
+        .get(pk=refund.pk)
+    )
+
+    if locked_refund.status not in (
+        Refund.Status.REQUESTED,
+        Refund.Status.PROCESSING,
+    ):
+        raise ValueError("This refund cannot be processed again.")
+
+    latest_attempt = get_latest_refund_attempt(locked_refund)
+
+    if (
+        latest_attempt is not None
+        and latest_attempt.status == RefundAttempt.Status.PROCESSING
+    ):
+        raise ValueError("A refund attempt is already processing.")
+
+    if requested_amount is None:
+        requested_amount = locked_refund.requested_amount
+
+    try:
+        requested_amount = Decimal(str(requested_amount))
+    except (InvalidOperation, TypeError, ValueError):
+        requested_amount = ZERO
+
+    if requested_amount <= ZERO:
+        raise ValueError("Refund amount must be greater than zero.")
+
+    attempt = RefundAttempt.objects.create(
+        refund=locked_refund,
+        attempt_number=get_next_refund_attempt_number(locked_refund),
+        status=RefundAttempt.Status.PROCESSING,
+        requested_amount=requested_amount,
+        refunded_amount=ZERO,
+    )
+
+    if locked_refund.status != Refund.Status.PROCESSING:
+        locked_refund.status = Refund.Status.PROCESSING
+        locked_refund.save(update_fields=["status"])
+
+    return attempt
+
+
+@transaction.atomic
+def record_refund_attempt_failed(
+    attempt,
+    *,
+    error_message="",
+    admin_note="",
+):
+    """
+    Mark a provider attempt FAILED.
+
+    The parent Refund intentionally remains PROCESSING so the admin
+    can retry the same refund request using a new RefundAttempt.
+    """
+    locked_attempt = (
+        RefundAttempt.objects
+        .select_for_update()
+        .select_related("refund")
+        .get(pk=attempt.pk)
+    )
+
+    if locked_attempt.status != RefundAttempt.Status.PROCESSING:
+        raise ValueError(
+            "Only a processing refund attempt can be marked failed."
+        )
+
+    locked_attempt.status = RefundAttempt.Status.FAILED
+    locked_attempt.error_message = (error_message or "").strip()
+    locked_attempt.admin_note = (admin_note or "").strip()
+    locked_attempt.processed_at = timezone.now()
+    locked_attempt.save(update_fields=[
+        "status",
+        "error_message",
+        "admin_note",
+        "processed_at",
+    ])
+
+    return locked_attempt
+
+
+@transaction.atomic
+def record_refund_attempt_cancelled(
+    attempt,
+    *,
+    error_message="",
+    admin_note="",
+):
+    """
+    Mark a provider attempt CANCELLED.
+
+    The parent Refund remains PROCESSING and can be retried.
+    """
+    locked_attempt = (
+        RefundAttempt.objects
+        .select_for_update()
+        .select_related("refund")
+        .get(pk=attempt.pk)
+    )
+
+    if locked_attempt.status != RefundAttempt.Status.PROCESSING:
+        raise ValueError(
+            "Only a processing refund attempt can be cancelled."
+        )
+
+    locked_attempt.status = RefundAttempt.Status.CANCELLED
+    locked_attempt.error_message = (error_message or "").strip()
+    locked_attempt.admin_note = (admin_note or "").strip()
+    locked_attempt.processed_at = timezone.now()
+    locked_attempt.save(update_fields=[
+        "status",
+        "error_message",
+        "admin_note",
+        "processed_at",
+    ])
+
+    return locked_attempt
+
+
+@transaction.atomic
+def record_refund_attempt_completed(
+    attempt,
+    *,
+    razorpay_refund_id,
+    refunded_amount,
+    admin_note="",
+):
+    """
+    Complete a successful provider attempt and its parent Refund.
+
+    Only a successful completion changes financial/order state.
+    """
+    locked_attempt = (
+        RefundAttempt.objects
+        .select_for_update()
+        .select_related("refund")
+        .get(pk=attempt.pk)
+    )
+
+    if locked_attempt.status != RefundAttempt.Status.PROCESSING:
+        raise ValueError(
+            "Only a processing refund attempt can be completed."
+        )
+
+    locked_refund = (
+        Refund.objects
+        .select_for_update()
+        .get(pk=locked_attempt.refund_id)
+    )
+
+    if locked_refund.status != Refund.Status.PROCESSING:
+        raise ValueError("This refund is no longer processing.")
+
+    try:
+        refunded_amount = Decimal(str(refunded_amount))
+    except (InvalidOperation, TypeError, ValueError):
+        raise ValueError("Invalid refunded amount.")
+
+    if refunded_amount <= ZERO:
+        raise ValueError("Refunded amount must be greater than zero.")
+
+    razorpay_refund_id = (razorpay_refund_id or "").strip()
+    if not razorpay_refund_id:
+        raise ValueError(
+            "Razorpay refund ID is required for a completed refund."
+        )
+
+    now = timezone.now()
+
+    locked_attempt.status = RefundAttempt.Status.COMPLETED
+    locked_attempt.refunded_amount = refunded_amount
+    locked_attempt.razorpay_refund_id = razorpay_refund_id
+    locked_attempt.admin_note = (admin_note or "").strip()
+    locked_attempt.processed_at = now
+    locked_attempt.save(update_fields=[
+        "status",
+        "refunded_amount",
+        "razorpay_refund_id",
+        "admin_note",
+        "processed_at",
+    ])
+
+    locked_refund.status = Refund.Status.COMPLETED
+    locked_refund.refunded_amount = refunded_amount
+    locked_refund.razorpay_refund_id = razorpay_refund_id
+    locked_refund.processed_at = now
+    locked_refund.save(update_fields=[
+        "status",
+        "refunded_amount",
+        "razorpay_refund_id",
+        "processed_at",
+    ])
+
+    order = (
+        Order.objects
+        .select_for_update()
+        .get(pk=locked_refund.order_id)
+    )
+
+    payment = (
+        Payment.objects
+        .select_for_update()
+        .filter(order_id=order.pk)
+        .first()
+    )
+
+    # Sum all completed parent refunds for this order, including the
+    # refund that has just completed.
+    completed_total = ZERO
+    completed_refunds = Refund.objects.filter(
+        order_id=order.pk,
+        status=Refund.Status.COMPLETED,
+    ).only("refunded_amount")
+
+    for completed_refund in completed_refunds:
+        try:
+            completed_total += Decimal(
+                str(completed_refund.refunded_amount or ZERO)
+            )
+        except (InvalidOperation, TypeError, ValueError):
+            continue
+
+    order_total = Decimal(str(order.final_amount or ZERO))
+
+    if completed_total >= order_total:
+        order.status = Order.Status.REFUNDED
+    else:
+        order.status = Order.Status.PARTIALLY_REFUNDED
+
+    order.save(update_fields=["status", "updated_at"])
+
+    if payment is not None:
+        payment_total = Decimal(str(payment.amount or ZERO))
+        if completed_total >= payment_total:
+            payment.status = Payment.Status.REFUNDED
+        else:
+            payment.status = Payment.Status.PARTIALLY_REFUNDED
+
+        payment.save(update_fields=["status", "updated_at"])
+
+    refund_item_ids = list(
+        locked_refund.items.values_list("order_item_id", flat=True)
+    )
+
+    if refund_item_ids:
+        StudentBatchPurchase.objects.filter(
+            order_id=order.pk,
+            student_id=locked_refund.student_id,
+            order_item_id__in=refund_item_ids,
+        ).update(
+            status=StudentBatchPurchase.Status.REFUNDED,
+            refunded_at=now,
+        )
+
+    return locked_refund
+
+
+def get_refund_attempt_history(refund):
+    """Return all provider attempts in chronological order for admin UI."""
+    return refund.attempts.order_by("attempt_number", "started_at", "pk")
+
+
+# ============================================================
+# RAZORPAY REFUND PROVIDER LOOKUP
+# ============================================================
+
+
+def fetch_razorpay_refund(payment_id, refund_id):
+    """
+    Fetch the current Razorpay refund object for an existing provider refund.
+
+    This is a read-only provider lookup. It does not change any NeoLearn
+    database state. The caller decides how the returned provider status
+    should update RefundAttempt / Refund.
+    """
+    from django.conf import settings
+    import razorpay
+
+    payment_id = (payment_id or "").strip()
+    refund_id = (refund_id or "").strip()
+
+    if not payment_id:
+        raise ValueError("Razorpay payment ID is required.")
+
+    if not refund_id:
+        raise ValueError("Razorpay refund ID is required.")
+
+    if not settings.RAZORPAY_KEY_ID or not settings.RAZORPAY_KEY_SECRET:
+        raise ValueError("Razorpay credentials are not configured.")
+
+    client = razorpay.Client(
+        auth=(
+            settings.RAZORPAY_KEY_ID,
+            settings.RAZORPAY_KEY_SECRET,
+        )
+    )
+
+    return client.payment.fetch_refund_id(
+        payment_id,
+        refund_id,
     )

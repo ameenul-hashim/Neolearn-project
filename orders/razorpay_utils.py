@@ -137,3 +137,77 @@ def verify_razorpay_payment(
     )
 
     return True
+
+# ============================================================
+# CREATE RAZORPAY REFUND
+# ============================================================
+
+def create_razorpay_refund(
+    *,
+    razorpay_payment_id,
+    amount,
+):
+    """
+    Create a Razorpay refund for a captured payment.
+
+    The amount is supplied in NeoLearn's major currency unit
+    and converted to the smallest currency unit expected by
+    Razorpay.
+
+    Example:
+
+        INR 100.00 -> 10000 paise
+    """
+
+    if not razorpay_payment_id:
+        raise ValueError(
+            "Razorpay payment ID is required."
+        )
+
+    client = get_razorpay_client()
+
+    try:
+        decimal_amount = Decimal(
+            str(amount)
+        )
+    except (
+        InvalidOperation,
+        TypeError,
+        ValueError,
+    ):
+        raise ValueError(
+            "Invalid refund amount."
+        )
+
+    decimal_amount = decimal_amount.quantize(
+        Decimal("0.01"),
+        rounding=ROUND_HALF_UP,
+    )
+
+    if decimal_amount <= Decimal("0.00"):
+        raise ValueError(
+            "Refund amount must be greater than zero."
+        )
+
+    amount_in_paise = int(
+        (
+            decimal_amount * Decimal("100")
+        ).quantize(
+            Decimal("1"),
+            rounding=ROUND_HALF_UP,
+        )
+    )
+
+    if amount_in_paise <= 0:
+        raise ValueError(
+            "Refund amount must be greater than zero."
+        )
+
+    razorpay_refund = client.payment.refund(
+        razorpay_payment_id,
+        {
+            "amount": amount_in_paise,
+        },
+    )
+
+    return razorpay_refund

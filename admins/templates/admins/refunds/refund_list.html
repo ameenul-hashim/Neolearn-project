@@ -1,0 +1,793 @@
+{% extends "admins/admin_base.html" %}
+
+{% block title %}
+    Refund Management | NeoLearn Admin
+{% endblock %}
+
+{% block admin_content %}
+
+<div class="min-h-full space-y-3 pb-6">
+
+    <!-- ==========================================================
+         REFUND HERO
+    =========================================================== -->
+    <section class="relative overflow-hidden rounded-2xl border border-cyan-300/20 bg-gradient-to-r from-slate-900 via-blue-950 to-violet-950 px-4 py-4 shadow-2xl shadow-blue-950/30 sm:px-6 sm:py-5">
+        <div class="pointer-events-none absolute -left-16 -top-20 h-44 w-44 rounded-full bg-cyan-400/15 blur-3xl"></div>
+        <div class="pointer-events-none absolute right-10 -top-24 h-52 w-52 rounded-full bg-violet-400/15 blur-3xl"></div>
+        <div class="pointer-events-none absolute -bottom-24 left-1/2 h-48 w-48 rounded-full bg-blue-400/10 blur-3xl"></div>
+
+        <div class="pointer-events-none absolute left-5 top-1/2 hidden -translate-y-1/2 rotate-[-8deg] sm:block">
+            <div class="flex h-14 w-14 items-center justify-center rounded-xl border border-white/10 bg-cyan-400/10 text-cyan-300 shadow-xl">
+                <i class="ri-refund-2-line text-3xl"></i>
+            </div>
+        </div>
+
+        <div class="pointer-events-none absolute right-[16%] top-1/2 hidden -translate-y-1/2 rotate-[7deg] md:block">
+            <div class="flex h-12 w-12 items-center justify-center rounded-xl border border-white/10 bg-violet-400/10 text-violet-300 shadow-xl">
+                <i class="ri-wallet-3-line text-2xl"></i>
+            </div>
+        </div>
+
+        <div class="pointer-events-none absolute right-[8%] top-1/2 hidden -translate-y-1/2 rotate-[-6deg] lg:block">
+            <div class="flex h-11 w-11 items-center justify-center rounded-xl border border-white/10 bg-blue-400/10 text-blue-300 shadow-xl">
+                <i class="ri-bank-card-line text-2xl"></i>
+            </div>
+        </div>
+
+        <div class="relative z-10 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div class="min-w-0 pl-0 sm:pl-14 md:max-w-2xl">
+                <div class="flex items-center gap-2">
+                    <span class="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-white/10 text-cyan-300 shadow-lg backdrop-blur-sm">
+                        <i class="ri-refund-2-fill text-xl"></i>
+                    </span>
+                    <h1 class="text-2xl font-black tracking-tight text-white sm:text-3xl">
+                        Refund Management
+                    </h1>
+                </div>
+
+                <p class="mt-1 max-w-xl text-[11px] font-medium text-white/65 sm:text-xs">
+                    Review student refund requests, inspect order details, and manage refund processing securely.
+                </p>
+
+                <div class="mt-2 hidden items-center gap-2 text-white/80 sm:flex">
+                    <span class="h-px w-8 bg-white/25"></span>
+                    <span class="font-serif text-sm italic tracking-wide">
+                        Secure Refunds. Clear Records.
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <div class="pointer-events-none absolute right-4 top-4 h-2 w-2 rotate-45 bg-cyan-300/70"></div>
+        <div class="pointer-events-none absolute right-12 bottom-5 h-2 w-5 rotate-[25deg] rounded-full bg-violet-300/50"></div>
+        <div class="pointer-events-none absolute left-1/3 top-4 h-1.5 w-1.5 rounded-full bg-white/50"></div>
+    </section>
+
+
+    <!-- ==========================================================
+         REFUND STATISTICS
+    =========================================================== -->
+    <section class="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-5">
+
+        <!-- TOTAL -->
+        <div class="group relative overflow-hidden rounded-xl border border-cyan-400/25 bg-gradient-to-br from-cyan-500/[0.13] to-slate-950/70 px-3 py-3 shadow-lg shadow-cyan-500/5 transition duration-200 hover:-translate-y-0.5 hover:border-cyan-300/40">
+            <div class="absolute -right-6 -top-6 h-16 w-16 rounded-full bg-cyan-300/10 blur-xl"></div>
+            <div class="relative flex items-center gap-3">
+                <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-cyan-400/15 text-cyan-300 ring-1 ring-cyan-300/10">
+                    <i class="ri-refund-2-fill text-xl"></i>
+                </div>
+                <div class="min-w-0 flex-1">
+                    <div class="flex items-center justify-between gap-2">
+                        <p class="text-xl font-black leading-none text-white">{{ total_refunds }}</p>
+                        <span class="flex h-6 w-6 items-center justify-center rounded-full bg-cyan-400/15 text-cyan-300">
+                            <i class="ri-file-list-3-line text-sm"></i>
+                        </span>
+                    </div>
+                    <p class="mt-1 text-[9px] font-black text-cyan-200">Total Refunds</p>
+                    <p class="text-[8px] font-semibold text-slate-500">All refund requests</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- REQUESTED -->
+        <div class="group relative overflow-hidden rounded-xl border border-amber-400/25 bg-gradient-to-br from-amber-500/[0.13] to-slate-950/70 px-3 py-3 shadow-lg shadow-amber-500/5 transition duration-200 hover:-translate-y-0.5 hover:border-amber-300/40">
+            <div class="absolute -right-6 -top-6 h-16 w-16 rounded-full bg-amber-300/10 blur-xl"></div>
+            <div class="relative flex items-center gap-3">
+                <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-400/15 text-amber-300 ring-1 ring-amber-300/10">
+                    <i class="ri-time-line text-xl"></i>
+                </div>
+                <div class="min-w-0 flex-1">
+                    <div class="flex items-center justify-between gap-2">
+                        <p class="text-xl font-black leading-none text-white">{{ requested_count }}</p>
+                        <span class="flex h-6 w-6 items-center justify-center rounded-full bg-amber-400/15 text-amber-300">
+                            <i class="ri-hourglass-line text-sm"></i>
+                        </span>
+                    </div>
+                    <p class="mt-1 text-[9px] font-black text-amber-200">Requested</p>
+                    <p class="text-[8px] font-semibold text-slate-500">Waiting for review</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- PROCESSING -->
+        <div class="group relative overflow-hidden rounded-xl border border-blue-400/25 bg-gradient-to-br from-blue-500/[0.13] to-slate-950/70 px-3 py-3 shadow-lg shadow-blue-500/5 transition duration-200 hover:-translate-y-0.5 hover:border-blue-300/40">
+            <div class="absolute -right-6 -top-6 h-16 w-16 rounded-full bg-blue-300/10 blur-xl"></div>
+            <div class="relative flex items-center gap-3">
+                <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-400/15 text-blue-300 ring-1 ring-blue-300/10">
+                    <i class="ri-loader-4-line text-xl"></i>
+                </div>
+                <div class="min-w-0 flex-1">
+                    <div class="flex items-center justify-between gap-2">
+                        <p class="text-xl font-black leading-none text-white">{{ processing_count }}</p>
+                        <span class="flex h-6 w-6 items-center justify-center rounded-full bg-blue-400/15 text-blue-300">
+                            <i class="ri-loader-2-line text-sm"></i>
+                        </span>
+                    </div>
+                    <p class="mt-1 text-[9px] font-black text-blue-200">Processing</p>
+                    <p class="text-[8px] font-semibold text-slate-500">May have retryable attempts</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- COMPLETED -->
+        <div class="group relative overflow-hidden rounded-xl border border-emerald-400/25 bg-gradient-to-br from-emerald-500/[0.13] to-slate-950/70 px-3 py-3 shadow-lg shadow-emerald-500/5 transition duration-200 hover:-translate-y-0.5 hover:border-emerald-300/40">
+            <div class="absolute -right-6 -top-6 h-16 w-16 rounded-full bg-emerald-300/10 blur-xl"></div>
+            <div class="relative flex items-center gap-3">
+                <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-400/15 text-emerald-300 ring-1 ring-emerald-300/10">
+                    <i class="ri-checkbox-circle-fill text-xl"></i>
+                </div>
+                <div class="min-w-0 flex-1">
+                    <div class="flex items-center justify-between gap-2">
+                        <p class="text-xl font-black leading-none text-white">{{ completed_count }}</p>
+                        <span class="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-400/15 text-emerald-300">
+                            <i class="ri-check-line text-sm"></i>
+                        </span>
+                    </div>
+                    <p class="mt-1 text-[9px] font-black text-emerald-200">Completed</p>
+                    <p class="text-[8px] font-semibold text-slate-500">Successfully refunded</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- CLOSED / LEGACY -->
+        <div class="group relative overflow-hidden rounded-xl border border-rose-400/25 bg-gradient-to-br from-rose-500/[0.13] to-slate-950/70 px-3 py-3 shadow-lg shadow-rose-500/5 transition duration-200 hover:-translate-y-0.5 hover:border-rose-300/40 sm:col-span-2 xl:col-span-1">
+            <div class="absolute -right-6 -top-6 h-16 w-16 rounded-full bg-rose-300/10 blur-xl"></div>
+            <div class="relative flex items-center gap-3">
+                <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-rose-400/15 text-rose-300 ring-1 ring-rose-300/10">
+                    <i class="ri-close-circle-line text-xl"></i>
+                </div>
+                <div class="min-w-0 flex-1">
+                    <div class="flex items-center justify-between gap-2">
+                        <p class="text-xl font-black leading-none text-white">
+                            {{ rejected_count|add:failed_count }}
+                        </p>
+                        <span class="flex h-6 w-6 items-center justify-center rounded-full bg-rose-400/15 text-rose-300">
+                            <i class="ri-error-warning-line text-sm"></i>
+                        </span>
+                    </div>
+                    <p class="mt-1 text-[9px] font-black text-rose-200">Rejected / Legacy Failed</p>
+                    <p class="text-[8px] font-semibold text-slate-500">
+                        {{ rejected_count }} rejected · {{ failed_count }} legacy failed
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+
+    <!-- ==========================================================
+         SEARCH / FILTER / SORT
+    =========================================================== -->
+    <section class="rounded-xl border border-white/[0.08] bg-slate-900/70 p-2 shadow-xl">
+        <div class="flex flex-col gap-2.5 xl:flex-row xl:items-center">
+
+            <!-- SEARCH -->
+            <form method="get" action="{% url 'admin_refunds' %}" class="relative min-w-0 flex-1">
+
+                {% if selected_status %}
+                    <input type="hidden" name="status" value="{{ selected_status }}">
+                {% endif %}
+
+                {% if sort %}
+                    <input type="hidden" name="sort" value="{{ sort }}">
+                {% endif %}
+
+                <i class="ri-search-line pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-lg text-slate-500"></i>
+
+                <input
+                    type="search"
+                    name="search"
+                    value="{{ search }}"
+                    autocomplete="off"
+                    placeholder="Search refund number, order, student, email or Razorpay refund ID..."
+                    aria-label="Search refunds"
+                    class="h-10 w-full rounded-xl border border-white/10 bg-white/[0.03] pl-11 pr-10 text-sm font-medium text-white outline-none placeholder:text-slate-600 focus:border-cyan-400/40 focus:ring-2 focus:ring-cyan-400/10"
+                >
+
+                {% if search %}
+                    <a
+                        href="{% url 'admin_refunds' %}"
+                        class="absolute right-2 top-1/2 inline-flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-lg text-slate-500 transition hover:bg-white/[0.06] hover:text-white"
+                        aria-label="Clear search"
+                        title="Clear search"
+                    >
+                        <i class="ri-close-line"></i>
+                    </a>
+                {% endif %}
+            </form>
+
+
+            <!-- FILTER FORM -->
+            <form method="get" action="{% url 'admin_refunds' %}" class="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
+
+                {% if search %}
+                    <input type="hidden" name="search" value="{{ search }}">
+                {% endif %}
+
+                <div class="min-w-0 sm:w-44">
+                    <label for="refundStatusFilter" class="sr-only">Refund status</label>
+                    <select
+                        id="refundStatusFilter"
+                        name="status"
+                        class="h-10 w-full rounded-xl border border-white/10 bg-slate-950 px-3 text-sm font-bold text-slate-200 outline-none focus:border-cyan-400/40 focus:ring-2 focus:ring-cyan-400/10"
+                    >
+                        <option value="" {% if not selected_status %}selected{% endif %}>All Statuses</option>
+
+                        {% for status_value in refund_statuses %}
+                            <option value="{{ status_value }}" {% if selected_status == status_value %}selected{% endif %}>
+                                {% if status_value == 'requested' %}
+                                    Requested
+                                {% elif status_value == 'processing' %}
+                                    Processing
+                                {% elif status_value == 'completed' %}
+                                    Completed
+                                {% elif status_value == 'rejected' %}
+                                    Rejected
+                                {% elif status_value == 'failed' %}
+                                    Legacy Failed
+                                {% else %}
+                                    {{ status_value|title }}
+                                {% endif %}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="min-w-0 sm:w-44">
+                    <label for="refundSortFilter" class="sr-only">Sort refunds</label>
+                    <select
+                        id="refundSortFilter"
+                        name="sort"
+                        class="h-10 w-full rounded-xl border border-white/10 bg-slate-950 px-3 text-sm font-bold text-slate-200 outline-none focus:border-cyan-400/40 focus:ring-2 focus:ring-cyan-400/10"
+                    >
+                        <option value="newest" {% if sort == 'newest' or not sort %}selected{% endif %}>Newest First</option>
+                        <option value="oldest" {% if sort == 'oldest' %}selected{% endif %}>Oldest First</option>
+                        <option value="amount_high" {% if sort == 'amount_high' %}selected{% endif %}>Highest Amount</option>
+                        <option value="amount_low" {% if sort == 'amount_low' %}selected{% endif %}>Lowest Amount</option>
+                    </select>
+                </div>
+
+                <button
+                    type="submit"
+                    class="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl bg-cyan-400 px-4 text-xs font-black text-slate-950 shadow-lg shadow-cyan-500/10 transition hover:bg-cyan-300"
+                >
+                    <i class="ri-filter-3-line text-base"></i>
+                    Apply
+                </button>
+
+                {% if search or selected_status or sort != 'newest' %}
+                    <a
+                        href="{% url 'admin_refunds' %}"
+                        class="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-4 text-xs font-bold text-slate-400 transition hover:bg-white/[0.08] hover:text-white"
+                    >
+                        <i class="ri-refresh-line"></i>
+                        Reset
+                    </a>
+                {% endif %}
+            </form>
+        </div>
+
+        {% if search or selected_status or sort != 'newest' %}
+            <div class="mt-2 flex flex-wrap items-center gap-2 border-t border-white/[0.06] px-1 pt-2">
+                <span class="text-[9px] font-black uppercase tracking-[0.12em] text-slate-600">Active:</span>
+
+                {% if search %}
+                    <span class="inline-flex items-center gap-1.5 rounded-lg border border-cyan-400/15 bg-cyan-400/[0.06] px-2.5 py-1 text-[9px] font-bold text-cyan-300">
+                        <i class="ri-search-line"></i>
+                        {{ search }}
+                    </span>
+                {% endif %}
+
+                {% if selected_status %}
+                    <span class="inline-flex items-center gap-1.5 rounded-lg border border-violet-400/15 bg-violet-400/[0.06] px-2.5 py-1 text-[9px] font-bold text-violet-300">
+                        <i class="ri-price-tag-3-line"></i>
+                        {% if selected_status == 'requested' %}
+                            Requested
+                        {% elif selected_status == 'processing' %}
+                            Processing
+                        {% elif selected_status == 'completed' %}
+                            Completed
+                        {% elif selected_status == 'rejected' %}
+                            Rejected
+                        {% elif selected_status == 'failed' %}
+                            Legacy Failed
+                        {% else %}
+                            {{ selected_status|title }}
+                        {% endif %}
+                    </span>
+                {% endif %}
+
+                {% if sort != 'newest' %}
+                    <span class="inline-flex items-center gap-1.5 rounded-lg border border-blue-400/15 bg-blue-400/[0.06] px-2.5 py-1 text-[9px] font-bold text-blue-300">
+                        <i class="ri-sort-desc"></i>
+                        {% if sort == 'oldest' %}
+                            Oldest First
+                        {% elif sort == 'amount_high' %}
+                            Highest Amount
+                        {% elif sort == 'amount_low' %}
+                            Lowest Amount
+                        {% endif %}
+                    </span>
+                {% endif %}
+            </div>
+        {% endif %}
+    </section>
+
+
+    <!-- ==========================================================
+         REFUND LIST
+    =========================================================== -->
+    {% if refunds %}
+
+        <section class="overflow-hidden rounded-2xl border border-white/[0.08] bg-slate-900/80 shadow-2xl">
+
+            <div class="flex flex-col gap-2 border-b border-white/[0.08] bg-slate-950/50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                    <h2 class="text-sm font-black text-white">Refund Requests</h2>
+                    <p class="mt-0.5 text-[10px] font-medium text-slate-500">
+                        Review requests and open a refund to process, reject, or retry provider attempts.
+                    </p>
+                </div>
+
+                <div class="inline-flex items-center gap-2 self-start rounded-lg border border-white/[0.07] bg-white/[0.025] px-2.5 py-1.5 text-[9px] font-bold text-slate-500 sm:self-auto">
+                    <i class="ri-file-list-3-line text-cyan-400"></i>
+                    {{ page_obj.paginator.count }}
+                    {% if page_obj.paginator.count == 1 %}refund{% else %}refunds{% endif %}
+                </div>
+            </div>
+
+
+            <!-- ==================================================
+                 DESKTOP TABLE
+            =================================================== -->
+            <div class="hidden overflow-x-auto md:block">
+                <table class="w-full min-w-[1100px]">
+                    <thead>
+                        <tr class="border-b border-white/[0.07] bg-white/[0.018]">
+
+                            <th class="px-4 py-3 text-left text-[9px] font-black uppercase tracking-[0.12em] text-slate-600">
+                                Refund
+                            </th>
+
+                            <th class="px-4 py-3 text-left text-[9px] font-black uppercase tracking-[0.12em] text-slate-600">
+                                Student
+                            </th>
+
+                            <th class="px-4 py-3 text-left text-[9px] font-black uppercase tracking-[0.12em] text-slate-600">
+                                Order
+                            </th>
+
+                            <th class="px-4 py-3 text-right text-[9px] font-black uppercase tracking-[0.12em] text-slate-600">
+                                Requested
+                            </th>
+
+                            <th class="px-4 py-3 text-right text-[9px] font-black uppercase tracking-[0.12em] text-slate-600">
+                                Refunded
+                            </th>
+
+                            <th class="px-4 py-3 text-left text-[9px] font-black uppercase tracking-[0.12em] text-slate-600">
+                                Status
+                            </th>
+
+                            <th class="px-4 py-3 text-left text-[9px] font-black uppercase tracking-[0.12em] text-slate-600">
+                                Requested At
+                            </th>
+
+                            <th class="px-4 py-3 text-right text-[9px] font-black uppercase tracking-[0.12em] text-slate-600">
+                                Action
+                            </th>
+                        </tr>
+                    </thead>
+
+                    <tbody class="divide-y divide-white/[0.055]">
+                        {% for refund in refunds %}
+                            <tr class="group transition hover:bg-white/[0.025]">
+
+                                <!-- REFUND NUMBER -->
+                                <td class="px-4 py-3">
+                                    <div class="flex items-center gap-3">
+                                        <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-cyan-400/10 bg-cyan-400/[0.06] text-cyan-300">
+                                            <i class="ri-refund-2-line text-lg"></i>
+                                        </div>
+
+                                        <div class="min-w-0">
+                                            <p class="max-w-[210px] truncate text-xs font-black text-white">
+                                                {{ refund.refund_number|default:"Refund #"|add:refund.id }}
+                                            </p>
+                                            <p class="mt-0.5 text-[9px] font-medium text-slate-600">
+                                                Refund Request #{{ refund.id }}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </td>
+
+
+                                <!-- STUDENT -->
+                                <td class="px-4 py-3">
+                                    <div class="min-w-0">
+                                        <p class="max-w-[190px] truncate text-xs font-black text-slate-200">
+                                            {{ refund.student.get_full_name|default:refund.student.email }}
+                                        </p>
+                                        <p class="mt-0.5 max-w-[190px] truncate text-[9px] font-medium text-slate-500">
+                                            {{ refund.student.email }}
+                                        </p>
+                                    </div>
+                                </td>
+
+
+                                <!-- ORDER -->
+                                <td class="px-4 py-3">
+                                    <div class="min-w-0">
+                                        <p class="max-w-[170px] truncate text-xs font-black text-cyan-300">
+                                            {{ refund.order.order_number }}
+                                        </p>
+                                        <p class="mt-0.5 text-[9px] font-medium text-slate-600">Order</p>
+                                    </div>
+                                </td>
+
+
+                                <!-- REQUESTED -->
+                                <td class="whitespace-nowrap px-4 py-3 text-right">
+                                    <p class="text-sm font-black text-white">
+                                        ₹{{ refund.requested_amount|floatformat:2 }}
+                                    </p>
+                                    <p class="mt-0.5 text-[8px] font-medium text-slate-600">Requested</p>
+                                </td>
+
+
+                                <!-- REFUNDED -->
+                                <td class="whitespace-nowrap px-4 py-3 text-right">
+                                    <p class="text-sm font-black {% if refund.refunded_amount and refund.refunded_amount > 0 %}text-emerald-300{% else %}text-slate-500{% endif %}">
+                                        ₹{{ refund.refunded_amount|floatformat:2 }}
+                                    </p>
+                                    <p class="mt-0.5 text-[8px] font-medium text-slate-600">Completed amount</p>
+                                </td>
+
+
+                                <!-- STATUS -->
+                                <td class="px-4 py-3">
+                                    {% if refund.status == 'requested' %}
+                                        <span class="inline-flex items-center gap-1.5 rounded-lg border border-amber-300/20 bg-amber-400/10 px-2.5 py-1.5 text-[9px] font-black text-amber-300">
+                                            <span class="h-1.5 w-1.5 rounded-full bg-amber-300"></span>
+                                            Requested
+                                        </span>
+
+                                    {% elif refund.status == 'processing' %}
+                                        <div class="flex flex-col items-start gap-1">
+                                            <span class="inline-flex items-center gap-1.5 rounded-lg border border-blue-300/20 bg-blue-400/10 px-2.5 py-1.5 text-[9px] font-black text-blue-300">
+                                                <span class="h-1.5 w-1.5 rounded-full bg-blue-300"></span>
+                                                Processing
+                                            </span>
+                                            <span class="text-[8px] font-semibold text-slate-600">
+                                                Check attempt history
+                                            </span>
+                                        </div>
+
+                                    {% elif refund.status == 'completed' %}
+                                        <span class="inline-flex items-center gap-1.5 rounded-lg border border-emerald-300/20 bg-emerald-400/10 px-2.5 py-1.5 text-[9px] font-black text-emerald-300">
+                                            <span class="h-1.5 w-1.5 rounded-full bg-emerald-300"></span>
+                                            Completed
+                                        </span>
+
+                                    {% elif refund.status == 'rejected' %}
+                                        <span class="inline-flex items-center gap-1.5 rounded-lg border border-rose-300/20 bg-rose-400/10 px-2.5 py-1.5 text-[9px] font-black text-rose-300">
+                                            <span class="h-1.5 w-1.5 rounded-full bg-rose-300"></span>
+                                            Rejected
+                                        </span>
+
+                                    {% elif refund.status == 'failed' %}
+                                        <div class="flex flex-col items-start gap-1">
+                                            <span class="inline-flex items-center gap-1.5 rounded-lg border border-rose-300/20 bg-rose-400/10 px-2.5 py-1.5 text-[9px] font-black text-rose-300">
+                                                <span class="h-1.5 w-1.5 rounded-full bg-rose-300"></span>
+                                                Legacy Failed
+                                            </span>
+                                            <span class="text-[8px] font-semibold text-slate-600">
+                                                Historical status
+                                            </span>
+                                        </div>
+
+                                    {% else %}
+                                        <span class="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.04] px-2.5 py-1.5 text-[9px] font-black text-slate-400">
+                                            {{ refund.status|title }}
+                                        </span>
+                                    {% endif %}
+                                </td>
+
+
+                                <!-- DATE -->
+                                <td class="px-4 py-3">
+                                    <p class="whitespace-nowrap text-xs font-bold text-slate-300">
+                                        {{ refund.requested_at|date:"d M Y" }}
+                                    </p>
+                                    <p class="mt-0.5 text-[9px] font-medium text-slate-600">
+                                        {{ refund.requested_at|date:"h:i A" }}
+                                    </p>
+                                </td>
+
+
+                                <!-- ACTION -->
+                                <td class="px-4 py-3 text-right">
+                                    <a
+                                        href="{% url 'admin_refund_detail' refund.id %}"
+                                        class="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl border border-cyan-300/20 bg-cyan-400/[0.045] px-3 text-[10px] font-black text-slate-300 transition hover:border-cyan-400/35 hover:bg-cyan-400/10 hover:text-cyan-200 hover:shadow-lg hover:shadow-cyan-500/5"
+                                    >
+                                        <i class="ri-eye-line text-sm"></i>
+                                        View Details
+                                    </a>
+                                </td>
+
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+
+            <!-- ==================================================
+                 MOBILE LIST
+            =================================================== -->
+            <div class="divide-y divide-white/[0.055] md:hidden">
+                {% for refund in refunds %}
+                    <article class="bg-slate-900/60 p-3 transition hover:bg-white/[0.025]">
+
+                        <div class="flex items-start justify-between gap-3">
+                            <div class="flex min-w-0 items-center gap-3">
+                                <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-cyan-400/10 bg-cyan-400/[0.06] text-cyan-300">
+                                    <i class="ri-refund-2-line text-lg"></i>
+                                </div>
+
+                                <div class="min-w-0">
+                                    <p class="max-w-[190px] truncate text-xs font-black text-white">
+                                        {{ refund.refund_number|default:"Refund #"|add:refund.id }}
+                                    </p>
+                                    <p class="mt-0.5 truncate text-[9px] font-medium text-cyan-300">
+                                        {{ refund.order.order_number }}
+                                    </p>
+                                </div>
+                            </div>
+
+                            {% if refund.status == 'requested' %}
+                                <span class="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-amber-300/20 bg-amber-400/10 px-2 py-1 text-[8px] font-black text-amber-300">
+                                    <span class="h-1.5 w-1.5 rounded-full bg-amber-300"></span>
+                                    Requested
+                                </span>
+                            {% elif refund.status == 'processing' %}
+                                <span class="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-blue-300/20 bg-blue-400/10 px-2 py-1 text-[8px] font-black text-blue-300">
+                                    <span class="h-1.5 w-1.5 rounded-full bg-blue-300"></span>
+                                    Processing
+                                </span>
+                            {% elif refund.status == 'completed' %}
+                                <span class="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-emerald-300/20 bg-emerald-400/10 px-2 py-1 text-[8px] font-black text-emerald-300">
+                                    <span class="h-1.5 w-1.5 rounded-full bg-emerald-300"></span>
+                                    Completed
+                                </span>
+                            {% elif refund.status == 'rejected' %}
+                                <span class="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-rose-300/20 bg-rose-400/10 px-2 py-1 text-[8px] font-black text-rose-300">
+                                    <span class="h-1.5 w-1.5 rounded-full bg-rose-300"></span>
+                                    Rejected
+                                </span>
+                            {% elif refund.status == 'failed' %}
+                                <span class="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-rose-300/20 bg-rose-400/10 px-2 py-1 text-[8px] font-black text-rose-300">
+                                    <span class="h-1.5 w-1.5 rounded-full bg-rose-300"></span>
+                                    Legacy Failed
+                                </span>
+                            {% endif %}
+                        </div>
+
+
+                        <!-- STUDENT -->
+                        <div class="mt-3 rounded-xl border border-white/[0.06] bg-white/[0.018] px-3 py-2.5">
+                            <div class="flex items-center justify-between gap-3">
+                                <div class="min-w-0">
+                                    <p class="text-[8px] font-black uppercase tracking-[0.12em] text-slate-600">Student</p>
+                                    <p class="mt-1 truncate text-xs font-black text-slate-200">
+                                        {{ refund.student.get_full_name|default:refund.student.email }}
+                                    </p>
+                                    <p class="mt-0.5 truncate text-[9px] font-medium text-slate-500">
+                                        {{ refund.student.email }}
+                                    </p>
+                                </div>
+
+                                <div class="shrink-0 text-right">
+                                    <p class="text-[8px] font-black uppercase tracking-[0.12em] text-slate-600">Requested</p>
+                                    <p class="mt-1 text-sm font-black text-white">
+                                        ₹{{ refund.requested_amount|floatformat:2 }}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+
+                        <!-- AMOUNT SUMMARY -->
+                        <div class="mt-2 grid grid-cols-2 divide-x divide-white/[0.07] rounded-xl border border-white/[0.06] bg-white/[0.012]">
+                            <div class="px-3 py-2.5">
+                                <p class="text-[8px] font-black uppercase tracking-[0.12em] text-slate-600">Requested Amount</p>
+                                <p class="mt-1 text-sm font-black text-white">
+                                    ₹{{ refund.requested_amount|floatformat:2 }}
+                                </p>
+                            </div>
+
+                            <div class="px-3 py-2.5">
+                                <p class="text-[8px] font-black uppercase tracking-[0.12em] text-slate-600">Completed Amount</p>
+                                <p class="mt-1 text-sm font-black {% if refund.refunded_amount and refund.refunded_amount > 0 %}text-emerald-300{% else %}text-slate-500{% endif %}">
+                                    ₹{{ refund.refunded_amount|floatformat:2 }}
+                                </p>
+                            </div>
+                        </div>
+
+
+                        <!-- REQUEST DATE + ACTION -->
+                        <div class="mt-2 flex items-center justify-between gap-3">
+                            <div class="min-w-0">
+                                <p class="text-[8px] font-black uppercase tracking-[0.12em] text-slate-600">
+                                    Refund Number
+                                </p>
+                                <p class="mt-1 truncate text-[10px] font-black text-cyan-300">
+                                    {{ refund.refund_number|default:"Not assigned" }}
+                                </p>
+                                <p class="mt-1 text-[8px] font-medium text-slate-600">
+                                    {{ refund.requested_at|date:"d M Y, h:i A" }}
+                                </p>
+                            </div>
+
+                            <a
+                                href="{% url 'admin_refund_detail' refund.id %}"
+                                class="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-xl border border-cyan-300/20 bg-cyan-400/[0.045] px-3 text-[10px] font-black text-cyan-300 transition hover:border-cyan-400/35 hover:bg-cyan-400/10 hover:text-cyan-200"
+                            >
+                                <i class="ri-eye-line text-sm"></i>
+                                View Details
+                            </a>
+                        </div>
+
+                    </article>
+                {% endfor %}
+            </div>
+
+        </section>
+
+
+        <!-- ==========================================================
+             PAGINATION
+        =========================================================== -->
+        <section class="flex flex-col gap-2 pt-0 sm:flex-row sm:items-center sm:justify-between">
+
+            <p class="text-xs font-medium text-slate-500 sm:text-sm">
+                Showing
+                <span class="font-black text-slate-300">{{ page_obj.start_index }}</span>
+                to
+                <span class="font-black text-slate-300">{{ page_obj.end_index }}</span>
+                of
+                <span class="font-black text-slate-300">{{ page_obj.paginator.count }}</span>
+                {% if page_obj.paginator.count == 1 %}refund{% else %}refunds{% endif %}
+            </p>
+
+
+            {% if page_obj.paginator.num_pages > 1 %}
+                <div class="flex items-center gap-1.5">
+
+                    {% if page_obj.has_previous %}
+                        <a
+                            href="?{{ preserved_query }}{% if preserved_query %}&{% endif %}page={{ page_obj.previous_page_number }}"
+                            class="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] text-slate-300 transition hover:bg-white/[0.08] hover:text-white"
+                            aria-label="Previous page"
+                        >
+                            <i class="ri-arrow-left-s-line"></i>
+                        </a>
+                    {% else %}
+                        <span class="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-white/[0.05] bg-white/[0.015] text-slate-700">
+                            <i class="ri-arrow-left-s-line"></i>
+                        </span>
+                    {% endif %}
+
+
+                    {% for page_number in page_obj.paginator.page_range %}
+                        {% if page_number == page_obj.number %}
+                            <span class="inline-flex h-9 min-w-9 items-center justify-center rounded-xl border border-cyan-300/30 bg-cyan-400/10 px-2 text-xs font-black text-cyan-300">
+                                {{ page_number }}
+                            </span>
+
+                        {% elif page_number <= 2 or page_number > page_obj.paginator.num_pages|add:"-2" or page_number >= page_obj.number|add:"-1" and page_number <= page_obj.number|add:"1" %}
+                            <a
+                                href="?{{ preserved_query }}{% if preserved_query %}&{% endif %}page={{ page_number }}"
+                                class="inline-flex h-9 min-w-9 items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] px-2 text-xs font-bold text-slate-400 transition hover:bg-white/[0.08] hover:text-white"
+                            >
+                                {{ page_number }}
+                            </a>
+
+                        {% elif page_number == 3 and page_obj.number > 4 %}
+                            <span class="px-1 text-slate-700">…</span>
+
+                        {% elif page_number == page_obj.paginator.num_pages|add:"-2" and page_obj.number < page_obj.paginator.num_pages|add:"-3" %}
+                            <span class="px-1 text-slate-700">…</span>
+                        {% endif %}
+                    {% endfor %}
+
+
+                    {% if page_obj.has_next %}
+                        <a
+                            href="?{{ preserved_query }}{% if preserved_query %}&{% endif %}page={{ page_obj.next_page_number }}"
+                            class="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] text-slate-300 transition hover:bg-white/[0.08] hover:text-white"
+                            aria-label="Next page"
+                        >
+                            <i class="ri-arrow-right-s-line"></i>
+                        </a>
+                    {% else %}
+                        <span class="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-white/[0.05] bg-white/[0.015] text-slate-700">
+                            <i class="ri-arrow-right-s-line"></i>
+                        </span>
+                    {% endif %}
+
+                </div>
+            {% endif %}
+        </section>
+
+
+    {% else %}
+
+        <!-- ==========================================================
+             EMPTY STATE
+        =========================================================== -->
+        <section class="overflow-hidden rounded-2xl border border-white/[0.08] bg-slate-900/80 shadow-2xl">
+            <div class="relative px-5 py-14 text-center sm:px-8">
+
+                <div class="pointer-events-none absolute left-1/2 top-1/2 h-56 w-56 -translate-x-1/2 -translate-y-1/2 rounded-full bg-cyan-400/[0.035] blur-3xl"></div>
+
+                <div class="relative mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-cyan-400/15 bg-cyan-400/[0.06] text-cyan-300">
+                    {% if search or selected_status %}
+                        <i class="ri-search-eye-line text-3xl"></i>
+                    {% else %}
+                        <i class="ri-refund-2-line text-3xl"></i>
+                    {% endif %}
+                </div>
+
+                {% if search or selected_status %}
+                    <h2 class="relative mt-4 text-lg font-black text-white">
+                        No matching refunds found
+                    </h2>
+                    <p class="relative mx-auto mt-1 max-w-md text-xs font-medium leading-5 text-slate-500">
+                        No refund request matches the current search or status filter.
+                    </p>
+
+                    <a
+                        href="{% url 'admin_refunds' %}"
+                        class="relative mt-5 inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-cyan-300/20 bg-cyan-400/[0.06] px-4 text-xs font-black text-cyan-300 transition hover:bg-cyan-400/10"
+                    >
+                        <i class="ri-refresh-line"></i>
+                        Clear Filters
+                    </a>
+                {% else %}
+                    <h2 class="relative mt-4 text-lg font-black text-white">
+                        No refund requests yet
+                    </h2>
+                    <p class="relative mx-auto mt-1 max-w-md text-xs font-medium leading-5 text-slate-500">
+                        Student refund requests will appear here after they submit a valid refund request.
+                    </p>
+                {% endif %}
+            </div>
+        </section>
+
+    {% endif %}
+
+</div>
+
+{% endblock %}

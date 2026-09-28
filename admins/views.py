@@ -6,6 +6,7 @@ from django.contrib import messages
 from django.views.decorators.http import require_POST
 from django.core.validators import validate_email
 from django.core.exceptions import ValidationError
+from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.paginator import Paginator
 from django.db.models import Q
@@ -30,11 +31,33 @@ from .helpers import (
     toggle_coupon_status,
     can_delete_coupon,
     delete_coupon,
+
+    # Refund admin listing/detail helpers
+    get_refund_listing_context,
+    get_admin_refund_detail,
 )
 
+# RefundAttempt lifecycle belongs to the orders domain.
+# Keep these imports separate from admins.helpers.
+from orders.helpers import (
+    begin_refund_attempt,
+    record_refund_attempt_failed,
+    record_refund_attempt_cancelled,
+    record_refund_attempt_completed,
+    fetch_razorpay_refund,
+)
+import razorpay
 from django.shortcuts import get_object_or_404
 from django.core.mail import send_mail
 from admins.models import (Batch,Subject,Coupon)
+from orders.models import (
+    Order,
+    Payment,
+    StudentBatchPurchase,
+    Refund,
+    RefundItem,
+    RefundAttempt,
+)
 from django.db import models,transaction
 from teachers.models import (Teacher,TeacherBatch,TeacherSubject,)
 from decimal import Decimal
@@ -2132,3 +2155,554 @@ def delete_coupon_view(
         "admin_coupons"
     )
     
+
+# ============================================================
+# ADMIN REFUND MANAGEMENT
+# ============================================================
+
+
+@login_required(login_url="admin_signin")
+@admin_required
+@cache_control(
+    no_cache=True,
+    must_revalidate=True,
+    no_store=True,
+)
+def admin_refunds_view(request):
+    """Admin refund management listing."""
+    context = get_refund_listing_context(request)
+    return render(request, "admins/refunds/refund_list.html", context)
+
+
+# ============================================================
+# ADMIN REFUND DETAIL
+# ============================================================
+
+
+@login_required(login_url="admin_signin")
+@admin_required
+@cache_control(
+    no_cache=True,
+    must_revalidate=True,
+    no_store=True,
+)
+def admin_refund_detail_view(request, refund_id):
+    """Display one complete refund request and its provider attempt history."""
+    try:
+        refund = get_admin_refund_detail(refund_id)
+    except Refund.DoesNotExist:
+        messages.error(request, "Refund request could not be found.")
+        return redirect("admin_refunds")
+
+    return render(
+        request,
+        "admins/refunds/refund_detail.html",
+        {"refund": refund},
+    )
+
+
+# ============================================================
+# SHARED PROVIDER-STATUS FINALIZATION
+# ============================================================
+
+
+def _apply_provider_refund_status(
+    *,
+    refund,
+    attempt,
+    provider_refund,
+    admin_note="",
+):
+    """
+    Apply one already-fetched Razorpay refund object to the local lifecycle.
+
+    IMPORTANT:
+        This function is used only for an existing RefundAttempt.
+        It never creates a second RefundAttempt and never starts another
+        Razorpay refund.
+
+    Returns:
+        (state, message)
+
+    state values:
+        completed / failed / cancelled / processing
+    """
+    razorpay_refund_id = str(
+        provider_refund.get("id") or attempt.razorpay_refund_id or ""
+    ).strip()
+    razorpay_status = str(
+        provider_refund.get("status") or ""
+    ).strip().lower()
+
+    if razorpay_refund_id and attempt.razorpay_refund_id != razorpay_refund_id:
+        attempt.razorpay_refund_id = razorpay_refund_id
+        attempt.save(update_fields=["razorpay_refund_id"])
+
+    if razorpay_status == "processed":
+        if not razorpay_refund_id:
+            return (
+                "processing",
+                "Razorpay reported the refund as processed but did not return a refund ID.",
+            )
+
+        provider_amount_paise = provider_refund.get("amount")
+        try:
+            if provider_amount_paise is not None:
+                refunded_amount = (
+                    Decimal(str(provider_amount_paise)) / Decimal("100")
+                ).quantize(Decimal("0.01"))
+            else:
+                refunded_amount = Decimal(str(attempt.requested_amount))
+        except Exception:
+            refunded_amount = Decimal(str(attempt.requested_amount))
+
+        completed_refund = record_refund_attempt_completed(
+            attempt,
+            razorpay_refund_id=razorpay_refund_id,
+            refunded_amount=refunded_amount,
+            admin_note=admin_note,
+        )
+        return (
+            "completed",
+            (
+                "Refund completed successfully. "
+                f"Refund Number: {completed_refund.refund_number} | "
+                f"Razorpay Refund ID: {completed_refund.razorpay_refund_id}"
+            ),
+        )
+
+    if razorpay_status == "failed":
+        error_message = str(
+            provider_refund.get("error_description")
+            or provider_refund.get("error_reason")
+            or provider_refund.get("error_source")
+            or "Razorpay reported that the refund failed."
+        ).strip()
+        record_refund_attempt_failed(
+            attempt,
+            error_message=error_message,
+            admin_note=admin_note,
+        )
+        return (
+            "failed",
+            "Razorpay reported that this refund attempt failed. The same Refund Number can be retried.",
+        )
+
+    if razorpay_status == "cancelled":
+        record_refund_attempt_cancelled(
+            attempt,
+            error_message="Razorpay cancelled the refund attempt.",
+            admin_note=admin_note,
+        )
+        return (
+            "cancelled",
+            "Razorpay cancelled this refund attempt. The same Refund Number can be retried.",
+        )
+
+    # Razorpay may return created/pending or another non-final state. Keep
+    # the attempt and parent Refund processing. Never create another refund
+    # while this provider refund is still unresolved.
+    return (
+        "processing",
+        (
+            "The Razorpay refund is still being processed "
+            f"(provider status: '{razorpay_status or 'unknown'}'). "
+            "No second refund attempt was created."
+        ),
+    )
+
+
+# ============================================================
+# ADMIN REFUND ACTION
+# ============================================================
+
+
+@login_required(login_url="admin_signin")
+@admin_required
+@require_POST
+def admin_refund_action_view(request, refund_id):
+    """
+    Process/retry or reject one refund request.
+
+    One Refund = one permanent student request + one refund_number.
+    One RefundAttempt = one Razorpay/provider attempt.
+
+    A provider pending response keeps the current attempt PROCESSING.
+    The admin must use Check Razorpay Status to reconcile that same
+    provider refund before another attempt can ever be created.
+    """
+    action = (request.POST.get("action") or "").strip().lower()
+    admin_note = (request.POST.get("admin_note") or "").strip()
+
+    if action not in {"process", "reject"}:
+        messages.error(request, "Invalid refund action.")
+        return redirect("admin_refund_detail", refund_id=refund_id)
+
+    if action == "reject" and not admin_note:
+        messages.error(
+            request,
+            "Please provide an admin note when rejecting a refund.",
+        )
+        return redirect("admin_refund_detail", refund_id=refund_id)
+
+    if action == "process":
+        try:
+            with transaction.atomic():
+                refund = (
+                    Refund.objects
+                    .select_for_update()
+                    .get(pk=refund_id)
+                )
+
+                if refund.status not in (
+                    Refund.Status.REQUESTED,
+                    Refund.Status.PROCESSING,
+                ):
+                    messages.error(
+                        request,
+                        (
+                            "This refund cannot be processed because its "
+                            f"current status is '{refund.get_status_display()}'."
+                        ),
+                    )
+                    return redirect(
+                        "admin_refund_detail",
+                        refund_id=refund.id,
+                    )
+
+                order = (
+                    Order.objects
+                    .select_for_update()
+                    .get(pk=refund.order_id)
+                )
+
+                payment = (
+                    Payment.objects
+                    .select_for_update()
+                    .get(order=order)
+                )
+
+                if not payment.razorpay_payment_id:
+                    messages.error(
+                        request,
+                        "Refund cannot be processed because the Razorpay payment ID is missing.",
+                    )
+                    return redirect(
+                        "admin_refund_detail",
+                        refund_id=refund.id,
+                    )
+
+                refund_amount = refund.requested_amount
+                if refund_amount is None or refund_amount <= Decimal("0.00"):
+                    messages.error(
+                        request,
+                        "Refund amount must be greater than zero.",
+                    )
+                    return redirect(
+                        "admin_refund_detail",
+                        refund_id=refund.id,
+                    )
+
+                latest_attempt = (
+                    RefundAttempt.objects
+                    .select_for_update()
+                    .filter(refund_id=refund.id)
+                    .order_by("-attempt_number", "-pk")
+                    .first()
+                )
+
+                # NEVER create a second provider refund while the previous
+                # Razorpay refund is still unresolved.
+                if (
+                    latest_attempt is not None
+                    and latest_attempt.status == RefundAttempt.Status.PROCESSING
+                ):
+                    if latest_attempt.razorpay_refund_id:
+                        messages.warning(
+                            request,
+                            "This refund already has a Razorpay attempt in Processing. Use Check Razorpay Status before retrying.",
+                        )
+                    else:
+                        messages.warning(
+                            request,
+                            "This refund already has a provider attempt in Processing. Manual verification is required before another attempt can start.",
+                        )
+                    return redirect(
+                        "admin_refund_detail",
+                        refund_id=refund.id,
+                    )
+
+                attempt = begin_refund_attempt(
+                    refund,
+                    requested_amount=refund_amount,
+                )
+
+                razorpay_payment_id = payment.razorpay_payment_id
+                refund_amount_paise = int(
+                    (Decimal(str(refund_amount)) * Decimal("100")).quantize(Decimal("1"))
+                )
+
+                if admin_note:
+                    refund.admin_note = admin_note
+                    refund.save(update_fields=["admin_note"])
+
+        except Refund.DoesNotExist:
+            messages.error(request, "Refund request could not be found.")
+            return redirect("admin_refunds")
+        except Payment.DoesNotExist:
+            messages.error(
+                request,
+                "The payment associated with this refund could not be found.",
+            )
+            return redirect("admin_refund_detail", refund_id=refund_id)
+        except Order.DoesNotExist:
+            messages.error(
+                request,
+                "The order associated with this refund could not be found.",
+            )
+            return redirect("admin_refund_detail", refund_id=refund_id)
+        except ValueError as exc:
+            messages.error(request, str(exc))
+            return redirect("admin_refund_detail", refund_id=refund_id)
+        except Exception as exc:
+            messages.error(
+                request,
+                f"Unable to prepare the refund request. {str(exc)}",
+            )
+            return redirect("admin_refund_detail", refund_id=refund_id)
+
+        # Provider call intentionally remains outside the database transaction.
+        try:
+            client = razorpay.Client(
+                auth=(
+                    settings.RAZORPAY_KEY_ID,
+                    settings.RAZORPAY_KEY_SECRET,
+                )
+            )
+
+            razorpay_refund = client.payment.refund(
+                razorpay_payment_id,
+                {"amount": refund_amount_paise},
+            )
+
+        except Exception as exc:
+            # A provider/network exception is ambiguous. The provider may have
+            # accepted the refund even though Django did not receive the result.
+            # Therefore keep the attempt PROCESSING and require reconciliation.
+            try:
+                with transaction.atomic():
+                    locked_refund = Refund.objects.select_for_update().get(pk=refund_id)
+                    locked_refund.admin_note = (
+                        admin_note
+                        or (
+                            "Razorpay did not return a confirmed result. "
+                            "Use Check Razorpay Status after verifying the provider. "
+                            f"Technical detail: {str(exc)}"
+                        )
+                    )
+                    locked_refund.save(update_fields=["admin_note"])
+            except Exception:
+                pass
+
+            messages.error(
+                request,
+                "The Razorpay refund result could not be confirmed. The attempt remains Processing for verification.",
+            )
+            return redirect("admin_refund_detail", refund_id=refund_id)
+
+        try:
+            state, message = _apply_provider_refund_status(
+                refund=refund,
+                attempt=attempt,
+                provider_refund=razorpay_refund,
+                admin_note=admin_note,
+            )
+        except Exception as exc:
+            messages.error(
+                request,
+                (
+                    "Razorpay returned a refund response, but NeoLearn could not "
+                    "finish the local lifecycle update. The attempt remains "
+                    f"Processing for reconciliation. Technical detail: {str(exc)}"
+                ),
+            )
+            return redirect("admin_refund_detail", refund_id=refund_id)
+
+        if state == "completed":
+            messages.success(request, message)
+        elif state in {"failed", "cancelled"}:
+            messages.warning(request, message)
+        else:
+            messages.warning(request, message)
+
+        return redirect("admin_refund_detail", refund_id=refund_id)
+
+    # ========================================================
+    # REJECT
+    # ========================================================
+
+    try:
+        with transaction.atomic():
+            refund = (
+                Refund.objects
+                .select_for_update()
+                .get(pk=refund_id)
+            )
+
+            if refund.status != Refund.Status.REQUESTED:
+                messages.error(
+                    request,
+                    (
+                        "This refund cannot be rejected because its current "
+                        f"status is '{refund.get_status_display()}'."
+                    ),
+                )
+                return redirect(
+                    "admin_refund_detail",
+                    refund_id=refund.id,
+                )
+
+            refund.status = Refund.Status.REJECTED
+            refund.admin_note = admin_note
+            refund.processed_at = timezone.now()
+            refund.save(
+                update_fields=[
+                    "status",
+                    "admin_note",
+                    "processed_at",
+                ]
+            )
+
+        messages.success(
+            request,
+            "Refund request rejected successfully.",
+        )
+
+    except Refund.DoesNotExist:
+        messages.error(request, "Refund request could not be found.")
+        return redirect("admin_refunds")
+    except Exception as exc:
+        messages.error(
+            request,
+            f"Unable to reject the refund request. {str(exc)}",
+        )
+
+    return redirect(
+        "admin_refund_detail",
+        refund_id=refund_id,
+    )
+
+
+# ============================================================
+# CHECK RAZORPAY REFUND STATUS
+# ============================================================
+
+
+@login_required(login_url="admin_signin")
+@admin_required
+@require_POST
+def admin_refund_status_view(request, refund_id):
+    """
+    Reconcile an existing PROCESSING RefundAttempt with Razorpay.
+
+    This does NOT create a new refund. It only fetches the current provider
+    state for the existing Razorpay refund ID.
+    """
+    try:
+        refund = (
+            Refund.objects
+            .select_related("order", "order__payment")
+            .get(pk=refund_id)
+        )
+    except Refund.DoesNotExist:
+        messages.error(request, "Refund request could not be found.")
+        return redirect("admin_refunds")
+
+    if refund.status != Refund.Status.PROCESSING:
+        messages.info(
+            request,
+            "This refund is no longer in Processing status, so no provider lookup was required.",
+        )
+        return redirect("admin_refund_detail", refund_id=refund.id)
+
+    attempt = (
+        RefundAttempt.objects
+        .filter(
+            refund_id=refund.id,
+            status=RefundAttempt.Status.PROCESSING,
+        )
+        .order_by("-attempt_number", "-pk")
+        .first()
+    )
+
+    if attempt is None:
+        messages.error(
+            request,
+            "No processing Razorpay attempt exists for this refund.",
+        )
+        return redirect("admin_refund_detail", refund_id=refund.id)
+
+    razorpay_refund_id = (attempt.razorpay_refund_id or "").strip()
+    payment = getattr(refund.order, "payment", None)
+    razorpay_payment_id = (
+        (payment.razorpay_payment_id or "").strip()
+        if payment
+        else ""
+    )
+
+    if not razorpay_payment_id:
+        messages.error(
+            request,
+            "The Razorpay payment ID is missing, so the refund cannot be reconciled.",
+        )
+        return redirect("admin_refund_detail", refund_id=refund.id)
+
+    if not razorpay_refund_id:
+        messages.error(
+            request,
+            "This processing attempt has no Razorpay refund ID. Do not start another attempt until the provider result is verified.",
+        )
+        return redirect("admin_refund_detail", refund_id=refund.id)
+
+    try:
+        provider_refund = fetch_razorpay_refund(
+            razorpay_payment_id,
+            razorpay_refund_id,
+        )
+    except Exception as exc:
+        messages.error(
+            request,
+            (
+                "NeoLearn could not fetch the current Razorpay refund status. "
+                f"The attempt remains Processing. Technical detail: {str(exc)}"
+            ),
+        )
+        return redirect("admin_refund_detail", refund_id=refund.id)
+
+    try:
+        state, message = _apply_provider_refund_status(
+            refund=refund,
+            attempt=attempt,
+            provider_refund=provider_refund,
+            admin_note="",
+        )
+    except Exception as exc:
+        messages.error(
+            request,
+            (
+                "Razorpay returned the refund status, but NeoLearn could not "
+                "finish the local update. The attempt remains Processing. "
+                f"Technical detail: {str(exc)}"
+            ),
+        )
+        return redirect("admin_refund_detail", refund_id=refund.id)
+
+    if state == "completed":
+        messages.success(request, message)
+    elif state in {"failed", "cancelled"}:
+        messages.warning(request, message)
+    else:
+        messages.warning(request, message)
+
+    return redirect("admin_refund_detail", refund_id=refund.id)
+
