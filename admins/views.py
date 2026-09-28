@@ -30,6 +30,15 @@ from .helpers import (
     toggle_coupon_status,
     can_delete_coupon,
     delete_coupon,
+
+    # Order Management helpers
+    get_admin_order_listing_context,
+    get_admin_order_detail,
+    save_admin_order_selection,
+    remove_admin_order_selection,
+    clear_admin_order_selections,
+    
+
 )
 
 from django.shortcuts import get_object_or_404
@@ -2132,3 +2141,1048 @@ def delete_coupon_view(
         "admin_coupons"
     )
     
+# ==========================================================
+# ORDER MANAGEMENT
+# ==========================================================
+
+
+@login_required(login_url="admin_signin")
+@admin_required
+@cache_control(
+    no_cache=True,
+    must_revalidate=True,
+    no_store=True,
+)
+def admin_orders_view(request):
+    """
+    Display the Admin Order Management listing.
+
+    Search, filters, summary statistics and pagination
+    are handled by helpers.py.
+    """
+
+    context = get_admin_order_listing_context(
+        request
+    )
+
+    return render(
+        request,
+        "admins/orders/order_list.html",
+        context,
+    )
+
+
+# ==========================================================
+# ADMIN ORDER DETAIL
+# ==========================================================
+
+
+@login_required(login_url="admin_signin")
+@admin_required
+@cache_control(
+    no_cache=True,
+    must_revalidate=True,
+    no_store=True,
+)
+def admin_order_detail_view(
+    request,
+    order_id,
+):
+    """
+    Display the complete Admin Order Details page.
+
+    All order-detail preparation is handled by helpers.py.
+    """
+
+    order = get_admin_order_detail(
+        order_id
+    )
+
+    return render(
+        request,
+        "admins/orders/order_detail.html",
+        {
+            "order": order,
+        },
+    )
+
+
+# ==========================================================
+# MARK PAYMENT AS RECEIVED
+# ==========================================================
+
+
+@login_required(login_url="admin_signin")
+@admin_required
+@require_POST
+@cache_control(
+    no_cache=True,
+    must_revalidate=True,
+    no_store=True,
+)
+def admin_mark_payment_received_view(
+    request,
+    order_id,
+):
+    """
+    Manually mark an order payment as received.
+
+    Allowed source states:
+
+        PENDING
+        PAYMENT_PROCESSING
+        PAYMENT_FAILED
+        CANCELLED
+
+    Result:
+
+        Order
+            -> PAID
+
+        Payment
+            -> CAPTURED
+
+        Invoice
+            -> Ensured
+
+        StudentBatchPurchase
+            -> ACTIVE
+
+    REFUNDED and PARTIALLY_REFUNDED orders are protected.
+
+    This action does NOT create, approve, reject or modify
+    any refund.
+
+    Existing Razorpay identifiers are preserved.
+
+    The action is reversible through Revert Payment.
+    """
+
+    # ------------------------------------------------------
+    # LOCAL MODEL IMPORTS
+    # ------------------------------------------------------
+
+    from orders.models import (
+        Order,
+        Payment,
+        Invoice,
+        StudentBatchPurchase,
+    )
+
+    try:
+
+        with transaction.atomic():
+
+            # --------------------------------------------------
+            # LOCK ONLY THE ORDER ROW
+            # --------------------------------------------------
+
+            order = (
+                Order.objects
+                .select_for_update()
+                .get(
+                    pk=order_id,
+                )
+            )
+
+            # --------------------------------------------------
+            # REFUND SAFETY
+            # --------------------------------------------------
+
+            if order.status in {
+                Order.Status.REFUNDED,
+                Order.Status.PARTIALLY_REFUNDED,
+            }:
+
+                messages.error(
+                    request,
+                    (
+                        "A refunded or partially refunded "
+                        "order cannot be marked as payment "
+                        "received."
+                    ),
+                )
+
+                return redirect(
+                    "admin_order_detail",
+                    order_id=order.id,
+                )
+
+            # --------------------------------------------------
+            # ORDER ITEMS
+            # --------------------------------------------------
+
+            order_items = list(
+                order.items
+                .select_related("batch")
+                .all()
+            )
+
+            if not order_items:
+
+                messages.error(
+                    request,
+                    "This order has no order items.",
+                )
+
+                return redirect(
+                    "admin_order_detail",
+                    order_id=order.id,
+                )
+
+            # --------------------------------------------------
+            # GET PAYMENT SEPARATELY
+            # --------------------------------------------------
+
+            payment = (
+                Payment.objects
+                .filter(
+                    order=order,
+                )
+                .first()
+            )
+
+            # --------------------------------------------------
+            # CREATE PAYMENT IF MISSING
+            # --------------------------------------------------
+
+            if payment is None:
+
+                razorpay_order_id = (
+                    getattr(
+                        order,
+                        "razorpay_order_id",
+                        None,
+                    )
+                    or ""
+                ).strip()
+
+                if not razorpay_order_id:
+
+                    messages.error(
+                        request,
+                        (
+                            "This order does not have a "
+                            "Razorpay order ID, so a payment "
+                            "record cannot be created."
+                        ),
+                    )
+
+                    return redirect(
+                        "admin_order_detail",
+                        order_id=order.id,
+                    )
+
+                payment = Payment.objects.create(
+                    order=order,
+                    razorpay_order_id=(
+                        razorpay_order_id
+                    ),
+                    amount=order.final_amount,
+                    currency=order.currency,
+                    status=(
+                        Payment.Status.CAPTURED
+                    ),
+                    captured_at=timezone.now(),
+                    failure_reason="",
+                )
+
+            # --------------------------------------------------
+            # UPDATE EXISTING PAYMENT
+            # --------------------------------------------------
+
+            else:
+
+                payment.status = (
+                    Payment.Status.CAPTURED
+                )
+
+                payment.amount = (
+                    order.final_amount
+                )
+
+                payment.currency = (
+                    order.currency
+                )
+
+                payment.captured_at = (
+                    payment.captured_at
+                    or timezone.now()
+                )
+
+                payment.failure_reason = ""
+
+                payment.save(
+                    update_fields=[
+                        "status",
+                        "amount",
+                        "currency",
+                        "captured_at",
+                        "failure_reason",
+                        "updated_at",
+                    ]
+                )
+
+            # --------------------------------------------------
+            # MARK ORDER PAID
+            # --------------------------------------------------
+
+            order.status = (
+                Order.Status.PAID
+            )
+
+            order.paid_at = (
+                order.paid_at
+                or timezone.now()
+            )
+
+            order.save(
+                update_fields=[
+                    "status",
+                    "paid_at",
+                    "updated_at",
+                ]
+            )
+
+            # --------------------------------------------------
+            # GET INVOICE SEPARATELY
+            # --------------------------------------------------
+
+            invoice = (
+                Invoice.objects
+                .filter(
+                    order=order,
+                )
+                .first()
+            )
+
+            # --------------------------------------------------
+            # ENSURE INVOICE
+            # --------------------------------------------------
+
+            if invoice is None:
+
+                Invoice.objects.create(
+                    order=order,
+                    subtotal=order.subtotal,
+
+                    # Order model:
+                    # total_coupon_discount
+                    #
+                    # Invoice model:
+                    # coupon_discount
+
+                    coupon_discount=(
+                        order.total_coupon_discount
+                    ),
+
+                    total_discount=(
+                        order.total_discount
+                    ),
+
+                    final_amount=(
+                        order.final_amount
+                    ),
+
+                    currency=order.currency,
+                )
+
+            # --------------------------------------------------
+            # GRANT / RESTORE STUDENT ACCESS
+            # --------------------------------------------------
+
+            for order_item in order_items:
+
+                # --------------------------------------------------
+                # FIND PURCHASE FOR THIS ORDER ITEM
+                # --------------------------------------------------
+
+                purchase = (
+                    StudentBatchPurchase.objects
+                    .filter(
+                        order_item=order_item,
+                    )
+                    .first()
+                )
+
+                # --------------------------------------------------
+                # CREATE PURCHASE IF MISSING
+                # --------------------------------------------------
+
+                if purchase is None:
+
+                    existing_purchase = (
+                        StudentBatchPurchase.objects
+                        .filter(
+                            student=order.user,
+                            batch=order_item.batch,
+                        )
+                        .first()
+                    )
+
+                    # --------------------------------------------------
+                    # EXISTING STUDENT + BATCH PURCHASE
+                    # --------------------------------------------------
+
+                    if existing_purchase is not None:
+
+                        # --------------------------------------------------
+                        # NEVER REACTIVATE REFUNDED PURCHASE
+                        # --------------------------------------------------
+
+                        if (
+                            existing_purchase.status
+                            == (
+                                StudentBatchPurchase
+                                .Status.REFUNDED
+                            )
+                        ):
+
+                            messages.error(
+                                request,
+                                (
+                                    "Access could not be granted "
+                                    "because this batch already "
+                                    "has a refunded purchase."
+                                ),
+                            )
+
+                            raise ValueError(
+                                "Refunded batch purchase conflict."
+                            )
+
+                        # --------------------------------------------------
+                        # PREVENT DUPLICATE PURCHASE
+                        # --------------------------------------------------
+
+                        messages.error(
+                            request,
+                            (
+                                "Access could not be granted "
+                                "because this student already "
+                                "has a purchase for one of the "
+                                "batches in this order."
+                            ),
+                        )
+
+                        raise ValueError(
+                            "Existing student batch purchase conflict."
+                        )
+
+                    # --------------------------------------------------
+                    # CREATE ACTIVE ACCESS
+                    # --------------------------------------------------
+
+                    StudentBatchPurchase.objects.create(
+                        student=order.user,
+                        batch=order_item.batch,
+                        order=order,
+                        order_item=order_item,
+                        status=(
+                            StudentBatchPurchase
+                            .Status.ACTIVE
+                        ),
+                        refunded_at=None,
+                    )
+
+                # --------------------------------------------------
+                # PURCHASE ALREADY EXISTS
+                # --------------------------------------------------
+
+                else:
+
+                    # --------------------------------------------------
+                    # NEVER REACTIVATE REFUNDED PURCHASE
+                    # --------------------------------------------------
+
+                    if (
+                        purchase.status
+                        == (
+                            StudentBatchPurchase
+                            .Status.REFUNDED
+                        )
+                    ):
+
+                        messages.error(
+                            request,
+                            (
+                                "A refunded batch purchase "
+                                "cannot be reactivated."
+                            ),
+                        )
+
+                        raise ValueError(
+                            "Refunded batch purchase cannot be reactivated."
+                        )
+
+                    # --------------------------------------------------
+                    # ACTIVE / REVOKED
+                    # -> ACTIVE
+                    # --------------------------------------------------
+
+                    purchase.status = (
+                        StudentBatchPurchase
+                        .Status.ACTIVE
+                    )
+
+                    purchase.refunded_at = None
+
+                    purchase.save(
+                        update_fields=[
+                            "status",
+                            "refunded_at",
+                        ]
+                    )
+
+        # ------------------------------------------------------
+        # SUCCESS
+        # ------------------------------------------------------
+
+        messages.success(
+            request,
+            (
+                f"Payment for order "
+                f"{order.order_number} "
+                "was marked as received and "
+                "student access was granted."
+            ),
+        )
+
+    # ----------------------------------------------------------
+    # ORDER NOT FOUND
+    # ----------------------------------------------------------
+
+    except Order.DoesNotExist:
+
+        messages.error(
+            request,
+            "Order not found.",
+        )
+
+    # ----------------------------------------------------------
+    # BUSINESS LOGIC ERROR
+    # ----------------------------------------------------------
+
+    except ValueError:
+
+        # The detailed error message has already
+        # been added before raising the exception.
+
+        pass
+
+    # ----------------------------------------------------------
+    # UNEXPECTED ERROR
+    # ----------------------------------------------------------
+
+    except Exception:
+
+        import traceback
+
+        traceback.print_exc()
+
+        messages.error(
+            request,
+            (
+                "Unable to mark payment as received. "
+                "Please try again."
+            ),
+        )
+
+    # ------------------------------------------------------
+    # RETURN
+    # ------------------------------------------------------
+
+    return redirect(
+        "admin_order_detail",
+        order_id=order_id,
+    )
+
+
+# ==========================================================
+# REVERT PAYMENT / REMOVE ACCESS
+# ==========================================================
+
+
+@login_required(login_url="admin_signin")
+@admin_required
+@require_POST
+@cache_control(
+    no_cache=True,
+    must_revalidate=True,
+    no_store=True,
+)
+def admin_revert_payment_view(
+    request,
+    order_id,
+):
+    """
+    Revert a paid order from Admin Order Management.
+
+    Result:
+
+        Order
+            -> PAYMENT_FAILED
+
+        Payment
+            -> FAILED
+
+        StudentBatchPurchase
+            ACTIVE
+            -> REVOKED
+
+    Refund records are NOT modified.
+
+    REFUNDED and PARTIALLY_REFUNDED orders are protected.
+
+    The Order row is locked separately so PostgreSQL does
+    not receive a FOR UPDATE lock across nullable joins.
+    """
+
+    # ------------------------------------------------------
+    # LOCAL MODEL IMPORTS
+    # ------------------------------------------------------
+
+    from orders.models import (
+        Order,
+        Payment,
+        StudentBatchPurchase,
+        Invoice,
+    )
+
+    try:
+
+        with transaction.atomic():
+
+            # --------------------------------------------------
+            # LOCK ONLY THE ORDER ROW
+            # --------------------------------------------------
+
+            order = (
+                Order.objects
+                .select_for_update()
+                .get(
+                    pk=order_id,
+                )
+            )
+
+            # --------------------------------------------------
+            # REFUND SAFETY
+            # --------------------------------------------------
+
+            if order.status in {
+                Order.Status.REFUNDED,
+                Order.Status.PARTIALLY_REFUNDED,
+            }:
+
+                messages.error(
+                    request,
+                    (
+                        "Refunded or partially refunded "
+                        "orders cannot be reverted from "
+                        "Order Management."
+                    ),
+                )
+
+                return redirect(
+                    "admin_order_detail",
+                    order_id=order.id,
+                )
+
+            # --------------------------------------------------
+            # ONLY PAID ORDERS CAN BE REVERTED
+            # --------------------------------------------------
+
+            if order.status != Order.Status.PAID:
+
+                messages.error(
+                    request,
+                    "Only paid orders can be reverted.",
+                )
+
+                return redirect(
+                    "admin_order_detail",
+                    order_id=order.id,
+                )
+
+            # --------------------------------------------------
+            # GET PAYMENT SEPARATELY
+            # --------------------------------------------------
+
+            payment = (
+                Payment.objects
+                .filter(
+                    order=order,
+                )
+                .first()
+            )
+
+            # --------------------------------------------------
+            # PAYMENT -> FAILED
+            # --------------------------------------------------
+
+            if payment is not None:
+
+                payment.status = (
+                    Payment.Status.FAILED
+                )
+
+                payment.failure_reason = (
+                    "Payment reverted by admin."
+                )
+
+                payment.save(
+                    update_fields=[
+                        "status",
+                        "failure_reason",
+                        "updated_at",
+                    ]
+                )
+
+            # --------------------------------------------------
+            # REMOVE INVOICE
+            # --------------------------------------------------
+            #
+            # Invoice has no status field.
+            #
+            # Therefore a manually reverted payment should
+            # not leave a successful invoice attached to an
+            # order that is now PAYMENT_FAILED.
+            #
+            # If payment is marked received again later,
+            # a fresh invoice will be created.
+            # --------------------------------------------------
+
+            Invoice.objects.filter(
+                order=order,
+            ).delete()
+
+            # --------------------------------------------------
+            # REVOKE ACTIVE STUDENT ACCESS
+            # --------------------------------------------------
+
+            StudentBatchPurchase.objects.filter(
+                order=order,
+                student=order.user,
+                status=(
+                    StudentBatchPurchase
+                    .Status.ACTIVE
+                ),
+            ).update(
+                status=(
+                    StudentBatchPurchase
+                    .Status.REVOKED
+                ),
+                refunded_at=None,
+            )
+
+            # --------------------------------------------------
+            # ORDER -> PAYMENT_FAILED
+            # --------------------------------------------------
+
+            order.status = (
+                Order.Status.PAYMENT_FAILED
+            )
+
+            order.paid_at = None
+
+            order.save(
+                update_fields=[
+                    "status",
+                    "paid_at",
+                    "updated_at",
+                ]
+            )
+
+        # ------------------------------------------------------
+        # SUCCESS
+        # ------------------------------------------------------
+
+        messages.success(
+            request,
+            (
+                f"Payment for order "
+                f"{order.order_number} "
+                "was reverted, invoice removed, "
+                "and student access was revoked."
+            ),
+        )
+
+    # ----------------------------------------------------------
+    # ORDER NOT FOUND
+    # ----------------------------------------------------------
+
+    except Order.DoesNotExist:
+
+        messages.error(
+            request,
+            "Order not found.",
+        )
+
+    # ----------------------------------------------------------
+    # UNEXPECTED ERROR
+    # ----------------------------------------------------------
+
+    except Exception:
+
+        import traceback
+
+        traceback.print_exc()
+
+        messages.error(
+            request,
+            (
+                "Unable to revert payment. "
+                "Please try again."
+            ),
+        )
+
+    # ------------------------------------------------------
+    # RETURN
+    # ------------------------------------------------------
+
+    return redirect(
+        "admin_order_detail",
+        order_id=order_id,
+    )
+
+
+# ==========================================================
+# ADMIN ORDER SELECTION
+# ==========================================================
+
+
+@login_required(login_url="admin_signin")
+@admin_required
+@require_POST
+def admin_order_selection_view(request):
+    """
+    Save or remove Admin Order Management selections.
+
+    Selection belongs to the logged-in admin and is stored
+    through the AdminOrderSelection helper functions.
+    """
+
+    action = (
+        request.POST
+        .get(
+            "action",
+            "",
+        )
+        .strip()
+        .lower()
+    )
+
+    order_id = (
+        request.POST
+        .get(
+            "order_id",
+            "",
+        )
+        .strip()
+    )
+
+    # ------------------------------------------------------
+    # SELECT ONE ORDER
+    # ------------------------------------------------------
+
+    if action == "select":
+
+        if not order_id:
+
+            return JsonResponse(
+                {
+                    "success": False,
+                    "message": "Order ID is required.",
+                },
+                status=400,
+            )
+
+        try:
+
+            order_id = int(
+                order_id
+            )
+
+        except (
+            TypeError,
+            ValueError,
+        ):
+
+            return JsonResponse(
+                {
+                    "success": False,
+                    "message": "Invalid order ID.",
+                },
+                status=400,
+            )
+
+        success = save_admin_order_selection(
+            request.user,
+            order_id,
+        )
+
+        if not success:
+
+            return JsonResponse(
+                {
+                    "success": False,
+                    "message": (
+                        "Unable to select this order."
+                    ),
+                },
+                status=400,
+            )
+
+        return JsonResponse(
+            {
+                "success": True,
+                "selected": True,
+                "order_id": order_id,
+            }
+        )
+
+    # ------------------------------------------------------
+    # UNSELECT ONE ORDER
+    # ------------------------------------------------------
+
+    if action == "unselect":
+
+        if not order_id:
+
+            return JsonResponse(
+                {
+                    "success": False,
+                    "message": "Order ID is required.",
+                },
+                status=400,
+            )
+
+        try:
+
+            order_id = int(
+                order_id
+            )
+
+        except (
+            TypeError,
+            ValueError,
+        ):
+
+            return JsonResponse(
+                {
+                    "success": False,
+                    "message": "Invalid order ID.",
+                },
+                status=400,
+            )
+
+        remove_admin_order_selection(
+            request.user,
+            order_id,
+        )
+
+        return JsonResponse(
+            {
+                "success": True,
+                "selected": False,
+                "order_id": order_id,
+            }
+        )
+
+    # ------------------------------------------------------
+    # CLEAR ALL SELECTIONS
+    # ------------------------------------------------------
+
+    if action == "clear":
+
+        clear_admin_order_selections(
+            request.user,
+        )
+
+        return JsonResponse(
+            {
+                "success": True,
+                "cleared": True,
+            }
+        )
+
+    # ------------------------------------------------------
+    # INVALID ACTION
+    # ------------------------------------------------------
+
+    return JsonResponse(
+        {
+            "success": False,
+            "message": "Invalid selection action.",
+        },
+        status=400,
+    )
+
+
+# ==========================================================
+# ADMIN INVOICE DETAIL
+# ==========================================================
+
+
+@login_required(login_url="admin_signin")
+@admin_required
+@cache_control(
+    no_cache=True,
+    must_revalidate=True,
+    no_store=True,
+)
+def admin_invoice_detail_view(
+    request,
+    invoice_number,
+):
+    """
+    Display one invoice for Admin Order Management.
+
+    This is an admin-only invoice view.
+
+    It is read-only.
+
+    It does not modify:
+        - Order
+        - Payment
+        - Student access
+        - Refunds
+    """
+
+    from orders.models import Invoice
+
+    try:
+
+        invoice = (
+            Invoice.objects
+            .select_related(
+                "order",
+                "order__user",
+                "order__payment",
+            )
+            .prefetch_related(
+                "order__items__batch",
+            )
+            .get(
+                invoice_number=invoice_number,
+            )
+        )
+
+    except Invoice.DoesNotExist:
+
+        messages.error(
+            request,
+            "Invoice not found.",
+        )
+
+        return redirect(
+            "admin_orders"
+        )
+
+    return render(
+        request,
+        "admins/orders/invoice_detail.html",
+        {
+            "invoice": invoice,
+        },
+    )

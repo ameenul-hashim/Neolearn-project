@@ -1,5 +1,6 @@
 from django.urls import path
 
+
 from .views import (
     # ==========================================================
     # AUTH
@@ -8,6 +9,7 @@ from .views import (
     admin_dashboard_view,
     admin_logout_view,
 
+
     # ==========================================================
     # STUDENTS
     # ==========================================================
@@ -15,6 +17,7 @@ from .views import (
     block_student_view,
     unblock_student_view,
     delete_student_view,
+
 
     # ==========================================================
     # BATCHES
@@ -25,6 +28,7 @@ from .views import (
     delete_batch_view,
     batch_subjects,
 
+
     # ==========================================================
     # SUBJECTS
     # ==========================================================
@@ -32,6 +36,7 @@ from .views import (
     create_subject_view,
     edit_subject_view,
     delete_subject_view,
+
 
     # ==========================================================
     # TEACHERS
@@ -48,6 +53,7 @@ from .views import (
     admin_delete_teacher,
     get_teacher_batches_data,
 
+
     # ==========================================================
     # COUPONS
     # ==========================================================
@@ -56,6 +62,18 @@ from .views import (
     edit_coupon_view,
     toggle_coupon_status_view,
     delete_coupon_view,
+
+
+    # ==========================================================
+    # ORDER MANAGEMENT
+    # ==========================================================
+    admin_orders_view,
+    admin_order_detail_view,
+    admin_order_selection_view,
+    admin_mark_payment_received_view,
+    admin_revert_payment_view,
+    admin_invoice_detail_view,
+
 
     # ==========================================================
     # ADMIN COURSE BUILDER
@@ -254,43 +272,103 @@ urlpatterns = [
 
 
     # ==========================================================
-# COUPONS
-# ==========================================================
+    # COUPONS
+    # ==========================================================
 
-# Coupon listing page
-path(
-    "coupons/",
-    admin_coupons_view,
-    name="admin_coupons",
-),
+    path(
+        "coupons/",
+        admin_coupons_view,
+        name="admin_coupons",
+    ),
 
-# Create coupon page
-path(
-    "coupons/create/",
-    create_coupon_view,
-    name="create_coupon",
-),
+    path(
+        "coupons/create/",
+        create_coupon_view,
+        name="create_coupon",
+    ),
 
-# Edit coupon page
-path(
-    "coupons/edit/<int:coupon_id>/",
-    edit_coupon_view,
-    name="edit_coupon",
-),
+    path(
+        "coupons/edit/<int:coupon_id>/",
+        edit_coupon_view,
+        name="edit_coupon",
+    ),
 
-# Activate / Deactivate coupon
-path(
-    "coupons/<int:coupon_id>/toggle/",
-    toggle_coupon_status_view,
-    name="toggle_coupon_status",
-),
+    path(
+        "coupons/<int:coupon_id>/toggle/",
+        toggle_coupon_status_view,
+        name="toggle_coupon_status",
+    ),
 
-# Delete coupon
-path(
-    "coupons/<int:coupon_id>/delete/",
-    delete_coupon_view,
-    name="delete_coupon",
-),
+    path(
+        "coupons/<int:coupon_id>/delete/",
+        delete_coupon_view,
+        name="delete_coupon",
+    ),
+
+
+    # ==========================================================
+    # ORDER MANAGEMENT
+    # ==========================================================
+
+    # ----------------------------------------------------------
+    # Order list
+    # ----------------------------------------------------------
+
+    path(
+        "orders/",
+        admin_orders_view,
+        name="admin_orders",
+    ),
+
+    # ----------------------------------------------------------
+    # Persistent order selection
+    # ----------------------------------------------------------
+
+    path(
+        "orders/selection/",
+        admin_order_selection_view,
+        name="admin_order_selection",
+    ),
+
+    # ----------------------------------------------------------
+    # Mark payment as received
+    # ----------------------------------------------------------
+
+    path(
+        "orders/<int:order_id>/payment-received/",
+        admin_mark_payment_received_view,
+        name="admin_mark_payment_received",
+    ),
+
+    # ----------------------------------------------------------
+    # Revert payment / remove student access
+    # ----------------------------------------------------------
+
+    path(
+        "orders/<int:order_id>/revert-payment/",
+        admin_revert_payment_view,
+        name="admin_revert_payment",
+    ),
+
+    # ----------------------------------------------------------
+    # Admin invoice detail
+    # ----------------------------------------------------------
+
+    path(
+        "orders/invoice/<str:invoice_number>/",
+        admin_invoice_detail_view,
+        name="admin_invoice_detail",
+    ),
+
+    # ----------------------------------------------------------
+    # Order details
+    # ----------------------------------------------------------
+
+    path(
+        "orders/<int:order_id>/",
+        admin_order_detail_view,
+        name="admin_order_detail",
+    ),
 
 
     # ==========================================================

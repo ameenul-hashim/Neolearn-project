@@ -1166,3 +1166,42 @@ class CouponBatchRule(models.Model):
     def save(self, *args, **kwargs):
         self.full_clean()
         super().save(*args, **kwargs)
+        
+class AdminOrderSelection(models.Model):
+    admin = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="admin_order_selections",
+    )
+
+    order = models.ForeignKey(
+        "orders.Order",
+        on_delete=models.CASCADE,
+        related_name="admin_selections",
+    )
+
+    selected_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["admin", "order"],
+                name="unique_admin_order_selection",
+            )
+        ]
+
+        indexes = [
+            models.Index(
+                fields=["admin", "selected_at"]
+            ),
+        ]
+
+        ordering = ["-selected_at"]
+
+    def __str__(self):
+        return (
+            f"{self.admin.username} → "
+            f"{self.order.order_number}"
+        )
