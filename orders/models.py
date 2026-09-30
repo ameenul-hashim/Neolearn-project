@@ -688,3 +688,92 @@ class RefundItem(models.Model):
             f"{self.order_item.batch_name}"
         )
 
+# ============================================================
+# REFUND ATTEMPT
+# ============================================================
+
+class RefundAttempt(models.Model):
+    class Status(models.TextChoices):
+        INITIATED = "initiated", "Initiated"
+        SUCCESS = "success", "Success"
+        FAILED = "failed", "Failed"
+
+    refund = models.ForeignKey(
+        Refund,
+        on_delete=models.CASCADE,
+        related_name="attempts",
+    )
+
+    attempt_number = models.PositiveIntegerField()
+
+    amount = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+    )
+
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.INITIATED,
+        db_index=True,
+    )
+
+    razorpay_payment_id = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+    )
+
+    razorpay_refund_id = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+    )
+
+    gateway_response = models.JSONField(
+        blank=True,
+        null=True,
+    )
+
+    error_message = models.TextField(
+        blank=True,
+        default="",
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    completed_at = models.DateTimeField(
+        blank=True,
+        null=True,
+    )
+
+    class Meta:
+        db_table = "orders_refund_attempt"
+        ordering = ["attempt_number", "created_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=[
+                    "refund",
+                    "attempt_number",
+                ],
+                name="unique_refund_attempt_number",
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=[
+                    "refund",
+                    "status",
+                ],
+                name="refund_att_refund_status_idx",
+            ),
+        ]
+
+    def __str__(self):
+        return (
+            f"Refund #{self.refund_id} - "
+            f"Attempt #{self.attempt_number} - "
+            f"{self.status}"
+        )

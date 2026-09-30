@@ -6,17 +6,18 @@ from django.db import transaction
 from django.utils import timezone
 
 from admins.models import Batch
-from admins.helpers import calculate_student_cart_totals
 
+from .razorpay_utils import create_razorpay_refund
 from students.models import Cart
-
 from .models import (
     Order,
     OrderItem,
     OrderCoupon,
+    Payment,
     StudentBatchPurchase,
     Refund,
     RefundItem,
+    RefundAttempt,
 )
 # ============================================================
 # CHECKOUT CONSTANTS
@@ -95,7 +96,8 @@ def get_checkout_data(user):
     # --------------------------------------------------------
     # REUSE EXISTING CART COUPON CALCULATION
     # --------------------------------------------------------
-
+    from admins.helpers import calculate_student_cart_totals
+    
     totals = calculate_student_cart_totals(
         cart,
         cart_items,
@@ -1920,3 +1922,620 @@ def get_refundable_order_items(
         )
         .order_by("id")
     )
+
+# ============================================================
+# REFUND EXECUTION ENGINE
+# ============================================================
+
+
+def _decimal_amount(value):
+    """
+    Safely convert a value to Decimal.
+    """
+    try:
+        amount = Decimal(str(value))
+    except (
+        InvalidOperation,
+        TypeError,
+        ValueError,
+    ):
+        return ZERO
+
+    if amount < ZERO:
+        return ZERO
+
+    return amount
+
+
+def _serialize_gateway_response(response):
+    """
+    Convert Razorpay's response into JSON-safe data for
+    RefundAttempt.gateway_response.
+    """
+
+    if response is None:
+        return None
+
+    if isinstance(response, dict):
+        return response
+
+    try:
+        return dict(response)
+    except (TypeError, ValueError):
+        return {
+            "response": str(response),
+        }
+
+
+def _get_next_refund_attempt_number(refund):
+    """
+    Return the next sequential attempt number for this refund.
+    """
+
+    last_attempt = (
+        RefundAttempt.objects
+        .filter(refund=refund)
+        .order_by("-attempt_number")
+        .first()
+    )
+
+    if not last_attempt:
+        return 1
+
+    return last_attempt.attempt_number + 1
+
+
+def _get_completed_refunded_amount(order, exclude_refund_id=None):
+    """
+    Return the total amount already successfully refunded
+    for this order.
+
+    Only COMPLETED refunds count.
+
+    Failed Razorpay attempts do not reduce the refundable
+    amount because they did not move any money.
+    """
+
+    queryset = Refund.objects.filter(
+        order=order,
+        status=Refund.Status.COMPLETED,
+    )
+
+    if exclude_refund_id is not None:
+        queryset = queryset.exclude(
+            pk=exclude_refund_id,
+        )
+
+    total = ZERO
+
+    for refund in queryset:
+        total += _decimal_amount(
+            refund.refunded_amount
+        )
+
+    return total
+
+
+def _get_payment_for_refund(order):
+    """
+    Return the payment associated with the order.
+    """
+
+    try:
+        return order.payment
+    except Payment.DoesNotExist:
+        return None
+
+
+def _mark_refund_attempt_failed(
+    *,
+    refund_id,
+    attempt_id,
+    error_message,
+    gateway_response=None,
+):
+    """
+    Record a failed Razorpay attempt.
+
+    IMPORTANT:
+    The Refund itself goes back to REQUESTED.
+
+    This means Admin can retry the same Refund later.
+    """
+
+    with transaction.atomic():
+
+        refund = (
+            Refund.objects
+            .select_for_update()
+            .get(pk=refund_id)
+        )
+
+        attempt = (
+            RefundAttempt.objects
+            .select_for_update()
+            .get(pk=attempt_id)
+        )
+
+        attempt.status = RefundAttempt.Status.FAILED
+        attempt.error_message = (
+            str(error_message or "")
+        )
+        attempt.gateway_response = (
+            _serialize_gateway_response(
+                gateway_response
+            )
+        )
+        attempt.completed_at = timezone.now()
+
+        attempt.save(
+            update_fields=[
+                "status",
+                "error_message",
+                "gateway_response",
+                "completed_at",
+            ]
+        )
+
+        # --------------------------------------------------------
+        # IMPORTANT:
+        # Razorpay failure does NOT mean the business refund
+        # request itself has permanently failed.
+        #
+        # It becomes REQUESTED again so Admin can retry/reject.
+        # --------------------------------------------------------
+
+        if refund.status == Refund.Status.PROCESSING:
+
+            refund.status = Refund.Status.REQUESTED
+
+            refund.save(
+                update_fields=[
+                    "status",
+                ]
+            )
+
+        return refund
+
+
+def _complete_refund_successfully(
+    *,
+    refund_id,
+    attempt_id,
+    gateway_response,
+):
+    """
+    Finalize a successful Razorpay refund.
+
+    This function performs all NeoLearn-side success updates
+    only AFTER Razorpay has successfully created the refund.
+    """
+
+    with transaction.atomic():
+
+        refund = (
+            Refund.objects
+            .select_for_update()
+            .select_related("order", "student")
+            .get(pk=refund_id)
+        )
+
+        attempt = (
+            RefundAttempt.objects
+            .select_for_update()
+            .get(pk=attempt_id)
+        )
+
+        order = (
+            Order.objects
+            .select_for_update()
+            .get(pk=refund.order_id)
+        )
+
+        payment = _get_payment_for_refund(order)
+
+        # --------------------------------------------------------
+        # PREVENT DUPLICATE FINALIZATION
+        # --------------------------------------------------------
+
+        if refund.status == Refund.Status.COMPLETED:
+
+            return refund
+
+        # --------------------------------------------------------
+        # GET RAZORPAY REFUND ID
+        # --------------------------------------------------------
+
+        razorpay_refund_id = None
+
+        if isinstance(gateway_response, dict):
+
+            razorpay_refund_id = (
+                gateway_response.get("id")
+                or gateway_response.get(
+                    "refund_id"
+                )
+            )
+
+        if not razorpay_refund_id:
+
+            raise ValueError(
+                "Razorpay refund succeeded but no "
+                "refund ID was returned."
+            )
+
+        # --------------------------------------------------------
+        # AMOUNT
+        # --------------------------------------------------------
+
+        successful_amount = _decimal_amount(
+            attempt.amount
+        )
+
+        if successful_amount <= ZERO:
+
+            raise ValueError(
+                "Successful refund amount must be greater than zero."
+            )
+
+        # --------------------------------------------------------
+        # COMPLETE REFUND
+        # --------------------------------------------------------
+
+        refund.status = Refund.Status.COMPLETED
+        refund.refunded_amount = successful_amount
+        refund.razorpay_refund_id = (
+            razorpay_refund_id
+        )
+        refund.processed_at = timezone.now()
+
+        refund.save(
+            update_fields=[
+                "status",
+                "refunded_amount",
+                "razorpay_refund_id",
+                "processed_at",
+            ]
+        )
+
+        # --------------------------------------------------------
+        # COMPLETE ATTEMPT
+        # --------------------------------------------------------
+
+        attempt.status = RefundAttempt.Status.SUCCESS
+        attempt.razorpay_refund_id = (
+            razorpay_refund_id
+        )
+        attempt.gateway_response = (
+            _serialize_gateway_response(
+                gateway_response
+            )
+        )
+        attempt.completed_at = timezone.now()
+
+        attempt.save(
+            update_fields=[
+                "status",
+                "razorpay_refund_id",
+                "gateway_response",
+                "completed_at",
+            ]
+        )
+
+        # --------------------------------------------------------
+        # REMOVE ACCESS ONLY FOR SUCCESSFULLY REFUNDED ITEMS
+        # --------------------------------------------------------
+
+        refund_items = (
+            RefundItem.objects
+            .select_related("order_item")
+            .filter(
+                refund=refund,
+            )
+        )
+
+        refunded_order_item_ids = []
+
+        for refund_item in refund_items:
+
+            order_item = refund_item.order_item
+
+            refunded_order_item_ids.append(
+                order_item.id
+            )
+
+            StudentBatchPurchase.objects.filter(
+                order_item=order_item,
+                order=order,
+                student=refund.student,
+                status=StudentBatchPurchase.Status.ACTIVE,
+            ).update(
+                status=StudentBatchPurchase.Status.REFUNDED,
+                refunded_at=timezone.now(),
+            )
+
+        # --------------------------------------------------------
+        # DETERMINE TOTAL SUCCESSFULLY REFUNDED AMOUNT
+        # --------------------------------------------------------
+
+        total_refunded = _get_completed_refunded_amount(
+            order,
+        )
+
+        order_amount = _decimal_amount(
+            order.final_amount
+        )
+
+        # --------------------------------------------------------
+        # UPDATE ORDER STATUS
+        # --------------------------------------------------------
+
+        if (
+            order_amount > ZERO
+            and total_refunded >= order_amount
+        ):
+
+            order.status = (
+                Order.Status.REFUNDED
+            )
+
+        else:
+
+            order.status = (
+                Order.Status.PARTIALLY_REFUNDED
+            )
+
+        order.save(
+            update_fields=[
+                "status",
+            ]
+        )
+
+        # --------------------------------------------------------
+        # UPDATE PAYMENT STATUS
+        # --------------------------------------------------------
+
+        if payment is not None:
+
+            payment_amount = _decimal_amount(
+                payment.amount
+            )
+
+            if (
+                payment_amount > ZERO
+                and total_refunded >= payment_amount
+            ):
+
+                payment.status = (
+                    Payment.Status.REFUNDED
+                )
+
+            else:
+
+                payment.status = (
+                    Payment.Status.PARTIALLY_REFUNDED
+                )
+
+            payment.save(
+                update_fields=[
+                    "status",
+                ]
+            )
+
+        return refund
+
+
+def execute_refund(refund_id):
+    """
+    Execute one Refund through Razorpay.
+
+    This is the central refund execution function.
+
+    It is intentionally reusable by:
+
+        - Admin Approve
+        - Admin Retry
+        - Admin Manual Refund
+
+    Student refund request creation does NOT call this
+    function directly. Student requests remain REQUESTED
+    until Admin approves them.
+    """
+
+    # =========================================================
+    # STEP 1
+    # Lock refund and prepare a new gateway attempt.
+    #
+    # IMPORTANT:
+    # Do NOT keep this transaction open while calling Razorpay.
+    # =========================================================
+
+    with transaction.atomic():
+
+        refund = (
+            Refund.objects
+            .select_for_update()
+            .select_related(
+                "order",
+                "student",
+            )
+            .get(pk=refund_id)
+        )
+
+        # -----------------------------------------------------
+        # ONLY REQUESTED REFUNDS CAN BE EXECUTED
+        # -----------------------------------------------------
+
+        if refund.status != Refund.Status.REQUESTED:
+
+            raise ValueError(
+                "This refund is not available for processing."
+            )
+
+        order = refund.order
+
+        # -----------------------------------------------------
+        # PAYMENT MUST EXIST
+        # -----------------------------------------------------
+
+        payment = _get_payment_for_refund(order)
+
+        if payment is None:
+
+            raise ValueError(
+                "No payment record exists for this order."
+            )
+
+        # -----------------------------------------------------
+        # RAZORPAY PAYMENT ID MUST EXIST
+        # -----------------------------------------------------
+
+        if not payment.razorpay_payment_id:
+
+            raise ValueError(
+                "No Razorpay payment ID exists for this order."
+            )
+
+        # -----------------------------------------------------
+        # REFUND AMOUNT
+        # -----------------------------------------------------
+
+        amount = _decimal_amount(
+            refund.requested_amount
+        )
+
+        if amount <= ZERO:
+
+            raise ValueError(
+                "Refund amount must be greater than zero."
+            )
+
+        # -----------------------------------------------------
+        # PREVENT OVER-REFUND
+        # -----------------------------------------------------
+
+        completed_amount = (
+            _get_completed_refunded_amount(
+                order,
+                exclude_refund_id=refund.id,
+            )
+        )
+
+        order_amount = _decimal_amount(
+            order.final_amount
+        )
+
+        remaining_amount = (
+            order_amount - completed_amount
+        )
+
+        if remaining_amount <= ZERO:
+
+            raise ValueError(
+                "There is no remaining refundable amount."
+            )
+
+        if amount > remaining_amount:
+
+            raise ValueError(
+                "The requested refund amount exceeds "
+                "the remaining refundable amount."
+            )
+
+        # -----------------------------------------------------
+        # CREATE ATTEMPT
+        # -----------------------------------------------------
+
+        attempt_number = (
+            _get_next_refund_attempt_number(
+                refund
+            )
+        )
+
+        attempt = RefundAttempt.objects.create(
+            refund=refund,
+            attempt_number=attempt_number,
+            amount=amount,
+            status=RefundAttempt.Status.INITIATED,
+            razorpay_payment_id=(
+                payment.razorpay_payment_id
+            ),
+        )
+
+        # -----------------------------------------------------
+        # MARK BUSINESS REFUND AS PROCESSING
+        # -----------------------------------------------------
+
+        refund.status = Refund.Status.PROCESSING
+
+        refund.save(
+            update_fields=[
+                "status",
+            ]
+        )
+
+        refund_id_value = refund.id
+        attempt_id_value = attempt.id
+        payment_id_value = (
+            payment.razorpay_payment_id
+        )
+        currency = (
+            payment.currency
+            or order.currency
+            or "INR"
+        )
+
+    # =========================================================
+    # STEP 2
+    # Call Razorpay OUTSIDE the database transaction.
+    # =========================================================
+
+    try:
+
+        gateway_response = create_razorpay_refund(
+            razorpay_payment_id=payment_id_value,
+            amount=amount,
+            currency=currency,
+        )
+
+    except Exception as exc:
+
+        _mark_refund_attempt_failed(
+            refund_id=refund_id_value,
+            attempt_id=attempt_id_value,
+            error_message=str(exc),
+        )
+
+        raise
+
+    # =========================================================
+    # STEP 3
+    # Finalize successful refund.
+    # =========================================================
+
+    try:
+
+        return _complete_refund_successfully(
+            refund_id=refund_id_value,
+            attempt_id=attempt_id_value,
+            gateway_response=gateway_response,
+        )
+
+    except Exception as exc:
+
+        # -----------------------------------------------------
+        # IMPORTANT:
+        #
+        # At this point Razorpay has already returned success.
+        #
+        # Therefore we MUST NOT call Razorpay again or mark
+        # the money movement as failed.
+        #
+        # This exception indicates a local finalization problem
+        # that must be investigated.
+        # -----------------------------------------------------
+
+        raise RuntimeError(
+            "Razorpay refund succeeded, but NeoLearn "
+            "could not finalize the refund locally."
+        ) from exc

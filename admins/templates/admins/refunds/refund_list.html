@@ -1,0 +1,968 @@
+{% extends "admins/admin_base.html" %}
+{% load static %}
+
+{% block title %}
+Refund Management | NeoLearn Admin
+{% endblock %}
+
+{% block admin_content %}
+
+<div class="w-full max-w-[1500px] mx-auto">
+
+    <!-- =========================================================
+         PAGE HEADER
+    ========================================================== -->
+
+    <div class="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-5 mb-6">
+
+        <div class="flex items-center gap-4">
+
+            <div
+                class="w-[56px] h-[56px] rounded-[15px]
+                       bg-gradient-to-br from-violet-600 to-purple-500
+                       flex items-center justify-center
+                       shadow-[0_0_28px_rgba(139,92,246,0.35)]"
+            >
+                <i class="ri-refund-2-line text-[28px] text-white"></i>
+            </div>
+
+            <div>
+                <h1 class="text-[28px] md:text-[30px] font-extrabold text-white leading-tight">
+                    Refund Management
+                </h1>
+
+                <p class="text-[#94A3B8] text-[14px] mt-1">
+                    Manage student refund requests, approvals, Razorpay refunds and access.
+                </p>
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- =========================================================
+         STATISTICS
+    ========================================================== -->
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 mb-5">
+
+        <!-- TOTAL -->
+
+        <div
+            class="relative overflow-hidden rounded-[13px]
+                   border border-blue-500/30
+                   bg-[#07152A]/80
+                   px-4 py-4"
+        >
+            <div class="absolute -right-4 -bottom-7 opacity-20">
+                <i class="ri-file-list-3-line text-[90px] text-blue-400"></i>
+            </div>
+
+            <div class="relative z-10">
+
+                <div class="flex items-center justify-between mb-3">
+
+                    <div
+                        class="w-[40px] h-[40px] rounded-[11px]
+                               bg-blue-500/15
+                               border border-blue-400/20
+                               flex items-center justify-center"
+                    >
+                        <i class="ri-file-list-3-line text-[20px] text-blue-400"></i>
+                    </div>
+
+                    <span class="text-[11px] uppercase tracking-wide text-[#64748B]">
+                        All Requests
+                    </span>
+
+                </div>
+
+                <p class="text-[27px] font-extrabold text-white">
+                    {{ total_refunds|default:0 }}
+                </p>
+
+                <p class="text-[11px] text-[#64748B] mt-1">
+                    Total refund requests
+                </p>
+
+            </div>
+        </div>
+
+
+        <!-- REQUESTED -->
+
+        <div
+            class="relative overflow-hidden rounded-[13px]
+                   border border-amber-500/30
+                   bg-[#171204]/80
+                   px-4 py-4"
+        >
+            <div class="absolute -right-4 -bottom-7 opacity-20">
+                <i class="ri-time-line text-[90px] text-amber-400"></i>
+            </div>
+
+            <div class="relative z-10">
+
+                <div class="flex items-center justify-between mb-3">
+
+                    <div
+                        class="w-[40px] h-[40px] rounded-[11px]
+                               bg-amber-500/15
+                               border border-amber-400/20
+                               flex items-center justify-center"
+                    >
+                        <i class="ri-time-line text-[20px] text-amber-400"></i>
+                    </div>
+
+                    <span class="text-[11px] uppercase tracking-wide text-[#64748B]">
+                        Requested
+                    </span>
+
+                </div>
+
+                <p class="text-[27px] font-extrabold text-white">
+                    {{ requested_count|default:0 }}
+                </p>
+
+                <p class="text-[11px] text-[#64748B] mt-1">
+                    Awaiting admin review
+                </p>
+
+            </div>
+        </div>
+
+
+        <!-- PROCESSING -->
+
+        <div
+            class="relative overflow-hidden rounded-[13px]
+                   border border-violet-500/30
+                   bg-[#12071D]/80
+                   px-4 py-4"
+        >
+            <div class="absolute -right-4 -bottom-7 opacity-20">
+                <i class="ri-loader-4-line text-[90px] text-violet-400"></i>
+            </div>
+
+            <div class="relative z-10">
+
+                <div class="flex items-center justify-between mb-3">
+
+                    <div
+                        class="w-[40px] h-[40px] rounded-[11px]
+                               bg-violet-500/15
+                               border border-violet-400/20
+                               flex items-center justify-center"
+                    >
+                        <i class="ri-loader-4-line text-[20px] text-violet-400"></i>
+                    </div>
+
+                    <span class="text-[11px] uppercase tracking-wide text-[#64748B]">
+                        Processing
+                    </span>
+
+                </div>
+
+                <p class="text-[27px] font-extrabold text-white">
+                    {{ processing_count|default:0 }}
+                </p>
+
+                <p class="text-[11px] text-[#64748B] mt-1">
+                    Refund being processed
+                </p>
+
+            </div>
+        </div>
+
+
+        <!-- COMPLETED -->
+
+        <div
+            class="relative overflow-hidden rounded-[13px]
+                   border border-emerald-500/30
+                   bg-[#031B17]/80
+                   px-4 py-4"
+        >
+            <div class="absolute -right-4 -bottom-7 opacity-20">
+                <i class="ri-checkbox-circle-line text-[90px] text-emerald-400"></i>
+            </div>
+
+            <div class="relative z-10">
+
+                <div class="flex items-center justify-between mb-3">
+
+                    <div
+                        class="w-[40px] h-[40px] rounded-[11px]
+                               bg-emerald-500/15
+                               border border-emerald-400/20
+                               flex items-center justify-center"
+                    >
+                        <i class="ri-checkbox-circle-line text-[20px] text-emerald-400"></i>
+                    </div>
+
+                    <span class="text-[11px] uppercase tracking-wide text-[#64748B]">
+                        Completed
+                    </span>
+
+                </div>
+
+                <p class="text-[27px] font-extrabold text-white">
+                    {{ completed_count|default:0 }}
+                </p>
+
+                <p class="text-[11px] text-[#64748B] mt-1">
+                    Refund successful
+                </p>
+
+            </div>
+        </div>
+
+
+        <!-- REJECTED -->
+
+        <div
+            class="relative overflow-hidden rounded-[13px]
+                   border border-red-500/30
+                   bg-[#1B080C]/80
+                   px-4 py-4"
+        >
+            <div class="absolute -right-4 -bottom-7 opacity-20">
+                <i class="ri-close-circle-line text-[90px] text-red-400"></i>
+            </div>
+
+            <div class="relative z-10">
+
+                <div class="flex items-center justify-between mb-3">
+
+                    <div
+                        class="w-[40px] h-[40px] rounded-[11px]
+                               bg-red-500/15
+                               border border-red-400/20
+                               flex items-center justify-center"
+                    >
+                        <i class="ri-close-circle-line text-[20px] text-red-400"></i>
+                    </div>
+
+                    <span class="text-[11px] uppercase tracking-wide text-[#64748B]">
+                        Rejected
+                    </span>
+
+                </div>
+
+                <p class="text-[27px] font-extrabold text-white">
+                    {{ rejected_count|default:0 }}
+                </p>
+
+                <p class="text-[11px] text-[#64748B] mt-1">
+                    Not approved
+                </p>
+
+            </div>
+        </div>
+
+    </div>
+
+
+    <!-- =========================================================
+         SEARCH + FILTER BAR
+    ========================================================== -->
+
+    <form
+        method="get"
+        action="{% url 'admin_refunds' %}"
+        class="mb-5"
+    >
+
+        <div class="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_220px_220px_auto] gap-3">
+
+            <!-- SEARCH -->
+
+            <div class="relative">
+
+                <i
+                    class="ri-search-line
+                           absolute left-4 top-1/2 -translate-y-1/2
+                           text-[#64748B] text-[19px]"
+                ></i>
+
+                <input
+                    type="text"
+                    name="search"
+                    value="{{ search }}"
+                    placeholder="Search refund number, order number, student name, email, phone..."
+                    class="w-full h-[48px]
+                           rounded-[11px]
+                           border border-[#193452]
+                           bg-[#071426]
+                           pl-11 pr-4
+                           text-[13px] text-white
+                           placeholder:text-[#64748B]
+                           outline-none
+                           focus:border-cyan-400/60
+                           transition"
+                >
+
+            </div>
+
+
+            <!-- STATUS -->
+
+            <select
+                name="status"
+                class="h-[48px]
+                       rounded-[11px]
+                       border border-[#193452]
+                       bg-[#071426]
+                       px-4
+                       text-[13px] text-[#CBD5E1]
+                       outline-none
+                       focus:border-cyan-400/60"
+            >
+
+                <option value="">
+                    All Refund Statuses
+                </option>
+
+                {% for status in refund_statuses %}
+
+                    <option
+                        value="{{ status }}"
+                        {% if selected_status == status %}selected{% endif %}
+                    >
+                        {{ status|title }}
+                    </option>
+
+                {% endfor %}
+
+            </select>
+
+
+            <!-- SORT -->
+
+            <select
+                name="sort"
+                class="h-[48px]
+                       rounded-[11px]
+                       border border-[#193452]
+                       bg-[#071426]
+                       px-4
+                       text-[13px] text-[#CBD5E1]
+                       outline-none
+                       focus:border-cyan-400/60"
+            >
+
+                <option
+                    value="newest"
+                    {% if sort == "newest" %}selected{% endif %}
+                >
+                    Newest First
+                </option>
+
+                <option
+                    value="oldest"
+                    {% if sort == "oldest" %}selected{% endif %}
+                >
+                    Oldest First
+                </option>
+
+                <option
+                    value="amount_high"
+                    {% if sort == "amount_high" %}selected{% endif %}
+                >
+                    Amount: High to Low
+                </option>
+
+                <option
+                    value="amount_low"
+                    {% if sort == "amount_low" %}selected{% endif %}
+                >
+                    Amount: Low to High
+                </option>
+
+            </select>
+
+
+            <!-- APPLY -->
+
+            <button
+                type="submit"
+                class="h-[48px]
+                       px-5
+                       rounded-[11px]
+                       bg-[#00E5FF]
+                       hover:bg-[#00D4EE]
+                       text-[#00131A]
+                       text-[13px]
+                       font-bold
+                       flex items-center justify-center gap-2
+                       transition"
+            >
+                <i class="ri-filter-3-line text-[17px]"></i>
+                Apply
+            </button>
+
+        </div>
+
+
+        <!-- CLEAR -->
+
+        {% if search or selected_status or sort != "newest" %}
+
+            <div class="flex justify-end mt-3">
+
+                <a
+                    href="{% url 'admin_refunds' %}"
+                    class="inline-flex items-center gap-2
+                           h-[38px] px-4
+                           rounded-[10px]
+                           border border-white/10
+                           bg-white/[0.03]
+                           text-[#94A3B8]
+                           hover:text-white
+                           hover:border-white/20
+                           text-[12px]
+                           transition"
+                >
+                    <i class="ri-refresh-line"></i>
+                    Clear Filters
+                </a>
+
+            </div>
+
+        {% endif %}
+
+    </form>
+
+
+    <!-- =========================================================
+         REFUND TABLE
+    ========================================================== -->
+
+    <div
+        class="rounded-[13px]
+               border border-[#193452]
+               bg-[#03101F]/90
+               overflow-hidden"
+    >
+
+        <!-- TABLE -->
+
+        <div class="overflow-x-auto">
+
+            <table class="w-full min-w-[1000px]">
+
+                <thead>
+
+                    <tr
+                        class="bg-[#07182A]
+                               border-b border-[#193452]"
+                    >
+
+                        <th class="px-3 py-4 text-left text-[10px] uppercase tracking-wider text-[#64748B] font-bold">
+                            Refund Number
+                        </th>
+
+                        <th class="px-3 py-4 text-left text-[10px] uppercase tracking-wider text-[#64748B] font-bold">
+                            Order Number
+                        </th>
+
+                        <th class="px-3 py-4 text-left text-[10px] uppercase tracking-wider text-[#64748B] font-bold">
+                            Student
+                        </th>
+
+                        <th class="px-3 py-4 text-left text-[10px] uppercase tracking-wider text-[#64748B] font-bold">
+                            Batch / Item
+                        </th>
+
+                        <th class="px-3 py-4 text-right text-[10px] uppercase tracking-wider text-[#64748B] font-bold">
+                            Requested
+                        </th>
+
+                        <th class="px-3 py-4 text-right text-[10px] uppercase tracking-wider text-[#64748B] font-bold">
+                            Refunded
+                        </th>
+
+                        <th class="px-3 py-4 text-left text-[10px] uppercase tracking-wider text-[#64748B] font-bold">
+                            Status
+                        </th>
+
+                        <th class="px-3 py-4 text-left text-[10px] uppercase tracking-wider text-[#64748B] font-bold">
+                            Request Date
+                        </th>
+
+                        <th class="px-3 py-4 text-center text-[10px] uppercase tracking-wider text-[#64748B] font-bold">
+                            Action
+                        </th>
+
+                    </tr>
+
+                </thead>
+
+
+                <tbody class="divide-y divide-[#10243A]">
+
+                    {% for refund in refunds %}
+
+                    <tr class="hover:bg-white/[0.025] transition">
+
+                        <!-- REFUND NUMBER -->
+
+                        <td class="px-3 py-4">
+
+                            <div class="font-semibold text-white text-[12px]">
+                                RF-{{ refund.pk|stringformat:"06d" }}
+                            </div>
+
+                        </td>
+
+
+                        <!-- ORDER -->
+
+                        <td class="px-3 py-4">
+
+                            <span class="text-[#CBD5E1] text-[12px]">
+                                {{ refund.order.order_number }}
+                            </span>
+
+                        </td>
+
+
+                        <!-- STUDENT -->
+
+                        <td class="px-3 py-4">
+
+                            <div class="flex items-center gap-3">
+
+                                <div
+                                    class="w-[34px] h-[34px]
+                                           rounded-full
+                                           bg-gradient-to-br
+                                           from-cyan-500 to-blue-600
+                                           flex items-center justify-center
+                                           text-white text-[12px]
+                                           font-bold shrink-0"
+                                >
+                                    {% firstof refund.student.first_name|slice:":1" refund.student.username|slice:":1" "U" %}
+                                </div>
+
+                                <div class="min-w-0">
+
+                                    <p class="text-white text-[12px] font-semibold truncate max-w-[150px]">
+                                        {% firstof refund.student.get_full_name refund.student.username %}
+                                    </p>
+
+                                    <p class="text-[#64748B] text-[10px] truncate max-w-[160px]">
+                                        {{ refund.student.email }}
+                                    </p>
+
+                                </div>
+
+                            </div>
+
+                        </td>
+
+
+                        <!-- BATCH / ITEM -->
+
+                        <td class="px-3 py-4">
+
+                            {% with item_count=refund.items.all|length %}
+
+                                <div class="text-[#CBD5E1] text-[12px]">
+
+                                    {% for item in refund.items.all|slice:":1" %}
+
+                                        {% if item.order_item.batch %}
+                                            {{ item.order_item.batch.batch_name }}
+                                        {% else %}
+                                            {{ item.order_item.batch_name }}
+                                        {% endif %}
+
+                                    {% empty %}
+
+                                        <span class="text-[#64748B]">
+                                            No item
+                                        </span>
+
+                                    {% endfor %}
+
+                                </div>
+
+                                <div class="text-[#64748B] text-[10px] mt-1">
+
+                                    {% if item_count > 1 %}
+                                        {{ item_count }} Items
+                                    {% else %}
+                                        1 Item
+                                    {% endif %}
+
+                                </div>
+
+                            {% endwith %}
+
+                        </td>
+
+
+                        <!-- REQUESTED AMOUNT -->
+
+                        <td class="px-3 py-4 text-right">
+
+                            <span class="text-[#E2E8F0] text-[12px] font-semibold">
+                                ₹{{ refund.requested_amount|floatformat:2 }}
+                            </span>
+
+                        </td>
+
+
+                        <!-- REFUNDED AMOUNT -->
+
+                        <td class="px-3 py-4 text-right">
+
+                            {% if refund.refunded_amount and refund.refunded_amount > 0 %}
+
+                                <span class="text-[#E2E8F0] text-[12px] font-semibold">
+                                    ₹{{ refund.refunded_amount|floatformat:2 }}
+                                </span>
+
+                            {% else %}
+
+                                <span class="text-[#475569] text-[12px]">
+                                    —
+                                </span>
+
+                            {% endif %}
+
+                        </td>
+
+
+                        <!-- STATUS -->
+
+                        <td class="px-3 py-4">
+
+                            {% if refund.status == "requested" %}
+
+                                <span
+                                    class="inline-flex items-center gap-1.5
+                                           px-2.5 py-1.5
+                                           rounded-[7px]
+                                           bg-amber-500/10
+                                           border border-amber-500/25
+                                           text-amber-300
+                                           text-[10px]
+                                           font-semibold"
+                                >
+                                    <i class="ri-time-line"></i>
+                                    Requested
+                                </span>
+
+                            {% elif refund.status == "processing" %}
+
+                                <span
+                                    class="inline-flex items-center gap-1.5
+                                           px-2.5 py-1.5
+                                           rounded-[7px]
+                                           bg-violet-500/10
+                                           border border-violet-500/25
+                                           text-violet-300
+                                           text-[10px]
+                                           font-semibold"
+                                >
+                                    <i class="ri-loader-4-line"></i>
+                                    Processing
+                                </span>
+
+                            {% elif refund.status == "completed" %}
+
+                                <span
+                                    class="inline-flex items-center gap-1.5
+                                           px-2.5 py-1.5
+                                           rounded-[7px]
+                                           bg-emerald-500/10
+                                           border border-emerald-500/25
+                                           text-emerald-300
+                                           text-[10px]
+                                           font-semibold"
+                                >
+                                    <i class="ri-checkbox-circle-line"></i>
+                                    Completed
+                                </span>
+
+                            {% elif refund.status == "rejected" %}
+
+                                <span
+                                    class="inline-flex items-center gap-1.5
+                                           px-2.5 py-1.5
+                                           rounded-[7px]
+                                           bg-red-500/10
+                                           border border-red-500/25
+                                           text-red-300
+                                           text-[10px]
+                                           font-semibold"
+                                >
+                                    <i class="ri-close-circle-line"></i>
+                                    Rejected
+                                </span>
+
+                            {% else %}
+
+                                <span
+                                    class="inline-flex items-center gap-1.5
+                                           px-2.5 py-1.5
+                                           rounded-[7px]
+                                           bg-slate-500/10
+                                           border border-slate-500/25
+                                           text-slate-300
+                                           text-[10px]
+                                           font-semibold"
+                                >
+                                    <i class="ri-question-line"></i>
+                                    {{ refund.get_status_display }}
+                                </span>
+
+                            {% endif %}
+
+                        </td>
+
+
+                        <!-- DATE -->
+
+                        <td class="px-3 py-4">
+
+                            <div class="text-[#CBD5E1] text-[11px]">
+                                {{ refund.requested_at|date:"d M Y" }}
+                            </div>
+
+                            <div class="text-[#64748B] text-[10px] mt-1">
+                                {{ refund.requested_at|date:"h:i A" }}
+                            </div>
+
+                        </td>
+
+
+                        <!-- ACTION -->
+
+                        <td class="px-3 py-4 text-center">
+
+                            <a
+                                href="{% url 'admin_refund_detail' refund.pk %}"
+                                class="inline-flex items-center justify-center gap-1.5
+                                       h-[34px] px-3
+                                       rounded-[8px]
+                                       border border-[#27415D]
+                                       bg-[#09182A]
+                                       hover:bg-cyan-400/10
+                                       hover:border-cyan-400/30
+                                       text-[#CBD5E1]
+                                       hover:text-white
+                                       text-[11px]
+                                       font-semibold
+                                       transition"
+                            >
+                                <i class="ri-eye-line text-[15px]"></i>
+                                View
+                            </a>
+
+                        </td>
+
+                    </tr>
+
+                    {% empty %}
+
+                    <tr>
+
+                        <td colspan="9" class="px-6 py-16 text-center">
+
+                            <div
+                                class="w-[58px] h-[58px]
+                                       mx-auto mb-4
+                                       rounded-[16px]
+                                       bg-white/[0.04]
+                                       border border-white/10
+                                       flex items-center justify-center"
+                            >
+                                <i class="ri-refund-2-line text-[27px] text-[#64748B]"></i>
+                            </div>
+
+                            <h3 class="text-white text-[15px] font-semibold">
+                                No refund requests found
+                            </h3>
+
+                            <p class="text-[#64748B] text-[12px] mt-1">
+                                Try changing the search or status filter.
+                            </p>
+
+                        </td>
+
+                    </tr>
+
+                    {% endfor %}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </div>
+
+
+    <!-- =========================================================
+         FOOTER / PAGINATION
+    ========================================================== -->
+
+    <div
+        class="flex flex-col md:flex-row
+               md:items-center
+               md:justify-between
+               gap-4
+               mt-5"
+    >
+
+        <!-- RESULT COUNT -->
+
+        <p class="text-[#94A3B8] text-[12px]">
+
+            {% if paginator.count %}
+
+                Showing
+                {{ page_obj.start_index }}
+                –
+                {{ page_obj.end_index }}
+                of
+                {{ paginator.count }}
+                refund requests
+
+            {% else %}
+
+                Showing 0 refund requests
+
+            {% endif %}
+
+        </p>
+
+
+        <!-- PAGINATION -->
+
+        {% if page_obj.paginator.num_pages > 1 %}
+
+        <div class="flex items-center gap-1.5">
+
+            <!-- PREVIOUS -->
+
+            {% if page_obj.has_previous %}
+
+                <a
+                    href="?{% if preserved_query %}{{ preserved_query }}&{% endif %}page={{ page_obj.previous_page_number }}"
+                    class="w-[40px] h-[38px]
+                           rounded-[9px]
+                           border border-[#193452]
+                           bg-[#071426]
+                           flex items-center justify-center
+                           text-[#94A3B8]
+                           hover:text-white
+                           hover:border-cyan-400/30
+                           transition"
+                >
+                    <i class="ri-arrow-left-s-line"></i>
+                </a>
+
+            {% else %}
+
+                <span
+                    class="w-[40px] h-[38px]
+                           rounded-[9px]
+                           border border-[#10243A]
+                           bg-[#06101D]
+                           flex items-center justify-center
+                           text-[#334155]"
+                >
+                    <i class="ri-arrow-left-s-line"></i>
+                </span>
+
+            {% endif %}
+
+
+            <!-- PAGE NUMBERS -->
+
+            {% for number in page_obj.paginator.page_range %}
+
+                {% if number == page_obj.number %}
+
+                    <span
+                        class="min-w-[38px] h-[38px] px-3
+                               rounded-[9px]
+                               bg-[#00E5FF]
+                               text-[#00131A]
+                               flex items-center justify-center
+                               text-[12px] font-bold"
+                    >
+                        {{ number }}
+                    </span>
+
+                {% elif number <= 3 or number > page_obj.paginator.num_pages|add:"-2" %}
+
+                    <a
+                        href="?{% if preserved_query %}{{ preserved_query }}&{% endif %}page={{ number }}"
+                        class="min-w-[38px] h-[38px] px-3
+                               rounded-[9px]
+                               border border-[#193452]
+                               bg-[#071426]
+                               text-[#94A3B8]
+                               hover:text-white
+                               hover:border-cyan-400/30
+                               flex items-center justify-center
+                               text-[12px]
+                               transition"
+                    >
+                        {{ number }}
+                    </a>
+
+                {% endif %}
+
+            {% endfor %}
+
+
+            <!-- NEXT -->
+
+            {% if page_obj.has_next %}
+
+                <a
+                    href="?{% if preserved_query %}{{ preserved_query }}&{% endif %}page={{ page_obj.next_page_number }}"
+                    class="w-[40px] h-[38px]
+                           rounded-[9px]
+                           border border-[#193452]
+                           bg-[#071426]
+                           flex items-center justify-center
+                           text-[#94A3B8]
+                           hover:text-white
+                           hover:border-cyan-400/30
+                           transition"
+                >
+                    <i class="ri-arrow-right-s-line"></i>
+                </a>
+
+            {% else %}
+
+                <span
+                    class="w-[40px] h-[38px]
+                           rounded-[9px]
+                           border border-[#10243A]
+                           bg-[#06101D]
+                           flex items-center justify-center
+                           text-[#334155]"
+                >
+                    <i class="ri-arrow-right-s-line"></i>
+                </span>
+
+            {% endif %}
+
+        </div>
+
+        {% endif %}
+
+    </div>
+
+</div>
+
+{% endblock %}

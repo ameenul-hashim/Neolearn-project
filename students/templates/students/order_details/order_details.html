@@ -3387,14 +3387,17 @@
             ====================================================== -->
 
             <aside
-                class="neo-mobile-page-scroll neo-right-order-scroll
+                class="
+                    neo-right-order-scroll
                     flex
                     min-h-0
                     min-w-0
+                    w-full
                     flex-col
-                    overflow-visible
+                    overflow-hidden
                     overscroll-contain
                     pr-0.5
+
                     lg:h-full
                     lg:max-h-full
                     lg:overflow-y-auto
@@ -3405,7 +3408,17 @@
                     lg:[&::-webkit-scrollbar]:hidden
                 "
             >
-                <div class="flex min-h-full min-w-0 flex-col gap-2.5">
+                <div
+                    class="
+                        flex
+                        min-h-0
+                        min-w-0
+                        w-full
+                        flex-col
+                        gap-2.5
+                        pb-1
+                    "
+                >
 
                     <!-- =================================================
                          COMPLETE ORDER TIMELINE
@@ -3417,7 +3430,7 @@
                             min-w-0
                             w-full
                             flex-col
-                            overflow-visible
+                            overflow-hidden
                             rounded-xl
                             border
                             border-cyan-400/20
@@ -3947,10 +3960,12 @@
 <style>
 /* =========================================================
    FINAL ORDER DETAILS — RIGHT COLUMN / TIMELINE HARDENING
-   One right-side scroll surface, no nested timeline scroll.
+   Right column is the only desktop internal scroll surface.
+   Timeline card remains fully contained; no nested scrollbar.
 ========================================================= */
 .neo-order-workspace {
     min-width: 0 !important;
+    width: 100% !important;
 }
 
 .neo-right-order-scroll {
@@ -3959,6 +3974,7 @@
     box-sizing: border-box !important;
     scrollbar-width: none !important;
     -ms-overflow-style: none !important;
+    overscroll-behavior: contain !important;
 }
 
 .neo-right-order-scroll::-webkit-scrollbar {
@@ -3967,45 +3983,48 @@
     display: none !important;
 }
 
-.neo-right-order-scroll > .flex,
+.neo-right-order-scroll > *,
 .neo-right-order-scroll section,
 .neo-right-order-scroll article,
 .neo-right-order-scroll a,
 .neo-right-order-scroll button,
 .neo-right-order-scroll div {
     min-width: 0;
+    max-width: 100%;
     box-sizing: border-box;
 }
 
-/* Never create a nested scrollbar inside the timeline. */
+/* Timeline never becomes a second/nested scroll container. */
 .neo-right-order-scroll .neo-timeline-scroll {
+    width: 100% !important;
+    min-width: 0 !important;
     height: auto !important;
     min-height: 0 !important;
     max-height: none !important;
     overflow: visible !important;
+    box-sizing: border-box !important;
 }
 
-/* Every long status/support sentence must remain inside its card. */
+/* Keep every right-side card contained inside the column. */
+.neo-right-order-scroll section {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+}
+
+/* Long labels/messages must wrap instead of widening the card. */
 .neo-right-order-scroll p,
 .neo-right-order-scroll span,
 .neo-right-order-scroll h2,
 .neo-right-order-scroll h3 {
+    min-width: 0 !important;
+    max-width: 100% !important;
     overflow-wrap: anywhere;
     word-break: normal;
 }
 
-/* Cancelled / failed support card must contain all text. */
-.neo-right-order-scroll > .flex > section {
-    max-width: 100% !important;
-    overflow: hidden !important;
-}
-
-/* Current-status footer is always contained at the bottom of the timeline card. */
-.neo-right-order-scroll .border-t {
-    min-width: 0 !important;
-}
-
-/* Aqua animated connector: starts at the first node and flows toward the next. */
+/* Aqua animated connector. */
 .neo-timeline-connector {
     background: linear-gradient(
         to bottom,
@@ -4026,7 +4045,6 @@
     100% { background-position: 0 120%; }
 }
 
-/* Timeline nodes stay alive, but the active refund endpoint gets the red heartbeat. */
 .neo-timeline-node {
     transform-origin: center;
 }
@@ -4056,48 +4074,83 @@
     72%, 100% { transform: scale(1.6); opacity: 0; }
 }
 
-/* Desktop: only the right column scrolls. Timeline itself never does. */
+/* Desktop: RIGHT COLUMN is the only internal vertical scroll surface. */
 @media (min-width: 1024px) {
     .neo-order-workspace {
         height: 100% !important;
         min-height: 0 !important;
+        overflow: hidden !important;
     }
 
     .neo-right-order-scroll {
         height: 100% !important;
+        min-height: 0 !important;
         max-height: 100% !important;
         overflow-y: auto !important;
         overflow-x: hidden !important;
         overscroll-behavior: contain !important;
         -webkit-overflow-scrolling: touch !important;
         touch-action: pan-y !important;
+        scrollbar-width: none !important;
+    }
+
+    .neo-right-order-scroll::-webkit-scrollbar {
+        width: 0 !important;
+        height: 0 !important;
+        display: none !important;
+    }
+
+    /* Inner wrapper grows naturally; ASIDE controls the scrolling. */
+    .neo-right-order-scroll > div {
+        width: 100% !important;
+        min-height: max-content !important;
+        height: auto !important;
+    }
+
+    /* Timeline itself never gets a scrollbar. */
+    .neo-right-order-scroll .neo-timeline-scroll {
+        height: auto !important;
+        max-height: none !important;
+        overflow: visible !important;
     }
 }
 
-/* Tablet/mobile: no fixed-height sidebar; normal page/touch scroll. */
+/* Tablet/mobile: natural page scrolling, no trapped sidebar. */
 @media (max-width: 1023px) {
     .neo-order-workspace {
         height: auto !important;
         min-height: 0 !important;
+        overflow: visible !important;
     }
 
     .neo-right-order-scroll {
         height: auto !important;
+        min-height: 0 !important;
         max-height: none !important;
         overflow: visible !important;
+        overscroll-behavior: auto !important;
         touch-action: pan-y !important;
         -webkit-overflow-scrolling: touch !important;
     }
 
+    .neo-right-order-scroll > div {
+        width: 100% !important;
+        min-height: 0 !important;
+        height: auto !important;
+    }
+
     .neo-right-order-scroll .neo-timeline-scroll {
+        width: 100% !important;
+        height: auto !important;
+        max-height: none !important;
         overflow: visible !important;
     }
 }
 
-/* Very small screens: prevent invoice/status controls from widening the page. */
+/* Very small screens: keep all right-side content inside the viewport. */
 @media (max-width: 639px) {
     .neo-right-order-scroll,
-    .neo-right-order-scroll > .flex,
+    .neo-right-order-scroll > div,
     .neo-right-order-scroll section {
         width: 100% !important;
         max-width: 100% !important;
@@ -4110,6 +4163,7 @@
 
 @media (prefers-reduced-motion: reduce) {
     .neo-timeline-connector,
+    .neo-timeline-node,
     .neo-timeline-current,
     .neo-timeline-current-ring {
         animation: none !important;

@@ -137,3 +137,78 @@ def verify_razorpay_payment(
     )
 
     return True
+
+
+# ============================================================
+# CREATE RAZORPAY REFUND
+# ============================================================
+
+def create_razorpay_refund(
+    *,
+    razorpay_payment_id,
+    amount,
+    currency="INR",
+):
+    """
+    Create a Razorpay refund for a captured payment.
+
+    Razorpay expects the refund amount in the smallest
+    currency unit.
+
+    Example:
+
+        INR 500.00 -> 50000 paise
+
+    IMPORTANT:
+        The payment ID must be the captured Razorpay
+        payment ID, not the Razorpay order ID.
+    """
+
+    if not razorpay_payment_id:
+        raise ValueError(
+            "Razorpay payment ID is required for refund."
+        )
+
+    client = get_razorpay_client()
+
+    try:
+        decimal_amount = Decimal(
+            str(amount)
+        )
+    except (
+        InvalidOperation,
+        TypeError,
+        ValueError,
+    ):
+        raise ValueError(
+            "Invalid refund amount."
+        )
+
+    if decimal_amount <= Decimal("0.00"):
+        raise ValueError(
+            "Refund amount must be greater than zero."
+        )
+
+    amount_in_paise = int(
+        (
+            decimal_amount * Decimal("100")
+        ).quantize(
+            Decimal("1"),
+            rounding=ROUND_HALF_UP,
+        )
+    )
+
+    if amount_in_paise <= 0:
+        raise ValueError(
+            "Refund amount must be greater than zero."
+        )
+
+    refund = client.payment.refund(
+        razorpay_payment_id,
+        {
+            "amount": amount_in_paise,
+            "speed": "optimum",
+        },
+    )
+
+    return refund

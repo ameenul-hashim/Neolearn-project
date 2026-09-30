@@ -196,10 +196,15 @@
                     <i class="ri-bank-card-line text-[18px]"></i>
                     <span class="text-[15px] font-medium">Order Management</span>
                 </a>
-
+                <!-- refund management -->
+                <a href="{% url 'admin_refunds' %}"
+                    class="flex items-center gap-4 h-[52px] px-5 rounded-[16px] text-[#94A3B8] hover:bg-white/5 hover:text-white transition">
+                    <i class="ri-refund-2-line text-[18px]"></i>
+                    <span class="text-[15px] font-medium">Refund Management</span>
+                </a>
                 <!-- COUPONS -->
-<a href="{% url 'admin_coupons' %}"
-    class="relative flex items-center gap-4 h-[52px] px-5 rounded-[16px] overflow-hidden transition duration-300
+            <a href="{% url 'admin_coupons' %}"
+                class="relative flex items-center gap-4 h-[52px] px-5 rounded-[16px] overflow-hidden transition duration-300
         {% if 'coupon' in request.resolver_match.url_name %}
             bg-cyan-400/10 border border-cyan-400/10 text-white
         {% else %}

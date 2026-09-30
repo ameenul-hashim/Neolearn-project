@@ -1,17 +1,34 @@
 from decimal import Decimal, InvalidOperation
+from datetime import datetime
+
 from students.models import StudentProfile
+
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
-from django.db.models import F, Q
+from django.db import transaction
+from django.db.models import F, Q, Prefetch
 from django.utils import timezone
-from datetime import datetime
 from orders.models import (
     Order,
     OrderItem,
     Payment,
     StudentBatchPurchase,
     Refund,
+    RefundItem,
+    RefundAttempt,
 )
+
+from orders.helpers import (
+    get_refund_policy,
+    get_refundable_order_items,
+    get_refundable_order_item_ids,
+    get_order_item_refund_amount,
+    get_full_order_refund_amount,
+    calculate_partial_refund_amount,
+    validate_refund_request,
+    refund_allows_partial,
+)
+
 from .models import (
     Batch,
     Coupon,
@@ -3121,32 +3138,6 @@ def delete_coupon(coupon):
 
     return True
 
-# ============================================================
-# REFUND DETAIL
-# ============================================================
-
-
-def get_admin_refund_detail(refund_id):
-    """
-    Return one refund with all information required
-    by the admin refund detail page.
-    """
-
-    return (
-        Refund.objects
-        .select_related(
-            "student",
-            "order",
-            "order__payment",
-        )
-        .prefetch_related(
-            "items__order_item__batch",
-        )
-        .get(
-            pk=refund_id,
-        )
-    )
-
 # =========================================================
 # ADMIN ORDER SELECTION HELPERS
 # =========================================================
@@ -4009,3 +4000,618 @@ def get_admin_order_detail(order_id):
     # ========================================================
 
     return order
+
+# ============================================================
+# REFUND DETAIL
+# ============================================================
+
+
+def get_admin_refund_detail(refund_id):
+    """
+    Return one Refund with everything required by the
+    Admin Refund Detail page.
+
+    Includes:
+
+        - Student
+        - Order
+        - Payment
+        - Refund items
+        - Order items
+        - Batches
+        - Razorpay attempt history
+
+    RefundAttempt history remains attached to the same
+    Refund so every Razorpay retry is preserved.
+    """
+
+    attempt_queryset = (
+        RefundAttempt.objects
+        .order_by(
+            "-attempt_number",
+            "-pk",
+        )
+    )
+
+    return (
+        Refund.objects
+        .select_related(
+            "student",
+            "order",
+            "order__user",
+            "order__payment",
+        )
+        .prefetch_related(
+            "items__order_item__batch",
+            "order__coupons",
+            "order__items__batch",
+            Prefetch(
+                "attempts",
+                queryset=attempt_queryset,
+            ),
+        )
+        .get(
+            pk=refund_id,
+        )
+    )
+
+
+# ============================================================
+# ADMIN REFUND MANAGEMENT
+# ============================================================
+
+
+def get_admin_refund_queryset():
+    """
+    Base queryset for Admin Refund Management.
+
+    Loads:
+
+        - student
+        - order
+        - payment
+        - refund items
+        - order items
+        - batches
+        - Razorpay attempt history
+    """
+
+    attempt_queryset = (
+        RefundAttempt.objects
+        .order_by(
+            "-attempt_number",
+            "-pk",
+        )
+    )
+
+    return (
+        Refund.objects
+        .select_related(
+            "student",
+            "order",
+            "order__user",
+            "order__payment",
+        )
+        .prefetch_related(
+            "items__order_item__batch",
+            "order__coupons",
+            "order__items__batch",
+            Prefetch(
+                "attempts",
+                queryset=attempt_queryset,
+            ),
+        )
+        .order_by(
+            "-requested_at",
+            "-pk",
+        )
+    )
+
+
+# ============================================================
+# ADMIN REFUND SUMMARY
+# ============================================================
+
+
+def get_admin_refund_summary():
+    """
+    Return Admin Refund Management summary statistics.
+
+    Parent Refund business statuses:
+
+        REQUESTED
+        PROCESSING
+        COMPLETED
+        REJECTED
+
+    Razorpay failures are NOT represented by a FAILED
+    parent Refund status.
+
+    They are stored inside RefundAttempt.
+    """
+
+    refunds = Refund.objects.all()
+
+    total_refunds = refunds.count()
+
+    requested_count = (
+        refunds
+        .filter(
+            status=Refund.Status.REQUESTED,
+        )
+        .count()
+    )
+
+    processing_count = (
+        refunds
+        .filter(
+            status=Refund.Status.PROCESSING,
+        )
+        .count()
+    )
+
+    completed_count = (
+        refunds
+        .filter(
+            status=Refund.Status.COMPLETED,
+        )
+        .count()
+    )
+
+    rejected_count = (
+        refunds
+        .filter(
+            status=Refund.Status.REJECTED,
+        )
+        .count()
+    )
+
+    return {
+        "total_refunds": total_refunds,
+        "requested_count": requested_count,
+        "processing_count": processing_count,
+        "completed_count": completed_count,
+        "rejected_count": rejected_count,
+    }
+
+
+# ============================================================
+# ADMIN REFUND STATUS LABEL
+# ============================================================
+
+
+def get_admin_refund_status_label(status):
+    """
+    Convert the parent Refund status into the Admin UI label.
+
+    FAILED is intentionally not exposed here because a
+    Razorpay failure belongs to RefundAttempt.
+    """
+
+    return {
+        Refund.Status.REQUESTED: "Requested",
+        Refund.Status.PROCESSING: "Processing",
+        Refund.Status.COMPLETED: "Completed",
+        Refund.Status.REJECTED: "Rejected",
+    }.get(
+        status,
+        str(
+            status or ""
+        ).replace(
+            "_",
+            " ",
+        ).title(),
+    )
+
+
+# ============================================================
+# ADMIN REFUND TYPE
+# ============================================================
+
+
+def get_admin_refund_type(refund):
+    """
+    Determine whether the stored Refund is Full or Partial.
+
+    Rules:
+
+        Single-batch order
+            -> Full
+
+        Multi-batch order:
+            all original OrderItems included
+                -> Full
+
+            fewer than all original OrderItems
+                -> Partial
+    """
+
+    order = refund.order
+
+    refund_item_ids = set(
+        refund.items.values_list(
+            "order_item_id",
+            flat=True,
+        )
+    )
+
+    order_item_ids = set(
+        order.items.values_list(
+            "id",
+            flat=True,
+        )
+    )
+
+    # No RefundItems should normally never happen,
+    # but safely treat it as Full for display.
+    if not refund_item_ids:
+        return "full"
+
+    # Single-batch refunds are always Full.
+    if len(order_item_ids) <= 1:
+        return "full"
+
+    # All original items means Full.
+    if refund_item_ids == order_item_ids:
+        return "full"
+
+    # Otherwise this Refund contains only a subset.
+    return "partial"
+
+
+# ============================================================
+# ADMIN REFUND ITEM COUNT
+# ============================================================
+
+
+def get_admin_refund_item_count(refund):
+    """
+    Return the number of OrderItems/batches included
+    in this Refund.
+    """
+
+    return refund.items.count()
+
+
+# ============================================================
+# ADMIN REFUND DISPLAY AMOUNT
+# ============================================================
+
+
+def get_admin_refund_amount(refund):
+    """
+    Return the amount displayed by Admin.
+
+    Before successful completion:
+
+        requested_amount
+
+    After successful completion:
+
+        refunded_amount
+    """
+
+    if refund.status == Refund.Status.COMPLETED:
+        return (
+            refund.refunded_amount
+            or Decimal("0.00")
+        )
+
+    return (
+        refund.requested_amount
+        or Decimal("0.00")
+    )
+
+
+# ============================================================
+# ADMIN REFUND LISTING
+# ============================================================
+
+
+def get_admin_refund_listing_context(request):
+    """
+    Build the complete Admin Refund Management listing.
+
+    Supported GET parameters:
+
+        search
+        status
+        sort
+        page
+
+    Search:
+
+        - Refund ID
+        - Order number
+        - Student username
+        - Student email
+
+    Parent Refund statuses:
+
+        requested
+        processing
+        completed
+        rejected
+    """
+
+    refunds = get_admin_refund_queryset()
+
+    # ========================================================
+    # SEARCH
+    # ========================================================
+
+    search = (
+        request.GET.get(
+            "search",
+            "",
+        )
+        .strip()
+    )
+
+    if search:
+
+        search_query = (
+            Q(
+                order__order_number__icontains=search
+            )
+            | Q(
+                student__username__icontains=search
+            )
+            | Q(
+                student__email__icontains=search
+            )
+        )
+
+        # Refund primary key is integer,
+        # so handle it separately.
+        try:
+            search_pk = int(search)
+
+        except (
+            TypeError,
+            ValueError,
+        ):
+            search_pk = None
+
+        if search_pk is not None:
+            search_query |= Q(
+                pk=search_pk
+            )
+
+        refunds = refunds.filter(
+            search_query
+        )
+
+    # ========================================================
+    # STATUS
+    # ========================================================
+
+    status = (
+        request.GET.get(
+            "status",
+            "",
+        )
+        .strip()
+        .lower()
+    )
+
+    valid_statuses = {
+        Refund.Status.REQUESTED,
+        Refund.Status.PROCESSING,
+        Refund.Status.COMPLETED,
+        Refund.Status.REJECTED,
+    }
+
+    if status not in valid_statuses:
+        status = ""
+
+    if status:
+        refunds = refunds.filter(
+            status=status,
+        )
+
+    # ========================================================
+    # SORT
+    # ========================================================
+
+    sort = (
+        request.GET.get(
+            "sort",
+            "newest",
+        )
+        .strip()
+        .lower()
+    )
+
+    allowed_sorts = {
+        "newest",
+        "oldest",
+        "amount_high",
+        "amount_low",
+    }
+
+    if sort not in allowed_sorts:
+        sort = "newest"
+
+    if sort == "oldest":
+
+        refunds = refunds.order_by(
+            "requested_at",
+            "pk",
+        )
+
+    elif sort == "amount_high":
+
+        refunds = refunds.order_by(
+            "-requested_amount",
+            "-requested_at",
+            "-pk",
+        )
+
+    elif sort == "amount_low":
+
+        refunds = refunds.order_by(
+            "requested_amount",
+            "-requested_at",
+            "-pk",
+        )
+
+    else:
+
+        refunds = refunds.order_by(
+            "-requested_at",
+            "-pk",
+        )
+
+    # ========================================================
+    # PAGINATION
+    # ========================================================
+
+    page_number = (
+        request.GET.get(
+            "page",
+            1,
+        )
+    )
+
+    paginator = Paginator(
+        refunds,
+        10,
+    )
+
+    page_obj = paginator.get_page(
+        page_number
+    )
+
+    # ========================================================
+    # ATTACH ADMIN DISPLAY VALUES
+    # ========================================================
+
+    for refund in page_obj.object_list:
+
+        refund.admin_status_label = (
+            get_admin_refund_status_label(
+                refund.status
+            )
+        )
+
+        refund.admin_refund_type = (
+            get_admin_refund_type(
+                refund
+            )
+        )
+
+        refund.admin_item_count = (
+            get_admin_refund_item_count(
+                refund
+            )
+        )
+
+        refund.admin_display_amount = (
+            get_admin_refund_amount(
+                refund
+            )
+        )
+
+    # ========================================================
+    # SUMMARY
+    # ========================================================
+
+    summary = (
+        get_admin_refund_summary()
+    )
+
+    # ========================================================
+    # PRESERVE FILTERS
+    # ========================================================
+
+    preserved_params = []
+
+    if search:
+        preserved_params.append(
+            f"search={search}"
+        )
+
+    if status:
+        preserved_params.append(
+            f"status={status}"
+        )
+
+    preserved_params.append(
+        f"sort={sort}"
+    )
+
+    # ========================================================
+    # RETURN CONTEXT
+    # ========================================================
+
+    return {
+
+        "refunds": (
+            page_obj.object_list
+        ),
+
+        "page_obj": page_obj,
+
+        "paginator": paginator,
+
+        "search": search,
+
+        "selected_status": status,
+
+        "sort": sort,
+
+        # ----------------------------------------------------
+        # ONLY REAL PARENT REFUND STATUSES
+        # ----------------------------------------------------
+
+        "refund_statuses": [
+            Refund.Status.REQUESTED,
+            Refund.Status.PROCESSING,
+            Refund.Status.COMPLETED,
+            Refund.Status.REJECTED,
+        ],
+
+        "refund_status_labels": {
+            Refund.Status.REQUESTED: "Requested",
+            Refund.Status.PROCESSING: "Processing",
+            Refund.Status.COMPLETED: "Completed",
+            Refund.Status.REJECTED: "Rejected",
+        },
+
+        "sort_options": [
+            "newest",
+            "oldest",
+            "amount_high",
+            "amount_low",
+        ],
+
+        "summary": summary,
+
+        "total_refunds": summary[
+            "total_refunds"
+        ],
+
+        "requested_count": summary[
+            "requested_count"
+        ],
+
+        "processing_count": summary[
+            "processing_count"
+        ],
+
+        "completed_count": summary[
+            "completed_count"
+        ],
+
+        "rejected_count": summary[
+            "rejected_count"
+        ],
+
+        "preserved_query": (
+            "&".join(
+                preserved_params
+            )
+        ),
+    }
+

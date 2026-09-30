@@ -76,6 +76,16 @@ from .views import (
 
 
     # ==========================================================
+    # REFUND MANAGEMENT
+    # ==========================================================
+    admin_refunds_view,
+    admin_refund_detail_view,
+    admin_approve_refund_view,
+    admin_retry_refund_view,
+    admin_reject_refund_view,
+    admin_reopen_refund_view,
+
+    # ==========================================================
     # ADMIN COURSE BUILDER
     # ==========================================================
     admin_course_builder_entry_view,
@@ -320,6 +330,7 @@ urlpatterns = [
         name="admin_orders",
     ),
 
+
     # ----------------------------------------------------------
     # Persistent order selection
     # ----------------------------------------------------------
@@ -329,6 +340,7 @@ urlpatterns = [
         admin_order_selection_view,
         name="admin_order_selection",
     ),
+
 
     # ----------------------------------------------------------
     # Mark payment as received
@@ -340,6 +352,7 @@ urlpatterns = [
         name="admin_mark_payment_received",
     ),
 
+
     # ----------------------------------------------------------
     # Revert payment / remove student access
     # ----------------------------------------------------------
@@ -349,6 +362,7 @@ urlpatterns = [
         admin_revert_payment_view,
         name="admin_revert_payment",
     ),
+
 
     # ----------------------------------------------------------
     # Admin invoice detail
@@ -360,8 +374,82 @@ urlpatterns = [
         name="admin_invoice_detail",
     ),
 
+
+    # ==========================================================
+    # REFUND MANAGEMENT
+    # ==========================================================
+
+    # ----------------------------------------------------------
+    # Refund list
+    # ----------------------------------------------------------
+
+    path(
+        "refunds/",
+        admin_refunds_view,
+        name="admin_refunds",
+    ),
+
+
+    # ----------------------------------------------------------
+    # Refund detail
+    # ----------------------------------------------------------
+
+    path(
+        "refunds/<int:refund_id>/",
+        admin_refund_detail_view,
+        name="admin_refund_detail",
+    ),
+
+
+    # ----------------------------------------------------------
+    # Approve / execute refund
+    # ----------------------------------------------------------
+
+    path(
+        "refunds/<int:refund_id>/approve/",
+        admin_approve_refund_view,
+        name="admin_approve_refund",
+    ),
+
+
+    # ----------------------------------------------------------
+    # Retry failed Razorpay refund attempt
+    # ----------------------------------------------------------
+
+    path(
+        "refunds/<int:refund_id>/retry/",
+        admin_retry_refund_view,
+        name="admin_retry_refund",
+    ),
+
+
+    # ----------------------------------------------------------
+    # Reject refund
+    # ----------------------------------------------------------
+
+    path(
+        "refunds/<int:refund_id>/reject/",
+        admin_reject_refund_view,
+        name="admin_reject_refund",
+    ),
+
+
+    # ----------------------------------------------------------
+    # Reopen rejected refund
+    # ----------------------------------------------------------
+
+    path(
+        "refunds/<int:refund_id>/reopen/",
+        admin_reopen_refund_view,
+        name="admin_reopen_refund",
+    ),
+
     # ----------------------------------------------------------
     # Order details
+    #
+    # IMPORTANT:
+    # This generic order route stays AFTER the more specific
+    # refund routes above.
     # ----------------------------------------------------------
 
     path(

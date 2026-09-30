@@ -9,6 +9,7 @@ from django.core.exceptions import ValidationError
 from django.contrib.auth.models import User
 from django.core.paginator import Paginator
 from django.db.models import Q
+from orders.helpers import execute_refund
 from .decorators import admin_required
 from .helpers import (
     create_batch,
@@ -37,9 +38,17 @@ from .helpers import (
     save_admin_order_selection,
     remove_admin_order_selection,
     clear_admin_order_selections,
-    
+
+    # Refund Management helpers
+    get_admin_refund_listing_context,
+    get_admin_refund_detail,
+    get_admin_refund_summary,
+    get_admin_refund_type,
+    get_admin_refund_item_count,
+    get_admin_refund_amount,
 
 )
+
 
 from django.shortcuts import get_object_or_404
 from django.core.mail import send_mail
@@ -3186,3 +3195,632 @@ def admin_invoice_detail_view(
             "invoice": invoice,
         },
     )
+    
+# ==========================================================
+# REFUND MANAGEMENT
+# ==========================================================
+
+
+# ==========================================================
+# ADMIN REFUND LIST
+# ==========================================================
+
+@login_required(login_url="admin_signin")
+@admin_required
+@cache_control(
+    no_cache=True,
+    must_revalidate=True,
+    no_store=True,
+)
+def admin_refunds_view(request):
+    """
+    Display the Admin Refund Management listing.
+
+    Refund parent statuses exposed by Admin:
+
+        REQUESTED
+        PROCESSING
+        COMPLETED
+        REJECTED
+
+    Razorpay gateway failures are stored in RefundAttempt.
+    They do not create a FAILED parent refund state.
+    """
+
+    context = get_admin_refund_listing_context(
+        request
+    )
+
+    return render(
+        request,
+        "admins/refunds/refund_list.html",
+        context,
+    )
+
+
+# ==========================================================
+# ADMIN REFUND DETAIL
+# ==========================================================
+
+@login_required(login_url="admin_signin")
+@admin_required
+@cache_control(
+    no_cache=True,
+    must_revalidate=True,
+    no_store=True,
+)
+def admin_refund_detail_view(
+    request,
+    refund_id,
+):
+    """
+    Display complete Admin Refund Details.
+
+    Read-only page.
+
+    Refund execution/rejection/reopening are handled
+    by separate POST actions.
+    """
+
+    refund = get_admin_refund_detail(
+        refund_id
+    )
+
+    refund.admin_type = get_admin_refund_type(
+        refund
+    )
+
+    refund.admin_item_count = (
+        get_admin_refund_item_count(
+            refund
+        )
+    )
+
+    refund.admin_amount = (
+        get_admin_refund_amount(
+            refund
+        )
+    )
+
+    refund.admin_status_label = (
+        refund.status.replace(
+            "_",
+            " ",
+        ).title()
+        if refund.status
+        else ""
+    )
+
+    # ------------------------------------------------------
+    # Latest gateway attempt
+    # ------------------------------------------------------
+
+    refund.admin_latest_attempt = (
+        refund.attempts.first()
+    )
+
+    return render(
+        request,
+        "admins/refunds/refund_detail.html",
+        {
+            "refund": refund,
+        },
+    )
+
+
+# ==========================================================
+# ADMIN APPROVE / EXECUTE REFUND
+# ==========================================================
+
+@login_required(login_url="admin_signin")
+@admin_required
+@require_POST
+@cache_control(
+    no_cache=True,
+    must_revalidate=True,
+    no_store=True,
+)
+def admin_approve_refund_view(
+    request,
+    refund_id,
+):
+    """
+    Approve and execute a requested refund.
+
+    The actual money movement is performed by Razorpay
+    through execute_refund().
+
+    Successful gateway result:
+
+        Refund
+            -> COMPLETED
+
+        Student access
+            -> removed for refunded items
+
+        Order
+            -> PARTIALLY_REFUNDED
+               or
+               REFUNDED
+
+    Gateway failure:
+
+        Refund
+            -> REQUESTED
+
+        RefundAttempt
+            -> FAILED
+
+        Student access
+            -> unchanged
+
+        Order
+            -> unchanged
+    """
+
+    from orders.models import Refund
+
+    refund = get_object_or_404(
+        Refund,
+        pk=refund_id,
+    )
+
+    # ------------------------------------------------------
+    # Only REQUESTED refunds can be approved
+    # ------------------------------------------------------
+
+    if refund.status != Refund.Status.REQUESTED:
+
+        messages.error(
+            request,
+            "This refund is not available for approval.",
+        )
+
+        return redirect(
+            "admin_refund_detail",
+            refund_id=refund.id,
+        )
+
+    try:
+
+        execute_refund(
+            refund.id
+        )
+
+        refund.refresh_from_db()
+
+        # --------------------------------------------------
+        # SUCCESS
+        # --------------------------------------------------
+
+        if refund.status == Refund.Status.COMPLETED:
+
+            messages.success(
+                request,
+                (
+                    f"Refund #{refund.id} was completed "
+                    "successfully."
+                ),
+            )
+
+        # --------------------------------------------------
+        # GATEWAY FAILURE
+        # --------------------------------------------------
+
+        else:
+
+            messages.warning(
+                request,
+                (
+                    f"Refund #{refund.id} could not be "
+                    "completed by Razorpay. The refund "
+                    "remains requested and can be retried."
+                ),
+            )
+
+    except ValueError as exc:
+
+        messages.error(
+            request,
+            str(exc),
+        )
+
+    except Exception:
+
+        import traceback
+
+        traceback.print_exc()
+
+        messages.error(
+            request,
+            (
+                "Unable to process this refund. "
+                "No refund completion was recorded."
+            ),
+        )
+
+    return redirect(
+        "admin_refund_detail",
+        refund_id=refund.id,
+    )
+
+
+# ==========================================================
+# ADMIN RETRY REFUND
+# ==========================================================
+
+@login_required(login_url="admin_signin")
+@admin_required
+@require_POST
+@cache_control(
+    no_cache=True,
+    must_revalidate=True,
+    no_store=True,
+)
+def admin_retry_refund_view(
+    request,
+    refund_id,
+):
+    """
+    Retry a refund whose previous Razorpay attempt failed.
+
+    The same Refund ID is reused.
+
+    A new RefundAttempt is created by execute_refund().
+    """
+
+    from orders.models import Refund
+
+    refund = get_object_or_404(
+        Refund,
+        pk=refund_id,
+    )
+
+    if refund.status != Refund.Status.REQUESTED:
+
+        messages.error(
+            request,
+            (
+                "Only a requested refund can be retried."
+            ),
+        )
+
+        return redirect(
+            "admin_refund_detail",
+            refund_id=refund.id,
+        )
+
+    try:
+
+        execute_refund(
+            refund.id
+        )
+
+        refund.refresh_from_db()
+
+        if refund.status == Refund.Status.COMPLETED:
+
+            messages.success(
+                request,
+                (
+                    f"Refund #{refund.id} was completed "
+                    "successfully on retry."
+                ),
+            )
+
+        else:
+
+            messages.warning(
+                request,
+                (
+                    f"Refund #{refund.id} is still requested "
+                    "because the Razorpay refund attempt "
+                    "did not complete."
+                ),
+            )
+
+    except ValueError as exc:
+
+        messages.error(
+            request,
+            str(exc),
+        )
+
+    except Exception:
+
+        import traceback
+
+        traceback.print_exc()
+
+        messages.error(
+            request,
+            (
+                "Unable to retry this refund."
+            ),
+        )
+
+    return redirect(
+        "admin_refund_detail",
+        refund_id=refund.id,
+    )
+
+
+# ==========================================================
+# ADMIN REJECT REFUND
+# ==========================================================
+
+@login_required(login_url="admin_signin")
+@admin_required
+@require_POST
+@cache_control(
+    no_cache=True,
+    must_revalidate=True,
+    no_store=True,
+)
+def admin_reject_refund_view(
+    request,
+    refund_id,
+):
+    """
+    Reject a requested refund.
+
+    A rejection reason is mandatory.
+
+    Rejected refunds:
+
+        Refund
+            -> REJECTED
+
+    No Razorpay refund is performed.
+
+    Student access remains unchanged.
+    """
+
+    from orders.models import Refund
+
+    refund = get_object_or_404(
+        Refund,
+        pk=refund_id,
+    )
+
+    # ------------------------------------------------------
+    # Only REQUESTED refunds can be rejected
+    # ------------------------------------------------------
+
+    if refund.status != Refund.Status.REQUESTED:
+
+        messages.error(
+            request,
+            (
+                "Only a requested refund can be rejected."
+            ),
+        )
+
+        return redirect(
+            "admin_refund_detail",
+            refund_id=refund.id,
+        )
+
+    rejection_reason = (
+        request.POST.get(
+            "rejection_reason",
+            "",
+        )
+        .strip()
+    )
+
+    if not rejection_reason:
+
+        messages.error(
+            request,
+            (
+                "A rejection reason is required."
+            ),
+        )
+
+        return redirect(
+            "admin_refund_detail",
+            refund_id=refund.id,
+        )
+
+    # ------------------------------------------------------
+    # Save rejection
+    # ------------------------------------------------------
+
+    try:
+
+        with transaction.atomic():
+
+            locked_refund = (
+                Refund.objects
+                .select_for_update()
+                .get(
+                    pk=refund.id,
+                )
+            )
+
+            # Re-check after acquiring lock
+
+            if (
+                locked_refund.status
+                != Refund.Status.REQUESTED
+            ):
+
+                messages.error(
+                    request,
+                    (
+                        "This refund is no longer "
+                        "available for rejection."
+                    ),
+                )
+
+                return redirect(
+                    "admin_refund_detail",
+                    refund_id=locked_refund.id,
+                )
+
+            locked_refund.status = (
+                Refund.Status.REJECTED
+            )
+
+            locked_refund.admin_note = (
+                rejection_reason
+            )
+
+            locked_refund.processed_at = (
+                timezone.now()
+            )
+
+            locked_refund.save(
+                update_fields=[
+                    "status",
+                    "admin_note",
+                    "processed_at",
+                ]
+            )
+
+        messages.success(
+            request,
+            (
+                f"Refund #{refund.id} was rejected."
+            ),
+        )
+
+    except Exception:
+
+        import traceback
+
+        traceback.print_exc()
+
+        messages.error(
+            request,
+            (
+                "Unable to reject this refund."
+            ),
+        )
+
+    return redirect(
+        "admin_refund_detail",
+        refund_id=refund.id,
+    )
+
+
+# ==========================================================
+# ADMIN REOPEN REJECTED REFUND
+# ==========================================================
+
+@login_required(login_url="admin_signin")
+@admin_required
+@require_POST
+@cache_control(
+    no_cache=True,
+    must_revalidate=True,
+    no_store=True,
+)
+def admin_reopen_refund_view(
+    request,
+    refund_id,
+):
+    """
+    Reopen a rejected refund.
+
+    IMPORTANT:
+
+        Reopening keeps the SAME Refund ID.
+
+        It does not create a new Refund.
+
+    A new Refund ID is created only when the student/admin
+    creates a genuinely new refund request.
+    """
+
+    from orders.models import Refund
+
+    try:
+
+        with transaction.atomic():
+
+            refund = (
+                Refund.objects
+                .select_for_update()
+                .get(
+                    pk=refund_id,
+                )
+            )
+
+            # --------------------------------------------------
+            # Only rejected refunds can be reopened
+            # --------------------------------------------------
+
+            if (
+                refund.status
+                != Refund.Status.REJECTED
+            ):
+
+                messages.error(
+                    request,
+                    (
+                        "Only a rejected refund can be reopened."
+                    ),
+                )
+
+                return redirect(
+                    "admin_refund_detail",
+                    refund_id=refund.id,
+                )
+
+            # --------------------------------------------------
+            # Reopen
+            # --------------------------------------------------
+
+            refund.status = (
+                Refund.Status.REQUESTED
+            )
+
+            refund.processed_at = None
+
+            refund.save(
+                update_fields=[
+                    "status",
+                    "processed_at",
+                ]
+            )
+
+        messages.success(
+            request,
+            (
+                f"Refund #{refund.id} was reopened "
+                "successfully."
+            ),
+        )
+
+    except Refund.DoesNotExist:
+
+        messages.error(
+            request,
+            "Refund not found.",
+        )
+
+        return redirect(
+            "admin_refunds"
+        )
+
+    except Exception:
+
+        import traceback
+
+        traceback.print_exc()
+
+        messages.error(
+            request,
+            (
+                "Unable to reopen this refund."
+            ),
+        )
+
+    return redirect(
+        "admin_refund_detail",
+        refund_id=refund.id,
+    )
+
+
