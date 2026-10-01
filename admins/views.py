@@ -2217,7 +2217,7 @@ def admin_order_detail_view(
 
 
 # ==========================================================
-# MARK PAYMENT AS RECEIVED
+# CREATE TEST PAYMENT SCENARIO
 # ==========================================================
 
 
@@ -2229,14 +2229,16 @@ def admin_order_detail_view(
     must_revalidate=True,
     no_store=True,
 )
-def admin_mark_payment_received_view(
+def admin_create_test_payment_scenario_view(
     request,
     order_id,
 ):
     """
-    Manually mark an order payment as received.
+    Create a local test payment scenario for Admin Order Management.
 
-    Allowed source states:
+    This action is ONLY for local testing.
+
+    Allowed source order states:
 
         PENDING
         PAYMENT_PROCESSING
@@ -2245,11 +2247,13 @@ def admin_mark_payment_received_view(
 
     Result:
 
+        Payment
+            -> payment_source = SCENARIO
+            -> status = CAPTURED
+            -> No Razorpay payment ID
+
         Order
             -> PAID
-
-        Payment
-            -> CAPTURED
 
         Invoice
             -> Ensured
@@ -2257,14 +2261,19 @@ def admin_mark_payment_received_view(
         StudentBatchPurchase
             -> ACTIVE
 
-    REFUNDED and PARTIALLY_REFUNDED orders are protected.
+    IMPORTANT:
 
-    This action does NOT create, approve, reject or modify
-    any refund.
+        This action NEVER calls Razorpay.
 
-    Existing Razorpay identifiers are preserved.
+        This action NEVER creates a fake Razorpay
+        payment ID.
 
-    The action is reversible through Revert Payment.
+        A real Razorpay payment ID already attached
+        to the payment is never converted into a
+        scenario payment.
+
+    This action is intended only to test the complete
+    local Order -> Refund -> Access workflow.
     """
 
     # ------------------------------------------------------
@@ -2283,7 +2292,7 @@ def admin_mark_payment_received_view(
         with transaction.atomic():
 
             # --------------------------------------------------
-            # LOCK ONLY THE ORDER ROW
+            # LOCK ORDER
             # --------------------------------------------------
 
             order = (
@@ -2307,8 +2316,35 @@ def admin_mark_payment_received_view(
                     request,
                     (
                         "A refunded or partially refunded "
-                        "order cannot be marked as payment "
-                        "received."
+                        "order cannot be converted into a "
+                        "test payment scenario."
+                    ),
+                )
+
+                return redirect(
+                    "admin_order_detail",
+                    order_id=order.id,
+                )
+
+            # --------------------------------------------------
+            # ALLOWED ORDER STATES
+            # --------------------------------------------------
+
+            allowed_statuses = {
+                Order.Status.PENDING,
+                Order.Status.PAYMENT_PROCESSING,
+                Order.Status.PAYMENT_FAILED,
+                Order.Status.CANCELLED,
+            }
+
+            if order.status not in allowed_statuses:
+
+                messages.error(
+                    request,
+                    (
+                        "A test payment scenario can only be "
+                        "created for pending, processing, failed, "
+                        "or cancelled orders."
                     ),
                 )
 
@@ -2340,7 +2376,7 @@ def admin_mark_payment_received_view(
                 )
 
             # --------------------------------------------------
-            # GET PAYMENT SEPARATELY
+            # GET PAYMENT
             # --------------------------------------------------
 
             payment = (
@@ -2352,28 +2388,37 @@ def admin_mark_payment_received_view(
             )
 
             # --------------------------------------------------
-            # CREATE PAYMENT IF MISSING
+            # CREATE / CONVERT PAYMENT TO SCENARIO
             # --------------------------------------------------
 
             if payment is None:
 
-                razorpay_order_id = (
-                    getattr(
-                        order,
-                        "razorpay_order_id",
-                        None,
-                    )
-                    or ""
-                ).strip()
+                payment = Payment.objects.create(
+                    order=order,
+                    payment_source=Payment.Source.SCENARIO,
+                    razorpay_order_id=None,
+                    razorpay_payment_id=None,
+                    amount=order.final_amount,
+                    currency=order.currency,
+                    status=Payment.Status.CAPTURED,
+                    captured_at=timezone.now(),
+                    failure_reason="",
+                )
 
-                if not razorpay_order_id:
+            else:
+
+                # --------------------------------------------------
+                # NEVER CONVERT A REAL RAZORPAY PAYMENT
+                # --------------------------------------------------
+
+                if payment.razorpay_payment_id:
 
                     messages.error(
                         request,
                         (
-                            "This order does not have a "
-                            "Razorpay order ID, so a payment "
-                            "record cannot be created."
+                            "This payment already contains a "
+                            "real Razorpay payment ID. It cannot "
+                            "be converted into a test scenario."
                         ),
                     )
 
@@ -2382,26 +2427,15 @@ def admin_mark_payment_received_view(
                         order_id=order.id,
                     )
 
-                payment = Payment.objects.create(
-                    order=order,
-                    razorpay_order_id=(
-                        razorpay_order_id
-                    ),
-                    amount=order.final_amount,
-                    currency=order.currency,
-                    status=(
-                        Payment.Status.CAPTURED
-                    ),
-                    captured_at=timezone.now(),
-                    failure_reason="",
+                # --------------------------------------------------
+                # SCENARIO PAYMENT
+                # --------------------------------------------------
+
+                payment.payment_source = (
+                    Payment.Source.SCENARIO
                 )
 
-            # --------------------------------------------------
-            # UPDATE EXISTING PAYMENT
-            # --------------------------------------------------
-
-            else:
-
+                payment.razorpay_payment_id = None
                 payment.status = (
                     Payment.Status.CAPTURED
                 )
@@ -2423,6 +2457,8 @@ def admin_mark_payment_received_view(
 
                 payment.save(
                     update_fields=[
+                        "payment_source",
+                        "razorpay_payment_id",
                         "status",
                         "amount",
                         "currency",
@@ -2433,7 +2469,7 @@ def admin_mark_payment_received_view(
                 )
 
             # --------------------------------------------------
-            # MARK ORDER PAID
+            # MARK ORDER AS PAID
             # --------------------------------------------------
 
             order.status = (
@@ -2454,7 +2490,7 @@ def admin_mark_payment_received_view(
             )
 
             # --------------------------------------------------
-            # GET INVOICE SEPARATELY
+            # ENSURE INVOICE
             # --------------------------------------------------
 
             invoice = (
@@ -2465,34 +2501,20 @@ def admin_mark_payment_received_view(
                 .first()
             )
 
-            # --------------------------------------------------
-            # ENSURE INVOICE
-            # --------------------------------------------------
-
             if invoice is None:
 
                 Invoice.objects.create(
                     order=order,
                     subtotal=order.subtotal,
-
-                    # Order model:
-                    # total_coupon_discount
-                    #
-                    # Invoice model:
-                    # coupon_discount
-
                     coupon_discount=(
                         order.total_coupon_discount
                     ),
-
                     total_discount=(
                         order.total_discount
                     ),
-
                     final_amount=(
                         order.final_amount
                     ),
-
                     currency=order.currency,
                 )
 
@@ -2530,14 +2552,12 @@ def admin_mark_payment_received_view(
                     )
 
                     # --------------------------------------------------
-                    # EXISTING STUDENT + BATCH PURCHASE
+                    # EXISTING PURCHASE FOR SAME STUDENT + BATCH
                     # --------------------------------------------------
 
                     if existing_purchase is not None:
 
-                        # --------------------------------------------------
                         # NEVER REACTIVATE REFUNDED PURCHASE
-                        # --------------------------------------------------
 
                         if (
                             existing_purchase.status
@@ -2560,9 +2580,7 @@ def admin_mark_payment_received_view(
                                 "Refunded batch purchase conflict."
                             )
 
-                        # --------------------------------------------------
                         # PREVENT DUPLICATE PURCHASE
-                        # --------------------------------------------------
 
                         messages.error(
                             request,
@@ -2579,7 +2597,7 @@ def admin_mark_payment_received_view(
                         )
 
                     # --------------------------------------------------
-                    # CREATE ACTIVE ACCESS
+                    # CREATE ACTIVE PURCHASE
                     # --------------------------------------------------
 
                     StudentBatchPurchase.objects.create(
@@ -2595,14 +2613,12 @@ def admin_mark_payment_received_view(
                     )
 
                 # --------------------------------------------------
-                # PURCHASE ALREADY EXISTS
+                # EXISTING PURCHASE
                 # --------------------------------------------------
 
                 else:
 
-                    # --------------------------------------------------
                     # NEVER REACTIVATE REFUNDED PURCHASE
-                    # --------------------------------------------------
 
                     if (
                         purchase.status
@@ -2624,10 +2640,7 @@ def admin_mark_payment_received_view(
                             "Refunded batch purchase cannot be reactivated."
                         )
 
-                    # --------------------------------------------------
-                    # ACTIVE / REVOKED
-                    # -> ACTIVE
-                    # --------------------------------------------------
+                    # ACTIVE / REVOKED -> ACTIVE
 
                     purchase.status = (
                         StudentBatchPurchase
@@ -2650,10 +2663,10 @@ def admin_mark_payment_received_view(
         messages.success(
             request,
             (
-                f"Payment for order "
-                f"{order.order_number} "
-                "was marked as received and "
-                "student access was granted."
+                f"Test payment scenario created for "
+                f"order {order.order_number}. "
+                "Order is now paid and student access "
+                "has been granted."
             ),
         )
 
@@ -2674,8 +2687,7 @@ def admin_mark_payment_received_view(
 
     except ValueError:
 
-        # The detailed error message has already
-        # been added before raising the exception.
+        # Detailed error message was already added.
 
         pass
 
@@ -2692,8 +2704,8 @@ def admin_mark_payment_received_view(
         messages.error(
             request,
             (
-                "Unable to mark payment as received. "
-                "Please try again."
+                "Unable to create the test payment "
+                "scenario. Please try again."
             ),
         )
 
@@ -2705,7 +2717,6 @@ def admin_mark_payment_received_view(
         "admin_order_detail",
         order_id=order_id,
     )
-
 
 # ==========================================================
 # REVERT PAYMENT / REMOVE ACCESS

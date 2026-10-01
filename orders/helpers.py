@@ -1992,7 +1992,7 @@ def _get_completed_refunded_amount(order, exclude_refund_id=None):
 
     Only COMPLETED refunds count.
 
-    Failed Razorpay attempts do not reduce the refundable
+    Failed gateway attempts do not reduce the refundable
     amount because they did not move any money.
     """
 
@@ -2035,12 +2035,12 @@ def _mark_refund_attempt_failed(
     gateway_response=None,
 ):
     """
-    Record a failed Razorpay attempt.
+    Record a failed refund attempt.
 
     IMPORTANT:
     The Refund itself goes back to REQUESTED.
 
-    This means Admin can retry the same Refund later.
+    This allows Admin to retry the same Refund later.
     """
 
     with transaction.atomic():
@@ -2079,10 +2079,11 @@ def _mark_refund_attempt_failed(
 
         # --------------------------------------------------------
         # IMPORTANT:
-        # Razorpay failure does NOT mean the business refund
-        # request itself has permanently failed.
+        # Gateway failure does NOT permanently fail the
+        # business refund request.
         #
-        # It becomes REQUESTED again so Admin can retry/reject.
+        # The Refund becomes REQUESTED again so Admin can
+        # retry or reject it.
         # --------------------------------------------------------
 
         if refund.status == Refund.Status.PROCESSING:
@@ -2105,10 +2106,18 @@ def _complete_refund_successfully(
     gateway_response,
 ):
     """
-    Finalize a successful Razorpay refund.
+    Finalize a successful refund.
 
     This function performs all NeoLearn-side success updates
-    only AFTER Razorpay has successfully created the refund.
+    after either:
+
+        1. Razorpay successfully creates a refund, or
+        2. A local Scenario Payment refund is successfully
+           simulated.
+
+    For Razorpay refunds, a real Razorpay refund ID is required.
+
+    For Scenario refunds, no Razorpay refund ID is expected.
     """
 
     with transaction.atomic():
@@ -2116,7 +2125,10 @@ def _complete_refund_successfully(
         refund = (
             Refund.objects
             .select_for_update()
-            .select_related("order", "student")
+            .select_related(
+                "order",
+                "student",
+            )
             .get(pk=refund_id)
         )
 
@@ -2139,8 +2151,17 @@ def _complete_refund_successfully(
         # --------------------------------------------------------
 
         if refund.status == Refund.Status.COMPLETED:
-
             return refund
+
+        # --------------------------------------------------------
+        # DETERMINE REFUND SOURCE
+        # --------------------------------------------------------
+
+        is_scenario_refund = (
+            payment is not None
+            and payment.payment_source
+            == Payment.Source.SCENARIO
+        )
 
         # --------------------------------------------------------
         # GET RAZORPAY REFUND ID
@@ -2152,17 +2173,21 @@ def _complete_refund_successfully(
 
             razorpay_refund_id = (
                 gateway_response.get("id")
-                or gateway_response.get(
-                    "refund_id"
+                or gateway_response.get("refund_id")
+            )
+
+        # --------------------------------------------------------
+        # REAL RAZORPAY REFUND
+        # --------------------------------------------------------
+
+        if not is_scenario_refund:
+
+            if not razorpay_refund_id:
+
+                raise ValueError(
+                    "Razorpay refund succeeded but no "
+                    "refund ID was returned."
                 )
-            )
-
-        if not razorpay_refund_id:
-
-            raise ValueError(
-                "Razorpay refund succeeded but no "
-                "refund ID was returned."
-            )
 
         # --------------------------------------------------------
         # AMOUNT
@@ -2186,6 +2211,8 @@ def _complete_refund_successfully(
         refund.refunded_amount = successful_amount
         refund.razorpay_refund_id = (
             razorpay_refund_id
+            if not is_scenario_refund
+            else None
         )
         refund.processed_at = timezone.now()
 
@@ -2203,14 +2230,19 @@ def _complete_refund_successfully(
         # --------------------------------------------------------
 
         attempt.status = RefundAttempt.Status.SUCCESS
+
         attempt.razorpay_refund_id = (
             razorpay_refund_id
+            if not is_scenario_refund
+            else None
         )
+
         attempt.gateway_response = (
             _serialize_gateway_response(
                 gateway_response
             )
         )
+
         attempt.completed_at = timezone.now()
 
         attempt.save(
@@ -2327,24 +2359,25 @@ def _complete_refund_successfully(
 
 def execute_refund(refund_id):
     """
-    Execute one Refund through Razorpay.
+    Execute one Refund.
 
-    This is the central refund execution function.
+    Two payment sources are supported:
 
-    It is intentionally reusable by:
+        RAZORPAY:
+            Uses the real Razorpay payment ID and the existing
+            Razorpay refund flow.
 
-        - Admin Approve
-        - Admin Retry
-        - Admin Manual Refund
+        SCENARIO:
+            Uses the local Scenario Payment flow and NEVER calls
+            Razorpay.
 
-    Student refund request creation does NOT call this
-    function directly. Student requests remain REQUESTED
-    until Admin approves them.
+    Student refund requests remain REQUESTED until Admin
+    approves them.
     """
 
     # =========================================================
     # STEP 1
-    # Lock refund and prepare a new gateway attempt.
+    # Lock refund and prepare a new refund attempt.
     #
     # IMPORTANT:
     # Do NOT keep this transaction open while calling Razorpay.
@@ -2387,10 +2420,24 @@ def execute_refund(refund_id):
             )
 
         # -----------------------------------------------------
-        # RAZORPAY PAYMENT ID MUST EXIST
+        # DETERMINE PAYMENT SOURCE
         # -----------------------------------------------------
 
-        if not payment.razorpay_payment_id:
+        is_scenario_payment = (
+            payment.payment_source
+            == Payment.Source.SCENARIO
+        )
+
+        # -----------------------------------------------------
+        # REAL RAZORPAY PAYMENT MUST HAVE A REAL PAYMENT ID
+        #
+        # Scenario payments intentionally do NOT have one.
+        # -----------------------------------------------------
+
+        if (
+            not is_scenario_payment
+            and not payment.razorpay_payment_id
+        ):
 
             raise ValueError(
                 "No Razorpay payment ID exists for this order."
@@ -2458,7 +2505,9 @@ def execute_refund(refund_id):
             amount=amount,
             status=RefundAttempt.Status.INITIATED,
             razorpay_payment_id=(
-                payment.razorpay_payment_id
+                None
+                if is_scenario_payment
+                else payment.razorpay_payment_id
             ),
         )
 
@@ -2476,9 +2525,13 @@ def execute_refund(refund_id):
 
         refund_id_value = refund.id
         attempt_id_value = attempt.id
+
         payment_id_value = (
-            payment.razorpay_payment_id
+            None
+            if is_scenario_payment
+            else payment.razorpay_payment_id
         )
+
         currency = (
             payment.currency
             or order.currency
@@ -2487,30 +2540,49 @@ def execute_refund(refund_id):
 
     # =========================================================
     # STEP 2
-    # Call Razorpay OUTSIDE the database transaction.
+    #
+    # REAL RAZORPAY:
+    #     Call Razorpay OUTSIDE the database transaction.
+    #
+    # SCENARIO:
+    #     Do NOT call Razorpay.
+    #     Create a local successful scenario response.
     # =========================================================
 
-    try:
+    if is_scenario_payment:
 
-        gateway_response = create_razorpay_refund(
-            razorpay_payment_id=payment_id_value,
-            amount=amount,
-            currency=currency,
-        )
+        gateway_response = {
+            "mode": "scenario",
+            "status": "success",
+            "message": "Local test scenario refund completed.",
+            "payment_source": Payment.Source.SCENARIO,
+            "amount": str(amount),
+            "currency": currency,
+        }
 
-    except Exception as exc:
+    else:
 
-        _mark_refund_attempt_failed(
-            refund_id=refund_id_value,
-            attempt_id=attempt_id_value,
-            error_message=str(exc),
-        )
+        try:
 
-        raise
+            gateway_response = create_razorpay_refund(
+                razorpay_payment_id=payment_id_value,
+                amount=amount,
+                currency=currency,
+            )
+
+        except Exception as exc:
+
+            _mark_refund_attempt_failed(
+                refund_id=refund_id_value,
+                attempt_id=attempt_id_value,
+                error_message=str(exc),
+            )
+
+            raise
 
     # =========================================================
     # STEP 3
-    # Finalize successful refund.
+    # Finalize successful refund locally.
     # =========================================================
 
     try:
@@ -2526,14 +2598,32 @@ def execute_refund(refund_id):
         # -----------------------------------------------------
         # IMPORTANT:
         #
-        # At this point Razorpay has already returned success.
+        # For a REAL Razorpay refund, Razorpay may already have
+        # successfully moved the money.
         #
-        # Therefore we MUST NOT call Razorpay again or mark
-        # the money movement as failed.
+        # Therefore we MUST NOT call Razorpay again or mark the
+        # gateway movement as failed.
         #
         # This exception indicates a local finalization problem
         # that must be investigated.
+        #
+        # For Scenario payments, this means the local scenario
+        # finalization itself failed.
         # -----------------------------------------------------
+
+        if is_scenario_payment:
+
+            _mark_refund_attempt_failed(
+                refund_id=refund_id_value,
+                attempt_id=attempt_id_value,
+                error_message=str(exc),
+                gateway_response=gateway_response,
+            )
+
+            raise RuntimeError(
+                "Scenario refund succeeded, but NeoLearn "
+                "could not finalize the refund locally."
+            ) from exc
 
         raise RuntimeError(
             "Razorpay refund succeeded, but NeoLearn "

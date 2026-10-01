@@ -70,7 +70,7 @@ from .views import (
     admin_orders_view,
     admin_order_detail_view,
     admin_order_selection_view,
-    admin_mark_payment_received_view,
+    admin_create_test_payment_scenario_view,
     admin_revert_payment_view,
     admin_invoice_detail_view,
 
@@ -84,6 +84,7 @@ from .views import (
     admin_retry_refund_view,
     admin_reject_refund_view,
     admin_reopen_refund_view,
+
 
     # ==========================================================
     # ADMIN COURSE BUILDER
@@ -343,13 +344,13 @@ urlpatterns = [
 
 
     # ----------------------------------------------------------
-    # Mark payment as received
+    # Create test payment scenario
     # ----------------------------------------------------------
 
     path(
-        "orders/<int:order_id>/payment-received/",
-        admin_mark_payment_received_view,
-        name="admin_mark_payment_received",
+        "orders/<int:order_id>/create-test-payment-scenario/",
+        admin_create_test_payment_scenario_view,
+        name="admin_create_test_payment_scenario",
     ),
 
 
@@ -443,6 +444,7 @@ urlpatterns = [
         admin_reopen_refund_view,
         name="admin_reopen_refund",
     ),
+
 
     # ----------------------------------------------------------
     # Order details

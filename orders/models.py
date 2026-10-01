@@ -366,6 +366,10 @@ class OrderCoupon(models.Model):
         )
 
 class Payment(models.Model):
+    class Source(models.TextChoices):
+        RAZORPAY = "razorpay", "Razorpay"
+        SCENARIO = "scenario", "Test Scenario"
+
     class Status(models.TextChoices):
         CREATED = "created", "Created"
         PROCESSING = "processing", "Processing"
@@ -380,8 +384,17 @@ class Payment(models.Model):
         related_name="payment",
     )
 
+    payment_source = models.CharField(
+        max_length=20,
+        choices=Source.choices,
+        default=Source.RAZORPAY,
+        db_index=True,
+    )
+
     razorpay_order_id = models.CharField(
         max_length=100,
+        blank=True,
+        null=True,
         db_index=True,
     )
 
@@ -437,7 +450,6 @@ class Payment(models.Model):
 
     def __str__(self):
         return f"{self.order.order_number} - {self.status}"
-
 
 class Invoice(models.Model):
     order = models.OneToOneField(
