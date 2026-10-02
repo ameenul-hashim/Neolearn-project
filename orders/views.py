@@ -30,6 +30,7 @@ from .models import (
     StudentBatchPurchase,
     Refund,
     RefundItem,
+    OrderTimelineEvent,
 )
 
 from students.models import Cart
@@ -3041,6 +3042,9 @@ def request_refund_view(request):
                 {
                     "success": True,
                     "refund_id": refund.id,
+                    "refund_request_id": (
+                        refund.refund_request_id
+                    ),
                     "order_number": order.order_number,
                     "refund_type": validated_refund_type,
                     "requested_amount": str(
@@ -3401,6 +3405,9 @@ def edit_refund_request_view(request, refund_id):
                 {
                     "success": True,
                     "refund_id": refund.id,
+                    "refund_request_id": (
+                        refund.refund_request_id
+                    ),
                     "order_number": order.order_number,
                     "refund_type": validated_refund_type,
                     "requested_amount": str(

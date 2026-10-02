@@ -51,6 +51,8 @@
                     bg-slate-600
                 {% elif order.status == 'cancelled' %}
                     bg-orange-500
+                {% elif order.status == 'payment_processing' %}
+                    bg-amber-600
                 {% elif order.status == 'payment_failed' %}
                     bg-rose-600
                 {% else %}
@@ -97,8 +99,10 @@
                             3
                         {% elif order.status == "cancelled" %}
                             4
-                        {% elif order.status == "payment_failed" %}
+                        {% elif order.status == "payment_processing" %}
                             5
+                        {% elif order.status == "payment_failed" %}
+                            6
                         {% else %}
                             •
                         {% endif %}
@@ -125,6 +129,8 @@
                             Fully Refunded Order
                         {% elif order.status == "cancelled" %}
                             Cancelled Order
+                        {% elif order.status == "payment_processing" %}
+                            Payment Processing
                         {% elif order.status == "payment_failed" %}
                             Payment Failed Order
                         {% else %}
@@ -155,6 +161,8 @@
                         All batches refunded
                     {% elif order.status == "cancelled" %}
                         Order cancelled by user
+                    {% elif order.status == "payment_processing" %}
+                        Payment is being processed
                     {% elif order.status == "payment_failed" %}
                         Payment failed, no access provided
                     {% endif %}
@@ -177,14 +185,35 @@
             main .text-slate-300\/75 { color: rgba(241, 245, 249, .80) !important; }
 
             /* =====================================================
-               Timeline: one continuous aqua connection + live end node
+               NeoLearn Order Timeline — directional workflow motion
+
+               NORMAL ORDER FLOW:
+               Order Created → Payment → Access
+               Animation: TOP → BOTTOM
+
+               REFUND FLOW:
+               Newer refund (top) ← Older refund (bottom)
+               Animation: BOTTOM → TOP
+
+               All moving lights are aqua-blue.
+               Status colors belong ONLY to the timeline nodes.
             ====================================================== */
+
+            /* -----------------------------------------------------
+               NORMAL ORDER CONNECTORS
+
+               Thin aqua workflow line.
+               Direction: TOP → BOTTOM.
+               The moving aqua bar is slightly larger and repeats
+               continuously with no pause.
+            ----------------------------------------------------- */
             .neo-timeline-connector {
                 position: absolute;
                 overflow: hidden;
                 width: 2px !important;
-                background: rgba(34, 211, 238, .22) !important;
-                box-shadow: 0 0 7px rgba(34, 211, 238, .16);
+                background: rgba(34, 211, 238, .20) !important;
+                box-shadow: 0 0 5px rgba(34, 211, 238, .10);
+                border-radius: 999px;
             }
 
             .neo-timeline-connector::after {
@@ -197,91 +226,210 @@
                 border-radius: 999px;
                 background: linear-gradient(
                     to bottom,
-                    transparent 0%,
-                    rgba(165, 243, 252, .95) 45%,
-                    rgba(34, 211, 238, 1) 100%
+                    rgba(165, 243, 252, .10) 0%,
+                    rgba(165, 243, 252, .98) 35%,
+                    rgba(34, 211, 238, 1) 68%,
+                    rgba(34, 211, 238, .18) 100%
                 );
-                box-shadow: 0 0 7px rgba(34, 211, 238, .65);
-                animation: neoTimelinePulseDown 1.65s linear infinite;
+                box-shadow:
+                    0 0 6px rgba(34, 211, 238, .70),
+                    0 0 10px rgba(34, 211, 238, .28);
+                animation: neoTimelineFlowDown .90s linear infinite;
                 will-change: transform;
             }
 
+            /* -----------------------------------------------------
+               REFUND CONNECTORS
+
+               Refund records are displayed newest → oldest.
+               Therefore the workflow light travels:
+
+                         BOTTOM
+                           ↑
+                           ↑
+                         TOP
+
+               Same aqua-blue animation, independent of the
+               refund status color. The moving bar is slightly
+               larger and repeats continuously.
+            ----------------------------------------------------- */
+            .neo-refund-connector {
+                position: absolute;
+                overflow: hidden;
+                width: 2px !important;
+                background: rgba(34, 211, 238, .20) !important;
+                box-shadow: 0 0 5px rgba(34, 211, 238, .10);
+                border-radius: 999px;
+            }
+
+            .neo-refund-connector::after {
+                content: "";
+                position: absolute;
+                left: 0;
+                bottom: -30%;
+                width: 100%;
+                height: 30%;
+                border-radius: 999px;
+                background: linear-gradient(
+                    to top,
+                    rgba(165, 243, 252, .10) 0%,
+                    rgba(165, 243, 252, .98) 35%,
+                    rgba(34, 211, 238, 1) 68%,
+                    rgba(34, 211, 238, .18) 100%
+                );
+                box-shadow:
+                    0 0 6px rgba(34, 211, 238, .70),
+                    0 0 10px rgba(34, 211, 238, .28);
+                animation: neoRefundFlowUp .90s linear infinite;
+                will-change: transform;
+            }
+
+            /* -----------------------------------------------------
+               REFUND WORKFLOW ENTRY DIVIDER
+
+               Separates the normal order workflow from the refund
+               workflow.
+
+               Direction: LEFT → RIGHT.
+               The moving aqua bar is slightly larger and repeats
+               continuously without stopping.
+            ----------------------------------------------------- */
+            .neo-refund-flow-divider {
+                position: relative;
+                height: 2px;
+                width: calc(100% - 34px);
+                margin: -1px 0 10px 30px;
+                overflow: hidden;
+                background: rgba(34, 211, 238, .16);
+                box-shadow: 0 0 4px rgba(34, 211, 238, .08);
+                border-radius: 999px;
+            }
+
+            .neo-refund-flow-divider::after {
+                content: "";
+                position: absolute;
+                top: 0;
+                left: -30%;
+                width: 30%;
+                height: 100%;
+                border-radius: 999px;
+                background: linear-gradient(
+                    to right,
+                    rgba(34, 211, 238, .12) 0%,
+                    rgba(165, 243, 252, .98) 35%,
+                    rgba(34, 211, 238, 1) 68%,
+                    rgba(34, 211, 238, .16) 100%
+                );
+                box-shadow:
+                    0 0 6px rgba(34, 211, 238, .70),
+                    0 0 10px rgba(34, 211, 238, .25);
+                animation: neoRefundDividerFlow .85s linear infinite;
+                will-change: transform;
+            }
+
+            /* -----------------------------------------------------
+               TIMELINE NODES
+
+               Existing status colors remain unchanged:
+               green = completed/success
+               red   = failed/rejected
+               amber = processing
+               violet = requested
+            ----------------------------------------------------- */
             .neo-timeline-node {
-                animation: neoTimelineNode 2.8s ease-in-out infinite;
+                transform-origin: center;
                 transition: transform .2s ease, box-shadow .2s ease;
             }
 
-            /* Only the final/current state pulses. Previous completed
-               nodes remain stable so the timeline reads left-to-right/top-to-bottom. */
             .neo-timeline-current {
-                animation: neoTimelineCurrentPulse 1.55s ease-in-out infinite !important;
+                animation: neoTimelineCurrentPulse 1.25s ease-in-out infinite !important;
                 box-shadow:
-                    0 0 0 0 rgba(34, 211, 238, .28),
-                    0 0 14px rgba(34, 211, 238, .28);
+                    0 0 0 0 rgba(34, 211, 238, .22),
+                    0 0 12px rgba(34, 211, 238, .20);
             }
 
             .neo-timeline-current.current-green {
                 box-shadow:
-                    0 0 0 0 rgba(52, 211, 153, .30),
-                    0 0 16px rgba(52, 211, 153, .30);
+                    0 0 0 0 rgba(52, 211, 153, .26),
+                    0 0 14px rgba(52, 211, 153, .24);
             }
 
             .neo-timeline-current.current-red {
-                animation: neoTimelineHeartbeat 1.35s ease-in-out infinite !important;
+                animation: neoTimelineHeartbeat 1.15s ease-in-out infinite !important;
                 box-shadow:
-                    0 0 0 0 rgba(248, 113, 113, .28),
-                    0 0 14px rgba(248, 113, 113, .24);
+                    0 0 0 0 rgba(248, 113, 113, .25),
+                    0 0 13px rgba(248, 113, 113, .22);
             }
 
             .neo-timeline-current.current-orange {
                 box-shadow:
-                    0 0 0 0 rgba(251, 146, 60, .28),
-                    0 0 14px rgba(251, 146, 60, .24);
+                    0 0 0 0 rgba(251, 146, 60, .25),
+                    0 0 13px rgba(251, 146, 60, .22);
             }
 
             .neo-timeline-current.current-amber {
                 box-shadow:
-                    0 0 0 0 rgba(251, 191, 36, .28),
-                    0 0 14px rgba(251, 191, 36, .24);
+                    0 0 0 0 rgba(251, 191, 36, .25),
+                    0 0 13px rgba(251, 191, 36, .22);
             }
 
             .neo-timeline-current-ring {
-                animation: neoTimelineRing 1.55s ease-out infinite;
-                border-color: rgba(34, 211, 238, .34) !important;
+                animation: neoTimelineRing 1.45s ease-out infinite;
+                border-color: rgba(34, 211, 238, .30) !important;
             }
 
-            @keyframes neoTimelinePulseDown {
-                0% { transform: translateY(0); opacity: 0; }
-                12% { opacity: 1; }
-                88% { opacity: 1; }
-                100% { transform: translateY(460%); opacity: 0; }
+            /* NORMAL: TOP → BOTTOM, continuous */
+            @keyframes neoTimelineFlowDown {
+                0% {
+                    transform: translateY(0);
+                }
+                100% {
+                    transform: translateY(433.33%);
+                }
             }
 
-            @keyframes neoTimelineNode {
-                0%, 100% { transform: scale(1); }
-                50% { transform: scale(1.018); }
+            /* REFUND: BOTTOM → TOP, continuous */
+            @keyframes neoRefundFlowUp {
+                0% {
+                    transform: translateY(0);
+                }
+                100% {
+                    transform: translateY(-433.33%);
+                }
+            }
+
+            /* REFUND ENTRY: LEFT → RIGHT, continuous */
+            @keyframes neoRefundDividerFlow {
+                0% {
+                    transform: translateX(0);
+                }
+                100% {
+                    transform: translateX(433.33%);
+                }
             }
 
             @keyframes neoTimelineCurrentPulse {
                 0%, 100% { transform: scale(1); }
-                50% { transform: scale(1.075); }
+                50% { transform: scale(1.055); }
             }
 
             @keyframes neoTimelineHeartbeat {
                 0%, 100% { transform: scale(1); }
-                18% { transform: scale(1.12); }
-                32% { transform: scale(.96); }
-                48% { transform: scale(1.08); }
+                18% { transform: scale(1.10); }
+                32% { transform: scale(.97); }
+                48% { transform: scale(1.06); }
                 65% { transform: scale(1); }
             }
 
             @keyframes neoTimelineRing {
-                0% { transform: scale(.85); opacity: .65; }
-                70%, 100% { transform: scale(1.65); opacity: 0; }
+                0% { transform: scale(.85); opacity: .60; }
+                70%, 100% { transform: scale(1.55); opacity: 0; }
             }
 
             @media (prefers-reduced-motion: reduce) {
                 .neo-timeline-connector::after,
+                .neo-refund-connector::after,
+                .neo-refund-flow-divider::after,
                 .neo-timeline-node,
                 .neo-timeline-current,
                 .neo-timeline-current-ring {
@@ -1833,10 +1981,6 @@
                                                 "
                                             >
 
-                                                <p class="text-[8px] leading-4 text-slate-500">
-                                                    Refund available within the 7-day refund window.
-                                                </p>
-
                                                 <button
                                                     type="button"
                                                     data-refund-open
@@ -2844,7 +2988,7 @@
                                                         </span>
 
                                                         <span class="text-[7px] text-slate-600">
-                                                            • Refund #{{ refund.id }}
+                                                            • {{ refund.refund_request_id }}
                                                         </span>
 
                                                     </div>
@@ -2887,6 +3031,7 @@
                                                                 type="button"
                                                                 data-refund-edit
                                                                 data-edit-refund-id="{{ refund.id }}"
+                                                                data-edit-public-refund-id="{{ refund.refund_request_id }}"
                                                                 data-edit-url="{% url 'orders:edit_refund_request' refund_id=refund.id %}"
                                                                 data-edit-reason="{{ refund.reason|escape }}"
                                                                 data-edit-item-ids="{% for refund_item in refund.items.all %}{{ refund_item.order_item_id }}{% if not forloop.last %},{% endif %}{% endfor %}"
@@ -3546,7 +3691,15 @@
                                         <span class="absolute left-1/2 top-6 bottom-0 w-px -translate-x-1/2 neo-timeline-connector"></span>
                                     </div>
                                     <div class="min-w-0 flex-1">
-                                        {% if payment and payment.status == "captured" %}
+                                        {% if order.status == "payment_processing" %}
+                                            <p class="text-[9px] font-black text-amber-200">Payment Processing</p>
+                                            <p class="mt-0.5 text-[7px] font-semibold text-slate-300">
+                                                {% if payment and payment.updated_at %}{{ payment.updated_at|date:"d M Y, h:i A" }}{% else %}Payment in progress{% endif %}
+                                            </p>
+                                            <p class="mt-1 text-[7px] leading-4 text-white/75">
+                                                Your payment is currently being processed. Learning access will be granted after successful capture.
+                                            </p>
+                                        {% elif payment and payment.status == "captured" %}
                                             <p class="text-[9px] font-black text-emerald-200">Payment Successful</p>
                                             <p class="mt-0.5 text-[7px] font-semibold text-slate-300">
                                                 {% if payment.paid_at %}{{ payment.paid_at|date:"d M Y, h:i A" }}{% else %}Payment captured{% endif %}
@@ -3581,7 +3734,9 @@
                                             <span class="z-10 neo-timeline-node {% if not refunds %}neo-timeline-current current-green{% endif %} flex h-6 w-6 items-center justify-center rounded-full bg-emerald-300 text-[9px] font-black text-slate-950">
                                                 <i class="ri-graduation-cap-fill"></i>
                                             </span>
-                                            <span class="absolute left-1/2 top-6 bottom-0 w-px -translate-x-1/2 neo-timeline-connector"></span>
+                                            {% if not refunds %}
+                                                <span class="absolute left-1/2 top-6 bottom-0 w-px -translate-x-1/2 neo-timeline-connector"></span>
+                                            {% endif %}
                                         </div>
                                         <div class="min-w-0 flex-1">
                                             <p class="text-[9px] font-black text-emerald-200">
@@ -3592,6 +3747,14 @@
                                             </p>
                                         </div>
                                     </div>
+                                {% endif %}
+
+                                <!-- REFUND WORKFLOW ENTRY -->
+                                {% if refunds %}
+                                    <div
+                                        class="neo-refund-flow-divider"
+                                        aria-hidden="true"
+                                    ></div>
                                 {% endif %}
 
                                 <!-- REFUNDS -->
@@ -3616,7 +3779,7 @@
                                                 </span>
                                             {% endif %}
                                             {% if not forloop.last %}
-                                                <span class="absolute left-1/2 top-6 bottom-0 w-px -translate-x-1/2 neo-timeline-connector"></span>
+                                                <span class="absolute left-1/2 top-6 bottom-0 w-px -translate-x-1/2 neo-refund-connector"></span>
                                             {% endif %}
                                         </div>
 
@@ -3794,73 +3957,174 @@
                     </section>
 
                     <!-- =================================================
-                         PAYMENT / ORDER SUPPORT STATUS
-                         Used for cancelled / failed orders so the right
-                         column remains useful instead of leaving a blank
-                         area beneath the timeline.
+                         ORDER / PAYMENT / REFUND STATUS CARD
+                         Keeps the right column useful for every state.
                     ================================================== -->
-                    {% if order.status == "cancelled" or order.status == "payment_failed" %}
-                        <section
-                            class="
-                                rounded-xl
-                                border
-                                {% if order.status == "cancelled" %}border-orange-300/20 bg-orange-300/[0.035]{% else %}border-rose-300/20 bg-rose-300/[0.035]{% endif %}
-                                p-3
-                                shadow-[0_10px_30px_rgba(0,0,0,0.16)]
-                                backdrop-blur-xl
-                            "
-                        >
+
+                    {% if order.status == "paid" and not refunds %}
+
+                        <section class="w-full min-w-0 rounded-xl border border-emerald-300/20 bg-emerald-300/[0.035] p-3 shadow-[0_10px_30px_rgba(0,0,0,0.16)] backdrop-blur-xl">
                             <div class="flex items-start gap-2.5">
-                                <span
-                                    class="
-                                        flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border
-                                        {% if order.status == "cancelled" %}border-orange-300/25 bg-orange-300/10 text-orange-200{% else %}border-rose-300/25 bg-rose-300/10 text-rose-200{% endif %}
-                                    "
-                                >
+                                <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-emerald-300/25 bg-emerald-300/10 text-emerald-200">
+                                    <i class="ri-checkbox-circle-line text-base"></i>
+                                </span>
+                                <div class="min-w-0 flex-1">
+                                    <p class="text-[9px] font-black text-white">Payment &amp; Learning Access</p>
+                                    <p class="mt-1 text-[7px] leading-4 text-white/75">Your payment was captured successfully and learning access is active.</p>
+                                </div>
+                            </div>
+                            <div class="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                                <div class="min-w-0 rounded-lg border border-white/10 bg-black/10 px-3 py-2.5">
+                                    <p class="text-[6px] font-black uppercase tracking-[0.14em] text-white/50">Payment</p>
+                                    <p class="mt-1 text-[9px] font-black text-emerald-200">₹{{ order.final_amount|floatformat:2 }}</p>
+                                    <p class="mt-0.5 text-[6px] text-white/60">Captured</p>
+                                </div>
+                                <div class="min-w-0 rounded-lg border border-white/10 bg-black/10 px-3 py-2.5">
+                                    <p class="text-[6px] font-black uppercase tracking-[0.14em] text-white/50">Learning Access</p>
+                                    <p class="mt-1 text-[9px] font-black text-emerald-200">Active</p>
+                                    <p class="mt-0.5 text-[6px] text-white/60">Access granted</p>
+                                </div>
+                            </div>
+                            <div class="mt-2 flex items-center justify-between gap-2 border-t border-white/10 pt-2.5">
+                                <span class="text-[6px] font-black uppercase tracking-[0.14em] text-white/50">Payment Source</span>
+                                <span class="text-[7px] font-black text-white">{% if payment and payment.payment_method %}{{ payment.payment_method|title }}{% else %}Razorpay{% endif %}</span>
+                            </div>
+                        </section>
+
+                    {% elif order.status == "payment_processing" %}
+
+                        <section class="w-full min-w-0 rounded-xl border border-amber-300/20 bg-amber-300/[0.035] p-3 shadow-[0_10px_30px_rgba(0,0,0,0.16)] backdrop-blur-xl">
+                            <div class="flex items-start gap-2.5">
+                                <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-amber-300/25 bg-amber-300/10 text-amber-200">
+                                    <i class="ri-loader-4-line text-base"></i>
+                                </span>
+                                <div class="min-w-0 flex-1">
+                                    <p class="text-[9px] font-black text-white">Payment Processing</p>
+                                    <p class="mt-1 text-[7px] leading-4 text-white/75">Your payment is currently being processed. Please wait for the final payment result.</p>
+                                </div>
+                            </div>
+                            <div class="mt-3 rounded-lg border border-white/10 bg-black/10 px-3 py-2.5">
+                                <div class="flex items-center justify-between gap-2">
+                                    <span class="text-[6px] font-black uppercase tracking-[0.14em] text-white/50">Order Amount</span>
+                                    <span class="text-[9px] font-black text-cyan-200">₹{{ order.final_amount|floatformat:2 }}</span>
+                                </div>
+                                <p class="mt-1.5 text-[6px] leading-4 text-white/60">Learning access will be granted only after successful payment capture.</p>
+                            </div>
+                        </section>
+
+                    {% elif has_processing_refund %}
+
+                        <section class="w-full min-w-0 rounded-xl border border-amber-300/20 bg-amber-300/[0.035] p-3 shadow-[0_10px_30px_rgba(0,0,0,0.16)] backdrop-blur-xl">
+                            <div class="flex items-start gap-2.5">
+                                <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-amber-300/25 bg-amber-300/10 text-amber-200">
+                                    <i class="ri-loader-4-line text-base"></i>
+                                </span>
+                                <div class="min-w-0 flex-1">
+                                    <p class="text-[9px] font-black text-white">Refund Processing</p>
+                                    <p class="mt-1 text-[7px] leading-4 text-white/75">The refund has been approved and is currently being processed.</p>
+                                </div>
+                            </div>
+                            <div class="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                                <div class="rounded-lg border border-white/10 bg-black/10 px-3 py-2.5">
+                                    <p class="text-[6px] font-black uppercase tracking-[0.14em] text-white/50">Refund Amount</p>
+                                    <p class="mt-1 text-[9px] font-black text-amber-200">{% for refund in refunds %}{% if refund.status == "processing" %}₹{{ refund.requested_amount|floatformat:2 }}{% endif %}{% endfor %}</p>
+                                </div>
+                                <div class="rounded-lg border border-white/10 bg-black/10 px-3 py-2.5">
+                                    <p class="text-[6px] font-black uppercase tracking-[0.14em] text-white/50">Status</p>
+                                    <p class="mt-1 text-[9px] font-black text-amber-200">Processing</p>
+                                </div>
+                            </div>
+                            <div class="mt-2 flex items-start gap-2 border-t border-white/10 pt-2.5">
+                                <i class="ri-information-line mt-0.5 shrink-0 text-xs text-amber-200"></i>
+                                <p class="text-[6px] leading-4 text-white/65">The refund is being handled through the payment provider. The final refund status will appear here after processing is completed.</p>
+                            </div>
+                        </section>
+
+                    {% elif has_completed_refund %}
+
+                        <section class="w-full min-w-0 rounded-xl border border-emerald-300/20 bg-emerald-300/[0.035] p-3 shadow-[0_10px_30px_rgba(0,0,0,0.16)] backdrop-blur-xl">
+                            <div class="flex items-start gap-2.5">
+                                <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-emerald-300/25 bg-emerald-300/10 text-emerald-200">
+                                    <i class="ri-checkbox-circle-line text-base"></i>
+                                </span>
+                                <div class="min-w-0 flex-1">
+                                    <p class="text-[9px] font-black text-white">Refund Completed</p>
+                                    <p class="mt-1 text-[7px] leading-4 text-white/75">The refund has been completed successfully.</p>
+                                </div>
+                            </div>
+                            <div class="mt-3 rounded-lg border border-white/10 bg-black/10 px-3 py-2.5">
+                                <div class="flex items-center justify-between gap-2">
+                                    <span class="text-[6px] font-black uppercase tracking-[0.14em] text-white/50">Refunded Amount</span>
+                                    <span class="text-[9px] font-black text-emerald-200">{% for refund in refunds %}{% if refund.status == "completed" %}₹{{ refund.refunded_amount|floatformat:2 }}{% endif %}{% endfor %}</span>
+                                </div>
+                            </div>
+                        </section>
+
+                    {% elif editable_refund %}
+
+                        <section class="w-full min-w-0 rounded-xl border border-violet-300/20 bg-violet-300/[0.035] p-3 shadow-[0_10px_30px_rgba(0,0,0,0.16)] backdrop-blur-xl">
+                            <div class="flex items-start gap-2.5">
+                                <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-violet-300/25 bg-violet-300/10 text-violet-200"><i class="ri-time-line text-base"></i></span>
+                                <div class="min-w-0 flex-1">
+                                    <p class="text-[9px] font-black text-white">Refund Request Submitted</p>
+                                    <p class="mt-1 text-[7px] leading-4 text-white/75">Your refund request is waiting for admin review.</p>
+                                </div>
+                            </div>
+                        </section>
+
+                    {% elif has_rejected_refund %}
+
+                        <section class="w-full min-w-0 rounded-xl border border-rose-300/20 bg-rose-300/[0.035] p-3 shadow-[0_10px_30px_rgba(0,0,0,0.16)] backdrop-blur-xl">
+                            <div class="flex items-start gap-2.5">
+                                <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-rose-300/25 bg-rose-300/10 text-rose-200"><i class="ri-close-circle-line text-base"></i></span>
+                                <div class="min-w-0 flex-1">
+                                    <p class="text-[9px] font-black text-white">Refund Rejected</p>
+                                    <p class="mt-1 text-[7px] leading-4 text-white/75">The refund request was rejected by the administrator.</p>
+                                </div>
+                            </div>
+                        </section>
+
+                    {% elif has_failed_refund %}
+
+                        <section class="w-full min-w-0 rounded-xl border border-rose-300/20 bg-rose-300/[0.035] p-3 shadow-[0_10px_30px_rgba(0,0,0,0.16)] backdrop-blur-xl">
+                            <div class="flex items-start gap-2.5">
+                                <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-rose-300/25 bg-rose-300/10 text-rose-200"><i class="ri-error-warning-line text-base"></i></span>
+                                <div class="min-w-0 flex-1">
+                                    <p class="text-[9px] font-black text-white">Refund Failed</p>
+                                    <p class="mt-1 text-[7px] leading-4 text-white/75">Refund processing could not be completed. Please contact support if needed.</p>
+                                </div>
+                            </div>
+                        </section>
+
+                    {% elif order.status == "cancelled" or order.status == "payment_failed" %}
+
+                        <section class="w-full min-w-0 rounded-xl border {% if order.status == "cancelled" %}border-orange-300/20 bg-orange-300/[0.035]{% else %}border-rose-300/20 bg-rose-300/[0.035]{% endif %} p-3 shadow-[0_10px_30px_rgba(0,0,0,0.16)] backdrop-blur-xl">
+                            <div class="flex items-start gap-2.5">
+                                <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border {% if order.status == "cancelled" %}border-orange-300/25 bg-orange-300/10 text-orange-200{% else %}border-rose-300/25 bg-rose-300/10 text-rose-200{% endif %}">
                                     <i class="{% if order.status == "cancelled" %}ri-shield-check-line{% else %}ri-bank-card-2-line{% endif %} text-base"></i>
                                 </span>
-
                                 <div class="min-w-0 flex-1">
                                     {% if order.status == "cancelled" %}
                                         <p class="text-[9px] font-black text-white">Payment Cancelled Safely</p>
-                                        <p class="mt-1 text-[7px] leading-4 text-white/75">
-                                            This order was cancelled before successful payment/access. No learning access was granted.
-                                        </p>
+                                        <p class="mt-1 text-[7px] leading-4 text-white/75">This order was cancelled before successful payment/access. No learning access was granted.</p>
                                     {% else %}
                                         <p class="text-[9px] font-black text-white">Payment Could Not Be Completed</p>
-                                        <p class="mt-1 text-[7px] leading-4 text-white/75">
-                                            Your payment was not captured and learning access was not granted.
-                                        </p>
+                                        <p class="mt-1 text-[7px] leading-4 text-white/75">Your payment was not captured and learning access was not granted.</p>
                                     {% endif %}
                                 </div>
                             </div>
-
-                            <div
-                                class="
-                                    mt-3 rounded-lg border border-white/10 bg-black/10 px-3 py-2.5
-                                "
-                            >
+                            <div class="mt-3 rounded-lg border border-white/10 bg-black/10 px-3 py-2.5">
                                 <div class="flex items-start gap-2">
                                     <i class="ri-information-line mt-0.5 shrink-0 text-xs {% if order.status == "cancelled" %}text-orange-200{% else %}text-rose-200{% endif %}"></i>
-                                    <p class="text-[7px] leading-4 text-white/80">
-                                        If money was debited from your bank account, please allow time for the payment provider/bank to return it to the original payment source. If you do not receive the amount within 24 hours, please contact our support team for further assistance.
-                                    </p>
+                                    <p class="text-[7px] leading-4 text-white/80">If money was debited from your bank account, please allow time for the payment provider/bank to return it to the original payment source. If you do not receive the amount within 24 hours, please contact our support team for further assistance.</p>
                                 </div>
                             </div>
-
                             <div class="mt-3 flex items-center justify-between gap-2 border-t border-white/10 pt-2.5">
-                                <span class="text-[6px] font-black uppercase tracking-[0.14em] text-white/55">
-                                    Payment source
-                                </span>
-                                <span class="text-[7px] font-black text-white">
-                                    {% if payment and payment.payment_method %}
-                                        {{ payment.payment_method|title }}
-                                    {% else %}
-                                        Original payment source
-                                    {% endif %}
-                                </span>
+                                <span class="text-[6px] font-black uppercase tracking-[0.14em] text-white/55">Payment source</span>
+                                <span class="text-[7px] font-black text-white">{% if payment and payment.payment_method %}{{ payment.payment_method|title }}{% else %}Original payment source{% endif %}</span>
                             </div>
                         </section>
+
                     {% endif %}
 
                     <!-- =================================================
@@ -3886,6 +4150,7 @@
                                 type="button"
                                 data-refund-edit
                                 data-edit-refund-id="{{ editable_refund.id }}"
+                                data-edit-public-refund-id="{{ editable_refund.refund_request_id }}"
                                 data-edit-url="{% url 'orders:edit_refund_request' refund_id=editable_refund.id %}"
                                 data-edit-reason="{{ editable_refund.reason|escape }}"
                                 data-edit-item-ids="{% for refund_item in editable_refund.items.all %}{{ refund_item.order_item_id }}{% if not forloop.last %},{% endif %}{% endfor %}"
@@ -4713,6 +4978,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     let editMode = false;
     let activeEditRefundId = "";
+    let activeEditPublicRefundId = "";
     let activeSubmitUrl = refundEndpoint;
     let activeEditItemIds = [];
 
@@ -4803,11 +5069,41 @@ document.addEventListener("DOMContentLoaded", function () {
     function getFullAmount() {
 
         /*
-         * Full refund means all batches currently eligible for this
-         * request. During edit mode this includes the existing request
-         * items plus any other batches that became available.
+         * Full-refund preview MUST follow the same historical pricing
+         * policy used by the server.
+         *
+         * 1. Single-batch order:
+         *    Use Order.final_amount.
+         *
+         * 2. Multiple batches + multi_checkout:
+         *    Use the complete historical Order.final_amount because
+         *    the multi-checkout discount cannot be safely allocated
+         *    between individual batches.
+         *
+         * 3. Multiple batches without multi_checkout:
+         *    Use the sum of the currently refundable OrderItem.final_price
+         *    values. This also works while editing a REQUESTED refund,
+         *    because getSelectableCheckboxes() includes the editable
+         *    request items again.
+         *
+         * The browser only displays the estimate. The backend remains
+         * authoritative and recalculates the actual refund amount.
          */
-        return getSelectableCheckboxes().reduce(
+        const selectableCheckboxes =
+            getSelectableCheckboxes();
+
+        if (
+            selectableCheckboxes.length <= 1
+            || isMultiCheckout
+        ) {
+
+            return parseFloat(
+                "{{ order.final_amount|default:'0' }}"
+            ) || 0;
+
+        }
+
+        return selectableCheckboxes.reduce(
             (total, checkbox) => {
 
                 return total + (
@@ -4984,8 +5280,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
         amountNote.textContent =
             editMode
-                ? "Full update uses all batches currently eligible after excluding this existing request."
-                : "Full refund amount is verified by the server before the request is created.";
+                ? "Historical refund preview. The server verifies the final amount when this request is updated."
+                : "Historical refund preview. The server verifies the final amount when this request is submitted.";
 
     }
 
@@ -5067,6 +5363,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
         editMode = false;
         activeEditRefundId = "";
+        activeEditPublicRefundId = "";
         activeSubmitUrl = refundEndpoint;
         activeEditItemIds = [];
 
@@ -5119,6 +5416,9 @@ document.addEventListener("DOMContentLoaded", function () {
         activeEditRefundId =
             button.dataset.editRefundId || "";
 
+        activeEditPublicRefundId =
+            button.dataset.editPublicRefundId || "";
+
         activeSubmitUrl =
             button.dataset.editUrl || "";
 
@@ -5132,8 +5432,11 @@ document.addEventListener("DOMContentLoaded", function () {
             "Edit Refund Request";
 
         modalSubtitle.textContent =
-            "Refund request #RFD-"
-            + String(activeEditRefundId).padStart(5, "0")
+            "Refund request #"
+            + (
+                activeEditPublicRefundId
+                || "Refund ID unavailable"
+            )
             + " · Order #{{ order.order_number }}";
 
         submitLabel.textContent =
@@ -5676,10 +5979,11 @@ document.addEventListener("DOMContentLoaded", function () {
 
                     successMessage.textContent =
                         "Refund request #"
-                        + String(
-                            data.refund_id
-                            || activeEditRefundId
-                        ).padStart(5, "0")
+                        + (
+                            data.refund_request_id
+                            || activeEditPublicRefundId
+                            || "Refund ID unavailable"
+                        )
                         + " has been updated successfully. Requested amount: "
                         + formatAmount(
                             parseFloat(
@@ -5696,10 +6000,10 @@ document.addEventListener("DOMContentLoaded", function () {
 
                     successMessage.textContent =
                         "Refund request #"
-                        + String(
-                            data.refund_id
-                            || "0"
-                        ).padStart(5, "0")
+                        + (
+                            data.refund_request_id
+                            || "Refund ID unavailable"
+                        )
                         + " has been submitted. Requested amount: "
                         + formatAmount(
                             parseFloat(

@@ -1044,6 +1044,925 @@
                     </section>
 
 
+
+
+
+                    <!-- =================================================
+                         REFUND DETAILS
+                    ================================================== -->
+
+                    {% if refunds %}
+
+                    <section class="neo-card">
+
+                        <div class="neo-card-header">
+
+                            <div class="neo-icon neo-icon-violet">
+                                <i class="ri-refund-2-line"></i>
+                            </div>
+
+                            <div class="min-w-0 flex-1">
+
+                                <div class="flex items-center justify-between gap-2">
+
+                                    <div class="min-w-0">
+
+                                        <h2 class="neo-card-title">
+                                            Refund Details
+                                        </h2>
+
+                                        <p class="neo-card-subtitle">
+                                            Refund requests and selected batches for this order
+                                        </p>
+
+                                    </div>
+
+                                    <span
+                                        class="
+                                            inline-flex
+                                            shrink-0
+                                            items-center
+                                            rounded-full
+                                            border
+                                            border-violet-400/20
+                                            bg-violet-400/[0.06]
+                                            px-2
+                                            py-1
+                                            text-[7px]
+                                            font-black
+                                            uppercase
+                                            tracking-wide
+                                            text-violet-200
+                                        "
+                                    >
+                                        {{ refunds|length }}
+                                        {% if refunds|length == 1 %}
+                                            Request
+                                        {% else %}
+                                            Requests
+                                        {% endif %}
+                                    </span>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+
+                        <div class="space-y-3 p-3">
+
+                            {% for refund in refunds %}
+
+                                <!-- =================================================
+                                     INDIVIDUAL REFUND REQUEST
+                                ================================================== -->
+
+                                <article
+                                    class="
+                                        overflow-hidden
+                                        rounded-xl
+                                        border
+                                        border-violet-400/15
+                                        bg-violet-400/[0.025]
+                                    "
+                                >
+
+                                    <!-- REFUND REQUEST HEADER -->
+
+                                    <div
+                                        class="
+                                            border-b
+                                            border-white/[0.06]
+                                            px-3
+                                            py-2.5
+                                        "
+                                    >
+
+                                        <div
+                                            class="
+                                                flex
+                                                flex-col
+                                                gap-2
+                                                sm:flex-row
+                                                sm:items-center
+                                                sm:justify-between
+                                            "
+                                        >
+
+                                            <div class="min-w-0">
+
+                                                <div class="flex flex-wrap items-center gap-2">
+
+                                                    {% if refund.items.count == order.admin_total_item_count %}
+
+                                                        <span
+                                                            class="
+                                                                inline-flex
+                                                                items-center
+                                                                rounded-full
+                                                                border
+                                                                border-cyan-400/20
+                                                                bg-cyan-400/[0.06]
+                                                                px-2
+                                                                py-1
+                                                                text-[7px]
+                                                                font-black
+                                                                uppercase
+                                                                tracking-wide
+                                                                text-cyan-300
+                                                            "
+                                                        >
+                                                            <i class="ri-refund-2-line mr-1"></i>
+                                                            Full Refund
+                                                        </span>
+
+                                                    {% else %}
+
+                                                        <span
+                                                            class="
+                                                                inline-flex
+                                                                items-center
+                                                                rounded-full
+                                                                border
+                                                                border-cyan-400/20
+                                                                bg-cyan-400/[0.06]
+                                                                px-2
+                                                                py-1
+                                                                text-[7px]
+                                                                font-black
+                                                                uppercase
+                                                                tracking-wide
+                                                                text-cyan-300
+                                                            "
+                                                        >
+                                                            <i class="ri-refund-2-line mr-1"></i>
+                                                            Partial Refund
+                                                        </span>
+
+                                                    {% endif %}
+
+                                                    <span
+                                                        class="
+                                                            text-[8px]
+                                                            font-black
+                                                            text-slate-300
+                                                        "
+                                                    >
+                                                        {{ refund.refund_request_id }}
+                                                    </span>
+
+                                                </div>
+
+                                                <p
+                                                    class="
+                                                        mt-1.5
+                                                        text-[7px]
+                                                        font-semibold
+                                                        text-slate-500
+                                                    "
+                                                >
+                                                    Requested on
+                                                    {% if refund.requested_at %}
+                                                        {{ refund.requested_at|date:"d M Y, h:i A" }}
+                                                    {% else %}
+                                                        —
+                                                    {% endif %}
+                                                </p>
+
+                                            </div>
+
+
+                                            <!-- STATUS -->
+
+                                            <div class="shrink-0">
+
+                                                {% if refund.status == "completed" %}
+
+                                                    <span class="neo-badge neo-badge-green">
+                                                        <i class="ri-checkbox-circle-line mr-1"></i>
+                                                        Completed
+                                                    </span>
+
+                                                {% elif refund.status == "processing" %}
+
+                                                    <span class="neo-badge neo-badge-amber">
+                                                        <i class="ri-loader-4-line mr-1"></i>
+                                                        Processing
+                                                    </span>
+
+                                                {% elif refund.status == "requested" %}
+
+                                                    <span class="neo-badge neo-badge-violet">
+                                                        <i class="ri-time-line mr-1"></i>
+                                                        Requested
+                                                    </span>
+
+                                                {% elif refund.status == "rejected" %}
+
+                                                    <span class="neo-badge neo-badge-red">
+                                                        <i class="ri-close-circle-line mr-1"></i>
+                                                        Rejected
+                                                    </span>
+
+                                                {% elif refund.status == "failed" %}
+
+                                                    <span class="neo-badge neo-badge-red">
+                                                        <i class="ri-error-warning-line mr-1"></i>
+                                                        Failed
+                                                    </span>
+
+                                                {% else %}
+
+                                                    <span class="neo-badge neo-badge-red">
+                                                        {{ refund.status|title }}
+                                                    </span>
+
+                                                {% endif %}
+
+                                            </div>
+
+                                        </div>
+
+                                    </div>
+
+
+                                    <!-- AMOUNT OVERVIEW -->
+
+                                    <div
+                                        class="
+                                            grid
+                                            grid-cols-1
+                                            divide-y
+                                            divide-white/[0.05]
+                                            sm:grid-cols-3
+                                            sm:divide-x
+                                            sm:divide-y-0
+                                        "
+                                    >
+
+                                        <div class="px-3 py-3">
+
+                                            <p class="neo-mini-label">
+                                                Requested Amount
+                                            </p>
+
+                                            <p
+                                                class="
+                                                    mt-1
+                                                    text-sm
+                                                    font-black
+                                                    text-violet-200
+                                                "
+                                            >
+                                                ₹{{ refund.requested_amount|floatformat:2 }}
+                                            </p>
+
+                                        </div>
+
+
+                                        <div class="px-3 py-3">
+
+                                            <p class="neo-mini-label">
+                                                Refunded Amount
+                                            </p>
+
+                                            <p
+                                                class="
+                                                    mt-1
+                                                    text-sm
+                                                    font-black
+                                                    text-emerald-300
+                                                "
+                                            >
+                                                ₹{{ refund.refunded_amount|floatformat:2 }}
+                                            </p>
+
+                                        </div>
+
+
+                                        <div class="px-3 py-3">
+
+                                            <p class="neo-mini-label">
+                                                Selected Batches
+                                            </p>
+
+                                            <p
+                                                class="
+                                                    mt-1
+                                                    text-sm
+                                                    font-black
+                                                    text-cyan-300
+                                                "
+                                            >
+                                                {{ refund.items.count }}
+                                                /
+                                                {{ order.admin_total_item_count }}
+                                            </p>
+
+                                            <p
+                                                class="
+                                                    mt-0.5
+                                                    text-[7px]
+                                                    font-semibold
+                                                    text-slate-600
+                                                "
+                                            >
+                                                Selected for this refund
+                                            </p>
+
+                                        </div>
+
+                                    </div>
+
+
+                                    <!-- REFUND BATCHES + REASON -->
+
+                                    <div
+                                        class="
+                                            grid
+                                            grid-cols-1
+                                            gap-3
+                                            border-t
+                                            border-white/[0.06]
+                                            p-3
+                                            lg:grid-cols-2
+                                        "
+                                    >
+
+                                        <!-- REFUND BATCHES -->
+
+                                        <div class="min-w-0">
+
+                                            <div
+                                                class="
+                                                    mb-2
+                                                    flex
+                                                    items-center
+                                                    justify-between
+                                                    gap-2
+                                                "
+                                            >
+
+                                                <div>
+
+                                                    <p
+                                                        class="
+                                                            text-[8px]
+                                                            font-black
+                                                            uppercase
+                                                            tracking-wide
+                                                            text-slate-300
+                                                        "
+                                                    >
+                                                        Refund Batches
+                                                    </p>
+
+                                                    <p
+                                                        class="
+                                                            mt-0.5
+                                                            text-[7px]
+                                                            font-semibold
+                                                            text-slate-600
+                                                        "
+                                                    >
+                                                        Batches included in this request
+                                                    </p>
+
+                                                </div>
+
+                                                <span
+                                                    class="
+                                                        rounded-full
+                                                        border
+                                                        border-white/[0.06]
+                                                        bg-white/[0.02]
+                                                        px-2
+                                                        py-1
+                                                        text-[7px]
+                                                        font-black
+                                                        text-slate-500
+                                                    "
+                                                >
+                                                    {{ refund.items.count }}
+                                                </span>
+
+                                            </div>
+
+
+                                            {% for refund_item in refund.items.all %}
+
+                                                <div
+                                                    class="
+                                                        mb-1.5
+                                                        flex
+                                                        items-center
+                                                        justify-between
+                                                        gap-3
+                                                        rounded-lg
+                                                        border
+                                                        border-cyan-400/10
+                                                        bg-cyan-400/[0.025]
+                                                        px-2.5
+                                                        py-2
+                                                        last:mb-0
+                                                    "
+                                                >
+
+                                                    <div
+                                                        class="
+                                                            flex
+                                                            min-w-0
+                                                            items-center
+                                                            gap-2
+                                                        "
+                                                    >
+
+                                                        <div
+                                                            class="
+                                                                flex
+                                                                h-7
+                                                                w-7
+                                                                shrink-0
+                                                                items-center
+                                                                justify-center
+                                                                rounded-lg
+                                                                border
+                                                                border-cyan-400/15
+                                                                bg-cyan-400/[0.05]
+                                                            "
+                                                        >
+                                                            <i
+                                                                class="
+                                                                    ri-book-2-line
+                                                                    text-[11px]
+                                                                    text-cyan-300
+                                                                "
+                                                            ></i>
+                                                        </div>
+
+                                                        <div class="min-w-0">
+
+                                                            <p
+                                                                class="
+                                                                    break-words
+                                                                    text-[8px]
+                                                                    font-black
+                                                                    text-slate-200
+                                                                "
+                                                            >
+                                                                {{ refund_item.order_item.batch_name }}
+                                                            </p>
+
+                                                            <p
+                                                                class="
+                                                                    mt-0.5
+                                                                    text-[6px]
+                                                                    font-bold
+                                                                    uppercase
+                                                                    tracking-wide
+                                                                    text-cyan-500
+                                                                "
+                                                            >
+                                                                Selected for refund
+                                                            </p>
+
+                                                        </div>
+
+                                                    </div>
+
+                                                    <div class="shrink-0 text-right">
+
+                                                        <p
+                                                            class="
+                                                                text-[9px]
+                                                                font-black
+                                                                text-violet-200
+                                                            "
+                                                        >
+                                                            ₹{{ refund_item.refund_amount|floatformat:2 }}
+                                                        </p>
+
+                                                    </div>
+
+                                                </div>
+
+                                            {% empty %}
+
+                                                <div
+                                                    class="
+                                                        rounded-lg
+                                                        border
+                                                        border-white/[0.06]
+                                                        bg-white/[0.015]
+                                                        px-3
+                                                        py-5
+                                                        text-center
+                                                    "
+                                                >
+                                                    <i
+                                                        class="
+                                                            ri-inbox-line
+                                                            text-lg
+                                                            text-slate-700
+                                                        "
+                                                    ></i>
+
+                                                    <p
+                                                        class="
+                                                            mt-1
+                                                            text-[8px]
+                                                            font-bold
+                                                            text-slate-500
+                                                        "
+                                                    >
+                                                        No refund batches recorded
+                                                    </p>
+                                                </div>
+
+                                            {% endfor %}
+
+                                        </div>
+
+
+                                        <!-- REFUND REASON -->
+
+                                        <div class="min-w-0">
+
+                                            <p
+                                                class="
+                                                    text-[8px]
+                                                    font-black
+                                                    uppercase
+                                                    tracking-wide
+                                                    text-slate-300
+                                                "
+                                            >
+                                                Refund Reason
+                                            </p>
+
+                                            <div
+                                                class="
+                                                    mt-2
+                                                    min-h-[90px]
+                                                    rounded-lg
+                                                    border
+                                                    border-white/[0.06]
+                                                    bg-white/[0.015]
+                                                    p-2.5
+                                                "
+                                            >
+
+                                                {% if refund.reason %}
+
+                                                    <p
+                                                        class="
+                                                            whitespace-pre-wrap
+                                                            break-words
+                                                            text-[8px]
+                                                            font-semibold
+                                                            leading-5
+                                                            text-slate-300
+                                                        "
+                                                    >
+                                                        {{ refund.reason }}
+                                                    </p>
+
+                                                {% else %}
+
+                                                    <p
+                                                        class="
+                                                            text-[8px]
+                                                            font-semibold
+                                                            text-slate-600
+                                                        "
+                                                    >
+                                                        No refund reason provided.
+                                                    </p>
+
+                                                {% endif %}
+
+                                            </div>
+
+
+                                            {% if refund.admin_note %}
+
+                                                <div class="mt-2">
+
+                                                    <p
+                                                        class="
+                                                            text-[7px]
+                                                            font-black
+                                                            uppercase
+                                                            tracking-wide
+                                                            text-slate-500
+                                                        "
+                                                    >
+                                                        Admin Note
+                                                    </p>
+
+                                                    <div
+                                                        class="
+                                                            mt-1
+                                                            rounded-lg
+                                                            border
+                                                            border-amber-400/10
+                                                            bg-amber-400/[0.025]
+                                                            p-2.5
+                                                        "
+                                                    >
+
+                                                        <p
+                                                            class="
+                                                                whitespace-pre-wrap
+                                                                break-words
+                                                                text-[8px]
+                                                                font-semibold
+                                                                leading-5
+                                                                text-slate-400
+                                                            "
+                                                        >
+                                                            {{ refund.admin_note }}
+                                                        </p>
+
+                                                    </div>
+
+                                                </div>
+
+                                            {% endif %}
+
+                                        </div>
+
+                                    </div>
+
+
+                                    <!-- PROCESSING DETAILS -->
+
+                                    <div
+                                        class="
+                                            grid
+                                            grid-cols-1
+                                            divide-y
+                                            divide-white/[0.05]
+                                            border-t
+                                            border-white/[0.06]
+                                            sm:grid-cols-2
+                                            sm:divide-x
+                                            sm:divide-y-0
+                                        "
+                                    >
+
+                                        <div class="px-3 py-3">
+
+                                            <p class="neo-mini-label">
+                                                Submitted
+                                            </p>
+
+                                            <p
+                                                class="
+                                                    mt-1
+                                                    text-[8px]
+                                                    font-black
+                                                    text-slate-200
+                                                "
+                                            >
+                                                {% if refund.requested_at %}
+                                                    {{ refund.requested_at|date:"d M Y, h:i A" }}
+                                                {% else %}
+                                                    —
+                                                {% endif %}
+                                            </p>
+
+                                        </div>
+
+
+                                        <div class="px-3 py-3">
+
+                                            <p class="neo-mini-label">
+                                                Current State
+                                            </p>
+
+                                            <p
+                                                class="
+                                                    mt-1
+                                                    text-[8px]
+                                                    font-black
+                                                    text-slate-200
+                                                "
+                                            >
+
+                                                {% if refund.status == "completed" %}
+                                                    Completed
+                                                {% elif refund.status == "processing" %}
+                                                    Processing
+                                                {% elif refund.status == "requested" %}
+                                                    Awaiting review
+                                                {% elif refund.status == "rejected" %}
+                                                    Rejected
+                                                {% elif refund.status == "failed" %}
+                                                    Failed
+                                                {% else %}
+                                                    {{ refund.status|title }}
+                                                {% endif %}
+
+                                            </p>
+
+                                        </div>
+
+                                    </div>
+
+
+                                    <!-- RAZORPAY / PROCESSING INFORMATION -->
+
+                                    {% if refund.razorpay_refund_id or refund.processed_at %}
+
+                                        <div
+                                            class="
+                                                border-t
+                                                border-white/[0.06]
+                                                px-3
+                                                py-3
+                                            "
+                                        >
+
+                                            <div
+                                                class="
+                                                    grid
+                                                    grid-cols-1
+                                                    gap-2
+                                                    sm:grid-cols-2
+                                                "
+                                            >
+
+                                                {% if refund.razorpay_refund_id %}
+
+                                                    <div
+                                                        class="
+                                                            rounded-lg
+                                                            border
+                                                            border-white/[0.06]
+                                                            bg-white/[0.015]
+                                                            px-2.5
+                                                            py-2
+                                                        "
+                                                    >
+
+                                                        <p class="neo-mini-label">
+                                                            Razorpay Refund ID
+                                                        </p>
+
+                                                        <p
+                                                            class="
+                                                                mt-1
+                                                                break-all
+                                                                text-[8px]
+                                                                font-black
+                                                                text-slate-300
+                                                            "
+                                                        >
+                                                            {{ refund.razorpay_refund_id }}
+                                                        </p>
+
+                                                    </div>
+
+                                                {% endif %}
+
+
+                                                {% if refund.processed_at %}
+
+                                                    <div
+                                                        class="
+                                                            rounded-lg
+                                                            border
+                                                            border-white/[0.06]
+                                                            bg-white/[0.015]
+                                                            px-2.5
+                                                            py-2
+                                                        "
+                                                    >
+
+                                                        <p class="neo-mini-label">
+                                                            Processed At
+                                                        </p>
+
+                                                        <p
+                                                            class="
+                                                                mt-1
+                                                                text-[8px]
+                                                                font-black
+                                                                text-slate-300
+                                                            "
+                                                        >
+                                                            {{ refund.processed_at|date:"d M Y, h:i A" }}
+                                                        </p>
+
+                                                    </div>
+
+                                                {% endif %}
+
+                                            </div>
+
+                                        </div>
+
+                                    {% endif %}
+
+                                </article>
+
+                            {% endfor %}
+
+
+                            <!-- =================================================
+                                 OVERALL REFUND SUMMARY
+                            ================================================== -->
+
+                            <div
+                                class="
+                                    grid
+                                    grid-cols-1
+                                    divide-y
+                                    divide-white/[0.05]
+                                    overflow-hidden
+                                    rounded-xl
+                                    border
+                                    border-white/[0.06]
+                                    bg-white/[0.015]
+                                    sm:grid-cols-3
+                                    sm:divide-x
+                                    sm:divide-y-0
+                                "
+                            >
+
+                                <div class="px-3 py-3">
+
+                                    <p class="neo-mini-label">
+                                        Completed Refunded
+                                    </p>
+
+                                    <p
+                                        class="
+                                            mt-1
+                                            text-sm
+                                            font-black
+                                            text-emerald-300
+                                        "
+                                    >
+                                        ₹{{ refunded_amount|floatformat:2 }}
+                                    </p>
+
+                                </div>
+
+
+                                <div class="px-3 py-3">
+
+                                    <p class="neo-mini-label">
+                                        Net Paid
+                                    </p>
+
+                                    <p
+                                        class="
+                                            mt-1
+                                            text-sm
+                                            font-black
+                                            text-cyan-300
+                                        "
+                                    >
+                                        ₹{{ net_paid|floatformat:2 }}
+                                    </p>
+
+                                </div>
+
+
+                                <div class="px-3 py-3">
+
+                                    <p class="neo-mini-label">
+                                        Refund Requests
+                                    </p>
+
+                                    <p
+                                        class="
+                                            mt-1
+                                            text-sm
+                                            font-black
+                                            text-violet-200
+                                        "
+                                    >
+                                        {{ refunds|length }}
+                                    </p>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </section>
+
+                    {% endif %}
+
+
+
+
+
                     <!-- =================================================
                          ORDER TIMELINE
                     ================================================== -->
@@ -1076,7 +1995,7 @@
 
                                     <div class="relative flex w-6 shrink-0 justify-center">
 
-                                        <span class="z-10 flex h-6 w-6 items-center justify-center rounded-full bg-cyan-300 text-[9px] font-black text-slate-950">
+                                        <span class="z-10 neo-admin-timeline-node neo-admin-timeline-current flex h-6 w-6 items-center justify-center rounded-full bg-cyan-300 text-[9px] font-black text-slate-950">
                                             <i class="ri-shopping-bag-3-fill"></i>
                                         </span>
 
@@ -1111,25 +2030,25 @@
 
                                         {% if payment and payment.status == "captured" %}
 
-                                            <span class="z-10 flex h-6 w-6 items-center justify-center rounded-full bg-emerald-300 text-[9px] font-black text-slate-950">
+                                            <span class="z-10 neo-admin-timeline-node neo-admin-timeline-current current-green flex h-6 w-6 items-center justify-center rounded-full bg-emerald-300 text-[9px] font-black text-slate-950">
                                                 <i class="ri-bank-card-fill"></i>
                                             </span>
 
                                         {% elif order.status == "cancelled" %}
 
-                                            <span class="z-10 flex h-6 w-6 items-center justify-center rounded-full bg-orange-300 text-[9px] font-black text-slate-950">
+                                            <span class="z-10 neo-admin-timeline-node neo-admin-timeline-current flex h-6 w-6 items-center justify-center rounded-full bg-orange-300 text-[9px] font-black text-slate-950">
                                                 <i class="ri-close-circle-fill"></i>
                                             </span>
 
                                         {% elif order.status == "payment_failed" %}
 
-                                            <span class="z-10 flex h-6 w-6 items-center justify-center rounded-full bg-rose-300 text-[9px] font-black text-slate-950">
+                                            <span class="z-10 neo-admin-timeline-node neo-admin-timeline-current current-red flex h-6 w-6 items-center justify-center rounded-full bg-rose-300 text-[9px] font-black text-slate-950">
                                                 <i class="ri-error-warning-fill"></i>
                                             </span>
 
                                         {% else %}
 
-                                            <span class="z-10 flex h-6 w-6 items-center justify-center rounded-full bg-amber-300 text-[9px] font-black text-slate-950">
+                                            <span class="z-10 neo-admin-timeline-node neo-admin-timeline-current current-amber flex h-6 w-6 items-center justify-center rounded-full bg-amber-300 text-[9px] font-black text-slate-950">
                                                 <i class="ri-time-line"></i>
                                             </span>
 
@@ -1217,22 +2136,26 @@
 
                                             {% if order.status == "paid" %}
 
-                                                <span class="z-10 flex h-6 w-6 items-center justify-center rounded-full bg-emerald-300 text-[9px] font-black text-slate-950">
+                                                <span class="z-10 neo-admin-timeline-node neo-admin-timeline-current current-green flex h-6 w-6 items-center justify-center rounded-full bg-emerald-300 text-[9px] font-black text-slate-950">
                                                     <i class="ri-graduation-cap-fill"></i>
                                                 </span>
 
                                             {% elif order.status == "partially_refunded" %}
 
-                                                <span class="z-10 flex h-6 w-6 items-center justify-center rounded-full bg-violet-300 text-[9px] font-black text-slate-950">
+                                                <span class="z-10 neo-admin-timeline-node neo-admin-timeline-current flex h-6 w-6 items-center justify-center rounded-full bg-violet-300 text-[9px] font-black text-slate-950">
                                                     <i class="ri-refund-2-fill"></i>
                                                 </span>
 
                                             {% else %}
 
-                                                <span class="z-10 flex h-6 w-6 items-center justify-center rounded-full bg-sky-300 text-[9px] font-black text-slate-950">
+                                                <span class="z-10 neo-admin-timeline-node neo-admin-timeline-current current-green flex h-6 w-6 items-center justify-center rounded-full bg-sky-300 text-[9px] font-black text-slate-950">
                                                     <i class="ri-refund-2-fill"></i>
                                                 </span>
 
+                                            {% endif %}
+
+                                            {% if not refunds %}
+                                                <span class="neo-timeline-line absolute left-1/2 top-6 bottom-0 -translate-x-1/2"></span>
                                             {% endif %}
 
                                         </div>
@@ -1279,6 +2202,16 @@
                                 {% endif %}
 
 
+                                <!-- REFUND WORKFLOW ENTRY -->
+
+                                {% if refunds %}
+                                    <div
+                                        class="neo-admin-refund-flow-divider"
+                                        aria-hidden="true"
+                                    ></div>
+                                {% endif %}
+
+
                                 <!-- REFUND EVENTS -->
 
                                 {% for refund in order.refunds.all %}
@@ -1289,28 +2222,34 @@
 
                                             {% if refund.status == "requested" %}
 
-                                                <span class="z-10 flex h-6 w-6 items-center justify-center rounded-full bg-violet-300 text-[9px] font-black text-slate-950">
+                                                <span class="z-10 neo-admin-timeline-node neo-admin-timeline-current flex h-6 w-6 items-center justify-center rounded-full bg-violet-300 text-[9px] font-black text-slate-950">
                                                     <i class="ri-refund-2-fill"></i>
                                                 </span>
 
                                             {% elif refund.status == "processing" %}
 
-                                                <span class="z-10 flex h-6 w-6 items-center justify-center rounded-full bg-amber-300 text-[9px] font-black text-slate-950">
+                                                <span class="z-10 neo-admin-timeline-node neo-admin-timeline-current current-amber flex h-6 w-6 items-center justify-center rounded-full bg-amber-300 text-[9px] font-black text-slate-950">
                                                     <i class="ri-loader-4-line"></i>
                                                 </span>
 
                                             {% elif refund.status == "completed" %}
 
-                                                <span class="z-10 flex h-6 w-6 items-center justify-center rounded-full bg-emerald-300 text-[9px] font-black text-slate-950">
+                                                <span class="z-10 neo-admin-timeline-node neo-admin-timeline-current current-green flex h-6 w-6 items-center justify-center rounded-full bg-emerald-300 text-[9px] font-black text-slate-950">
                                                     <i class="ri-checkbox-circle-fill"></i>
                                                 </span>
 
                                             {% else %}
 
-                                                <span class="z-10 flex h-6 w-6 items-center justify-center rounded-full bg-rose-300 text-[9px] font-black text-slate-950">
+                                                <span class="z-10 neo-admin-timeline-node neo-admin-timeline-current current-red flex h-6 w-6 items-center justify-center rounded-full bg-rose-300 text-[9px] font-black text-slate-950">
                                                     <i class="ri-close-circle-fill"></i>
                                                 </span>
 
+                                            {% endif %}
+
+                                            {% if not forloop.last %}
+                                                <span
+                                                    class="absolute left-1/2 top-6 bottom-[-1.5rem] w-[2px] -translate-x-1/2 neo-admin-refund-connector"
+                                                ></span>
                                             {% endif %}
 
                                         </div>
@@ -1321,7 +2260,7 @@
                                             <div class="flex flex-wrap items-center gap-1.5">
 
                                                 <p class="text-[9px] font-black text-violet-200">
-                                                    Refund #{{ refund.id }}
+                                                    {{ refund.refund_request_id }}
                                                 </p>
 
                                                 <span class="neo-badge neo-badge-violet">
@@ -1353,6 +2292,11 @@
 
 
                 </div>
+
+
+
+
+
 
             </main>
 
@@ -1951,9 +2895,11 @@
                     </section>
 
 
-                    <!-- =================================================
-                         REFUND SUMMARY — DISPLAY ONLY
-                    ================================================== -->
+                <!-- =================================================
+                     REFUND SUMMARY — LEFT COLUMN
+                ================================================== -->
+
+                {% if refunds %}
 
                     <section class="neo-card">
 
@@ -1966,77 +2912,229 @@
                             <div class="min-w-0">
                                 <h2 class="neo-card-title">Refund Summary</h2>
                                 <p class="neo-card-subtitle">
-                                    Refund activity for this order
+                                    Overall refund activity for this order
                                 </p>
                             </div>
 
                         </div>
 
+                        <div class="space-y-2 p-3">
 
-                        <div class="p-3">
+                            <!-- REQUEST COUNT -->
+                            <div
+                                class="
+                                    flex
+                                    items-center
+                                    justify-between
+                                    gap-3
+                                    rounded-xl
+                                    border
+                                    border-violet-400/10
+                                    bg-violet-400/[0.025]
+                                    px-3
+                                    py-2.5
+                                "
+                            >
 
-                            {% for refund in order.refunds.all %}
+                                <div class="flex min-w-0 items-center gap-2">
+                                    <span
+                                        class="
+                                            flex
+                                            h-8
+                                            w-8
+                                            shrink-0
+                                            items-center
+                                            justify-center
+                                            rounded-lg
+                                            border
+                                            border-violet-400/15
+                                            bg-violet-400/10
+                                            text-violet-300
+                                        "
+                                    >
+                                        <i class="ri-refund-2-line"></i>
+                                    </span>
 
-                                <div class="mb-2 last:mb-0 rounded-xl border border-violet-400/10 bg-violet-400/[0.025] p-2.5">
-
-                                    <div class="flex items-center justify-between gap-2">
-
-                                        <span class="text-[8px] font-black text-violet-200">
-                                            Refund #{{ refund.id }}
-                                        </span>
-
-                                        {% if refund.status == "completed" %}
-                                            <span class="neo-badge neo-badge-green">Completed</span>
-                                        {% elif refund.status == "processing" %}
-                                            <span class="neo-badge neo-badge-amber">Processing</span>
-                                        {% elif refund.status == "requested" %}
-                                            <span class="neo-badge neo-badge-violet">Requested</span>
-                                        {% elif refund.status == "rejected" %}
-                                            <span class="neo-badge neo-badge-red">Rejected</span>
-                                        {% else %}
-                                            <span class="neo-badge neo-badge-red">Failed</span>
-                                        {% endif %}
-
+                                    <div class="min-w-0">
+                                        <p class="text-[9px] font-black text-white">
+                                            Refund Requests
+                                        </p>
+                                        <p class="mt-0.5 text-[7px] text-slate-500">
+                                            Total requests submitted for this order
+                                        </p>
                                     </div>
+                                </div>
+
+                                <span
+                                    class="
+                                        shrink-0
+                                        rounded-full
+                                        border
+                                        border-violet-400/20
+                                        bg-violet-400/10
+                                        px-2.5
+                                        py-1
+                                        text-[9px]
+                                        font-black
+                                        text-violet-300
+                                    "
+                                >
+                                    {{ refunds|length }}
+                                </span>
+
+                            </div>
 
 
-                                    <div class="mt-2 grid grid-cols-2 gap-2">
+                            <!-- AMOUNT SUMMARY -->
+                            <div
+                                class="
+                                    grid
+                                    grid-cols-1
+                                    divide-y
+                                    divide-white/[0.05]
+                                    overflow-hidden
+                                    rounded-xl
+                                    border
+                                    border-white/[0.06]
+                                    bg-white/[0.015]
+                                    sm:grid-cols-2
+                                    sm:divide-x
+                                    sm:divide-y-0
+                                "
+                            >
 
-                                        <div>
-                                            <p class="neo-mini-label">Requested</p>
-                                            <p class="neo-mini-value">
+                                <div class="px-3 py-3">
+                                    <p class="neo-mini-label">Completed Refunded</p>
+                                    <p class="mt-1 text-base font-black text-emerald-300">
+                                        ₹{{ refunded_amount|floatformat:2 }}
+                                    </p>
+                                    <p class="mt-0.5 text-[7px] font-semibold text-slate-600">
+                                        Successfully refunded amount
+                                    </p>
+                                </div>
+
+                                <div class="px-3 py-3">
+                                    <p class="neo-mini-label">Net Paid</p>
+                                    <p class="mt-1 text-base font-black text-cyan-300">
+                                        ₹{{ net_paid|floatformat:2 }}
+                                    </p>
+                                    <p class="mt-0.5 text-[7px] font-semibold text-slate-600">
+                                        Remaining amount after completed refunds
+                                    </p>
+                                </div>
+
+                            </div>
+
+
+                            <!-- REQUEST OVERVIEW -->
+                            <div class="space-y-1.5">
+
+                                {% for refund in refunds %}
+
+                                    <div
+                                        class="
+                                            flex
+                                            items-center
+                                            justify-between
+                                            gap-3
+                                            rounded-lg
+                                            border
+                                            border-white/[0.06]
+                                            bg-white/[0.015]
+                                            px-2.5
+                                            py-2
+                                        "
+                                    >
+
+                                        <div class="min-w-0">
+
+                                            <div class="flex flex-wrap items-center gap-1.5">
+
+                                                <span class="text-[8px] font-black text-slate-200">
+                                                    {{ refund.refund_request_id }}
+                                                </span>
+
+                                                {% if refund.status == "completed" %}
+                                                    <span class="neo-badge neo-badge-green">
+                                                        Completed
+                                                    </span>
+                                                {% elif refund.status == "processing" %}
+                                                    <span class="neo-badge neo-badge-amber">
+                                                        Processing
+                                                    </span>
+                                                {% elif refund.status == "requested" %}
+                                                    <span class="neo-badge neo-badge-violet">
+                                                        Requested
+                                                    </span>
+                                                {% elif refund.status == "rejected" %}
+                                                    <span class="neo-badge neo-badge-red">
+                                                        Rejected
+                                                    </span>
+                                                {% elif refund.status == "failed" %}
+                                                    <span class="neo-badge neo-badge-red">
+                                                        Failed
+                                                    </span>
+                                                {% else %}
+                                                    <span class="neo-badge neo-badge-muted">
+                                                        {{ refund.status|title }}
+                                                    </span>
+                                                {% endif %}
+
+                                            </div>
+
+                                            <p class="mt-0.5 text-[7px] text-slate-500">
+                                                {% if refund.requested_at %}
+                                                    {{ refund.requested_at|date:"d M Y, h:i A" }}
+                                                {% else %}
+                                                    —
+                                                {% endif %}
+                                            </p>
+
+                                        </div>
+
+                                        <div class="shrink-0 text-right">
+                                            <p class="text-[9px] font-black text-violet-200">
                                                 ₹{{ refund.requested_amount|floatformat:2 }}
                                             </p>
-                                        </div>
-
-                                        <div>
-                                            <p class="neo-mini-label">Refunded</p>
-                                            <p class="neo-mini-value">
-                                                ₹{{ refund.refunded_amount|floatformat:2 }}
+                                            <p class="mt-0.5 text-[6px] uppercase tracking-wide text-slate-600">
+                                                Requested
                                             </p>
                                         </div>
 
                                     </div>
 
-                                </div>
+                                {% endfor %}
 
-                            {% empty %}
+                            </div>
 
-                                <div class="rounded-xl border border-white/[0.06] bg-white/[0.015] px-3 py-6 text-center">
-                                    <i class="ri-refund-2-line text-xl text-slate-700"></i>
-                                    <p class="mt-2 text-[9px] font-bold text-slate-500">
-                                        No refund activity
+
+                            <!-- NOTE -->
+                            <div
+                                class="
+                                    rounded-lg
+                                    border
+                                    border-cyan-400/10
+                                    bg-cyan-400/[0.025]
+                                    px-2.5
+                                    py-2
+                                "
+                            >
+                                <div class="flex items-start gap-2">
+                                    <i class="ri-information-line mt-0.5 text-cyan-300"></i>
+                                    <p class="text-[7px] leading-4 text-slate-500">
+                                        Detailed refund information, selected batches,
+                                        refund reasons and Razorpay processing information
+                                        are available in the Refund Details card on the
+                                        right side.
                                     </p>
-                                    <p class="mt-1 text-[7px] text-slate-600">
-                                        Refund processing is handled separately.
-                                    </p>
                                 </div>
-
-                            {% endfor %}
+                            </div>
 
                         </div>
 
                     </section>
+
+                {% endif %}
 
 
                     <!-- =================================================
@@ -2846,17 +3944,189 @@ body:has(.neo-admin-order-page) {
 
 
 /* =========================================================
-   TIMELINE
+   TIMELINE — ORDER DETAILS WORKFLOW ANIMATION ONLY
 ========================================================= */
 
+/*
+   NORMAL ORDER FLOW
+   Order Created → Payment → Learning Access
+   Direction: TOP → BOTTOM
+*/
 .neo-timeline-line {
-    width: 1px;
+    position: absolute;
+    overflow: hidden;
+    width: 2px !important;
+    background: rgba(34, 211, 238, .20) !important;
+    box-shadow: 0 0 5px rgba(34, 211, 238, .10);
+    border-radius: 999px;
+}
+
+.neo-timeline-line::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: -30%;
+    width: 100%;
+    height: 30%;
+    border-radius: 999px;
     background: linear-gradient(
         to bottom,
-        rgba(34,211,238,.75),
-        rgba(34,211,238,.12)
+        rgba(165, 243, 252, .10) 0%,
+        rgba(165, 243, 252, .98) 35%,
+        rgba(34, 211, 238, 1) 68%,
+        rgba(34, 211, 238, .18) 100%
     );
-    box-shadow: 0 0 7px rgba(34,211,238,.16);
+    box-shadow:
+        0 0 6px rgba(34, 211, 238, .70),
+        0 0 10px rgba(34, 211, 238, .28);
+    animation: neoAdminTimelineFlowDown .90s linear infinite;
+    will-change: transform;
+}
+
+/*
+   REFUND WORKFLOW ENTRY
+   Direction: LEFT → RIGHT
+*/
+.neo-admin-refund-flow-divider {
+    position: relative;
+    height: 2px;
+    width: calc(100% - 34px);
+    margin: -1px 0 10px 30px;
+    overflow: hidden;
+    background: rgba(34, 211, 238, .16);
+    box-shadow: 0 0 4px rgba(34, 211, 238, .08);
+    border-radius: 999px;
+}
+
+.neo-admin-refund-flow-divider::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -30%;
+    width: 30%;
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(
+        to right,
+        rgba(34, 211, 238, .12) 0%,
+        rgba(165, 243, 252, .98) 35%,
+        rgba(34, 211, 238, 1) 68%,
+        rgba(34, 211, 238, .16) 100%
+    );
+    box-shadow:
+        0 0 6px rgba(34, 211, 238, .70),
+        0 0 10px rgba(34, 211, 238, .25);
+    animation: neoAdminRefundDividerFlow .85s linear infinite;
+    will-change: transform;
+}
+
+/*
+   REFUND WORKFLOW
+   Refund records are newest → oldest, so the light travels
+   BOTTOM → TOP. The moving light remains aqua-blue.
+*/
+.neo-admin-refund-connector {
+    position: absolute;
+    overflow: hidden;
+    width: 2px !important;
+    background: rgba(34, 211, 238, .20) !important;
+    box-shadow: 0 0 5px rgba(34, 211, 238, .10);
+    border-radius: 999px;
+}
+
+.neo-admin-refund-connector::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: -30%;
+    width: 100%;
+    height: 30%;
+    border-radius: 999px;
+    background: linear-gradient(
+        to top,
+        rgba(165, 243, 252, .10) 0%,
+        rgba(165, 243, 252, .98) 35%,
+        rgba(34, 211, 238, 1) 68%,
+        rgba(34, 211, 238, .18) 100%
+    );
+    box-shadow:
+        0 0 6px rgba(34, 211, 238, .70),
+        0 0 10px rgba(34, 211, 238, .28);
+    animation: neoAdminRefundFlowUp .90s linear infinite;
+    will-change: transform;
+}
+
+/* Status node animation only inside this order timeline. */
+.neo-admin-timeline-node {
+    transform-origin: center;
+    transition: transform .2s ease, box-shadow .2s ease;
+}
+
+.neo-admin-timeline-current {
+    animation: neoAdminTimelineCurrentPulse 1.25s ease-in-out infinite !important;
+    box-shadow:
+        0 0 0 0 rgba(34, 211, 238, .22),
+        0 0 12px rgba(34, 211, 238, .20);
+}
+
+.neo-admin-timeline-current.current-green {
+    box-shadow:
+        0 0 0 0 rgba(52, 211, 153, .26),
+        0 0 14px rgba(52, 211, 153, .24);
+}
+
+.neo-admin-timeline-current.current-red {
+    animation: neoAdminTimelineHeartbeat 1.15s ease-in-out infinite !important;
+    box-shadow:
+        0 0 0 0 rgba(248, 113, 113, .25),
+        0 0 13px rgba(248, 113, 113, .22);
+}
+
+.neo-admin-timeline-current.current-amber {
+    box-shadow:
+        0 0 0 0 rgba(251, 191, 36, .25),
+        0 0 13px rgba(251, 191, 36, .22);
+}
+
+/* Continuous TOP → BOTTOM */
+@keyframes neoAdminTimelineFlowDown {
+    0% { transform: translateY(0); }
+    100% { transform: translateY(433.33%); }
+}
+
+/* Continuous BOTTOM → TOP */
+@keyframes neoAdminRefundFlowUp {
+    0% { transform: translateY(0); }
+    100% { transform: translateY(-433.33%); }
+}
+
+/* Continuous LEFT → RIGHT */
+@keyframes neoAdminRefundDividerFlow {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(433.33%); }
+}
+
+@keyframes neoAdminTimelineCurrentPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.055); }
+}
+
+@keyframes neoAdminTimelineHeartbeat {
+    0%, 100% { transform: scale(1); }
+    18% { transform: scale(1.10); }
+    32% { transform: scale(.97); }
+    48% { transform: scale(1.06); }
+    65% { transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .neo-timeline-line::after,
+    .neo-admin-refund-flow-divider::after,
+    .neo-admin-refund-connector::after,
+    .neo-admin-timeline-node,
+    .neo-admin-timeline-current {
+        animation: none !important;
+    }
 }
 
 

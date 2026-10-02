@@ -9,7 +9,10 @@ from django.core.exceptions import ValidationError
 from django.contrib.auth.models import User
 from django.core.paginator import Paginator
 from django.db.models import Q
-from orders.helpers import execute_refund
+from orders.helpers import (
+    execute_refund,
+    create_order_timeline_event,
+)
 from .decorators import admin_required
 from .helpers import (
     create_batch,
@@ -2212,12 +2215,45 @@ def admin_order_detail_view(
         "admins/orders/order_detail.html",
         {
             "order": order,
+
+            # ==================================================
+            # REFUND INFORMATION
+            # ==================================================
+
+            "refunds": getattr(
+                order,
+                "admin_refunds",
+                [],
+            ),
+
+            "refunded_amount": getattr(
+                order,
+                "admin_refunded_amount",
+                Decimal("0.00"),
+            ),
+
+            "net_paid": getattr(
+                order,
+                "admin_net_paid",
+                order.final_amount,
+            ),
+
+            "refund_count": getattr(
+                order,
+                "admin_refund_count",
+                0,
+            ),
+
+            "timeline_events": getattr(
+                order,
+                "admin_timeline_events",
+                [],
+            ),
         },
     )
 
-
 # ==========================================================
-# CREATE TEST PAYMENT SCENARIO
+# CREATE / RESTORE TEST PAYMENT ACCESS
 # ==========================================================
 
 
@@ -2234,46 +2270,42 @@ def admin_create_test_payment_scenario_view(
     order_id,
 ):
     """
-    Create a local test payment scenario for Admin Order Management.
+    Create or restore a paid payment state for Admin Order
+    Management testing.
 
-    This action is ONLY for local testing.
+    This action supports TWO payment situations:
 
-    Allowed source order states:
+        1. SCENARIO payment
+           -> No real Razorpay payment ID
+           -> Used for local testing
 
-        PENDING
-        PAYMENT_PROCESSING
-        PAYMENT_FAILED
-        CANCELLED
+        2. REAL RAZORPAY payment
+           -> Existing real Razorpay payment ID
+           -> Existing real payment is preserved
+           -> Never converted into SCENARIO
 
-    Result:
+    Purpose:
 
-        Payment
-            -> payment_source = SCENARIO
-            -> status = CAPTURED
-            -> No Razorpay payment ID
+        This action is used to test/recover the complete:
 
-        Order
-            -> PAID
+            Payment
+                ->
+            Order
+                ->
+            Student Access
 
-        Invoice
-            -> Ensured
+        workflow.
 
-        StudentBatchPurchase
-            -> ACTIVE
+    Important rules:
 
-    IMPORTANT:
-
-        This action NEVER calls Razorpay.
-
-        This action NEVER creates a fake Razorpay
-        payment ID.
-
-        A real Razorpay payment ID already attached
-        to the payment is never converted into a
-        scenario payment.
-
-    This action is intended only to test the complete
-    local Order -> Refund -> Access workflow.
+        - A real Razorpay payment ID is NEVER removed.
+        - A real Razorpay payment is NEVER converted into
+          a Scenario payment.
+        - No fake Razorpay payment ID is created.
+        - This action NEVER calls Razorpay.
+        - REFUNDED purchases cannot be reactivated.
+        - REFUNDED and PARTIALLY_REFUNDED orders remain protected.
+        - REVOKED student access can be restored to ACTIVE.
     """
 
     # ------------------------------------------------------
@@ -2285,6 +2317,7 @@ def admin_create_test_payment_scenario_view(
         Payment,
         Invoice,
         StudentBatchPurchase,
+        OrderTimelineEvent,
     )
 
     try:
@@ -2316,8 +2349,8 @@ def admin_create_test_payment_scenario_view(
                     request,
                     (
                         "A refunded or partially refunded "
-                        "order cannot be converted into a "
-                        "test payment scenario."
+                        "order cannot be restored through "
+                        "the test payment action."
                     ),
                 )
 
@@ -2327,7 +2360,20 @@ def admin_create_test_payment_scenario_view(
                 )
 
             # --------------------------------------------------
-            # ALLOWED ORDER STATES
+            # ORDER STATES
+            # --------------------------------------------------
+            #
+            # Scenario payments are allowed for:
+            #
+            #     PENDING
+            #     PAYMENT_PROCESSING
+            #     PAYMENT_FAILED
+            #     CANCELLED
+            #
+            # A real already-paid order is also allowed so that
+            # student access can be restored when the student
+            # has already completed a real Razorpay payment.
+            #
             # --------------------------------------------------
 
             allowed_statuses = {
@@ -2335,6 +2381,7 @@ def admin_create_test_payment_scenario_view(
                 Order.Status.PAYMENT_PROCESSING,
                 Order.Status.PAYMENT_FAILED,
                 Order.Status.CANCELLED,
+                Order.Status.PAID,
             }
 
             if order.status not in allowed_statuses:
@@ -2342,9 +2389,8 @@ def admin_create_test_payment_scenario_view(
                 messages.error(
                     request,
                     (
-                        "A test payment scenario can only be "
-                        "created for pending, processing, failed, "
-                        "or cancelled orders."
+                        "This payment recovery action is not "
+                        "available for the current order status."
                     ),
                 )
 
@@ -2381,6 +2427,7 @@ def admin_create_test_payment_scenario_view(
 
             payment = (
                 Payment.objects
+                .select_for_update()
                 .filter(
                     order=order,
                 )
@@ -2388,54 +2435,120 @@ def admin_create_test_payment_scenario_view(
             )
 
             # --------------------------------------------------
-            # CREATE / CONVERT PAYMENT TO SCENARIO
+            # DETERMINE PAYMENT TYPE
+            # --------------------------------------------------
+
+            is_real_razorpay_payment = (
+                payment is not None
+                and bool(
+                    payment.razorpay_payment_id
+                )
+            )
+
+            # --------------------------------------------------
+            # CREATE PAYMENT IF MISSING
             # --------------------------------------------------
 
             if payment is None:
 
                 payment = Payment.objects.create(
                     order=order,
-                    payment_source=Payment.Source.SCENARIO,
+                    payment_source=(
+                        Payment.Source.SCENARIO
+                    ),
                     razorpay_order_id=None,
                     razorpay_payment_id=None,
                     amount=order.final_amount,
                     currency=order.currency,
-                    status=Payment.Status.CAPTURED,
+                    status=(
+                        Payment.Status.CAPTURED
+                    ),
                     captured_at=timezone.now(),
                     failure_reason="",
                 )
 
+                is_real_razorpay_payment = False
+
+            # --------------------------------------------------
+            # REAL RAZORPAY PAYMENT
+            # --------------------------------------------------
+            #
+            # IMPORTANT:
+            #
+            # If a real Razorpay payment ID already exists,
+            # preserve the payment exactly as a real payment.
+            #
+            # NEVER:
+            #
+            #     payment_source = SCENARIO
+            #
+            # NEVER:
+            #
+            #     razorpay_payment_id = None
+            #
+            # --------------------------------------------------
+
+            elif is_real_razorpay_payment:
+
+                # --------------------------------------------------
+                # PRESERVE REAL RAZORPAY PAYMENT
+                # --------------------------------------------------
+
+                payment.payment_source = (
+                    Payment.Source.RAZORPAY
+                )
+
+                payment.status = (
+                    Payment.Status.CAPTURED
+                )
+
+                payment.amount = (
+                    order.final_amount
+                )
+
+                payment.currency = (
+                    order.currency
+                )
+
+                payment.captured_at = (
+                    payment.captured_at
+                    or timezone.now()
+                )
+
+                payment.failure_reason = ""
+
+                # --------------------------------------------------
+                # IMPORTANT:
+                #
+                # razorpay_payment_id is intentionally NOT changed.
+                #
+                # The real payment ID stays exactly as it is.
+                # --------------------------------------------------
+
+                payment.save(
+                    update_fields=[
+                        "payment_source",
+                        "status",
+                        "amount",
+                        "currency",
+                        "captured_at",
+                        "failure_reason",
+                        "updated_at",
+                    ]
+                )
+
+            # --------------------------------------------------
+            # EXISTING SCENARIO / NON-RAZORPAY PAYMENT
+            # --------------------------------------------------
+
             else:
-
-                # --------------------------------------------------
-                # NEVER CONVERT A REAL RAZORPAY PAYMENT
-                # --------------------------------------------------
-
-                if payment.razorpay_payment_id:
-
-                    messages.error(
-                        request,
-                        (
-                            "This payment already contains a "
-                            "real Razorpay payment ID. It cannot "
-                            "be converted into a test scenario."
-                        ),
-                    )
-
-                    return redirect(
-                        "admin_order_detail",
-                        order_id=order.id,
-                    )
-
-                # --------------------------------------------------
-                # SCENARIO PAYMENT
-                # --------------------------------------------------
 
                 payment.payment_source = (
                     Payment.Source.SCENARIO
                 )
 
                 payment.razorpay_payment_id = None
+
                 payment.status = (
                     Payment.Status.CAPTURED
                 )
@@ -2487,6 +2600,38 @@ def admin_create_test_payment_scenario_view(
                     "paid_at",
                     "updated_at",
                 ]
+            )
+
+            # --------------------------------------------------
+            # PAYMENT SUCCESS TIMELINE
+            # --------------------------------------------------
+
+            create_order_timeline_event(
+                order=order,
+                payment=payment,
+                event_type=(
+                    OrderTimelineEvent
+                    .EventType
+                    .PAYMENT_SUCCEEDED
+                ),
+                title="Payment Successful",
+                description=(
+                    "Payment was captured successfully."
+                ),
+                metadata={
+                    "payment_source": (
+                        payment.payment_source
+                    ),
+                    "amount": str(
+                        payment.amount
+                    ),
+                    "currency": (
+                        payment.currency
+                    ),
+                    "razorpay_payment_id": (
+                        payment.razorpay_payment_id
+                    ),
+                },
             )
 
             # --------------------------------------------------
@@ -2557,7 +2702,9 @@ def admin_create_test_payment_scenario_view(
 
                     if existing_purchase is not None:
 
+                        # --------------------------------------------------
                         # NEVER REACTIVATE REFUNDED PURCHASE
+                        # --------------------------------------------------
 
                         if (
                             existing_purchase.status
@@ -2580,7 +2727,9 @@ def admin_create_test_payment_scenario_view(
                                 "Refunded batch purchase conflict."
                             )
 
+                        # --------------------------------------------------
                         # PREVENT DUPLICATE PURCHASE
+                        # --------------------------------------------------
 
                         messages.error(
                             request,
@@ -2618,7 +2767,9 @@ def admin_create_test_payment_scenario_view(
 
                 else:
 
+                    # --------------------------------------------------
                     # NEVER REACTIVATE REFUNDED PURCHASE
+                    # --------------------------------------------------
 
                     if (
                         purchase.status
@@ -2640,7 +2791,9 @@ def admin_create_test_payment_scenario_view(
                             "Refunded batch purchase cannot be reactivated."
                         )
 
+                    # --------------------------------------------------
                     # ACTIVE / REVOKED -> ACTIVE
+                    # --------------------------------------------------
 
                     purchase.status = (
                         StudentBatchPurchase
@@ -2656,19 +2809,62 @@ def admin_create_test_payment_scenario_view(
                         ]
                     )
 
+            # --------------------------------------------------
+            # ACCESS GRANTED TIMELINE
+            # --------------------------------------------------
+
+            create_order_timeline_event(
+                order=order,
+                payment=payment,
+                event_type=(
+                    OrderTimelineEvent
+                    .EventType
+                    .ACCESS_GRANTED
+                ),
+                title="Learning Access Granted",
+                description=(
+                    "Learning access was granted for the "
+                    "batches included in the paid order."
+                ),
+                metadata={
+                    "order_item_count": len(
+                        order_items
+                    ),
+                    "payment_source": (
+                        payment.payment_source
+                    ),
+                    "razorpay_payment_id": (
+                        payment.razorpay_payment_id
+                    ),
+                },
+            )
+
         # ------------------------------------------------------
-        # SUCCESS
+        # SUCCESS MESSAGE
         # ------------------------------------------------------
 
-        messages.success(
-            request,
-            (
-                f"Test payment scenario created for "
-                f"order {order.order_number}. "
-                "Order is now paid and student access "
-                "has been granted."
-            ),
-        )
+        if is_real_razorpay_payment:
+
+            messages.success(
+                request,
+                (
+                    f"Real Razorpay payment for order "
+                    f"{order.order_number} was preserved "
+                    "and student access has been restored."
+                ),
+            )
+
+        else:
+
+            messages.success(
+                request,
+                (
+                    f"Test payment scenario created for "
+                    f"order {order.order_number}. "
+                    "Order is now paid and student access "
+                    "has been granted."
+                ),
+            )
 
     # ----------------------------------------------------------
     # ORDER NOT FOUND
@@ -2704,8 +2900,8 @@ def admin_create_test_payment_scenario_view(
         messages.error(
             request,
             (
-                "Unable to create the test payment "
-                "scenario. Please try again."
+                "Unable to process the payment/access "
+                "recovery action. Please try again."
             ),
         )
 
@@ -2767,6 +2963,7 @@ def admin_revert_payment_view(
         Payment,
         StudentBatchPurchase,
         Invoice,
+        OrderTimelineEvent,
     )
 
     try:
@@ -2858,6 +3055,21 @@ def admin_revert_payment_view(
                     ]
                 )
 
+                create_order_timeline_event(
+                    order=order,
+                    payment=payment,
+                    event_type=(
+                        OrderTimelineEvent.EventType.PAYMENT_FAILED
+                    ),
+                    title="Payment Failed",
+                    description=(
+                        "Payment was reverted by an administrator."
+                    ),
+                    metadata={
+                        "reason": "Payment reverted by admin.",
+                    },
+                )
+
             # --------------------------------------------------
             # REMOVE INVOICE
             # --------------------------------------------------
@@ -2880,20 +3092,41 @@ def admin_revert_payment_view(
             # REVOKE ACTIVE STUDENT ACCESS
             # --------------------------------------------------
 
-            StudentBatchPurchase.objects.filter(
-                order=order,
-                student=order.user,
-                status=(
-                    StudentBatchPurchase
-                    .Status.ACTIVE
-                ),
-            ).update(
-                status=(
-                    StudentBatchPurchase
-                    .Status.REVOKED
-                ),
-                refunded_at=None,
+            revoked_access_count = (
+                StudentBatchPurchase.objects.filter(
+                    order=order,
+                    student=order.user,
+                    status=(
+                        StudentBatchPurchase
+                        .Status.ACTIVE
+                    ),
+                ).update(
+                    status=(
+                        StudentBatchPurchase
+                        .Status.REVOKED
+                    ),
+                    refunded_at=None,
+                )
             )
+
+            if revoked_access_count > 0:
+                create_order_timeline_event(
+                    order=order,
+                    payment=payment,
+                    event_type=(
+                        OrderTimelineEvent.EventType.ACCESS_REVOKED
+                    ),
+                    title="Learning Access Revoked",
+                    description=(
+                        "Learning access was revoked after "
+                        "the payment was reverted."
+                    ),
+                    metadata={
+                        "revoked_access_count": (
+                            revoked_access_count
+                        ),
+                    },
+                )
 
             # --------------------------------------------------
             # ORDER -> PAYMENT_FAILED
@@ -3587,7 +3820,10 @@ def admin_reject_refund_view(
     Student access remains unchanged.
     """
 
-    from orders.models import Refund
+    from orders.models import (
+        Refund,
+        OrderTimelineEvent,
+    )
 
     refund = get_object_or_404(
         Refund,
@@ -3690,6 +3926,22 @@ def admin_reject_refund_view(
                 ]
             )
 
+            create_order_timeline_event(
+                order=locked_refund.order,
+                refund=locked_refund,
+                event_type=(
+                    OrderTimelineEvent.EventType.REFUND_REJECTED
+                ),
+                title="Refund Rejected",
+                description=(
+                    "The refund request was rejected by "
+                    "an administrator."
+                ),
+                metadata={
+                    "rejection_reason": rejection_reason,
+                },
+            )
+
         messages.success(
             request,
             (
@@ -3745,7 +3997,10 @@ def admin_reopen_refund_view(
     creates a genuinely new refund request.
     """
 
-    from orders.models import Refund
+    from orders.models import (
+        Refund,
+        OrderTimelineEvent,
+    )
 
     try:
 
@@ -3797,6 +4052,19 @@ def admin_reopen_refund_view(
                 ]
             )
 
+            create_order_timeline_event(
+                order=refund.order,
+                refund=refund,
+                event_type=(
+                    OrderTimelineEvent.EventType.REFUND_REOPENED
+                ),
+                title="Refund Reopened",
+                description=(
+                    "The previously rejected refund request "
+                    "was reopened for review."
+                ),
+            )
+
         messages.success(
             request,
             (
@@ -3833,5 +4101,3 @@ def admin_reopen_refund_view(
         "admin_refund_detail",
         refund_id=refund.id,
     )
-
-

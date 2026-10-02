@@ -619,6 +619,36 @@ class Refund(models.Model):
         related_name="refund_requests",
     )
 
+    # =========================================================
+    # PUBLIC REFUND REQUEST ID
+    # =========================================================
+    #
+    # Examples:
+    #
+    #     NEORFD-2026-FA6B8A0C
+    #     NEORFD-2026-X7K9M2Q4
+    #     NEORFD-2026-P4N8Z6T1
+    #
+    # This is the public refund ID shown to students/admins.
+    #
+    # It is:
+    #   - random
+    #   - unique
+    #   - automatically generated
+    #   - not based on refund.id
+    #   - not sequential
+    #   - unchanged when the refund is edited
+    # =========================================================
+
+    refund_request_id = models.CharField(
+        max_length=40,
+        unique=True,
+        editable=False,
+        blank=True,
+        null=True,
+        db_index=True,
+    )
+
     reason = models.TextField()
 
     status = models.CharField(
@@ -664,9 +694,38 @@ class Refund(models.Model):
         ordering = ["-requested_at"]
 
     def __str__(self):
-        return f"Refund #{self.pk} - {self.order.order_number}"
+        return (
+            f"{self.refund_request_id} - "
+            f"{self.order.order_number}"
+        )
 
+    def save(self, *args, **kwargs):
+        # Generate the public refund ID only when
+        # this refund does not already have one.
+        #
+        # Once generated, the same ID is kept permanently,
+        # including when the student edits/reopens the refund.
 
+        if not self.refund_request_id:
+            year = timezone.now().year
+
+            while True:
+                refund_id = (
+                    f"NEORFD-{year}-"
+                    f"{uuid.uuid4().hex[:8].upper()}"
+                )
+
+                # Prevent a duplicate public refund ID.
+                if not Refund.objects.filter(
+                    refund_request_id=refund_id
+                ).exists():
+                    self.refund_request_id = refund_id
+                    break
+
+        super().save(
+            *args,
+            **kwargs,
+        )
 class RefundItem(models.Model):
     refund = models.ForeignKey(
         Refund,
@@ -788,4 +847,152 @@ class RefundAttempt(models.Model):
             f"Refund #{self.refund_id} - "
             f"Attempt #{self.attempt_number} - "
             f"{self.status}"
+        )
+        
+class OrderTimelineEvent(models.Model):
+    class EventType(models.TextChoices):
+        ORDER_CREATED = (
+            "order_created",
+            "Order Created",
+        )
+
+        PAYMENT_CREATED = (
+            "payment_created",
+            "Payment Created",
+        )
+
+        PAYMENT_PROCESSING = (
+            "payment_processing",
+            "Payment Processing",
+        )
+
+        PAYMENT_SUCCEEDED = (
+            "payment_succeeded",
+            "Payment Successful",
+        )
+
+        PAYMENT_FAILED = (
+            "payment_failed",
+            "Payment Failed",
+        )
+
+        ORDER_CANCELLED = (
+            "order_cancelled",
+            "Order Cancelled",
+        )
+
+        ACCESS_GRANTED = (
+            "access_granted",
+            "Learning Access Granted",
+        )
+
+        ACCESS_REVOKED = (
+            "access_revoked",
+            "Learning Access Revoked",
+        )
+
+        REFUND_REQUESTED = (
+            "refund_requested",
+            "Refund Requested",
+        )
+
+        REFUND_PROCESSING = (
+            "refund_processing",
+            "Refund Processing",
+        )
+
+        REFUND_COMPLETED = (
+            "refund_completed",
+            "Refund Completed",
+        )
+
+        REFUND_REJECTED = (
+            "refund_rejected",
+            "Refund Rejected",
+        )
+
+        REFUND_REOPENED = (
+            "refund_reopened",
+            "Refund Reopened",
+        )
+
+        REFUND_FAILED = (
+            "refund_failed",
+            "Refund Failed",
+        )
+
+    order = models.ForeignKey(
+        Order,
+        on_delete=models.CASCADE,
+        related_name="timeline_events",
+    )
+
+    refund = models.ForeignKey(
+        "Refund",
+        on_delete=models.SET_NULL,
+        related_name="timeline_events",
+        blank=True,
+        null=True,
+    )
+
+    payment = models.ForeignKey(
+        Payment,
+        on_delete=models.SET_NULL,
+        related_name="timeline_events",
+        blank=True,
+        null=True,
+    )
+
+    event_type = models.CharField(
+        max_length=40,
+        choices=EventType.choices,
+        db_index=True,
+    )
+
+    title = models.CharField(
+        max_length=200,
+    )
+
+    description = models.TextField(
+        blank=True,
+        default="",
+    )
+
+    metadata = models.JSONField(
+        blank=True,
+        null=True,
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        db_index=True,
+    )
+
+    class Meta:
+        db_table = "orders_order_timeline_event"
+        ordering = [
+            "created_at",
+            "pk",
+        ]
+        indexes = [
+            models.Index(
+                fields=[
+                    "order",
+                    "created_at",
+                ],
+                name="ord_timeline_order_idx",
+            ),
+            models.Index(
+                fields=[
+                    "event_type",
+                    "created_at",
+                ],
+                name="ord_timeline_type_idx",
+            ),
+        ]
+
+    def __str__(self):
+        return (
+            f"{self.order.order_number} - "
+            f"{self.title}"
         )

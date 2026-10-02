@@ -18,12 +18,48 @@ from .models import (
     Refund,
     RefundItem,
     RefundAttempt,
+    OrderTimelineEvent,
 )
 # ============================================================
 # CHECKOUT CONSTANTS
 # ============================================================
 
 ZERO = Decimal("0.00")
+
+
+# ============================================================
+# ORDER TIMELINE EVENTS
+# ============================================================
+
+
+def create_order_timeline_event(
+    *,
+    order,
+    event_type,
+    title,
+    description="",
+    refund=None,
+    payment=None,
+    metadata=None,
+):
+    """
+    Create one historical OrderTimelineEvent.
+
+    Every meaningful order, payment, access, or refund
+    state change must create a NEW timeline event.
+
+    Existing timeline events are never updated or reused.
+    """
+
+    return OrderTimelineEvent.objects.create(
+        order=order,
+        event_type=event_type,
+        title=title,
+        description=description or "",
+        refund=refund,
+        payment=payment,
+        metadata=metadata,
+    )
 
 
 # ============================================================
@@ -568,6 +604,17 @@ def build_order_from_cart(
 
         terms_accepted=(
             terms_accepted
+        ),
+    )
+
+    create_order_timeline_event(
+        order=order,
+        event_type=(
+            OrderTimelineEvent.EventType.ORDER_CREATED
+        ),
+        title="Order Created",
+        description=(
+            "NeoLearn order was created."
         ),
     )
 
@@ -2096,6 +2143,24 @@ def _mark_refund_attempt_failed(
                 ]
             )
 
+            create_order_timeline_event(
+                order=refund.order,
+                refund=refund,
+                event_type=(
+                    OrderTimelineEvent.EventType.REFUND_FAILED
+                ),
+                title="Refund Failed",
+                description=(
+                    "The refund gateway attempt failed. "
+                    "The refund request was returned to "
+                    "Requested so it can be retried."
+                ),
+                metadata={
+                    "attempt_id": attempt.id,
+                    "attempt_number": attempt.attempt_number,
+                },
+            )
+
         return refund
 
 
@@ -2118,9 +2183,30 @@ def _complete_refund_successfully(
     For Razorpay refunds, a real Razorpay refund ID is required.
 
     For Scenario refunds, no Razorpay refund ID is expected.
+
+    IMPORTANT PAYMENT RULE:
+
+        The original Payment record represents the original
+        successful payment.
+
+        A refund is a separate financial transaction.
+
+        Therefore Payment.status is NOT changed when a refund
+        succeeds.
+
+        Payment remains SUCCESS.
+
+        Refund.status becomes COMPLETED.
+
+        Order.status becomes either PARTIALLY_REFUNDED or
+        REFUNDED.
     """
 
     with transaction.atomic():
+
+        # ========================================================
+        # LOCK REFUND
+        # ========================================================
 
         refund = (
             Refund.objects
@@ -2132,11 +2218,19 @@ def _complete_refund_successfully(
             .get(pk=refund_id)
         )
 
+        # ========================================================
+        # LOCK REFUND ATTEMPT
+        # ========================================================
+
         attempt = (
             RefundAttempt.objects
             .select_for_update()
             .get(pk=attempt_id)
         )
+
+        # ========================================================
+        # LOCK ORDER
+        # ========================================================
 
         order = (
             Order.objects
@@ -2144,18 +2238,22 @@ def _complete_refund_successfully(
             .get(pk=refund.order_id)
         )
 
+        # ========================================================
+        # GET PAYMENT
+        # ========================================================
+
         payment = _get_payment_for_refund(order)
 
-        # --------------------------------------------------------
+        # ========================================================
         # PREVENT DUPLICATE FINALIZATION
-        # --------------------------------------------------------
+        # ========================================================
 
         if refund.status == Refund.Status.COMPLETED:
             return refund
 
-        # --------------------------------------------------------
+        # ========================================================
         # DETERMINE REFUND SOURCE
-        # --------------------------------------------------------
+        # ========================================================
 
         is_scenario_refund = (
             payment is not None
@@ -2163,9 +2261,9 @@ def _complete_refund_successfully(
             == Payment.Source.SCENARIO
         )
 
-        # --------------------------------------------------------
+        # ========================================================
         # GET RAZORPAY REFUND ID
-        # --------------------------------------------------------
+        # ========================================================
 
         razorpay_refund_id = None
 
@@ -2176,9 +2274,9 @@ def _complete_refund_successfully(
                 or gateway_response.get("refund_id")
             )
 
-        # --------------------------------------------------------
+        # ========================================================
         # REAL RAZORPAY REFUND
-        # --------------------------------------------------------
+        # ========================================================
 
         if not is_scenario_refund:
 
@@ -2189,9 +2287,9 @@ def _complete_refund_successfully(
                     "refund ID was returned."
                 )
 
-        # --------------------------------------------------------
-        # AMOUNT
-        # --------------------------------------------------------
+        # ========================================================
+        # GET SUCCESSFUL REFUND AMOUNT
+        # ========================================================
 
         successful_amount = _decimal_amount(
             attempt.amount
@@ -2203,17 +2301,22 @@ def _complete_refund_successfully(
                 "Successful refund amount must be greater than zero."
             )
 
-        # --------------------------------------------------------
+        # ========================================================
         # COMPLETE REFUND
-        # --------------------------------------------------------
+        # ========================================================
 
         refund.status = Refund.Status.COMPLETED
-        refund.refunded_amount = successful_amount
+
+        refund.refunded_amount = (
+            successful_amount
+        )
+
         refund.razorpay_refund_id = (
             razorpay_refund_id
             if not is_scenario_refund
             else None
         )
+
         refund.processed_at = timezone.now()
 
         refund.save(
@@ -2225,11 +2328,13 @@ def _complete_refund_successfully(
             ]
         )
 
-        # --------------------------------------------------------
-        # COMPLETE ATTEMPT
-        # --------------------------------------------------------
+        # ========================================================
+        # COMPLETE REFUND ATTEMPT
+        # ========================================================
 
-        attempt.status = RefundAttempt.Status.SUCCESS
+        attempt.status = (
+            RefundAttempt.Status.SUCCESS
+        )
 
         attempt.razorpay_refund_id = (
             razorpay_refund_id
@@ -2254,13 +2359,15 @@ def _complete_refund_successfully(
             ]
         )
 
-        # --------------------------------------------------------
+        # ========================================================
         # REMOVE ACCESS ONLY FOR SUCCESSFULLY REFUNDED ITEMS
-        # --------------------------------------------------------
+        # ========================================================
 
         refund_items = (
             RefundItem.objects
-            .select_related("order_item")
+            .select_related(
+                "order_item",
+            )
             .filter(
                 refund=refund,
             )
@@ -2270,7 +2377,9 @@ def _complete_refund_successfully(
 
         for refund_item in refund_items:
 
-            order_item = refund_item.order_item
+            order_item = (
+                refund_item.order_item
+            )
 
             refunded_order_item_ids.append(
                 order_item.id
@@ -2280,27 +2389,33 @@ def _complete_refund_successfully(
                 order_item=order_item,
                 order=order,
                 student=refund.student,
-                status=StudentBatchPurchase.Status.ACTIVE,
+                status=(
+                    StudentBatchPurchase.Status.ACTIVE
+                ),
             ).update(
-                status=StudentBatchPurchase.Status.REFUNDED,
+                status=(
+                    StudentBatchPurchase.Status.REFUNDED
+                ),
                 refunded_at=timezone.now(),
             )
 
-        # --------------------------------------------------------
+        # ========================================================
         # DETERMINE TOTAL SUCCESSFULLY REFUNDED AMOUNT
-        # --------------------------------------------------------
+        # ========================================================
 
-        total_refunded = _get_completed_refunded_amount(
-            order,
+        total_refunded = (
+            _get_completed_refunded_amount(
+                order,
+            )
         )
 
         order_amount = _decimal_amount(
             order.final_amount
         )
 
-        # --------------------------------------------------------
+        # ========================================================
         # UPDATE ORDER STATUS
-        # --------------------------------------------------------
+        # ========================================================
 
         if (
             order_amount > ZERO
@@ -2323,40 +2438,101 @@ def _complete_refund_successfully(
             ]
         )
 
-        # --------------------------------------------------------
-        # UPDATE PAYMENT STATUS
-        # --------------------------------------------------------
+        # ========================================================
+        # PAYMENT STATUS
+        # ========================================================
+        #
+        # IMPORTANT:
+        #
+        # DO NOT CHANGE Payment.status here.
+        #
+        # The original payment was already successful.
+        #
+        # Refund is a separate transaction and has its own
+        # Refund.status.
+        #
+        # Therefore:
+        #
+        # Payment.status -> SUCCESS
+        #
+        # Refund.status -> COMPLETED
+        #
+        # Order.status -> PARTIALLY_REFUNDED / REFUNDED
+        #
+        # No payment.save() is performed here.
+        # ========================================================
 
-        if payment is not None:
+        payment_status_for_timeline = (
+            payment.status
+            if payment is not None
+            else None
+        )
 
-            payment_amount = _decimal_amount(
-                payment.amount
-            )
+        # ========================================================
+        # CREATE REFUND COMPLETED TIMELINE EVENT
+        # ========================================================
 
-            if (
-                payment_amount > ZERO
-                and total_refunded >= payment_amount
-            ):
+        create_order_timeline_event(
+            order=order,
+            refund=refund,
+            payment=payment,
+            event_type=(
+                OrderTimelineEvent.EventType.REFUND_COMPLETED
+            ),
+            title="Refund Completed",
+            description=(
+                "Refund completed successfully and "
+                "the refunded learning access was revoked."
+            ),
+            metadata={
+                "refund_amount": str(
+                    successful_amount
+                ),
+                "total_refunded": str(
+                    total_refunded
+                ),
+                "order_status": (
+                    order.status
+                ),
+                "payment_status": (
+                    payment_status_for_timeline
+                ),
+                "razorpay_refund_id": (
+                    razorpay_refund_id
+                    if not is_scenario_refund
+                    else None
+                ),
+            },
+        )
 
-                payment.status = (
-                    Payment.Status.REFUNDED
-                )
+        # ========================================================
+        # CREATE ACCESS REVOKED TIMELINE EVENT
+        # ========================================================
 
-            else:
+        create_order_timeline_event(
+            order=order,
+            refund=refund,
+            event_type=(
+                OrderTimelineEvent.EventType.ACCESS_REVOKED
+            ),
+            title="Learning Access Revoked",
+            description=(
+                "Learning access was revoked for the "
+                "batches included in the completed refund."
+            ),
+            metadata={
+                "refunded_order_item_ids": (
+                    refunded_order_item_ids
+                ),
+            },
+        )
 
-                payment.status = (
-                    Payment.Status.PARTIALLY_REFUNDED
-                )
-
-            payment.save(
-                update_fields=[
-                    "status",
-                ]
-            )
+        # ========================================================
+        # RETURN COMPLETED REFUND
+        # ========================================================
 
         return refund
-
-
+    
 def execute_refund(refund_id):
     """
     Execute one Refund.
@@ -2523,6 +2699,28 @@ def execute_refund(refund_id):
             ]
         )
 
+        create_order_timeline_event(
+            order=order,
+            refund=refund,
+            payment=payment,
+            event_type=(
+                OrderTimelineEvent.EventType.REFUND_PROCESSING
+            ),
+            title="Refund Processing",
+            description=(
+                "Refund was approved and is now being "
+                "processed."
+            ),
+            metadata={
+                "attempt_id": attempt.id,
+                "attempt_number": attempt.attempt_number,
+                "amount": str(amount),
+                "payment_source": (
+                    payment.payment_source
+                ),
+            },
+        )
+
         refund_id_value = refund.id
         attempt_id_value = attempt.id
 
@@ -2629,3 +2827,4 @@ def execute_refund(refund_id):
             "Razorpay refund succeeded, but NeoLearn "
             "could not finalize the refund locally."
         ) from exc
+        

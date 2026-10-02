@@ -3794,6 +3794,7 @@ def get_admin_order_detail(order_id):
     This helper is read-only.
 
     It prepares:
+
         - Student information
         - NeoLearn Student ID
         - Payment information
@@ -3803,6 +3804,9 @@ def get_admin_order_detail(order_id):
         - Access counts
         - Order items
         - Batch information
+        - Refund information
+        - Refund totals
+        - Refund display values
     """
 
     # ========================================================
@@ -3827,6 +3831,7 @@ def get_admin_order_detail(order_id):
         )
     )
 
+
     # ========================================================
     # STUDENT INFORMATION
     # ========================================================
@@ -3843,11 +3848,15 @@ def get_admin_order_detail(order_id):
     )
 
     if student_profile is not None:
+
         order.admin_student_id = (
             student_profile.neo_student_id
         )
+
     else:
+
         order.admin_student_id = None
+
 
     # ========================================================
     # INVOICE INFORMATION
@@ -3862,6 +3871,7 @@ def get_admin_order_detail(order_id):
     order.admin_invoice = invoice
 
     if invoice is not None:
+
         order.admin_invoice_number = (
             invoice.invoice_number
         )
@@ -3869,9 +3879,12 @@ def get_admin_order_detail(order_id):
         order.admin_invoice_date = (
             invoice.invoice_date
         )
+
     else:
+
         order.admin_invoice_number = None
         order.admin_invoice_date = None
+
 
     # ========================================================
     # ACCESS STATUS
@@ -3890,6 +3903,7 @@ def get_admin_order_detail(order_id):
             access_status,
         )
     )
+
 
     # ========================================================
     # PAYMENT STATUS
@@ -3924,6 +3938,7 @@ def get_admin_order_detail(order_id):
             "No Payment Record"
         )
 
+
     # ========================================================
     # ORDER STATUS
     # ========================================================
@@ -3936,6 +3951,7 @@ def get_admin_order_detail(order_id):
             order.status,
         )
     )
+
 
     # ========================================================
     # ACCESS COUNTS
@@ -3969,6 +3985,7 @@ def get_admin_order_detail(order_id):
         ).count()
     )
 
+
     # ========================================================
     # STORE COUNTS ON ORDER FOR TEMPLATE
     # ========================================================
@@ -3994,6 +4011,140 @@ def get_admin_order_detail(order_id):
         - active_purchase_count,
         0,
     )
+
+
+    # ========================================================
+    # REFUND INFORMATION
+    # ========================================================
+
+    refunds = list(
+        order.refunds
+        .select_related(
+            "student",
+        )
+        .prefetch_related(
+            "items__order_item__batch",
+        )
+        .order_by(
+            "-requested_at",
+            "-pk",
+        )
+    )
+
+    order.admin_refunds = (
+        refunds
+    )
+
+
+    # ========================================================
+    # REFUND TOTAL
+    # ========================================================
+
+    refunded_amount = Decimal(
+        "0.00"
+    )
+
+    for refund in refunds:
+
+        if refund.status == (
+            Refund.Status.COMPLETED
+        ):
+
+            refunded_amount += (
+                refund.refunded_amount
+                or Decimal("0.00")
+            )
+
+    order.admin_refunded_amount = (
+        refunded_amount
+    )
+
+
+    # ========================================================
+    # NET PAID
+    # ========================================================
+
+    final_amount = (
+        order.final_amount
+        or Decimal("0.00")
+    )
+
+    net_paid = (
+        final_amount
+        - refunded_amount
+    )
+
+    if net_paid < Decimal("0.00"):
+
+        net_paid = Decimal(
+            "0.00"
+        )
+
+    order.admin_net_paid = (
+        net_paid
+    )
+
+
+    # ========================================================
+    # REFUND COUNT
+    # ========================================================
+
+    order.admin_refund_count = (
+        len(refunds)
+    )
+
+
+    # ========================================================
+    # PREPARE REFUND DISPLAY VALUES
+    # ========================================================
+
+    for refund in refunds:
+
+        refund.admin_status_label = (
+            get_admin_refund_status_label(
+                refund.status
+            )
+        )
+
+        refund.admin_refund_type = (
+            get_admin_refund_type(
+                refund
+            )
+        )
+
+        refund.admin_item_count = (
+            get_admin_refund_item_count(
+                refund
+            )
+        )
+
+        refund.admin_display_amount = (
+            get_admin_refund_amount(
+                refund
+            )
+        )
+
+
+    # ========================================================
+    # ORDER TIMELINE
+    # ========================================================
+
+    timeline_events = list(
+        order.timeline_events
+        .select_related(
+            "refund",
+            "payment",
+        )
+        .order_by(
+            "-created_at",
+            "-pk",
+        )
+    )
+
+    order.admin_timeline_events = (
+        timeline_events
+    )
+
 
     # ========================================================
     # RETURN
@@ -4614,4 +4765,3 @@ def get_admin_refund_listing_context(request):
             )
         ),
     }
-
