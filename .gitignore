@@ -1,34 +1,18 @@
-# PYTHON
-
+﻿.env
+.env.*
+!.env.example
 __pycache__/
 *.py[cod]
-
-# VIRTUAL ENVIRONMENT
-
 venv/
-
-# DATABASE
-
+env/
+.venv/
+*.log
 db.sqlite3
-
-# ENV FILES
-
-.env
-
-# DJANGO STATIC BUILD
-
-staticfiles/
-
-# MEDIA FILES
-
+db.sqlite3-journal
 media/
-
-# OS FILES
-
+staticfiles/
+.vscode/
+.idea/
+*.swp
 .DS_Store
 Thumbs.db
-
-# VSCODE
-
-.vscode/
-
