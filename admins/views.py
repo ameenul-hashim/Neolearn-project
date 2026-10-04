@@ -1572,55 +1572,6 @@ def get_teacher_batches_data(request, teacher_id):
     return JsonResponse(data)
 
 # ==========================================================
-# ADMIN COURSE BUILDER ENTRY POINT
-# ==========================================================
-
-@cache_control(no_cache=True, must_revalidate=True, no_store=True)
-@admin_required
-def admin_course_builder_entry_view(request, batch_id, subject_id):
-
-    # ------------------------------------------------------
-    # Validate selected batch
-    # ------------------------------------------------------
-
-    batch = get_object_or_404(
-        Batch,
-        id=batch_id,
-    )
-
-    # ------------------------------------------------------
-    # Validate that the subject belongs to this batch
-    # ------------------------------------------------------
-
-    subject = get_object_or_404(
-        Subject,
-        id=subject_id,
-        batch=batch,
-    )
-
-    # ------------------------------------------------------
-    # Entry-point context
-    # ------------------------------------------------------
-
-    context = {
-        "batch": batch,
-        "subject": subject,
-    }
-
-    # ------------------------------------------------------
-    # Temporary response
-    #
-    # The actual Course Builder will be connected later
-    # after Admin + Teacher entry points are completed.
-    # ------------------------------------------------------
-
-    return render(
-        request,
-        "courses/course_builder.html",
-        context,
-    )
-
-# ==========================================================
 # COUPON MANAGEMENT
 # ==========================================================
 # Multi Checkout pricing/eligibility is calculated in helpers.py.
@@ -4100,4 +4051,41 @@ def admin_reopen_refund_view(
     return redirect(
         "admin_refund_detail",
         refund_id=refund.id,
+    )
+
+# ==========================================================
+# ADMIN COURSE BUILDER ENTRY POINT
+# ==========================================================
+
+@cache_control(no_cache=True, must_revalidate=True, no_store=True)
+@admin_required
+def admin_course_builder_entry_view(request, batch_id, subject_id):
+
+    # ------------------------------------------------------
+    # Validate selected batch
+    # ------------------------------------------------------
+
+    batch = get_object_or_404(
+        Batch,
+        id=batch_id,
+    )
+
+    # ------------------------------------------------------
+    # Validate that the subject belongs to this batch
+    # ------------------------------------------------------
+
+    subject = get_object_or_404(
+        Subject,
+        id=subject_id,
+        batch=batch,
+    )
+
+    # ------------------------------------------------------
+    # Redirect to the shared Course Builder
+    # ------------------------------------------------------
+
+    return redirect(
+        "course_builder",
+        batch_id=batch.id,
+        subject_id=subject.id,
     )

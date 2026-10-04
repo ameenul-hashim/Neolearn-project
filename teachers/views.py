@@ -565,10 +565,6 @@ def teacher_subjects_view(
         context,
     )
 
-# ============================================================
-# TEACHER COURSE BUILDER ENTRY POINT
-# ============================================================
-
 @login_required(login_url="teacher_login")
 @cache_control(
     no_cache=True,
@@ -581,57 +577,22 @@ def teacher_course_builder_entry_view(
     subject_id,
 ):
 
-    # --------------------------------------------------------
-    # Verify teacher profile
-    # --------------------------------------------------------
-
-    if not hasattr(
-        request.user,
-        "teacher_profile",
-    ):
-
-        messages.error(
-            request,
-            "Access denied.",
-        )
-
+    if not hasattr(request.user, "teacher_profile"):
+        messages.error(request, "Access denied.")
         return redirect("teacher_login")
 
     teacher = request.user.teacher_profile
 
-    # --------------------------------------------------------
-    # Verify selected batch
-    # --------------------------------------------------------
+    batch = get_object_or_404(Batch, id=batch_id)
+    subject = get_object_or_404(Subject, id=subject_id, batch=batch)
 
-    batch = get_object_or_404(
-        Batch,
-        id=batch_id,
-    )
-
-    # --------------------------------------------------------
-    # Verify selected subject belongs to this batch
-    # --------------------------------------------------------
-
-    subject = get_object_or_404(
-        Subject,
-        id=subject_id,
-        batch=batch,
-    )
-
-    # --------------------------------------------------------
-    # Verify teacher has active access to this batch
-    # --------------------------------------------------------
-
+    # Permission gates (404 if not assigned)
     batch_assignment = get_object_or_404(
         TeacherBatch,
         teacher=teacher,
         batch=batch,
         is_active=True,
     )
-
-    # --------------------------------------------------------
-    # Verify teacher has active access to this subject
-    # --------------------------------------------------------
 
     subject_assignment = get_object_or_404(
         TeacherSubject,
@@ -641,28 +602,9 @@ def teacher_course_builder_entry_view(
         is_active=True,
     )
 
-    # --------------------------------------------------------
-    # Entry-point context
-    # --------------------------------------------------------
-
-    context = {
-        "teacher": teacher,
-        "batch": batch,
-        "subject": subject,
-        "batch_assignment": batch_assignment,
-        "subject_assignment": subject_assignment,
-        "is_admin": False,
-        "is_teacher": True,
-    }
-
-    # --------------------------------------------------------
-    # Temporary response
-    #
-    # Actual shared Course Builder will be connected later.
-    # --------------------------------------------------------
-
-    return render(
-        request,
-        "courses/course_builder.html",
-        context,
+    # Redirect to the shared Course Builder
+    return redirect(
+        "course_builder",
+        batch_id=batch.id,
+        subject_id=subject.id,
     )
