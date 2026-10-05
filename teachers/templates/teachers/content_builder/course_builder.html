@@ -137,7 +137,7 @@
                                         <div class="relative">
                                             <button type="button" class="neo-3dot js-chapter-menu-trigger"><i class="ri-more-2-fill"></i></button>
                                             <div class="neo-menu hidden js-chapter-menu">
-                                                <a href="{% url 'course_edit_chapter' batch.id subject.id chapter.id %}" class="neo-menu-item">
+                                                <a href="#" class="neo-menu-item">
                                                     <i class="ri-edit-line"></i> Edit Chapter
                                                 </a>
                                                 <a href="?chapter={{ chapter.id }}&view=timeline" class="neo-menu-item">
@@ -486,7 +486,7 @@
             </div>
             <button type="button" class="js-close-modal flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-800 bg-slate-900/60 text-slate-500 hover:bg-slate-800 hover:text-white"><i class="ri-close-line"></i></button>
         </div>
-        <form method="POST" action="{% url 'course_create_chapter' batch.id subject.id %}" class="p-4 sm:p-5">
+        <form method="POST" action="#" class="p-4 sm:p-5">
             {% csrf_token %}
             <div><label for="chapter_name" class="neo-label">Chapter Name <span class="text-red-400">*</span></label>
                 <input type="text" name="chapter_name" id="chapter_name" maxlength="255" required value="{{ chapter_edit_form.chapter_name|default:'' }}" placeholder="Enter chapter name" class="neo-input"></div>

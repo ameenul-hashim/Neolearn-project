@@ -577,24 +577,54 @@ def teacher_course_builder_entry_view(
     subject_id,
 ):
 
+    # ========================================================
+    # TEACHER PROFILE CHECK
+    # ========================================================
+
     if not hasattr(request.user, "teacher_profile"):
-        messages.error(request, "Access denied.")
+        messages.error(
+            request,
+            "Access denied.",
+        )
         return redirect("teacher_login")
 
     teacher = request.user.teacher_profile
 
-    batch = get_object_or_404(Batch, id=batch_id)
-    subject = get_object_or_404(Subject, id=subject_id, batch=batch)
+    # ========================================================
+    # BATCH
+    # ========================================================
 
-    # Permission gates (404 if not assigned)
-    batch_assignment = get_object_or_404(
+    batch = get_object_or_404(
+        Batch,
+        id=batch_id,
+    )
+
+    # ========================================================
+    # SUBJECT
+    # ========================================================
+
+    subject = get_object_or_404(
+        Subject,
+        id=subject_id,
+        batch=batch,
+    )
+
+    # ========================================================
+    # TEACHER BATCH ASSIGNMENT
+    # ========================================================
+
+    get_object_or_404(
         TeacherBatch,
         teacher=teacher,
         batch=batch,
         is_active=True,
     )
 
-    subject_assignment = get_object_or_404(
+    # ========================================================
+    # TEACHER SUBJECT ASSIGNMENT
+    # ========================================================
+
+    get_object_or_404(
         TeacherSubject,
         teacher=teacher,
         batch=batch,
@@ -602,9 +632,12 @@ def teacher_course_builder_entry_view(
         is_active=True,
     )
 
-    # Redirect to the shared Course Builder
+    # ========================================================
+    # REDIRECT TO SHARED COURSE BUILDER
+    # ========================================================
+
     return redirect(
-        "course_builder",
+        "courses:course_builder",
         batch_id=batch.id,
         subject_id=subject.id,
     )

@@ -4085,7 +4085,7 @@ def admin_course_builder_entry_view(request, batch_id, subject_id):
     # ------------------------------------------------------
 
     return redirect(
-        "course_builder",
+        "courses:course_builder",
         batch_id=batch.id,
         subject_id=subject.id,
     )

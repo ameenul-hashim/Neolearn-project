@@ -1,17 +1,3 @@
-# =========================================================
-# NEOLEARNER — SHARED COURSE BUILDER MODELS
-#
-# Used by BOTH Admin panel and Teacher panel.
-#
-# - Chapters, Videos, PDFs, Quizzes
-# - Change / timeline logs
-# - Deletion audit (shared, read-only)
-#
-# Content creation logic is shared. Delete actions are
-# separated by role in their respective views
-# (teachers/views.py and admins/views.py).
-# =========================================================
-
 from django.db import models
 from django.contrib.auth.models import User
 from cloudinary.models import CloudinaryField
@@ -20,161 +6,23 @@ from admins.models import Batch, Subject
 from teachers.models import Teacher
 
 
-# =========================================================
-# ABSTRACT BASE — SHARED CREATION / UPDATE TRACKING
-# =========================================================
+# ============================================================
+# COMMON STATUS
+# ============================================================
 
-class ContentTracking(models.Model):
-    """
-    Common creation / update tracking fields for every
-    piece of Course Builder content.
-
-    Inherited by:
-        CourseChapter
-        ChapterVideo
-        ChapterPDF
-        ChapterQuiz
-    """
-
-    created_by = models.ForeignKey(
-        Teacher,
-        on_delete=models.PROTECT,
-        null=True,
-        blank=True,
-        related_name="%(class)s_created",
-    )
-
-    created_by_admin = models.ForeignKey(
-        User,
-        on_delete=models.PROTECT,
-        null=True,
-        blank=True,
-        related_name="%(class)s_admin_created",
-    )
-
-    updated_by = models.ForeignKey(
-        Teacher,
-        on_delete=models.PROTECT,
-        null=True,
-        blank=True,
-        related_name="%(class)s_updated",
-    )
-
-    updated_by_admin = models.ForeignKey(
-        User,
-        on_delete=models.PROTECT,
-        null=True,
-        blank=True,
-        related_name="%(class)s_admin_updated",
-    )
-
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        abstract = True
+STATUS_CHOICES = [
+    ("draft", "Draft"),
+    ("published", "Published"),
+]
 
 
-# =========================================================
-# ABSTRACT BASE — SHARED DELETE-REQUEST FIELDS
-# =========================================================
-
-class SoftDeleteFields(models.Model):
-    """
-    Common teacher delete-request fields shared by all
-    Course Builder content.
-
-    Teacher requests delete → Admin approves / rejects.
-    Actual deletion is handled in views / services.
-    """
-
-    DELETE_STATUS_CHOICES = [
-        ("pending", "Pending"),
-        ("withdrawn", "Withdrawn"),
-        ("approved", "Approved"),
-        ("rejected", "Rejected"),
-    ]
-
-    delete_requested = models.BooleanField(default=False)
-
-    delete_requested_by = models.ForeignKey(
-        Teacher,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="%(class)s_delete_requests",
-    )
-
-    delete_requested_at = models.DateTimeField(
-        null=True,
-        blank=True,
-    )
-
-    delete_reason = models.TextField(blank=True)
-
-    delete_status = models.CharField(
-        max_length=20,
-        choices=DELETE_STATUS_CHOICES,
-        default="pending",
-    )
-
-    is_deleted = models.BooleanField(default=False)
-
-    class Meta:
-        abstract = True
-
-
-# =========================================================
-# ABSTRACT BASE — SHARED CHANGE-LOG FIELDS
-# =========================================================
-
-class BaseChangeLog(models.Model):
-    """
-    Common timeline fields for all Course Builder change logs.
-
-    Each child model:
-        - overrides ACTION_CHOICES
-        - declares its own FK to its content type
-    """
-
-    changed_by = models.ForeignKey(
-        Teacher,
-        on_delete=models.PROTECT,
-        null=True,
-        blank=True,
-        related_name="%(class)s_changed",
-    )
-
-    changed_by_admin = models.ForeignKey(
-        User,
-        on_delete=models.PROTECT,
-        null=True,
-        blank=True,
-        related_name="%(class)s_admin_changed",
-    )
-
-    field_name = models.CharField(max_length=100, blank=True)
-    old_value = models.TextField(blank=True)
-    new_value = models.TextField(blank=True)
-    change_summary = models.TextField(blank=True)
-
-    changed_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        abstract = True
-        ordering = ["-changed_at", "-id"]
-
-
-# =========================================================
+# ============================================================
 # COURSE CHAPTER
-# =========================================================
+# ============================================================
 
-class CourseChapter(ContentTracking, SoftDeleteFields):
+class CourseChapter(models.Model):
 
-    STATUS_CHOICES = [
-        ("draft", "Draft"),
-        ("published", "Published"),
-    ]
+    STATUS_CHOICES = STATUS_CHOICES
 
     batch = models.ForeignKey(
         Batch,
@@ -188,10 +36,17 @@ class CourseChapter(ContentTracking, SoftDeleteFields):
         related_name="course_chapters",
     )
 
-    chapter_name = models.CharField(max_length=255)
-    chapter_description = models.CharField(max_length=255, blank=True)
+    chapter_name = models.CharField(
+        max_length=100,
+    )
 
-    chapter_order = models.PositiveIntegerField(default=1)
+    chapter_description = models.CharField(
+        max_length=250,
+    )
+
+    chapter_order = models.PositiveIntegerField(
+        default=1,
+    )
 
     status = models.CharField(
         max_length=15,
@@ -199,29 +54,61 @@ class CourseChapter(ContentTracking, SoftDeleteFields):
         default="draft",
     )
 
+    created_by_admin = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="course_chapters_created_as_admin",
+    )
+
+    created_by_teacher = models.ForeignKey(
+        Teacher,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="course_chapters_created_as_teacher",
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+    )
+
     class Meta:
-        ordering = ["chapter_order", "pk"]
+        ordering = [
+            "chapter_order",
+            "pk",
+        ]
+
+        constraints = [
+            models.UniqueConstraint(
+                fields=[
+                    "batch",
+                    "subject",
+                    "chapter_name",
+                ],
+                name="unique_chapter_name_per_batch_subject",
+            ),
+        ]
 
     def __str__(self):
         return self.chapter_name
 
 
-# =========================================================
+# ============================================================
 # CHAPTER CHANGE / TIMELINE
-# =========================================================
+# ============================================================
 
-class ChapterChangeLog(BaseChangeLog):
+class ChapterChangeLog(models.Model):
 
     ACTION_CHOICES = [
         ("created", "Created"),
         ("updated", "Updated"),
         ("order_changed", "Order Changed"),
-        ("status_changed", "Status Changed"),
-        ("delete_requested", "Delete Requested"),
-        ("delete_withdrawn", "Delete Withdrawn"),
-        ("delete_approved", "Delete Approved"),
-        ("delete_rejected", "Delete Rejected"),
-        ("restored", "Restored"),
     ]
 
     chapter = models.ForeignKey(
@@ -230,24 +117,68 @@ class ChapterChangeLog(BaseChangeLog):
         related_name="change_logs",
     )
 
+    changed_by_admin = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="chapter_changes_as_admin",
+    )
+
+    changed_by_teacher = models.ForeignKey(
+        Teacher,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="chapter_changes_as_teacher",
+    )
+
     action = models.CharField(
         max_length=30,
         choices=ACTION_CHOICES,
     )
 
+    field_name = models.CharField(
+        max_length=100,
+        blank=True,
+    )
+
+    old_value = models.TextField(
+        blank=True,
+    )
+
+    new_value = models.TextField(
+        blank=True,
+    )
+
+    change_summary = models.TextField(
+        blank=True,
+    )
+
+    changed_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    class Meta:
+        ordering = [
+            "-changed_at",
+            "-id",
+        ]
+
     def __str__(self):
         return (
             f"{self.chapter.chapter_name} - "
-            f"{self.get_action_display()} - "
-            f"{self.changed_by or self.changed_by_admin}"
+            f"{self.get_action_display()}"
         )
 
 
-# =========================================================
+# ============================================================
 # CHAPTER VIDEO
-# =========================================================
+# ============================================================
 
-class ChapterVideo(ContentTracking, SoftDeleteFields):
+class ChapterVideo(models.Model):
+
+    STATUS_CHOICES = STATUS_CHOICES
 
     chapter = models.ForeignKey(
         CourseChapter,
@@ -255,44 +186,91 @@ class ChapterVideo(ContentTracking, SoftDeleteFields):
         related_name="videos",
     )
 
-    video_name = models.CharField(max_length=255)
-    video_description = models.TextField(blank=True)
+    video_name = models.CharField(
+        max_length=100,
+    )
+
+    video_description = models.CharField(
+        max_length=250,
+    )
 
     video_file = CloudinaryField(
         "video",
         resource_type="video",
     )
 
-    video_order = models.PositiveIntegerField(default=1)
+    video_thumbnail = CloudinaryField(
+        "video_thumbnail",
+        resource_type="image",
+        folder="neolearn/video_thumbnails",
+        blank=True,
+        null=True,
+    )
+
+    video_order = models.PositiveIntegerField(
+        default=1,
+    )
+
+    status = models.CharField(
+        max_length=15,
+        choices=STATUS_CHOICES,
+        default="draft",
+    )
+
+    created_by_admin = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="course_videos_created_as_admin",
+    )
+
+    created_by_teacher = models.ForeignKey(
+        Teacher,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="course_videos_created_as_teacher",
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+    )
 
     class Meta:
-        ordering = ["video_order", "pk"]
-        indexes = [
-            models.Index(fields=["chapter", "video_order"]),
+        ordering = [
+            "video_order",
+            "pk",
+        ]
+
+        constraints = [
+            models.UniqueConstraint(
+                fields=[
+                    "chapter",
+                    "video_name",
+                ],
+                name="unique_video_name_per_chapter",
+            ),
         ]
 
     def __str__(self):
         return self.video_name
 
 
-# =========================================================
+# ============================================================
 # VIDEO CHANGE / TIMELINE
-# =========================================================
+# ============================================================
 
-class VideoChangeLog(BaseChangeLog):
+class VideoChangeLog(models.Model):
 
     ACTION_CHOICES = [
         ("created", "Created"),
         ("updated", "Updated"),
-        ("name_changed", "Name Changed"),
-        ("description_changed", "Description Changed"),
-        ("file_changed", "Video File Changed"),
         ("order_changed", "Order Changed"),
-        ("delete_requested", "Delete Requested"),
-        ("delete_withdrawn", "Delete Withdrawn"),
-        ("delete_approved", "Delete Approved"),
-        ("delete_rejected", "Delete Rejected"),
-        ("restored", "Restored"),
     ]
 
     video = models.ForeignKey(
@@ -301,24 +279,77 @@ class VideoChangeLog(BaseChangeLog):
         related_name="change_logs",
     )
 
+    changed_by_admin = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="video_changes_as_admin",
+    )
+
+    changed_by_teacher = models.ForeignKey(
+        Teacher,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="video_changes_as_teacher",
+    )
+
     action = models.CharField(
-        max_length=40,
+        max_length=30,
         choices=ACTION_CHOICES,
     )
+
+    field_name = models.CharField(
+        max_length=100,
+        blank=True,
+    )
+
+    old_value = models.TextField(
+        blank=True,
+    )
+
+    new_value = models.TextField(
+        blank=True,
+    )
+
+    change_summary = models.TextField(
+        blank=True,
+    )
+
+    changed_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    class Meta:
+        ordering = [
+            "-changed_at",
+            "-id",
+        ]
+
+        indexes = [
+            models.Index(
+                fields=[
+                    "video",
+                    "changed_at",
+                ]
+            ),
+        ]
 
     def __str__(self):
         return (
             f"{self.video.video_name} - "
-            f"{self.get_action_display()} - "
-            f"{self.changed_by or self.changed_by_admin}"
+            f"{self.get_action_display()}"
         )
 
 
-# =========================================================
+# ============================================================
 # CHAPTER PDF
-# =========================================================
+# ============================================================
 
-class ChapterPDF(ContentTracking, SoftDeleteFields):
+class ChapterPDF(models.Model):
+
+    STATUS_CHOICES = STATUS_CHOICES
 
     chapter = models.ForeignKey(
         CourseChapter,
@@ -326,10 +357,17 @@ class ChapterPDF(ContentTracking, SoftDeleteFields):
         related_name="pdfs",
     )
 
-    pdf_name = models.CharField(max_length=255)
-    pdf_description = models.TextField(blank=False)
+    pdf_name = models.CharField(
+        max_length=100,
+    )
 
-    pdf_file = models.FileField(upload_to="course_pdfs/")
+    pdf_description = models.CharField(
+        max_length=250,
+    )
+
+    pdf_file = models.FileField(
+        upload_to="course_pdfs/",
+    )
 
     pdf_thumbnail = CloudinaryField(
         "pdf_thumbnail",
@@ -339,37 +377,70 @@ class ChapterPDF(ContentTracking, SoftDeleteFields):
         null=True,
     )
 
-    pdf_order = models.PositiveIntegerField(default=1)
+    pdf_order = models.PositiveIntegerField(
+        default=1,
+    )
+
+    status = models.CharField(
+        max_length=15,
+        choices=STATUS_CHOICES,
+        default="draft",
+    )
+
+    created_by_admin = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="course_pdfs_created_as_admin",
+    )
+
+    created_by_teacher = models.ForeignKey(
+        Teacher,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="course_pdfs_created_as_teacher",
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+    )
 
     class Meta:
-        ordering = ["pdf_order", "pk"]
-        indexes = [
-            models.Index(fields=["chapter", "pdf_order"]),
+        ordering = [
+            "pdf_order",
+            "pk",
+        ]
+
+        constraints = [
+            models.UniqueConstraint(
+                fields=[
+                    "chapter",
+                    "pdf_name",
+                ],
+                name="unique_pdf_name_per_chapter",
+            ),
         ]
 
     def __str__(self):
         return self.pdf_name
 
 
-# =========================================================
+# ============================================================
 # PDF CHANGE / TIMELINE
-# =========================================================
+# ============================================================
 
-class PDFChangeLog(BaseChangeLog):
+class PDFChangeLog(models.Model):
 
     ACTION_CHOICES = [
         ("created", "Created"),
         ("updated", "Updated"),
-        ("name_changed", "Name Changed"),
-        ("description_changed", "Description Changed"),
-        ("file_changed", "PDF File Changed"),
-        ("thumbnail_changed", "Thumbnail Changed"),
         ("order_changed", "Order Changed"),
-        ("delete_requested", "Delete Requested"),
-        ("delete_withdrawn", "Delete Withdrawn"),
-        ("delete_approved", "Delete Approved"),
-        ("delete_rejected", "Delete Rejected"),
-        ("restored", "Restored"),
     ]
 
     pdf = models.ForeignKey(
@@ -378,24 +449,77 @@ class PDFChangeLog(BaseChangeLog):
         related_name="change_logs",
     )
 
+    changed_by_admin = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="pdf_changes_as_admin",
+    )
+
+    changed_by_teacher = models.ForeignKey(
+        Teacher,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="pdf_changes_as_teacher",
+    )
+
     action = models.CharField(
-        max_length=40,
+        max_length=30,
         choices=ACTION_CHOICES,
     )
+
+    field_name = models.CharField(
+        max_length=100,
+        blank=True,
+    )
+
+    old_value = models.TextField(
+        blank=True,
+    )
+
+    new_value = models.TextField(
+        blank=True,
+    )
+
+    change_summary = models.TextField(
+        blank=True,
+    )
+
+    changed_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    class Meta:
+        ordering = [
+            "-changed_at",
+            "-id",
+        ]
+
+        indexes = [
+            models.Index(
+                fields=[
+                    "pdf",
+                    "changed_at",
+                ]
+            ),
+        ]
 
     def __str__(self):
         return (
             f"{self.pdf.pdf_name} - "
-            f"{self.get_action_display()} - "
-            f"{self.changed_by or self.changed_by_admin}"
+            f"{self.get_action_display()}"
         )
 
 
-# =========================================================
+# ============================================================
 # CHAPTER QUIZ
-# =========================================================
+# ============================================================
 
-class ChapterQuiz(ContentTracking, SoftDeleteFields):
+class ChapterQuiz(models.Model):
+
+    STATUS_CHOICES = STATUS_CHOICES
 
     chapter = models.ForeignKey(
         CourseChapter,
@@ -403,25 +527,75 @@ class ChapterQuiz(ContentTracking, SoftDeleteFields):
         related_name="quizzes",
     )
 
-    quiz_name = models.CharField(max_length=255)
-    quiz_description = models.TextField(blank=False)
+    quiz_name = models.CharField(
+        max_length=100,
+    )
 
-    # Stored for future student-attempt stage.
-    attempt_limit = models.PositiveIntegerField(default=1)
+    quiz_description = models.CharField(
+        max_length=250,
+    )
+
+    quiz_order = models.PositiveIntegerField(
+        default=1,
+    )
+
+    maximum_attempts = models.PositiveIntegerField(
+        default=1,
+    )
+
+    status = models.CharField(
+        max_length=15,
+        choices=STATUS_CHOICES,
+        default="draft",
+    )
+
+    created_by_admin = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="course_quizzes_created_as_admin",
+    )
+
+    created_by_teacher = models.ForeignKey(
+        Teacher,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="course_quizzes_created_as_teacher",
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+    )
 
     class Meta:
-        ordering = ["pk"]
-        indexes = [
-            models.Index(fields=["chapter"]),
+        ordering = [
+            "quiz_order",
+            "pk",
+        ]
+
+        constraints = [
+            models.UniqueConstraint(
+                fields=[
+                    "chapter",
+                    "quiz_name",
+                ],
+                name="unique_quiz_name_per_chapter",
+            ),
         ]
 
     def __str__(self):
         return self.quiz_name
 
 
-# =========================================================
+# ============================================================
 # QUIZ QUESTION
-# =========================================================
+# ============================================================
 
 class QuizQuestion(models.Model):
 
@@ -431,22 +605,32 @@ class QuizQuestion(models.Model):
         related_name="questions",
     )
 
-    question_text = models.TextField(blank=False)
-    marks = models.PositiveIntegerField(default=1)
+    question_text = models.TextField()
 
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    marks = models.PositiveIntegerField(
+        default=1,
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+    )
 
     class Meta:
-        ordering = ["pk"]
+        ordering = [
+            "pk",
+        ]
 
     def __str__(self):
         return self.question_text[:80]
 
 
-# =========================================================
+# ============================================================
 # QUIZ OPTION
-# =========================================================
+# ============================================================
 
 class QuizOption(models.Model):
 
@@ -468,47 +652,61 @@ class QuizOption(models.Model):
         choices=OPTION_LABELS,
     )
 
-    option_text = models.CharField(max_length=500, blank=False)
-    is_correct = models.BooleanField(default=False)
+    option_text = models.CharField(
+        max_length=250,
+    )
 
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    is_correct = models.BooleanField(
+        default=False,
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+    )
 
     class Meta:
-        ordering = ["option_label"]
+        ordering = [
+            "option_label",
+        ]
+
         constraints = [
             models.UniqueConstraint(
-                fields=["question", "option_label"],
+                fields=[
+                    "question",
+                    "option_label",
+                ],
                 name="unique_quiz_question_option_label",
             ),
         ]
 
     def __str__(self):
-        return f"{self.question} - {self.option_label}"
+        return (
+            f"{self.question} - "
+            f"{self.option_label}"
+        )
 
 
-# =========================================================
+# ============================================================
 # QUIZ CHANGE / TIMELINE
-# =========================================================
+# ============================================================
 
-class QuizChangeLog(BaseChangeLog):
+class QuizChangeLog(models.Model):
 
     ACTION_CHOICES = [
         ("created", "Created"),
         ("updated", "Updated"),
-        ("name_changed", "Name Changed"),
-        ("description_changed", "Description Changed"),
-        ("attempt_limit_changed", "Attempt Limit Changed"),
+        ("order_changed", "Order Changed"),
         ("question_added", "Question Added"),
         ("question_updated", "Question Updated"),
         ("question_deleted", "Question Deleted"),
-        ("option_changed", "Option Changed"),
+        ("option_added", "Option Added"),
+        ("option_updated", "Option Updated"),
+        ("option_deleted", "Option Deleted"),
         ("correct_answer_changed", "Correct Answer Changed"),
-        ("delete_requested", "Delete Requested"),
-        ("delete_withdrawn", "Delete Withdrawn"),
-        ("delete_approved", "Delete Approved"),
-        ("delete_rejected", "Delete Rejected"),
-        ("restored", "Restored"),
     ]
 
     quiz = models.ForeignKey(
@@ -517,46 +715,87 @@ class QuizChangeLog(BaseChangeLog):
         related_name="change_logs",
     )
 
+    changed_by_admin = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="quiz_changes_as_admin",
+    )
+
+    changed_by_teacher = models.ForeignKey(
+        Teacher,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="quiz_changes_as_teacher",
+    )
+
     action = models.CharField(
         max_length=40,
         choices=ACTION_CHOICES,
     )
 
+    field_name = models.CharField(
+        max_length=100,
+        blank=True,
+    )
+
+    old_value = models.TextField(
+        blank=True,
+    )
+
+    new_value = models.TextField(
+        blank=True,
+    )
+
+    change_summary = models.TextField(
+        blank=True,
+    )
+
+    changed_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    class Meta:
+        ordering = [
+            "-changed_at",
+            "-id",
+        ]
+
+        indexes = [
+            models.Index(
+                fields=[
+                    "quiz",
+                    "changed_at",
+                ]
+            ),
+        ]
+
     def __str__(self):
         return (
             f"{self.quiz.quiz_name} - "
-            f"{self.get_action_display()} - "
-            f"{self.changed_by or self.changed_by_admin}"
+            f"{self.get_action_display()}"
         )
 
 
-# =========================================================
-# COMMON CONTENT DELETION AUDIT
-# =========================================================
-#
-# Shared, read-only audit for the whole Course Builder.
-#
-# Records every delete action:
-#
-#   1. Teacher delete request        → status = pending
-#   2. Teacher withdraw              → status = withdrawn
-#   3. Admin approve                 → status = approved
-#   4. Admin reject                  → status = rejected
-#   5. Admin direct delete           → status = deleted
-#
-# The record remains even after the original content has
-# been permanently deleted.
-#
-# Read-only across both panels. Write actions are handled
-# in teachers/views.py and admins/views.py.
-# =========================================================
-
+# ============================================================
+# COMMON DELETION AUDIT
+# ============================================================
 
 class DeletionAudit(models.Model):
 
-    # -----------------------------------------------------
-    # CONTENT TYPE
-    # -----------------------------------------------------
+    """
+    Common read-only deletion history for:
+
+        Chapter
+        Video
+        PDF
+        Quiz
+
+    This model does not use a ForeignKey to the deleted content
+    because the original object may no longer exist.
+    """
 
     CONTENT_TYPE_CHOICES = [
         ("chapter", "Chapter"),
@@ -570,83 +809,76 @@ class DeletionAudit(models.Model):
         choices=CONTENT_TYPE_CHOICES,
     )
 
-    # Original DB id — NOT a FK, because content may be
-    # permanently deleted.
     object_id = models.PositiveBigIntegerField()
 
-    # -----------------------------------------------------
-    # CONTENT SNAPSHOT
-    # -----------------------------------------------------
-
-    content_name = models.CharField(max_length=255)
-    batch_name = models.CharField(max_length=255, blank=True)
-    subject_name = models.CharField(max_length=255, blank=True)
-    chapter_name = models.CharField(max_length=255, blank=True)
-
-    # -----------------------------------------------------
-    # ORIGINAL CREATOR
-    # -----------------------------------------------------
-
-    created_by_teacher = models.ForeignKey(
-        Teacher,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="deletion_audits_created",
+    content_name = models.CharField(
+        max_length=100,
     )
+
+    batch_name = models.CharField(
+        max_length=255,
+        blank=True,
+    )
+
+    subject_name = models.CharField(
+        max_length=255,
+        blank=True,
+    )
+
+    chapter_name = models.CharField(
+        max_length=100,
+        blank=True,
+    )
+
+    # ========================================================
+    # ORIGINAL CREATOR
+    # ========================================================
 
     created_by_admin = models.ForeignKey(
         User,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name="deletion_audits_created",
+        related_name="content_deletion_audits_created_as_admin",
     )
 
-    created_at_original = models.DateTimeField(
+    created_by_teacher = models.ForeignKey(
+        Teacher,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="content_deletion_audits_created_as_teacher",
+    )
+
+    original_created_at = models.DateTimeField(
         null=True,
         blank=True,
     )
 
-    # -----------------------------------------------------
+    # ========================================================
     # TEACHER DELETE REQUEST
-    # -----------------------------------------------------
+    # ========================================================
 
-    delete_requested_by_teacher = models.ForeignKey(
+    requested_by_teacher = models.ForeignKey(
         Teacher,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name="deletion_audits_requested",
+        related_name="content_deletion_requests",
     )
 
-    delete_requested_at = models.DateTimeField(
+    requested_at = models.DateTimeField(
         null=True,
         blank=True,
     )
 
-    delete_request_reason = models.TextField(blank=True)
-
-    # -----------------------------------------------------
-    # TEACHER WITHDRAW
-    # -----------------------------------------------------
-
-    withdrawn_by_teacher = models.ForeignKey(
-        Teacher,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="deletion_audits_withdrawn",
-    )
-
-    withdrawn_at = models.DateTimeField(
-        null=True,
+    request_reason = models.TextField(
         blank=True,
     )
 
-    # -----------------------------------------------------
-    # ADMIN DECISION (approve / reject)
-    # -----------------------------------------------------
+    # ========================================================
+    # ADMIN DECISION
+    # ========================================================
 
     ADMIN_DECISION_CHOICES = [
         ("approved", "Approved"),
@@ -664,7 +896,7 @@ class DeletionAudit(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name="deletion_audits_decisions",
+        related_name="content_deletion_decisions",
     )
 
     decision_at = models.DateTimeField(
@@ -672,29 +904,36 @@ class DeletionAudit(models.Model):
         blank=True,
     )
 
-    admin_response = models.TextField(blank=True)
+    admin_response = models.TextField(
+        blank=True,
+    )
 
-    # -----------------------------------------------------
-    # ADMIN DIRECT DELETE
-    # -----------------------------------------------------
+    # ========================================================
+    # DIRECT ADMIN DELETE
+    # ========================================================
 
     deleted_by_admin = models.ForeignKey(
         User,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name="deletion_audits_direct_deleted",
+        related_name="content_direct_deletions",
     )
 
-    admin_delete_reason = models.TextField(blank=True)
+    admin_delete_reason = models.TextField(
+        blank=True,
+    )
 
-    # -----------------------------------------------------
-    # DELETION METHOD
-    # -----------------------------------------------------
+    # ========================================================
+    # DELETE METHOD
+    # ========================================================
 
     DELETION_METHOD_CHOICES = [
         ("admin_direct", "Admin Direct Delete"),
-        ("teacher_request_approved", "Teacher Request Approved"),
+        (
+            "teacher_request_approved",
+            "Teacher Request Approved",
+        ),
     ]
 
     deletion_method = models.CharField(
@@ -703,54 +942,84 @@ class DeletionAudit(models.Model):
         blank=True,
     )
 
-    # -----------------------------------------------------
-    # FINAL STATUS
-    # -----------------------------------------------------
+    # ========================================================
+    # AUDIT STATUS
+    # ========================================================
 
-    STATUS_CHOICES = [
+    AUDIT_STATUS_CHOICES = [
         ("pending", "Pending"),
-        ("withdrawn", "Withdrawn"),
         ("approved", "Approved"),
         ("rejected", "Rejected"),
-        ("deleted", "Permanently Deleted"),
+        ("deleted", "Deleted"),
     ]
 
     status = models.CharField(
         max_length=20,
-        choices=STATUS_CHOICES,
+        choices=AUDIT_STATUS_CHOICES,
         default="pending",
     )
+
+    # ========================================================
+    # ACTUAL DELETION TIME
+    # ========================================================
 
     deleted_at = models.DateTimeField(
         null=True,
         blank=True,
     )
 
-    # -----------------------------------------------------
-    # SNAPSHOT OF CONTENT BEFORE DELETE
-    # -----------------------------------------------------
+    # ========================================================
+    # CONTENT SNAPSHOT
+    # ========================================================
 
-    snapshot = models.JSONField(default=dict, blank=True)
+    snapshot = models.JSONField(
+        default=dict,
+        blank=True,
+    )
 
-    # -----------------------------------------------------
-    # AUDIT CREATION TIME
-    # -----------------------------------------------------
+    # ========================================================
+    # AUDIT CREATED TIME
+    # ========================================================
 
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
 
-    # -----------------------------------------------------
+    # ========================================================
     # META
-    # -----------------------------------------------------
+    # ========================================================
 
     class Meta:
-        ordering = ["-created_at", "-id"]
+        ordering = [
+            "-created_at",
+            "-id",
+        ]
 
         indexes = [
-            models.Index(fields=["content_type", "object_id"]),
-            models.Index(fields=["status", "created_at"]),
-            models.Index(fields=["deletion_method", "created_at"]),
-            models.Index(fields=["admin_decision", "created_at"]),
-            models.Index(fields=["subject_name", "created_at"]),
+            models.Index(
+                fields=[
+                    "content_type",
+                    "object_id",
+                ]
+            ),
+            models.Index(
+                fields=[
+                    "status",
+                    "created_at",
+                ]
+            ),
+            models.Index(
+                fields=[
+                    "deletion_method",
+                    "created_at",
+                ]
+            ),
+            models.Index(
+                fields=[
+                    "admin_decision",
+                    "created_at",
+                ]
+            ),
         ]
 
     def __str__(self):
