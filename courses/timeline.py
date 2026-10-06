@@ -1,4 +1,5 @@
 from django.utils import timezone
+
 from django.contrib.auth.models import User
 
 from teachers.models import Teacher
@@ -13,8 +14,8 @@ from .models import (
     ChapterQuiz,
     QuizChangeLog,
     DeletionAudit,
+    get_actor_snapshot,
 )
-
 
 # ============================================================
 # ACTOR VALIDATION
@@ -25,9 +26,14 @@ def _get_actor_fields(
     teacher=None,
 ):
     """
-    Return the correct actor fields for timeline records.
+    Return all actor information required for a timeline record.
 
     Exactly one actor must be provided.
+
+    The timeline stores both:
+
+        1. Foreign-key reference
+        2. Permanent name + role snapshot
 
     Admin:
         admin=User instance
@@ -46,25 +52,57 @@ def _get_actor_fields(
             "An admin or teacher actor is required."
         )
 
+    # --------------------------------------------------------
+    # ADMIN
+    # --------------------------------------------------------
+
     if admin is not None:
         if not isinstance(admin, User):
             raise ValueError(
                 "The admin actor must be a User instance."
             )
 
+        actor_name, actor_role = get_actor_snapshot(
+            admin=admin,
+            teacher=None,
+        )
+
+        if not actor_name:
+            raise ValueError(
+                "Unable to determine the admin's full name."
+            )
+
         return {
             "changed_by_admin": admin,
             "changed_by_teacher": None,
+            "changed_by_name": actor_name,
+            "changed_by_role": actor_role,
         }
+
+    # --------------------------------------------------------
+    # TEACHER
+    # --------------------------------------------------------
 
     if not isinstance(teacher, Teacher):
         raise ValueError(
             "The teacher actor must be a Teacher instance."
         )
 
+    actor_name, actor_role = get_actor_snapshot(
+        admin=None,
+        teacher=teacher,
+    )
+
+    if not actor_name:
+        raise ValueError(
+            "Unable to determine the teacher's full name."
+        )
+
     return {
         "changed_by_admin": None,
         "changed_by_teacher": teacher,
+        "changed_by_name": actor_name,
+        "changed_by_role": actor_role,
     }
 
 
@@ -92,6 +130,10 @@ def _get_creation_actor_fields(
             "The original creator must be provided."
         )
 
+    # --------------------------------------------------------
+    # ADMIN CREATOR
+    # --------------------------------------------------------
+
     if admin is not None:
         if not isinstance(admin, User):
             raise ValueError(
@@ -102,6 +144,10 @@ def _get_creation_actor_fields(
             "created_by_admin": admin,
             "created_by_teacher": None,
         }
+
+    # --------------------------------------------------------
+    # TEACHER CREATOR
+    # --------------------------------------------------------
 
     if not isinstance(teacher, Teacher):
         raise ValueError(
@@ -131,6 +177,17 @@ def _create_timeline_entry(
 ):
     """
     Common timeline creator.
+
+    Every timeline entry automatically stores:
+
+        - actor ForeignKey
+        - actor full name snapshot
+        - actor role snapshot
+        - action
+        - field name
+        - old value
+        - new value
+        - change summary
 
     The specific content relationship is passed through
     extra_fields because each timeline model uses a different
@@ -163,12 +220,37 @@ def record_chapter_created(
     teacher=None,
 ):
     """
-    Record chapter creation.
+    Record the complete Chapter snapshot at creation time.
+
+    The Chapter Timeline must remember what the Chapter looked
+    like when it was created.
+
+    Stored snapshot:
+
+        - Chapter name
+        - Chapter description
+        - Chapter order
+        - Chapter status
+        - Created datetime
+
+    The actor information is stored separately by
+    _create_timeline_entry().
     """
+
+    chapter_snapshot = (
+        f"Chapter Name: {chapter.chapter_name}\n"
+        f"Description: {chapter.chapter_description}\n"
+        f"Order: {chapter.chapter_order}\n"
+        f"Status: {chapter.status}\n"
+        f"Created At: {chapter.created_at}"
+    )
 
     return _create_timeline_entry(
         log_model=ChapterChangeLog,
         action="created",
+        field_name="chapter_snapshot",
+        old_value="",
+        new_value=chapter_snapshot,
         change_summary=(
             f"Chapter '{chapter.chapter_name}' was created."
         ),
@@ -177,6 +259,8 @@ def record_chapter_created(
         chapter=chapter,
     )
 
+
+# ============================================================
 
 def record_chapter_updated(
     chapter,
@@ -187,7 +271,15 @@ def record_chapter_updated(
     teacher=None,
 ):
     """
-    Record one chapter field update.
+    Record one Chapter field update.
+
+    This stores the exact before and after values.
+
+    Examples:
+
+        chapter_name
+        chapter_description
+        status
     """
 
     return _create_timeline_entry(
@@ -213,7 +305,11 @@ def record_chapter_order_changed(
     teacher=None,
 ):
     """
-    Record chapter order change.
+    Record a Chapter order change.
+
+    Example:
+
+        Chapter order changed from 3 to 1.
     """
 
     return _create_timeline_entry(
@@ -242,12 +338,34 @@ def record_video_created(
     teacher=None,
 ):
     """
-    Record video creation.
+    Record the complete Video snapshot at creation time.
+
+    Stored snapshot:
+
+        - Video name
+        - Video description
+        - Video order
+        - Video status
+        - Created datetime
+
+    The actual Cloudinary video file is intentionally not stored
+    in the visible timeline snapshot.
     """
+
+    video_snapshot = (
+        f"Video Name: {video.video_name}\n"
+        f"Description: {video.video_description}\n"
+        f"Order: {video.video_order}\n"
+        f"Status: {video.status}\n"
+        f"Created At: {video.created_at}"
+    )
 
     return _create_timeline_entry(
         log_model=VideoChangeLog,
         action="created",
+        field_name="video_snapshot",
+        old_value="",
+        new_value=video_snapshot,
         change_summary=(
             f"Video '{video.video_name}' was created."
         ),
@@ -321,12 +439,34 @@ def record_pdf_created(
     teacher=None,
 ):
     """
-    Record PDF creation.
+    Record the complete PDF snapshot at creation time.
+
+    Stored snapshot:
+
+        - PDF name
+        - PDF description
+        - PDF order
+        - PDF status
+        - Created datetime
+
+    The actual Cloudinary PDF file is intentionally not stored
+    in the visible timeline snapshot.
     """
+
+    pdf_snapshot = (
+        f"PDF Name: {pdf.pdf_name}\n"
+        f"Description: {pdf.pdf_description}\n"
+        f"Order: {pdf.pdf_order}\n"
+        f"Status: {pdf.status}\n"
+        f"Created At: {pdf.created_at}"
+    )
 
     return _create_timeline_entry(
         log_model=PDFChangeLog,
         action="created",
+        field_name="pdf_snapshot",
+        old_value="",
+        new_value=pdf_snapshot,
         change_summary=(
             f"PDF '{pdf.pdf_name}' was created."
         ),
@@ -400,12 +540,33 @@ def record_quiz_created(
     teacher=None,
 ):
     """
-    Record quiz creation.
+    Record the complete Quiz snapshot at creation time.
+
+    Stored snapshot:
+
+        - Quiz name
+        - Quiz description
+        - Quiz order
+        - Maximum attempts
+        - Quiz status
+        - Created datetime
     """
+
+    quiz_snapshot = (
+        f"Quiz Name: {quiz.quiz_name}\n"
+        f"Description: {quiz.quiz_description}\n"
+        f"Order: {quiz.quiz_order}\n"
+        f"Maximum Attempts: {quiz.maximum_attempts}\n"
+        f"Status: {quiz.status}\n"
+        f"Created At: {quiz.created_at}"
+    )
 
     return _create_timeline_entry(
         log_model=QuizChangeLog,
         action="created",
+        field_name="quiz_snapshot",
+        old_value="",
+        new_value=quiz_snapshot,
         change_summary=(
             f"Quiz '{quiz.quiz_name}' was created."
         ),
@@ -641,6 +802,7 @@ def record_correct_answer_changed(
     Record a correct-answer change.
 
     Example:
+
         B -> C
     """
 
@@ -669,6 +831,7 @@ def _get_deletion_content_information(content):
     Return the common information needed for DeletionAudit.
 
     Supported content:
+
         CourseChapter
         ChapterVideo
         ChapterPDF
@@ -954,6 +1117,7 @@ def mark_admin_deletion_decision(
     Record the Admin decision on a Teacher deletion request.
 
     Allowed decisions:
+
         approved
         rejected
 
@@ -1065,6 +1229,7 @@ def mark_deletion_completed(
     successfully been deleted.
 
     Allowed deletion methods:
+
         admin_direct
         teacher_request_approved
     """

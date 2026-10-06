@@ -1,8 +1,11 @@
 from django.db import models
+
 from django.contrib.auth.models import User
+
 from cloudinary.models import CloudinaryField
 
 from admins.models import Batch, Subject
+
 from teachers.models import Teacher
 
 
@@ -17,8 +20,73 @@ STATUS_CHOICES = [
 
 
 # ============================================================
+# COMMON TIMELINE ACTOR SNAPSHOT HELPERS
+# ============================================================
+
+
+def get_admin_display_name(user):
+    """
+    Return the best available display name for an admin User.
+    """
+
+    if not user:
+        return ""
+
+    full_name = user.get_full_name().strip()
+
+    if full_name:
+        return full_name
+
+    return user.username
+
+
+def get_teacher_display_name(teacher):
+    """
+    Return the teacher's stored full name.
+    """
+
+    if not teacher:
+        return ""
+
+    full_name = getattr(teacher, "full_name", "")
+
+    if full_name:
+        return full_name.strip()
+
+    if getattr(teacher, "user", None):
+        user = teacher.user
+
+        full_name = user.get_full_name().strip()
+
+        if full_name:
+            return full_name
+
+        return user.username
+
+    return ""
+
+
+def get_actor_snapshot(admin=None, teacher=None):
+    """
+    Return immutable timeline actor information.
+
+    Returns:
+        (name, role)
+    """
+
+    if admin:
+        return get_admin_display_name(admin), "Admin"
+
+    if teacher:
+        return get_teacher_display_name(teacher), "Teacher"
+
+    return "", ""
+
+
+# ============================================================
 # COURSE CHAPTER
 # ============================================================
+
 
 class CourseChapter(models.Model):
 
@@ -54,6 +122,10 @@ class CourseChapter(models.Model):
         default="draft",
     )
 
+    # --------------------------------------------------------
+    # ORIGINAL CREATOR
+    # --------------------------------------------------------
+
     created_by_admin = models.ForeignKey(
         User,
         on_delete=models.PROTECT,
@@ -69,6 +141,30 @@ class CourseChapter(models.Model):
         blank=True,
         related_name="course_chapters_created_as_teacher",
     )
+
+    # --------------------------------------------------------
+    # LAST UPDATER
+    # --------------------------------------------------------
+
+    updated_by_admin = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="course_chapters_updated_as_admin",
+    )
+
+    updated_by_teacher = models.ForeignKey(
+        Teacher,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="course_chapters_updated_as_teacher",
+    )
+
+    # --------------------------------------------------------
+    # TIMESTAMPS
+    # --------------------------------------------------------
 
     created_at = models.DateTimeField(
         auto_now_add=True,
@@ -103,6 +199,7 @@ class CourseChapter(models.Model):
 # CHAPTER CHANGE / TIMELINE
 # ============================================================
 
+
 class ChapterChangeLog(models.Model):
 
     ACTION_CHOICES = [
@@ -116,6 +213,10 @@ class ChapterChangeLog(models.Model):
         on_delete=models.CASCADE,
         related_name="change_logs",
     )
+
+    # --------------------------------------------------------
+    # LIVE ACTOR REFERENCES
+    # --------------------------------------------------------
 
     changed_by_admin = models.ForeignKey(
         User,
@@ -132,6 +233,24 @@ class ChapterChangeLog(models.Model):
         blank=True,
         related_name="chapter_changes_as_teacher",
     )
+
+    # --------------------------------------------------------
+    # IMMUTABLE ACTOR SNAPSHOT
+    # --------------------------------------------------------
+
+    changed_by_name = models.CharField(
+        max_length=255,
+        blank=True,
+    )
+
+    changed_by_role = models.CharField(
+        max_length=50,
+        blank=True,
+    )
+
+    # --------------------------------------------------------
+    # CHANGE INFORMATION
+    # --------------------------------------------------------
 
     action = models.CharField(
         max_length=30,
@@ -165,6 +284,29 @@ class ChapterChangeLog(models.Model):
             "-id",
         ]
 
+    def save(self, *args, **kwargs):
+        """
+        Save the actor's name and role as a permanent snapshot.
+
+        For an existing timeline entry, the stored snapshot is not
+        overwritten if it already exists.
+        """
+
+        if not self.changed_by_name or not self.changed_by_role:
+
+            name, role = get_actor_snapshot(
+                admin=self.changed_by_admin,
+                teacher=self.changed_by_teacher,
+            )
+
+            if name:
+                self.changed_by_name = name
+
+            if role:
+                self.changed_by_role = role
+
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return (
             f"{self.chapter.chapter_name} - "
@@ -175,6 +317,7 @@ class ChapterChangeLog(models.Model):
 # ============================================================
 # CHAPTER VIDEO
 # ============================================================
+
 
 class ChapterVideo(models.Model):
 
@@ -194,17 +337,14 @@ class ChapterVideo(models.Model):
         max_length=250,
     )
 
+    # --------------------------------------------------------
+    # VIDEO FILE
+    # --------------------------------------------------------
+
     video_file = CloudinaryField(
         "video",
         resource_type="video",
-    )
-
-    video_thumbnail = CloudinaryField(
-        "video_thumbnail",
-        resource_type="image",
-        folder="neolearn/video_thumbnails",
-        blank=True,
-        null=True,
+        folder="neolearn/videos",
     )
 
     video_order = models.PositiveIntegerField(
@@ -216,6 +356,10 @@ class ChapterVideo(models.Model):
         choices=STATUS_CHOICES,
         default="draft",
     )
+
+    # --------------------------------------------------------
+    # ORIGINAL CREATOR
+    # --------------------------------------------------------
 
     created_by_admin = models.ForeignKey(
         User,
@@ -232,6 +376,30 @@ class ChapterVideo(models.Model):
         blank=True,
         related_name="course_videos_created_as_teacher",
     )
+
+    # --------------------------------------------------------
+    # LAST UPDATER
+    # --------------------------------------------------------
+
+    updated_by_admin = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="course_videos_updated_as_admin",
+    )
+
+    updated_by_teacher = models.ForeignKey(
+        Teacher,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="course_videos_updated_as_teacher",
+    )
+
+    # --------------------------------------------------------
+    # TIMESTAMPS
+    # --------------------------------------------------------
 
     created_at = models.DateTimeField(
         auto_now_add=True,
@@ -265,6 +433,7 @@ class ChapterVideo(models.Model):
 # VIDEO CHANGE / TIMELINE
 # ============================================================
 
+
 class VideoChangeLog(models.Model):
 
     ACTION_CHOICES = [
@@ -278,6 +447,10 @@ class VideoChangeLog(models.Model):
         on_delete=models.CASCADE,
         related_name="change_logs",
     )
+
+    # --------------------------------------------------------
+    # LIVE ACTOR REFERENCES
+    # --------------------------------------------------------
 
     changed_by_admin = models.ForeignKey(
         User,
@@ -294,6 +467,24 @@ class VideoChangeLog(models.Model):
         blank=True,
         related_name="video_changes_as_teacher",
     )
+
+    # --------------------------------------------------------
+    # IMMUTABLE ACTOR SNAPSHOT
+    # --------------------------------------------------------
+
+    changed_by_name = models.CharField(
+        max_length=255,
+        blank=True,
+    )
+
+    changed_by_role = models.CharField(
+        max_length=50,
+        blank=True,
+    )
+
+    # --------------------------------------------------------
+    # CHANGE INFORMATION
+    # --------------------------------------------------------
 
     action = models.CharField(
         max_length=30,
@@ -336,6 +527,26 @@ class VideoChangeLog(models.Model):
             ),
         ]
 
+    def save(self, *args, **kwargs):
+        """
+        Save the actor's name and role as a permanent snapshot.
+        """
+
+        if not self.changed_by_name or not self.changed_by_role:
+
+            name, role = get_actor_snapshot(
+                admin=self.changed_by_admin,
+                teacher=self.changed_by_teacher,
+            )
+
+            if name:
+                self.changed_by_name = name
+
+            if role:
+                self.changed_by_role = role
+
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return (
             f"{self.video.video_name} - "
@@ -346,6 +557,7 @@ class VideoChangeLog(models.Model):
 # ============================================================
 # CHAPTER PDF
 # ============================================================
+
 
 class ChapterPDF(models.Model):
 
@@ -365,9 +577,22 @@ class ChapterPDF(models.Model):
         max_length=250,
     )
 
-    pdf_file = models.FileField(
-        upload_to="course_pdfs/",
+    # --------------------------------------------------------
+    # PDF FILE
+    # --------------------------------------------------------
+    # IMPORTANT:
+    # PDF files are stored in Cloudinary as RAW resources.
+    # --------------------------------------------------------
+
+    pdf_file = CloudinaryField(
+        "pdf",
+        resource_type="raw",
+        folder="neolearn/pdfs",
     )
+
+    # --------------------------------------------------------
+    # PDF THUMBNAIL
+    # --------------------------------------------------------
 
     pdf_thumbnail = CloudinaryField(
         "pdf_thumbnail",
@@ -387,6 +612,10 @@ class ChapterPDF(models.Model):
         default="draft",
     )
 
+    # --------------------------------------------------------
+    # ORIGINAL CREATOR
+    # --------------------------------------------------------
+
     created_by_admin = models.ForeignKey(
         User,
         on_delete=models.PROTECT,
@@ -402,6 +631,30 @@ class ChapterPDF(models.Model):
         blank=True,
         related_name="course_pdfs_created_as_teacher",
     )
+
+    # --------------------------------------------------------
+    # LAST UPDATER
+    # --------------------------------------------------------
+
+    updated_by_admin = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="course_pdfs_updated_as_admin",
+    )
+
+    updated_by_teacher = models.ForeignKey(
+        Teacher,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="course_pdfs_updated_as_teacher",
+    )
+
+    # --------------------------------------------------------
+    # TIMESTAMPS
+    # --------------------------------------------------------
 
     created_at = models.DateTimeField(
         auto_now_add=True,
@@ -435,6 +688,7 @@ class ChapterPDF(models.Model):
 # PDF CHANGE / TIMELINE
 # ============================================================
 
+
 class PDFChangeLog(models.Model):
 
     ACTION_CHOICES = [
@@ -448,6 +702,10 @@ class PDFChangeLog(models.Model):
         on_delete=models.CASCADE,
         related_name="change_logs",
     )
+
+    # --------------------------------------------------------
+    # LIVE ACTOR REFERENCES
+    # --------------------------------------------------------
 
     changed_by_admin = models.ForeignKey(
         User,
@@ -464,6 +722,24 @@ class PDFChangeLog(models.Model):
         blank=True,
         related_name="pdf_changes_as_teacher",
     )
+
+    # --------------------------------------------------------
+    # IMMUTABLE ACTOR SNAPSHOT
+    # --------------------------------------------------------
+
+    changed_by_name = models.CharField(
+        max_length=255,
+        blank=True,
+    )
+
+    changed_by_role = models.CharField(
+        max_length=50,
+        blank=True,
+    )
+
+    # --------------------------------------------------------
+    # CHANGE INFORMATION
+    # --------------------------------------------------------
 
     action = models.CharField(
         max_length=30,
@@ -506,6 +782,26 @@ class PDFChangeLog(models.Model):
             ),
         ]
 
+    def save(self, *args, **kwargs):
+        """
+        Save the actor's name and role as a permanent snapshot.
+        """
+
+        if not self.changed_by_name or not self.changed_by_role:
+
+            name, role = get_actor_snapshot(
+                admin=self.changed_by_admin,
+                teacher=self.changed_by_teacher,
+            )
+
+            if name:
+                self.changed_by_name = name
+
+            if role:
+                self.changed_by_role = role
+
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return (
             f"{self.pdf.pdf_name} - "
@@ -516,6 +812,7 @@ class PDFChangeLog(models.Model):
 # ============================================================
 # CHAPTER QUIZ
 # ============================================================
+
 
 class ChapterQuiz(models.Model):
 
@@ -549,6 +846,10 @@ class ChapterQuiz(models.Model):
         default="draft",
     )
 
+    # --------------------------------------------------------
+    # ORIGINAL CREATOR
+    # --------------------------------------------------------
+
     created_by_admin = models.ForeignKey(
         User,
         on_delete=models.PROTECT,
@@ -564,6 +865,30 @@ class ChapterQuiz(models.Model):
         blank=True,
         related_name="course_quizzes_created_as_teacher",
     )
+
+    # --------------------------------------------------------
+    # LAST UPDATER
+    # --------------------------------------------------------
+
+    updated_by_admin = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="course_quizzes_updated_as_admin",
+    )
+
+    updated_by_teacher = models.ForeignKey(
+        Teacher,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="course_quizzes_updated_as_teacher",
+    )
+
+    # --------------------------------------------------------
+    # TIMESTAMPS
+    # --------------------------------------------------------
 
     created_at = models.DateTimeField(
         auto_now_add=True,
@@ -596,6 +921,7 @@ class ChapterQuiz(models.Model):
 # ============================================================
 # QUIZ QUESTION
 # ============================================================
+
 
 class QuizQuestion(models.Model):
 
@@ -631,6 +957,7 @@ class QuizQuestion(models.Model):
 # ============================================================
 # QUIZ OPTION
 # ============================================================
+
 
 class QuizOption(models.Model):
 
@@ -694,6 +1021,7 @@ class QuizOption(models.Model):
 # QUIZ CHANGE / TIMELINE
 # ============================================================
 
+
 class QuizChangeLog(models.Model):
 
     ACTION_CHOICES = [
@@ -715,6 +1043,10 @@ class QuizChangeLog(models.Model):
         related_name="change_logs",
     )
 
+    # --------------------------------------------------------
+    # LIVE ACTOR REFERENCES
+    # --------------------------------------------------------
+
     changed_by_admin = models.ForeignKey(
         User,
         on_delete=models.PROTECT,
@@ -730,6 +1062,24 @@ class QuizChangeLog(models.Model):
         blank=True,
         related_name="quiz_changes_as_teacher",
     )
+
+    # --------------------------------------------------------
+    # IMMUTABLE ACTOR SNAPSHOT
+    # --------------------------------------------------------
+
+    changed_by_name = models.CharField(
+        max_length=255,
+        blank=True,
+    )
+
+    changed_by_role = models.CharField(
+        max_length=50,
+        blank=True,
+    )
+
+    # --------------------------------------------------------
+    # CHANGE INFORMATION
+    # --------------------------------------------------------
 
     action = models.CharField(
         max_length=40,
@@ -772,6 +1122,26 @@ class QuizChangeLog(models.Model):
             ),
         ]
 
+    def save(self, *args, **kwargs):
+        """
+        Save the actor's name and role as a permanent snapshot.
+        """
+
+        if not self.changed_by_name or not self.changed_by_role:
+
+            name, role = get_actor_snapshot(
+                admin=self.changed_by_admin,
+                teacher=self.changed_by_teacher,
+            )
+
+            if name:
+                self.changed_by_name = name
+
+            if role:
+                self.changed_by_role = role
+
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return (
             f"{self.quiz.quiz_name} - "
@@ -782,6 +1152,7 @@ class QuizChangeLog(models.Model):
 # ============================================================
 # COMMON DELETION AUDIT
 # ============================================================
+
 
 class DeletionAudit(models.Model):
 

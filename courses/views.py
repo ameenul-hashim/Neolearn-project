@@ -4,6 +4,8 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
+import cloudinary.uploader
+
 from admins.models import Batch, Subject
 from teachers.models import Teacher, TeacherSubject
 
@@ -25,15 +27,74 @@ from .ordering import (
     remove_item_and_close_gap,
 )
 
+from .timeline import (
+    record_chapter_created,
+    record_chapter_updated,
+    record_chapter_order_changed,
+    record_video_created,
+    record_video_updated,
+    record_video_order_changed,
+    record_pdf_created,
+    record_pdf_updated,
+    record_pdf_order_changed,
+    record_quiz_created,
+    record_quiz_updated,
+    record_quiz_order_changed,
+)
 
 # ============================================================
-# COMMON ACTOR HELPERS
+# CONSTANTS
+# ============================================================
+
+VALID_STATUS = {
+    "draft",
+    "published",
+}
+
+VALID_CONTENT_TYPES = {
+    "chapter",
+    "video",
+    "pdf",
+    "quiz",
+}
+
+VALID_BUILDER_VIEWS = {
+    "videos",
+    "pdfs",
+    "quizzes",
+    "live",
+    "timeline",
+    "video_timeline",
+    "pdf_timeline",
+    "quiz_timeline",
+}
+
+# These must exist in your Cloudinary account.
+#
+# They are shared permanent assets.
+# They are NOT deleted when a course item is deleted.
+
+DEFAULT_PDF_THUMBNAIL = (
+    "neolearn/defaults/default_pdf_thumbnail"
+)
+
+# Upload validation.
+MAX_VIDEO_SIZE_MB = 500
+MAX_PDF_SIZE_MB = 50
+MAX_IMAGE_SIZE_MB = 5
+
+
+# ============================================================
+# COMMON ACTOR / ROLE HELPERS
 # ============================================================
 
 
 def _get_teacher(request):
     """
-    Return the Teacher profile belonging to the logged-in user.
+    Return the Teacher profile belonging to the
+    currently authenticated user.
+
+    Never accept teacher ID from POST/GET data.
     """
 
     if not request.user.is_authenticated:
@@ -47,23 +108,42 @@ def _get_teacher(request):
 
 def _is_admin(request):
     """
-    Admin access is based on staff/superuser status.
+    Admin access is determined by the authenticated User.
+
+    A browser/HTML form cannot declare itself Admin.
     """
 
+    if not request.user.is_authenticated:
+        return False
+
     return bool(
-        request.user.is_authenticated
-        and (
-            request.user.is_staff
-            or request.user.is_superuser
-        )
+        request.user.is_staff
+        or request.user.is_superuser
     )
 
 
 def _get_actor(request):
     """
-    Determine the current actor from request.user.
+    Resolve the current actor from request.user.
 
-    No actor information comes from HTML.
+    Possible results:
+
+        Admin:
+            {
+                "role": "admin",
+                "admin": User,
+                "teacher": None,
+            }
+
+        Teacher:
+            {
+                "role": "teacher",
+                "admin": None,
+                "teacher": Teacher,
+            }
+
+        Other / anonymous:
+            None
     """
 
     if not request.user.is_authenticated:
@@ -78,43 +158,88 @@ def _get_actor(request):
 
     teacher = _get_teacher(request)
 
-    if teacher is not None:
-        return {
-            "role": "teacher",
-            "admin": None,
-            "teacher": teacher,
-        }
+    if teacher is None:
+        return None
 
-    return None
+    return {
+        "role": "teacher",
+        "admin": None,
+        "teacher": teacher,
+    }
 
 
 def _get_actor_name(actor):
     """
-    Return the display name of the current actor.
+    Snapshot-friendly actor display name.
     """
 
     if actor["role"] == "admin":
-        name = actor["admin"].get_full_name().strip()
 
-        if name:
-            return name
+        full_name = (
+            actor["admin"]
+            .get_full_name()
+            .strip()
+        )
+
+        if full_name:
+            return full_name
 
         return actor["admin"].get_username()
 
-    name = actor["teacher"].full_name.strip()
+    teacher = actor["teacher"]
 
-    if name:
-        return name
+    full_name = (
+        getattr(
+            teacher,
+            "full_name",
+            "",
+        )
+        or ""
+    ).strip()
 
-    return actor["teacher"].user.get_username()
+    if full_name:
+        return full_name
+
+    user = getattr(
+        teacher,
+        "user",
+        None,
+    )
+
+    if user is not None:
+
+        full_name = (
+            user
+            .get_full_name()
+            .strip()
+        )
+
+        if full_name:
+            return full_name
+
+        return user.get_username()
+
+    return "Teacher"
+
+
+def _get_actor_role(actor):
+    """
+    Human-readable role snapshot.
+    """
+
+    if actor["role"] == "admin":
+        return "Admin"
+
+    return "Teacher"
 
 
 def _get_creator_fields(actor):
     """
-    Return the correct creator fields.
+    Set the original creator correctly.
     """
 
     if actor["role"] == "admin":
+
         return {
             "created_by_admin": actor["admin"],
             "created_by_teacher": None,
@@ -126,25 +251,58 @@ def _get_creator_fields(actor):
     }
 
 
+def _get_updater_fields(actor):
+    """
+    Set the latest updater on content.
+
+    Creation is tracked by created_by_*.
+    These fields are updated only when an existing object is changed.
+    """
+    if actor["role"] == "admin":
+        return {
+            "updated_by_admin": actor["admin"],
+            "updated_by_teacher": None,
+        }
+
+    return {
+        "updated_by_admin": None,
+        "updated_by_teacher": actor["teacher"],
+    }
+
+
 def _get_change_actor_fields(actor):
     """
-    Return the correct timeline actor fields.
+    Timeline actor information.
+
+    IMPORTANT:
+    changed_by_name and changed_by_role are snapshots.
+
+    Therefore the timeline still shows who performed the
+    action even if the person's current profile changes later.
     """
 
+    actor_name = _get_actor_name(actor)
+    actor_role = _get_actor_role(actor)
+
     if actor["role"] == "admin":
+
         return {
             "changed_by_admin": actor["admin"],
             "changed_by_teacher": None,
+            "changed_by_name": actor_name,
+            "changed_by_role": actor_role,
         }
 
     return {
         "changed_by_admin": None,
         "changed_by_teacher": actor["teacher"],
+        "changed_by_name": actor_name,
+        "changed_by_role": actor_role,
     }
 
 
 # ============================================================
-# COMMON AUTHORIZATION
+# ROLE / ACCESS CONTROL
 # ============================================================
 
 
@@ -154,8 +312,11 @@ def _get_teacher_assignment(
     subject,
 ):
     """
-    Verify active teacher assignment for this exact
-    batch + subject.
+    Teacher must be actively assigned to the exact
+    Batch + Subject.
+
+    A teacher assigned to another subject cannot manipulate
+    this subject by changing the URL.
     """
 
     return (
@@ -181,12 +342,17 @@ def _authorize_builder(
     subject,
 ):
     """
-    Admin:
-        allowed.
+    Central Course Builder authorization.
 
-    Teacher:
-        allowed only when actively assigned to this
-        exact batch + subject.
+    ADMIN:
+        Full access.
+
+    TEACHER:
+        Only active assignment to this exact
+        batch + subject.
+
+    EVERYONE ELSE:
+        Denied.
     """
 
     actor = _get_actor(request)
@@ -194,8 +360,16 @@ def _authorize_builder(
     if actor is None:
         return None
 
+    # --------------------------------------------------------
+    # ADMIN
+    # --------------------------------------------------------
+
     if actor["role"] == "admin":
         return actor
+
+    # --------------------------------------------------------
+    # TEACHER
+    # --------------------------------------------------------
 
     assignment = _get_teacher_assignment(
         actor["teacher"],
@@ -211,12 +385,61 @@ def _authorize_builder(
     return actor
 
 
+def _authorize_admin(request):
+    """
+    Admin-only authorization.
+
+    Used for sensitive deletion audit operations.
+    """
+
+    actor = _get_actor(request)
+
+    if actor is None:
+        return None
+
+    if actor["role"] != "admin":
+        return None
+
+    return actor
+
+
+def _authorize_teacher(
+    request,
+    batch,
+    subject,
+):
+    """
+    Teacher-only authorization.
+
+    Used for teacher deletion requests.
+    """
+
+    actor = _authorize_builder(
+        request,
+        batch,
+        subject,
+    )
+
+    if actor is None:
+        return None
+
+    if actor["role"] != "teacher":
+        return None
+
+    return actor
+
+
+# ============================================================
+# COMMON OBJECT LOOKUPS
+# ============================================================
+
+
 def _get_batch_subject(
     batch_id,
     subject_id,
 ):
     """
-    Make sure subject belongs to requested batch.
+    Ensure Subject actually belongs to Batch.
     """
 
     batch = get_object_or_404(
@@ -239,7 +462,7 @@ def _get_chapter(
     chapter_id,
 ):
     """
-    Make sure chapter belongs to exact batch + subject.
+    Ensure chapter belongs to exact Batch + Subject.
     """
 
     return get_object_or_404(
@@ -250,6 +473,77 @@ def _get_chapter(
     )
 
 
+def _get_content_object(
+    batch,
+    subject,
+    content_type,
+    object_id,
+    chapter_id=None,
+):
+    """
+    Resolve content safely.
+
+    The chapter/batch/subject relationship is checked
+    server-side for every object.
+    """
+
+    if content_type == "chapter":
+
+        return get_object_or_404(
+            CourseChapter,
+            id=object_id,
+            batch=batch,
+            subject=subject,
+        )
+
+    if content_type == "video":
+
+        chapter = get_object_or_404(
+            CourseChapter,
+            id=chapter_id,
+            batch=batch,
+            subject=subject,
+        )
+
+        return get_object_or_404(
+            ChapterVideo,
+            id=object_id,
+            chapter=chapter,
+        )
+
+    if content_type == "pdf":
+
+        chapter = get_object_or_404(
+            CourseChapter,
+            id=chapter_id,
+            batch=batch,
+            subject=subject,
+        )
+
+        return get_object_or_404(
+            ChapterPDF,
+            id=object_id,
+            chapter=chapter,
+        )
+
+    if content_type == "quiz":
+
+        chapter = get_object_or_404(
+            CourseChapter,
+            id=chapter_id,
+            batch=batch,
+            subject=subject,
+        )
+
+        return get_object_or_404(
+            ChapterQuiz,
+            id=object_id,
+            chapter=chapter,
+        )
+
+    return None
+
+
 # ============================================================
 # COMMON REDIRECT
 # ============================================================
@@ -258,24 +552,84 @@ def _get_chapter(
 def _builder_redirect(
     batch,
     subject,
-    chapter=None,
 ):
-    """
-    Central builder redirect.
-    """
-
-    if chapter is not None:
-        return redirect(
-            "courses:course_builder",
-            batch_id=batch.id,
-            subject_id=subject.id,
-        )
-
     return redirect(
         "courses:course_builder",
         batch_id=batch.id,
         subject_id=subject.id,
     )
+
+
+def _render_builder_form_error(
+    request,
+    batch,
+    subject,
+    actor,
+    selected_chapter,
+    errors,
+    form_data,
+    form_error_key,
+    form_data_key,
+    open_key,
+    selected_content="videos",
+    open_id=None,
+):
+    """
+    Render the same Course Builder page after a failed POST.
+
+    The submitted values remain available to the HTML form.
+    The exact form/modal is marked as open by context.
+    No JavaScript is responsible for validation or form data.
+    """
+
+    context = _get_builder_context(
+        batch=batch,
+        subject=subject,
+        actor=actor,
+        selected_chapter=selected_chapter,
+        selected_content=selected_content,
+    )
+
+    context[form_error_key] = errors
+    context[form_data_key] = form_data
+    context[open_key] = True
+
+    if open_id is not None:
+        context[f"{open_key}_id"] = open_id
+
+    for error in errors.values():
+        messages.error(
+            request,
+            error,
+        )
+
+    return render(
+        request,
+        _builder_template(actor),
+        context,
+    )
+
+
+# ============================================================
+# COMMON TEMPLATE
+# ============================================================
+
+
+def _builder_template(actor):
+    """
+    Return the presentation template for the current
+    Course Builder entry point.
+
+    This is NOT permission logic.
+    Permission is handled by _authorize_builder().
+    Actor role is used here only because Admin and Teacher
+    intentionally have separate templates.
+    """
+
+    if actor["role"] == "admin":
+        return "admins/course_builder/admin_course_builder.html"
+
+    return "teachers/content_builder/course_builder.html"
 
 
 # ============================================================
@@ -291,17 +645,10 @@ def _get_builder_context(
     selected_content="videos",
 ):
     """
-    Common Course Builder context.
+    Complete shared Course Builder context.
 
-    selected_content controls the right-side workspace:
-        videos
-        pdfs
-        quizzes
-        live
-        timeline
-
-    The actual content querysets are loaded for the selected chapter.
-    The template decides which workspace to display.
+    Both Admin and Teacher receive the same data structure.
+    Their templates remain separate.
     """
 
     chapters = (
@@ -320,20 +667,10 @@ def _get_builder_context(
         )
     )
 
-    # Always select the first chapter when no chapter was
-    # explicitly selected and chapters are available.
     if selected_chapter is None:
         selected_chapter = chapters.first()
 
-    valid_views = {
-        "videos",
-        "pdfs",
-        "quizzes",
-        "live",
-        "timeline",
-    }
-
-    if selected_content not in valid_views:
+    if selected_content not in VALID_BUILDER_VIEWS:
         selected_content = "videos"
 
     context = {
@@ -357,95 +694,99 @@ def _get_builder_context(
             ),
             "chapter_order",
         ),
+
+        "videos": [],
+        "video_count": 0,
+
+        "pdfs": [],
+        "pdf_count": 0,
+
+        "quizzes": [],
+        "quiz_count": 0,
+
+        "next_video_order": 1,
+        "next_pdf_order": 1,
+        "next_quiz_order": 1,
+
+        "chapter_timeline": [],
+        "video_timeline": [],
+        "pdf_timeline": [],
+        "quiz_timeline": [],
+
+        "selected_video": None,
+        "selected_pdf": None,
+        "selected_quiz": None,
     }
 
-    if selected_chapter is not None:
+    if selected_chapter is None:
+        return context
 
-        videos = (
-            ChapterVideo.objects
-            .filter(
-                chapter=selected_chapter,
-            )
-            .order_by(
+    videos = (
+        ChapterVideo.objects
+        .filter(
+            chapter=selected_chapter,
+        )
+        .order_by(
+            "video_order",
+            "pk",
+        )
+    )
+
+    pdfs = (
+        ChapterPDF.objects
+        .filter(
+            chapter=selected_chapter,
+        )
+        .order_by(
+            "pdf_order",
+            "pk",
+        )
+    )
+
+    quizzes = (
+        ChapterQuiz.objects
+        .filter(
+            chapter=selected_chapter,
+        )
+        .order_by(
+            "quiz_order",
+            "pk",
+        )
+    )
+
+    context.update(
+        {
+            "videos": videos,
+            "video_count": videos.count(),
+
+            "pdfs": pdfs,
+            "pdf_count": pdfs.count(),
+
+            "quizzes": quizzes,
+            "quiz_count": quizzes.count(),
+
+            "next_video_order": get_next_order(
+                ChapterVideo.objects.filter(
+                    chapter=selected_chapter,
+                ),
                 "video_order",
-                "pk",
-            )
-        )
+            ),
 
-        pdfs = (
-            ChapterPDF.objects
-            .filter(
-                chapter=selected_chapter,
-            )
-            .order_by(
+            "next_pdf_order": get_next_order(
+                ChapterPDF.objects.filter(
+                    chapter=selected_chapter,
+                ),
                 "pdf_order",
-                "pk",
-            )
-        )
+            ),
 
-        quizzes = (
-            ChapterQuiz.objects
-            .filter(
-                chapter=selected_chapter,
-            )
-            .order_by(
+            "next_quiz_order": get_next_order(
+                ChapterQuiz.objects.filter(
+                    chapter=selected_chapter,
+                ),
                 "quiz_order",
-                "pk",
-            )
-        )
-
-        context.update(
-            {
-                "videos": videos,
-                "video_count": videos.count(),
-
-                "pdfs": pdfs,
-                "pdf_count": pdfs.count(),
-
-                "quizzes": quizzes,
-                "quiz_count": quizzes.count(),
-
-                "next_video_order": get_next_order(
-                    ChapterVideo.objects.filter(
-                        chapter=selected_chapter,
-                    ),
-                    "video_order",
-                ),
-
-                "next_pdf_order": get_next_order(
-                    ChapterPDF.objects.filter(
-                        chapter=selected_chapter,
-                    ),
-                    "pdf_order",
-                ),
-
-                "next_quiz_order": get_next_order(
-                    ChapterQuiz.objects.filter(
-                        chapter=selected_chapter,
-                    ),
-                    "quiz_order",
-                ),
-            }
-        )
-
-    else:
-
-        context.update(
-            {
-                "videos": [],
-                "video_count": 0,
-
-                "pdfs": [],
-                "pdf_count": 0,
-
-                "quizzes": [],
-                "quiz_count": 0,
-
-                "next_video_order": 1,
-                "next_pdf_order": 1,
-                "next_quiz_order": 1,
-            }
-        )
+            ),
+        }
+    )
 
     return context
 
@@ -536,6 +877,340 @@ def _log_quiz(
 
 
 # ============================================================
+# CLOUDINARY HELPERS
+# ============================================================
+
+
+def _get_cloudinary_public_id(value):
+    """
+    Get the Cloudinary public ID from CloudinaryField.
+    """
+
+    if not value:
+        return ""
+
+    public_id = getattr(
+        value,
+        "public_id",
+        None,
+    )
+
+    if public_id:
+        return public_id
+
+    value_string = str(value)
+
+    if not value_string:
+        return ""
+
+    return value_string
+
+
+def _is_default_asset(public_id):
+    """
+    Default thumbnails are shared assets.
+
+    NEVER delete them when content is deleted/replaced.
+    """
+
+    if not public_id:
+        return False
+
+    return public_id.startswith(
+        "neolearn/defaults/"
+    )
+
+
+def _destroy_cloudinary_asset(
+    value,
+    resource_type,
+):
+    """
+    Delete one Cloudinary asset.
+
+    This is intentionally defensive.
+    Cloudinary cleanup failure should not corrupt the
+    already-successful database transaction.
+    """
+
+    public_id = _get_cloudinary_public_id(
+        value
+    )
+
+    if not public_id:
+        return
+
+    if _is_default_asset(public_id):
+        return
+
+    try:
+        cloudinary.uploader.destroy(
+            public_id,
+            resource_type=resource_type,
+            type="upload",
+            invalidate=True,
+        )
+    except Exception:
+        # Do not make a successful DB operation fail
+        # only because remote cleanup failed.
+        pass
+
+
+def _destroy_cloudinary_public_id(
+    public_id,
+    resource_type,
+):
+    """
+    Delete an already captured public ID.
+    """
+
+    if not public_id:
+        return
+
+    if _is_default_asset(public_id):
+        return
+
+    try:
+        cloudinary.uploader.destroy(
+            public_id,
+            resource_type=resource_type,
+            type="upload",
+            invalidate=True,
+        )
+    except Exception:
+        pass
+
+
+def _capture_video_assets(video):
+    """
+    Capture video Cloudinary assets before deletion/replacement.
+    """
+
+    return [
+        (
+            _get_cloudinary_public_id(
+                video.video_file
+            ),
+            "video",
+        ),
+    ]
+
+
+def _capture_pdf_assets(pdf):
+    """
+    Capture PDF Cloudinary assets before deletion/replacement.
+    """
+
+    return [
+        (
+            _get_cloudinary_public_id(
+                pdf.pdf_file
+            ),
+            "raw",
+        ),
+        (
+            _get_cloudinary_public_id(
+                pdf.pdf_thumbnail
+            ),
+            "image",
+        ),
+    ]
+
+
+def _capture_chapter_assets(chapter):
+    """
+    A chapter may own child videos and PDFs.
+
+    When the chapter is permanently deleted, capture all
+    child Cloudinary assets before Django cascades the rows.
+    """
+
+    assets = []
+
+    videos = ChapterVideo.objects.filter(
+        chapter=chapter,
+    )
+
+    pdfs = ChapterPDF.objects.filter(
+        chapter=chapter,
+    )
+
+    for video in videos:
+        assets.extend(
+            _capture_video_assets(video)
+        )
+
+    for pdf in pdfs:
+        assets.extend(
+            _capture_pdf_assets(pdf)
+        )
+
+    return assets
+
+
+def _schedule_cloudinary_cleanup(assets):
+    """
+    Schedule remote cleanup only after the DB transaction
+    successfully commits.
+    """
+
+    cleaned = set()
+
+    def cleanup():
+        for (
+            public_id,
+            resource_type,
+        ) in assets:
+
+            if not public_id:
+                continue
+
+            key = (
+                public_id,
+                resource_type,
+            )
+
+            if key in cleaned:
+                continue
+
+            cleaned.add(key)
+
+            _destroy_cloudinary_public_id(
+                public_id,
+                resource_type,
+            )
+
+    transaction.on_commit(cleanup)
+
+
+# ============================================================
+# SERVER-SIDE FILE VALIDATION
+# ============================================================
+
+
+def _validate_upload(
+    uploaded_file,
+    allowed_extensions,
+    allowed_mime_types,
+    max_size_mb,
+):
+    """
+    Generic server-side upload validation.
+    """
+
+    if uploaded_file is None:
+        return "File is required."
+
+    filename = (
+        uploaded_file.name
+        or ""
+    ).strip()
+
+    if "." not in filename:
+        return "The uploaded file has no valid extension."
+
+    extension = (
+        filename
+        .rsplit(".", 1)[1]
+        .lower()
+    )
+
+    if extension not in allowed_extensions:
+        return (
+            "Invalid file type. "
+            "Please upload a supported file."
+        )
+
+    content_type = (
+        getattr(
+            uploaded_file,
+            "content_type",
+            "",
+        )
+        or ""
+    ).lower()
+
+    if (
+        allowed_mime_types
+        and content_type
+        and content_type not in allowed_mime_types
+    ):
+        return (
+            "Invalid file format."
+        )
+
+    max_bytes = (
+        max_size_mb
+        * 1024
+        * 1024
+    )
+
+    if uploaded_file.size > max_bytes:
+        return (
+            f"File size cannot exceed "
+            f"{max_size_mb} MB."
+        )
+
+    return None
+
+
+def _validate_video_file(
+    uploaded_file,
+):
+    return _validate_upload(
+        uploaded_file=uploaded_file,
+        allowed_extensions={
+            "mp4",
+            "mov",
+            "m4v",
+            "webm",
+        },
+        allowed_mime_types={
+            "video/mp4",
+            "video/quicktime",
+            "video/webm",
+            "video/x-m4v",
+        },
+        max_size_mb=MAX_VIDEO_SIZE_MB,
+    )
+
+
+def _validate_pdf_file(
+    uploaded_file,
+):
+    return _validate_upload(
+        uploaded_file=uploaded_file,
+        allowed_extensions={
+            "pdf",
+        },
+        allowed_mime_types={
+            "application/pdf",
+        },
+        max_size_mb=MAX_PDF_SIZE_MB,
+    )
+
+
+def _validate_image_file(
+    uploaded_file,
+):
+    return _validate_upload(
+        uploaded_file=uploaded_file,
+        allowed_extensions={
+            "jpg",
+            "jpeg",
+            "png",
+            "webp",
+        },
+        allowed_mime_types={
+            "image/jpeg",
+            "image/png",
+            "image/webp",
+        },
+        max_size_mb=MAX_IMAGE_SIZE_MB,
+    )
+
+
+# ============================================================
 # COURSE BUILDER
 # ============================================================
 
@@ -548,16 +1223,13 @@ def course_builder_view(
     """
     Main Course Builder.
 
-    Same backend for Admin and Teacher.
+    Shared backend.
 
-    The selected chapter and selected workspace are controlled
-    by the URL query string:
+    Admin:
+        full access.
 
-        ?chapter=<chapter_id>&view=videos
-        ?chapter=<chapter_id>&view=pdfs
-        ?chapter=<chapter_id>&view=quizzes
-        ?chapter=<chapter_id>&view=live
-        ?chapter=<chapter_id>&view=timeline
+    Teacher:
+        active assignment required.
     """
 
     batch, subject = _get_batch_subject(
@@ -572,22 +1244,26 @@ def course_builder_view(
     )
 
     if actor is None:
+
         messages.error(
             request,
             "You do not have permission to access this course builder.",
         )
 
-        return redirect("teacher_login")
-
-    # --------------------------------------------------------
-    # SELECTED CHAPTER
-    # --------------------------------------------------------
-
-    chapter_id = request.GET.get("chapter")
+        return redirect(
+            "teacher_login"
+        )
 
     selected_chapter = None
 
+    chapter_id = (
+        request.GET.get(
+            "chapter"
+        )
+    )
+
     if chapter_id:
+
         try:
             selected_chapter = _get_chapter(
                 batch,
@@ -600,10 +1276,6 @@ def course_builder_view(
         ):
             selected_chapter = None
 
-    # --------------------------------------------------------
-    # SELECTED RIGHT-SIDE WORKSPACE
-    # --------------------------------------------------------
-
     selected_content = (
         request.GET.get(
             "view",
@@ -611,21 +1283,6 @@ def course_builder_view(
         )
         or "videos"
     ).strip().lower()
-
-    valid_views = {
-        "videos",
-        "pdfs",
-        "quizzes",
-        "live",
-        "timeline",
-    }
-
-    if selected_content not in valid_views:
-        selected_content = "videos"
-
-    # --------------------------------------------------------
-    # COMMON BUILDER CONTEXT
-    # --------------------------------------------------------
 
     context = _get_builder_context(
         batch=batch,
@@ -635,40 +1292,16 @@ def course_builder_view(
         selected_content=selected_content,
     )
 
-    # _get_builder_context() automatically selects the first
-    # chapter when no chapter was supplied.
-    selected_chapter = context["selected_chapter"]
-
     # --------------------------------------------------------
     # CHAPTER TIMELINE
     # --------------------------------------------------------
 
-    timeline_type = (
-        request.GET.get(
-            "timeline",
-            "",
-        )
-        .strip()
-        .lower()
-    )
-
-    timeline_item = request.GET.get("item")
-
-    context["timeline_entries"] = []
-    context["video_timeline_entries"] = []
-    context["pdf_timeline_entries"] = []
-    context["quiz_timeline_entries"] = []
-
-    context["selected_video"] = None
-    context["selected_pdf"] = None
-    context["selected_quiz"] = None
-
     if (
-        timeline_type == "chapter"
-        and selected_chapter is not None
+        selected_chapter is not None
+        and selected_content == "timeline"
     ):
 
-        logs = (
+        context["chapter_timeline"] = (
             ChapterChangeLog.objects
             .filter(
                 chapter=selected_chapter,
@@ -683,24 +1316,32 @@ def course_builder_view(
             )
         )
 
-        context["timeline_entries"] = logs
+    # --------------------------------------------------------
+    # VIDEO TIMELINE
+    # --------------------------------------------------------
 
-    elif (
-        timeline_type == "video"
-        and selected_chapter is not None
-        and timeline_item
+    if (
+        selected_chapter is not None
+        and selected_content == "video_timeline"
     ):
 
+        item_id = request.GET.get(
+            "item"
+        )
+
         try:
-            video_id = int(timeline_item)
 
             selected_video = get_object_or_404(
                 ChapterVideo,
-                id=video_id,
+                id=int(item_id),
                 chapter=selected_chapter,
             )
 
-            logs = (
+            context["selected_video"] = (
+                selected_video
+            )
+
+            context["video_timeline"] = (
                 VideoChangeLog.objects
                 .filter(
                     video=selected_video,
@@ -715,31 +1356,38 @@ def course_builder_view(
                 )
             )
 
-            context["selected_video"] = selected_video
-            context["video_timeline_entries"] = logs
-
         except (
             ValueError,
             TypeError,
         ):
             pass
 
-    elif (
-        timeline_type == "pdf"
-        and selected_chapter is not None
-        and timeline_item
+    # --------------------------------------------------------
+    # PDF TIMELINE
+    # --------------------------------------------------------
+
+    if (
+        selected_chapter is not None
+        and selected_content == "pdf_timeline"
     ):
 
+        item_id = request.GET.get(
+            "item"
+        )
+
         try:
-            pdf_id = int(timeline_item)
 
             selected_pdf = get_object_or_404(
                 ChapterPDF,
-                id=pdf_id,
+                id=int(item_id),
                 chapter=selected_chapter,
             )
 
-            logs = (
+            context["selected_pdf"] = (
+                selected_pdf
+            )
+
+            context["pdf_timeline"] = (
                 PDFChangeLog.objects
                 .filter(
                     pdf=selected_pdf,
@@ -754,31 +1402,38 @@ def course_builder_view(
                 )
             )
 
-            context["selected_pdf"] = selected_pdf
-            context["pdf_timeline_entries"] = logs
-
         except (
             ValueError,
             TypeError,
         ):
             pass
 
-    elif (
-        timeline_type == "quiz"
-        and selected_chapter is not None
-        and timeline_item
+    # --------------------------------------------------------
+    # QUIZ TIMELINE
+    # --------------------------------------------------------
+
+    if (
+        selected_chapter is not None
+        and selected_content == "quiz_timeline"
     ):
 
+        item_id = request.GET.get(
+            "item"
+        )
+
         try:
-            quiz_id = int(timeline_item)
 
             selected_quiz = get_object_or_404(
                 ChapterQuiz,
-                id=quiz_id,
+                id=int(item_id),
                 chapter=selected_chapter,
             )
 
-            logs = (
+            context["selected_quiz"] = (
+                selected_quiz
+            )
+
+            context["quiz_timeline"] = (
                 QuizChangeLog.objects
                 .filter(
                     quiz=selected_quiz,
@@ -793,31 +1448,15 @@ def course_builder_view(
                 )
             )
 
-            context["selected_quiz"] = selected_quiz
-            context["quiz_timeline_entries"] = logs
-
         except (
             ValueError,
             TypeError,
         ):
             pass
 
-    # --------------------------------------------------------
-    # TEMPLATE
-    # --------------------------------------------------------
-
-    if actor["role"] == "admin":
-        template_name = (
-            "admins/course_builder/admin_course_builder.html"
-        )
-    else:
-        template_name = (
-            "teachers/content_builder/course_builder.html"
-        )
-
     return render(
         request,
-        template_name,
+        _builder_template(actor),
         context,
     )
 
@@ -834,15 +1473,23 @@ def create_chapter_view(
     subject_id,
 ):
     """
-    Create chapter.
+    Admin + assigned Teacher can create chapters.
 
-    Order is automatically assigned as the next order.
+    Teacher cannot use this view unless actively assigned.
     """
+
+    # --------------------------------------------------------
+    # GET BATCH + SUBJECT
+    # --------------------------------------------------------
 
     batch, subject = _get_batch_subject(
         batch_id,
         subject_id,
     )
+
+    # --------------------------------------------------------
+    # AUTHORIZE ADMIN / ASSIGNED TEACHER
+    # --------------------------------------------------------
 
     actor = _authorize_builder(
         request,
@@ -851,12 +1498,20 @@ def create_chapter_view(
     )
 
     if actor is None:
+
         messages.error(
             request,
             "You do not have permission to create a chapter.",
         )
 
-        return redirect("teacher_login")
+        return _builder_redirect(
+            batch,
+            subject,
+        )
+
+    # --------------------------------------------------------
+    # READ FORM DATA
+    # --------------------------------------------------------
 
     chapter_name = (
         request.POST.get(
@@ -884,89 +1539,97 @@ def create_chapter_view(
         or "draft"
     )
 
+    # --------------------------------------------------------
+    # VALIDATION
+    # --------------------------------------------------------
+
     errors = {}
 
     if not chapter_name:
+
         errors["chapter_name"] = (
             "Please enter the chapter name."
         )
 
     elif len(chapter_name) > 100:
+
         errors["chapter_name"] = (
             "Chapter name cannot exceed 100 characters."
         )
 
     if not chapter_description:
+
         errors["chapter_description"] = (
             "Please enter the chapter description."
         )
 
     elif len(chapter_description) > 250:
+
         errors["chapter_description"] = (
             "Chapter description cannot exceed 250 characters."
         )
 
-    if status not in {
-        "draft",
-        "published",
-    }:
+    if status not in VALID_STATUS:
+
         errors["status"] = (
             "Please select a valid chapter status."
         )
 
-    duplicate_exists = (
-        CourseChapter.objects
-        .filter(
-            batch=batch,
-            subject=subject,
-            chapter_name__iexact=chapter_name,
-        )
-        .exists()
-    )
+    # --------------------------------------------------------
+    # DUPLICATE CHAPTER NAME
+    # --------------------------------------------------------
 
-    if duplicate_exists:
-        errors["chapter_name"] = (
-            "A chapter with this name already exists "
-            "in this subject."
+    if chapter_name:
+
+        duplicate = (
+            CourseChapter.objects
+            .filter(
+                batch=batch,
+                subject=subject,
+                chapter_name__iexact=chapter_name,
+            )
+            .exists()
         )
+
+        if duplicate:
+
+            errors["chapter_name"] = (
+                "A chapter with this name already exists."
+            )
+
+    # --------------------------------------------------------
+    # VALIDATION FAILED
+    # --------------------------------------------------------
 
     if errors:
-        context = _get_builder_context(
+
+        return _render_builder_form_error(
+            request=request,
             batch=batch,
             subject=subject,
             actor=actor,
+            selected_chapter=None,
+            errors=errors,
+            form_data={
+                "chapter_name": chapter_name,
+                "chapter_description": chapter_description,
+                "status": status,
+            },
+            form_error_key="chapter_form_errors",
+            form_data_key="chapter_form_data",
+            open_key="chapter_create_open",
+            selected_content=(
+                request.POST.get(
+                    "builder_view",
+                    "videos",
+                )
+                or "videos"
+            ),
         )
 
-        context["chapter_form_errors"] = errors
-
-        context["chapter_form_data"] = {
-            "chapter_name": chapter_name,
-            "chapter_description": chapter_description,
-            "status": status,
-        }
-
-        context["chapter_create_open"] = True
-
-        for error in errors.values():
-            messages.error(
-                request,
-                error,
-            )
-
-        if actor["role"] == "admin":
-            template_name = (
-                "admins/course_builder/admin_course_builder.html"
-            )
-        else:
-            template_name = (
-                "teachers/content_builder/course_builder.html"
-            )
-
-        return render(
-            request,
-            template_name,
-            context,
-        )
+    # --------------------------------------------------------
+    # CREATE CHAPTER
+    # --------------------------------------------------------
 
     with transaction.atomic():
 
@@ -990,34 +1653,44 @@ def create_chapter_view(
             **_get_creator_fields(actor),
         )
 
-        _log_chapter(
+        # ----------------------------------------------------
+        # CHAPTER CREATION TIMELINE
+        # ----------------------------------------------------
+
+        record_chapter_created(
             chapter=chapter,
-            actor=actor,
-            action="created",
-            field_name="chapter",
-            old_value="",
-            new_value=(
-                f"Name: {chapter.chapter_name}\n"
-                f"Description: {chapter.chapter_description}\n"
-                f"Order: {chapter.chapter_order}\n"
-                f"Status: {chapter.status}"
+            admin=(
+                actor["admin"]
+                if actor["role"] == "admin"
+                else None
             ),
-            summary=(
-                f"Chapter created by "
-                f"{_get_actor_name(actor)} "
-                f"({actor['role'].title()})."
+            teacher=(
+                actor["teacher"]
+                if actor["role"] == "teacher"
+                else None
             ),
         )
+
+    # --------------------------------------------------------
+    # SUCCESS
+    # --------------------------------------------------------
 
     messages.success(
         request,
         "Chapter created successfully.",
     )
 
+    # --------------------------------------------------------
+    # PRG REDIRECT
+    # --------------------------------------------------------
+
     return _builder_redirect(
         batch,
         subject,
     )
+# ============================================================
+# CHAPTER EDIT
+# ============================================================
 
 
 # ============================================================
@@ -1033,19 +1706,34 @@ def edit_chapter_view(
     chapter_id,
 ):
     """
-    Edit chapter.
+    Admin + assigned Teacher can edit a chapter.
 
-    IMPORTANT:
-    chapter_order is part of this edit.
+    All chapter edit fields are submitted through one POST:
 
-    If order changes, move_item() automatically adjusts
-    all affected sibling chapter orders.
+        chapter_name
+        chapter_description
+        status
+        chapter_order
+
+    Ordering is handled through the existing
+    courses.ordering.move_item() helper.
+
+    Validation, authorization, ordering, saving and
+    timeline creation are handled completely server-side.
     """
+
+    # --------------------------------------------------------
+    # GET BATCH + SUBJECT
+    # --------------------------------------------------------
 
     batch, subject = _get_batch_subject(
         batch_id,
         subject_id,
     )
+
+    # --------------------------------------------------------
+    # AUTHORIZE ADMIN / ASSIGNED TEACHER
+    # --------------------------------------------------------
 
     actor = _authorize_builder(
         request,
@@ -1054,18 +1742,30 @@ def edit_chapter_view(
     )
 
     if actor is None:
+
         messages.error(
             request,
             "You do not have permission to edit this chapter.",
         )
 
-        return redirect("teacher_login")
+        return _builder_redirect(
+            batch,
+            subject,
+        )
+
+    # --------------------------------------------------------
+    # GET EXACT CHAPTER
+    # --------------------------------------------------------
 
     chapter = _get_chapter(
         batch,
         subject,
         chapter_id,
     )
+
+    # --------------------------------------------------------
+    # READ FORM DATA
+    # --------------------------------------------------------
 
     chapter_name = (
         request.POST.get(
@@ -1083,14 +1783,6 @@ def edit_chapter_view(
         .strip()
     )
 
-    raw_order = (
-        request.POST.get(
-            "chapter_order",
-            "",
-        )
-        .strip()
-    )
-
     status = (
         request.POST.get(
             "status",
@@ -1100,174 +1792,325 @@ def edit_chapter_view(
         .lower()
     )
 
+    raw_order = (
+        request.POST.get(
+            "chapter_order",
+            "",
+        )
+        .strip()
+    )
+
+    # --------------------------------------------------------
+    # VALIDATION
+    # --------------------------------------------------------
+
     errors = {}
 
+    # --------------------------------------------------------
+    # CHAPTER NAME
+    # --------------------------------------------------------
+
     if not chapter_name:
+
         errors["chapter_name"] = (
             "Please enter the chapter name."
         )
 
     elif len(chapter_name) > 100:
+
         errors["chapter_name"] = (
             "Chapter name cannot exceed 100 characters."
         )
 
+    # --------------------------------------------------------
+    # CHAPTER DESCRIPTION
+    # --------------------------------------------------------
+
     if not chapter_description:
+
         errors["chapter_description"] = (
             "Please enter the chapter description."
         )
 
     elif len(chapter_description) > 250:
+
         errors["chapter_description"] = (
             "Chapter description cannot exceed 250 characters."
         )
 
-    if not raw_order:
-        errors["chapter_order"] = (
-            "Please enter the chapter order."
-        )
-        new_order = None
-    else:
-        try:
-            new_order = int(raw_order)
+    # --------------------------------------------------------
+    # STATUS
+    # --------------------------------------------------------
 
-            if new_order < 1:
-                errors["chapter_order"] = (
-                    "Chapter order must be greater than or equal to 1."
-                )
+    if status not in VALID_STATUS:
 
-        except (
-            TypeError,
-            ValueError,
-        ):
-            new_order = None
-            errors["chapter_order"] = (
-                "Chapter order must be a valid whole number."
-            )
-
-    if not status:
-        errors["status"] = (
-            "Please select a chapter status."
-        )
-
-    elif status not in {
-        "draft",
-        "published",
-    }:
         errors["status"] = (
             "Please select a valid chapter status."
         )
 
-    duplicate_exists = (
-        CourseChapter.objects
-        .filter(
-            batch=batch,
-            subject=subject,
-            chapter_name__iexact=chapter_name,
+    # --------------------------------------------------------
+    # CHAPTER ORDER
+    # --------------------------------------------------------
+
+    new_order = None
+
+    try:
+
+        new_order = int(raw_order)
+
+        if new_order < 1:
+            raise ValueError
+
+    except (
+        ValueError,
+        TypeError,
+    ):
+
+        errors["chapter_order"] = (
+            "Chapter order must be a valid number."
         )
-        .exclude(
-            pk=chapter.pk,
-        )
-        .exists()
+
+    # --------------------------------------------------------
+    # CHAPTER ORDER MAXIMUM
+    # --------------------------------------------------------
+
+    chapter_queryset = CourseChapter.objects.filter(
+        batch=batch,
+        subject=subject,
     )
 
-    if duplicate_exists:
-        errors["chapter_name"] = (
-            "A chapter with this name already exists "
-            "in this subject."
+    chapter_count = chapter_queryset.count()
+
+    if (
+        new_order is not None
+        and new_order > chapter_count
+    ):
+
+        errors["chapter_order"] = (
+            f"Chapter order must be between "
+            f"1 and {chapter_count}."
         )
+
+    # --------------------------------------------------------
+    # DUPLICATE CHAPTER NAME
+    # --------------------------------------------------------
+
+    if chapter_name:
+
+        duplicate = (
+            CourseChapter.objects
+            .filter(
+                batch=batch,
+                subject=subject,
+                chapter_name__iexact=chapter_name,
+            )
+            .exclude(
+                pk=chapter.pk,
+            )
+            .exists()
+        )
+
+        if duplicate:
+
+            errors["chapter_name"] = (
+                "A chapter with this name already exists."
+            )
+
+    # --------------------------------------------------------
+    # VALIDATION FAILED
+    # --------------------------------------------------------
 
     if errors:
 
-        for error in errors.values():
-            messages.error(
-                request,
-                error,
-            )
-
-        return _builder_redirect(
-            batch,
-            subject,
-            chapter,
+        return _render_builder_form_error(
+            request=request,
+            batch=batch,
+            subject=subject,
+            actor=actor,
+            selected_chapter=chapter,
+            errors=errors,
+            form_data={
+                "chapter_name": chapter_name,
+                "chapter_description": chapter_description,
+                "chapter_order": raw_order,
+                "status": status,
+            },
+            form_error_key="chapter_edit_form_errors",
+            form_data_key="chapter_edit_form_data",
+            open_key="chapter_edit_open",
+            selected_content=(
+                request.POST.get(
+                    "builder_view",
+                    "videos",
+                )
+                or "videos"
+            ),
+            open_id=chapter.id,
         )
+
+    # --------------------------------------------------------
+    # CAPTURE OLD VALUES
+    # --------------------------------------------------------
+
+    old_name = chapter.chapter_name
+
+    old_description = (
+        chapter.chapter_description
+    )
+
+    old_status = chapter.status
+
+    old_order = chapter.chapter_order
+
+    # --------------------------------------------------------
+    # BUILD FIELD CHANGES
+    # --------------------------------------------------------
 
     changes = []
 
-    if chapter.chapter_name != chapter_name:
+    if old_name != chapter_name:
+
         changes.append(
             (
                 "chapter_name",
-                chapter.chapter_name,
+                old_name,
                 chapter_name,
             )
         )
 
-    if (
-        chapter.chapter_description
-        != chapter_description
-    ):
+    if old_description != chapter_description:
+
         changes.append(
             (
                 "chapter_description",
-                chapter.chapter_description,
+                old_description,
                 chapter_description,
             )
         )
 
-    if chapter.status != status:
+    if old_status != status:
+
         changes.append(
             (
                 "status",
-                chapter.status,
+                old_status,
                 status,
             )
         )
 
-    old_order = chapter.chapter_order
+    # --------------------------------------------------------
+    # UPDATE CHAPTER
+    # --------------------------------------------------------
 
     with transaction.atomic():
 
-        queryset = CourseChapter.objects.filter(
-            batch=batch,
-            subject=subject,
-        )
+        # ----------------------------------------------------
+        # ORDER CHANGE
+        # ----------------------------------------------------
 
         if old_order != new_order:
 
-            move_item(
-                item=chapter,
-                queryset=queryset,
-                order_field="chapter_order",
-                new_order=new_order,
-            )
+            try:
 
-            _log_chapter(
+                move_item(
+                    item=chapter,
+                    queryset=CourseChapter.objects.filter(
+                        batch=batch,
+                        subject=subject,
+                    ),
+                    order_field="chapter_order",
+                    new_order=new_order,
+                )
+
+            except ValueError as exc:
+
+                errors["chapter_order"] = str(exc)
+
+                return _render_builder_form_error(
+                    request=request,
+                    batch=batch,
+                    subject=subject,
+                    actor=actor,
+                    selected_chapter=chapter,
+                    errors=errors,
+                    form_data={
+                        "chapter_name": chapter_name,
+                        "chapter_description": (
+                            chapter_description
+                        ),
+                        "chapter_order": raw_order,
+                        "status": status,
+                    },
+                    form_error_key="chapter_edit_form_errors",
+                    form_data_key="chapter_edit_form_data",
+                    open_key="chapter_edit_open",
+                    selected_content=(
+                        request.POST.get(
+                            "builder_view",
+                            "videos",
+                        )
+                        or "videos"
+                    ),
+                    open_id=chapter.id,
+                )
+
+            # ------------------------------------------------
+            # ORDER TIMELINE
+            # ------------------------------------------------
+
+            record_chapter_order_changed(
                 chapter=chapter,
-                actor=actor,
-                action="order_changed",
-                field_name="chapter_order",
-                old_value=old_order,
-                new_value=new_order,
-                summary=(
-                    f"Chapter order changed from "
-                    f"{old_order} to {new_order} by "
-                    f"{_get_actor_name(actor)} "
-                    f"({actor['role'].title()})."
+                old_order=old_order,
+                new_order=new_order,
+                admin=(
+                    actor["admin"]
+                    if actor["role"] == "admin"
+                    else None
+                ),
+                teacher=(
+                    actor["teacher"]
+                    if actor["role"] == "teacher"
+                    else None
                 ),
             )
 
+        # ----------------------------------------------------
+        # UPDATE NORMAL CHAPTER FIELDS
+        # ----------------------------------------------------
+
         chapter.chapter_name = chapter_name
-        chapter.chapter_description = chapter_description
+
+        chapter.chapter_description = (
+            chapter_description
+        )
+
         chapter.status = status
 
-        chapter.save(
-            update_fields=[
-                "chapter_name",
-                "chapter_description",
-                "status",
-                "updated_at",
-            ]
+        # ----------------------------------------------------
+        # UPDATE LAST MODIFIED ACTOR
+        # ----------------------------------------------------
+
+        chapter.updated_by_admin = (
+            actor["admin"]
+            if actor["role"] == "admin"
+            else None
         )
+
+        chapter.updated_by_teacher = (
+            actor["teacher"]
+            if actor["role"] == "teacher"
+            else None
+        )
+
+        # ----------------------------------------------------
+        # SAVE
+        # ----------------------------------------------------
+
+        chapter.save()
+
+        # ----------------------------------------------------
+        # FIELD UPDATE TIMELINE
+        # ----------------------------------------------------
 
         for (
             field_name,
@@ -1275,30 +2118,284 @@ def edit_chapter_view(
             new_value,
         ) in changes:
 
-            _log_chapter(
+            record_chapter_updated(
                 chapter=chapter,
-                actor=actor,
-                action="updated",
                 field_name=field_name,
                 old_value=old_value,
                 new_value=new_value,
-                summary=(
-                    f"{field_name.replace('_', ' ').title()} "
-                    f"updated by "
-                    f"{_get_actor_name(actor)} "
-                    f"({actor['role'].title()})."
+                admin=(
+                    actor["admin"]
+                    if actor["role"] == "admin"
+                    else None
+                ),
+                teacher=(
+                    actor["teacher"]
+                    if actor["role"] == "teacher"
+                    else None
                 ),
             )
+
+    # --------------------------------------------------------
+    # SUCCESS
+    # --------------------------------------------------------
 
     messages.success(
         request,
         "Chapter updated successfully.",
     )
 
+    # --------------------------------------------------------
+    # PRG REDIRECT
+    # --------------------------------------------------------
+
     return _builder_redirect(
         batch,
         subject,
-        chapter,
+    )
+    
+# --------------------------------------------------------
+# CHAPTER DETAILS
+# ============================================================
+
+
+def chapter_details_view(
+    request,
+    batch_id,
+    subject_id,
+    chapter_id,
+):
+    """
+    Read-only Chapter Details page.
+
+    This is the backend endpoint for the Chapter Details screen.
+
+    ADMIN:
+        Full access to the chapter details.
+
+    TEACHER:
+        Access only when actively assigned to the exact
+        Batch + Subject.
+
+    The page shows:
+
+        - Batch
+        - Subject
+        - Chapter information
+        - Original creator
+        - Creator role
+        - Created / updated timestamps
+        - Video / PDF / Quiz counts
+        - Content items belonging to this chapter
+        - Complete Chapter Timeline
+        - Timeline actor name
+        - Timeline actor role
+        - Before / After values
+
+    This view does NOT create or modify anything.
+    It is intentionally read-only.
+    """
+
+    # --------------------------------------------------------
+    # GET BATCH + SUBJECT
+    # --------------------------------------------------------
+
+    batch, subject = _get_batch_subject(
+        batch_id,
+        subject_id,
+    )
+
+    # --------------------------------------------------------
+    # AUTHORIZE ADMIN / ASSIGNED TEACHER
+    # --------------------------------------------------------
+
+    actor = _authorize_builder(
+        request,
+        batch,
+        subject,
+    )
+
+    if actor is None:
+        messages.error(
+            request,
+            "You do not have permission to view this chapter.",
+        )
+
+        return _builder_redirect(
+            batch,
+            subject,
+        )
+
+    # --------------------------------------------------------
+    # GET EXACT CHAPTER
+    # --------------------------------------------------------
+
+    chapter = get_object_or_404(
+        CourseChapter.objects.select_related(
+            "created_by_admin",
+            "created_by_teacher",
+            "created_by_teacher__user",
+        ),
+        id=chapter_id,
+        batch=batch,
+        subject=subject,
+    )
+
+    # --------------------------------------------------------
+    # ORIGINAL CREATOR
+    # --------------------------------------------------------
+
+    creator_name = "Unknown"
+    creator_role = "Unknown"
+
+    if chapter.created_by_admin is not None:
+        creator_name = (
+            chapter.created_by_admin.get_full_name().strip()
+        )
+
+        if not creator_name:
+            creator_name = (
+                chapter.created_by_admin.get_username()
+            )
+
+        creator_role = "Admin"
+
+    elif chapter.created_by_teacher is not None:
+        teacher = chapter.created_by_teacher
+
+        creator_name = (
+            getattr(
+                teacher,
+                "full_name",
+                "",
+            )
+            or ""
+        ).strip()
+
+        if not creator_name:
+            user = getattr(
+                teacher,
+                "user",
+                None,
+            )
+
+            if user is not None:
+                creator_name = (
+                    user.get_full_name().strip()
+                )
+
+                if not creator_name:
+                    creator_name = (
+                        user.get_username()
+                    )
+
+        if not creator_name:
+            creator_name = "Teacher"
+
+        creator_role = "Teacher"
+
+    # --------------------------------------------------------
+    # CONTENT
+    # --------------------------------------------------------
+
+    videos = (
+        ChapterVideo.objects
+        .filter(
+            chapter=chapter,
+        )
+        .order_by(
+            "video_order",
+            "pk",
+        )
+    )
+
+    pdfs = (
+        ChapterPDF.objects
+        .filter(
+            chapter=chapter,
+        )
+        .order_by(
+            "pdf_order",
+            "pk",
+        )
+    )
+
+    quizzes = (
+        ChapterQuiz.objects
+        .filter(
+            chapter=chapter,
+        )
+        .order_by(
+            "quiz_order",
+            "pk",
+        )
+    )
+
+    # --------------------------------------------------------
+    # CHAPTER TIMELINE
+    # --------------------------------------------------------
+
+    chapter_timeline = (
+        ChapterChangeLog.objects
+        .filter(
+            chapter=chapter,
+        )
+        .select_related(
+            "changed_by_admin",
+            "changed_by_teacher",
+            "changed_by_teacher__user",
+        )
+        .order_by(
+            "-changed_at",
+            "-id",
+        )
+    )
+
+    # --------------------------------------------------------
+    # LAST CHANGE
+    # --------------------------------------------------------
+
+    last_change = (
+        chapter_timeline.first()
+    )
+
+    # --------------------------------------------------------
+    # CURRENT PAGE ACTOR
+    # --------------------------------------------------------
+
+    actor_name = _get_actor_name(actor)
+    actor_role = _get_actor_role(actor)
+
+    # --------------------------------------------------------
+    # RENDER
+    # --------------------------------------------------------
+
+    return render(
+        request,
+        "courses/chapter_details.html",
+        {
+            "batch": batch,
+            "subject": subject,
+            "chapter": chapter,
+
+            "creator_name": creator_name,
+            "creator_role": creator_role,
+
+            "videos": videos,
+            "video_count": videos.count(),
+
+            "pdfs": pdfs,
+            "pdf_count": pdfs.count(),
+
+            "quizzes": quizzes,
+            "quiz_count": quizzes.count(),
+
+            "chapter_timeline": chapter_timeline,
+            "last_change": last_change,
+
+            "actor": actor,
+            "actor_name": actor_name,
+            "actor_role": actor_role,
+        },
     )
 
 
@@ -1315,15 +2412,31 @@ def create_video_view(
     chapter_id,
 ):
     """
-    Create video.
+    Admin + assigned Teacher can create a video.
 
-    video_order is automatically the next available order.
+    Video fields:
+        - video_name
+        - video_description
+        - video_file
+        - status
+
+    Video order is assigned automatically.
+
+    Video thumbnail is intentionally not used.
     """
+
+    # --------------------------------------------------------
+    # GET BATCH + SUBJECT
+    # --------------------------------------------------------
 
     batch, subject = _get_batch_subject(
         batch_id,
         subject_id,
     )
+
+    # --------------------------------------------------------
+    # AUTHORIZE ADMIN / ASSIGNED TEACHER
+    # --------------------------------------------------------
 
     actor = _authorize_builder(
         request,
@@ -1332,18 +2445,30 @@ def create_video_view(
     )
 
     if actor is None:
+
         messages.error(
             request,
             "You do not have permission to create a video.",
         )
 
-        return redirect("teacher_login")
+        return _builder_redirect(
+            batch,
+            subject,
+        )
+
+    # --------------------------------------------------------
+    # GET CHAPTER
+    # --------------------------------------------------------
 
     chapter = _get_chapter(
         batch,
         subject,
         chapter_id,
     )
+
+    # --------------------------------------------------------
+    # READ FORM DATA
+    # --------------------------------------------------------
 
     video_name = (
         request.POST.get(
@@ -1364,87 +2489,118 @@ def create_video_view(
     status = (
         request.POST.get(
             "status",
-            "",
+            "draft",
         )
         .strip()
         .lower()
+        or "draft"
     )
 
     video_file = request.FILES.get(
         "video_file",
     )
 
-    video_thumbnail = request.FILES.get(
-        "video_thumbnail",
-    )
+    # --------------------------------------------------------
+    # VALIDATION
+    # --------------------------------------------------------
 
     errors = {}
 
+    # VIDEO NAME
     if not video_name:
+
         errors["video_name"] = (
             "Please enter the video name."
         )
 
     elif len(video_name) > 100:
+
         errors["video_name"] = (
             "Video name cannot exceed 100 characters."
         )
 
+    # VIDEO DESCRIPTION
     if not video_description:
+
         errors["video_description"] = (
             "Please enter the video description."
         )
 
     elif len(video_description) > 250:
+
         errors["video_description"] = (
             "Video description cannot exceed 250 characters."
         )
 
+    # VIDEO FILE
     if not video_file:
+
         errors["video_file"] = (
             "Please select a video file."
         )
 
-    if not status:
-        errors["status"] = (
-            "Please select a video status."
+    else:
+
+        error = _validate_video_file(
+            video_file,
         )
 
-    elif status not in {
-        "draft",
-        "published",
-    }:
+        if error:
+
+            errors["video_file"] = error
+
+    # STATUS
+    if status not in VALID_STATUS:
+
         errors["status"] = (
             "Please select a valid video status."
         )
 
-    duplicate_exists = (
-        ChapterVideo.objects
-        .filter(
-            chapter=chapter,
-            video_name__iexact=video_name,
-        )
-        .exists()
-    )
+    # DUPLICATE VIDEO NAME
+    if video_name:
 
-    if duplicate_exists:
-        errors["video_name"] = (
-            "A video with this name already exists "
-            "in this chapter."
+        duplicate = (
+            ChapterVideo.objects
+            .filter(
+                chapter=chapter,
+                video_name__iexact=video_name,
+            )
+            .exists()
         )
 
-    if errors:
-        for error in errors.values():
-            messages.error(
-                request,
-                error,
+        if duplicate:
+
+            errors["video_name"] = (
+                "A video with this name already exists."
             )
 
-        return _builder_redirect(
-            batch,
-            subject,
-            chapter,
+    # --------------------------------------------------------
+    # VALIDATION FAILED
+    # --------------------------------------------------------
+
+    if errors:
+
+        return _render_builder_form_error(
+            request=request,
+            batch=batch,
+            subject=subject,
+            actor=actor,
+            selected_chapter=chapter,
+            errors=errors,
+            form_data={
+                "video_name": video_name,
+                "video_description": video_description,
+                "status": status,
+            },
+            form_error_key="video_form_errors",
+            form_data_key="video_form_data",
+            open_key="video_create_open",
+            selected_content="videos",
         )
+
+    # --------------------------------------------------------
+    # CREATE VIDEO
+    # --------------------------------------------------------
 
     with transaction.atomic():
 
@@ -1462,41 +2618,49 @@ def create_video_view(
             video_name=video_name,
             video_description=video_description,
             video_file=video_file,
-            video_thumbnail=video_thumbnail,
             video_order=video_order,
             status=status,
             **_get_creator_fields(actor),
         )
 
-        _log_video(
+        # ----------------------------------------------------
+        # VIDEO CREATION TIMELINE
+        # ----------------------------------------------------
+
+        record_video_created(
             video=video,
-            actor=actor,
-            action="created",
-            field_name="video",
-            old_value="",
-            new_value=(
-                f"Name: {video.video_name}\n"
-                f"Description: {video.video_description}\n"
-                f"Order: {video.video_order}\n"
-                f"Status: {video.status}"
+            admin=(
+                actor["admin"]
+                if actor["role"] == "admin"
+                else None
             ),
-            summary=(
-                f"Video created by "
-                f"{_get_actor_name(actor)} "
-                f"({actor['role'].title()})."
+            teacher=(
+                actor["teacher"]
+                if actor["role"] == "teacher"
+                else None
             ),
         )
+
+    # --------------------------------------------------------
+    # SUCCESS
+    # --------------------------------------------------------
 
     messages.success(
         request,
         "Video created successfully.",
     )
 
+    # --------------------------------------------------------
+    # PRG REDIRECT
+    # --------------------------------------------------------
+
     return _builder_redirect(
         batch,
         subject,
-        chapter,
     )
+# ============================================================
+# VIDEO EDIT
+# ============================================================
 
 
 # ============================================================
@@ -1513,17 +2677,37 @@ def edit_video_view(
     video_id,
 ):
     """
-    Edit video.
+    Admin + assigned Teacher can edit a video.
 
-    video_order is editable here.
+    Editable fields:
+        - video_name
+        - video_description
+        - video_file
+        - status
+        - video_order
 
-    move_item() handles the +1 / -1 balancing.
+    Video thumbnail is intentionally not used.
+
+    Video order is changed through this same Edit form.
+
+    Timeline:
+        - One entry for every changed basic field.
+        - One separate entry for video file replacement.
+        - One separate entry for order change.
     """
+
+    # --------------------------------------------------------
+    # GET BATCH + SUBJECT
+    # --------------------------------------------------------
 
     batch, subject = _get_batch_subject(
         batch_id,
         subject_id,
     )
+
+    # --------------------------------------------------------
+    # AUTHORIZE ADMIN / ASSIGNED TEACHER
+    # --------------------------------------------------------
 
     actor = _authorize_builder(
         request,
@@ -1532,12 +2716,20 @@ def edit_video_view(
     )
 
     if actor is None:
+
         messages.error(
             request,
             "You do not have permission to edit this video.",
         )
 
-        return redirect("teacher_login")
+        return _builder_redirect(
+            batch,
+            subject,
+        )
+
+    # --------------------------------------------------------
+    # GET CHAPTER
+    # --------------------------------------------------------
 
     chapter = _get_chapter(
         batch,
@@ -1545,11 +2737,19 @@ def edit_video_view(
         chapter_id,
     )
 
+    # --------------------------------------------------------
+    # GET EXACT VIDEO
+    # --------------------------------------------------------
+
     video = get_object_or_404(
         ChapterVideo,
         id=video_id,
         chapter=chapter,
     )
+
+    # --------------------------------------------------------
+    # READ FORM DATA
+    # --------------------------------------------------------
 
     video_name = (
         request.POST.get(
@@ -1567,14 +2767,6 @@ def edit_video_view(
         .strip()
     )
 
-    raw_order = (
-        request.POST.get(
-            "video_order",
-            "",
-        )
-        .strip()
-    )
-
     status = (
         request.POST.get(
             "status",
@@ -1584,279 +2776,6 @@ def edit_video_view(
         .lower()
     )
 
-    new_video_file = request.FILES.get(
-        "video_file",
-    )
-
-    new_thumbnail = request.FILES.get(
-        "video_thumbnail",
-    )
-
-    errors = {}
-
-    if not video_name:
-        errors["video_name"] = (
-            "Please enter the video name."
-        )
-
-    elif len(video_name) > 100:
-        errors["video_name"] = (
-            "Video name cannot exceed 100 characters."
-        )
-
-    if not video_description:
-        errors["video_description"] = (
-            "Please enter the video description."
-        )
-
-    elif len(video_description) > 250:
-        errors["video_description"] = (
-            "Video description cannot exceed 250 characters."
-        )
-
-    if not raw_order:
-        errors["video_order"] = (
-            "Please enter the video order."
-        )
-        new_order = None
-    else:
-        try:
-            new_order = int(raw_order)
-
-            if new_order < 1:
-                errors["video_order"] = (
-                    "Video order must be greater than or equal to 1."
-                )
-
-        except (
-            TypeError,
-            ValueError,
-        ):
-            new_order = None
-            errors["video_order"] = (
-                "Video order must be a valid whole number."
-            )
-
-    if not status:
-        errors["status"] = (
-            "Please select a video status."
-        )
-
-    elif status not in {
-        "draft",
-        "published",
-    }:
-        errors["status"] = (
-            "Please select a valid video status."
-        )
-
-    duplicate_exists = (
-        ChapterVideo.objects
-        .filter(
-            chapter=chapter,
-            video_name__iexact=video_name,
-        )
-        .exclude(
-            pk=video.pk,
-        )
-        .exists()
-    )
-
-    if duplicate_exists:
-        errors["video_name"] = (
-            "A video with this name already exists "
-            "in this chapter."
-        )
-
-    if errors:
-
-        for error in errors.values():
-            messages.error(
-                request,
-                error,
-            )
-
-        return _builder_redirect(
-            batch,
-            subject,
-            chapter,
-        )
-
-    changes = []
-
-    if video.video_name != video_name:
-        changes.append(
-            (
-                "video_name",
-                video.video_name,
-                video_name,
-            )
-        )
-
-    if (
-        video.video_description
-        != video_description
-    ):
-        changes.append(
-            (
-                "video_description",
-                video.video_description,
-                video_description,
-            )
-        )
-
-    if video.status != status:
-        changes.append(
-            (
-                "status",
-                video.status,
-                status,
-            )
-        )
-
-    if new_video_file:
-        changes.append(
-            (
-                "video_file",
-                "Existing file",
-                new_video_file.name,
-            )
-        )
-
-    if new_thumbnail:
-        changes.append(
-            (
-                "video_thumbnail",
-                "Existing thumbnail",
-                new_thumbnail.name,
-            )
-        )
-
-    old_order = video.video_order
-
-    with transaction.atomic():
-
-        queryset = ChapterVideo.objects.filter(
-            chapter=chapter,
-        )
-
-        if old_order != new_order:
-
-            move_item(
-                item=video,
-                queryset=queryset,
-                order_field="video_order",
-                new_order=new_order,
-            )
-
-            _log_video(
-                video=video,
-                actor=actor,
-                action="order_changed",
-                field_name="video_order",
-                old_value=old_order,
-                new_value=new_order,
-                summary=(
-                    f"Video order changed from "
-                    f"{old_order} to {new_order} by "
-                    f"{_get_actor_name(actor)} "
-                    f"({actor['role'].title()})."
-                ),
-            )
-
-        video.video_name = video_name
-        video.video_description = video_description
-        video.status = status
-
-        if new_video_file:
-            video.video_file = new_video_file
-
-        if new_thumbnail:
-            video.video_thumbnail = new_thumbnail
-
-        video.save()
-
-        for (
-            field_name,
-            old_value,
-            new_value,
-        ) in changes:
-
-            _log_video(
-                video=video,
-                actor=actor,
-                action="updated",
-                field_name=field_name,
-                old_value=old_value,
-                new_value=new_value,
-                summary=(
-                    f"{field_name.replace('_', ' ').title()} "
-                    f"updated by "
-                    f"{_get_actor_name(actor)} "
-                    f"({actor['role'].title()})."
-                ),
-            )
-
-    messages.success(
-        request,
-        "Video updated successfully.",
-    )
-
-    return _builder_redirect(
-        batch,
-        subject,
-        chapter,
-    )
-
-
-# ============================================================
-# VIDEO ORDER
-#
-# Kept as a backend endpoint for compatibility.
-#
-# Edit already supports order.
-# ============================================================
-
-
-@require_POST
-def change_video_order_view(
-    request,
-    batch_id,
-    subject_id,
-    chapter_id,
-    video_id,
-):
-    batch, subject = _get_batch_subject(
-        batch_id,
-        subject_id,
-    )
-
-    actor = _authorize_builder(
-        request,
-        batch,
-        subject,
-    )
-
-    if actor is None:
-        messages.error(
-            request,
-            "You do not have permission to change video order.",
-        )
-
-        return redirect("teacher_login")
-
-    chapter = _get_chapter(
-        batch,
-        subject,
-        chapter_id,
-    )
-
-    video = get_object_or_404(
-        ChapterVideo,
-        id=video_id,
-        chapter=chapter,
-    )
-
     raw_order = (
         request.POST.get(
             "video_order",
@@ -1865,77 +2784,413 @@ def change_video_order_view(
         .strip()
     )
 
-    try:
-        new_order = int(raw_order)
-    except (
-        TypeError,
-        ValueError,
+    new_video_file = request.FILES.get(
+        "video_file",
+    )
+
+    # --------------------------------------------------------
+    # KEEP ORIGINAL VALUES FOR CHANGE DETECTION
+    # --------------------------------------------------------
+
+    old_name = video.video_name
+    old_description = video.video_description
+    old_status = video.status
+    old_order = video.video_order
+    old_video_file = video.video_file
+
+    # --------------------------------------------------------
+    # VALIDATION
+    # --------------------------------------------------------
+
+    errors = {}
+
+    # --------------------------------------------------------
+    # VIDEO NAME
+    # --------------------------------------------------------
+
+    if not video_name:
+
+        errors["video_name"] = (
+            "Please enter the video name."
+        )
+
+    elif len(video_name) > 100:
+
+        errors["video_name"] = (
+            "Video name cannot exceed 100 characters."
+        )
+
+    # --------------------------------------------------------
+    # VIDEO DESCRIPTION
+    # --------------------------------------------------------
+
+    if not video_description:
+
+        errors["video_description"] = (
+            "Please enter the video description."
+        )
+
+    elif len(video_description) > 250:
+
+        errors["video_description"] = (
+            "Video description cannot exceed 250 characters."
+        )
+
+    # --------------------------------------------------------
+    # STATUS
+    # --------------------------------------------------------
+
+    if status not in VALID_STATUS:
+
+        errors["status"] = (
+            "Please select a valid video status."
+        )
+
+    # --------------------------------------------------------
+    # VIDEO ORDER
+    # --------------------------------------------------------
+
+    new_order = None
+
+    if not raw_order:
+
+        errors["video_order"] = (
+            "Please enter the video order."
+        )
+
+    else:
+
+        try:
+
+            new_order = int(raw_order)
+
+            if isinstance(
+                new_order,
+                bool,
+            ):
+                raise ValueError
+
+        except (
+            ValueError,
+            TypeError,
+        ):
+
+            errors["video_order"] = (
+                "Video order must be a valid number."
+            )
+
+    # --------------------------------------------------------
+    # VALIDATE VIDEO ORDER RANGE
+    # --------------------------------------------------------
+
+    if (
+        new_order is not None
+        and "video_order" not in errors
     ):
-        messages.error(
-            request,
-            "Video order must be a valid whole number.",
-        )
 
-        return _builder_redirect(
-            batch,
-            subject,
-            chapter,
-        )
-
-    try:
-
-        old_order, new_order = move_item(
-            item=video,
-            queryset=ChapterVideo.objects.filter(
+        video_queryset = (
+            ChapterVideo.objects
+            .filter(
                 chapter=chapter,
-            ),
-            order_field="video_order",
-            new_order=new_order,
+            )
         )
 
-    except ValueError as exc:
+        video_count = video_queryset.count()
 
-        messages.error(
-            request,
-            str(exc),
+        if new_order < 1:
+
+            errors["video_order"] = (
+                "Video order must be at least 1."
+            )
+
+        elif new_order > video_count:
+
+            errors["video_order"] = (
+                f"Video order cannot be greater than "
+                f"{video_count}."
+            )
+
+    # --------------------------------------------------------
+    # OPTIONAL VIDEO FILE
+    # --------------------------------------------------------
+
+    if new_video_file:
+
+        error = _validate_video_file(
+            new_video_file,
         )
 
-        return _builder_redirect(
-            batch,
-            subject,
-            chapter,
+        if error:
+
+            errors["video_file"] = error
+
+    # --------------------------------------------------------
+    # DUPLICATE VIDEO NAME
+    # --------------------------------------------------------
+
+    if video_name:
+
+        duplicate = (
+            ChapterVideo.objects
+            .filter(
+                chapter=chapter,
+                video_name__iexact=video_name,
+            )
+            .exclude(
+                id=video.id,
+            )
+            .exists()
         )
 
-    if old_order != new_order:
+        if duplicate:
 
-        _log_video(
-            video=video,
+            errors["video_name"] = (
+                "A video with this name already exists."
+            )
+
+    # --------------------------------------------------------
+    # VALIDATION FAILED
+    # --------------------------------------------------------
+
+    if errors:
+
+        return _render_builder_form_error(
+            request=request,
+            batch=batch,
+            subject=subject,
             actor=actor,
-            action="order_changed",
-            field_name="video_order",
-            old_value=old_order,
-            new_value=new_order,
-            summary=(
-                f"Video order changed from "
-                f"{old_order} to {new_order} by "
-                f"{_get_actor_name(actor)} "
-                f"({actor['role'].title()})."
-            ),
+            selected_chapter=chapter,
+            errors=errors,
+            form_data={
+                "video_name": video_name,
+                "video_description": video_description,
+                "status": status,
+                "video_order": raw_order,
+            },
+            form_error_key="video_edit_form_errors",
+            form_data_key="video_edit_form_data",
+            open_key="video_edit_open",
+            selected_content="videos",
+            open_id=video.id,
         )
+
+    # --------------------------------------------------------
+    # DETECT BASIC FIELD CHANGES
+    # --------------------------------------------------------
+
+    changes = []
+
+    if old_name != video_name:
+
+        changes.append(
+            (
+                "video_name",
+                old_name,
+                video_name,
+            )
+        )
+
+    if old_description != video_description:
+
+        changes.append(
+            (
+                "video_description",
+                old_description,
+                video_description,
+            )
+        )
+
+    if old_status != status:
+
+        changes.append(
+            (
+                "status",
+                old_status,
+                status,
+            )
+        )
+
+    # --------------------------------------------------------
+    # CAPTURE OLD CLOUDINARY VIDEO
+    # BEFORE REPLACEMENT
+    # --------------------------------------------------------
+
+    old_video_public_id = (
+        _get_cloudinary_public_id(
+            old_video_file,
+        )
+        if new_video_file
+        else ""
+    )
+
+    # --------------------------------------------------------
+    # SAVE EVERYTHING IN ONE TRANSACTION
+    # --------------------------------------------------------
+
+    with transaction.atomic():
+
+        # ----------------------------------------------------
+        # VIDEO ORDER
+        # ----------------------------------------------------
+
+        if old_order != new_order:
+
+            move_item(
+                item=video,
+                queryset=ChapterVideo.objects.filter(
+                    chapter=chapter,
+                ),
+                order_field="video_order",
+                new_order=new_order,
+            )
+
+            record_video_order_changed(
+                video=video,
+                old_order=old_order,
+                new_order=new_order,
+                admin=(
+                    actor["admin"]
+                    if actor["role"] == "admin"
+                    else None
+                ),
+                teacher=(
+                    actor["teacher"]
+                    if actor["role"] == "teacher"
+                    else None
+                ),
+            )
+
+        # ----------------------------------------------------
+        # BASIC VIDEO FIELDS
+        # ----------------------------------------------------
+
+        video.video_name = video_name
+
+        video.video_description = (
+            video_description
+        )
+
+        video.status = status
+
+        # ----------------------------------------------------
+        # OPTIONAL VIDEO FILE REPLACEMENT
+        # ----------------------------------------------------
+
+        if new_video_file:
+
+            video.video_file = new_video_file
+
+        # ----------------------------------------------------
+        # UPDATED BY ADMIN / TEACHER
+        # ----------------------------------------------------
+
+        video.updated_by_admin = (
+            actor["admin"]
+            if actor["role"] == "admin"
+            else None
+        )
+
+        video.updated_by_teacher = (
+            actor["teacher"]
+            if actor["role"] == "teacher"
+            else None
+        )
+
+        # ----------------------------------------------------
+        # SAVE VIDEO
+        # ----------------------------------------------------
+
+        video.save()
+
+        # ----------------------------------------------------
+        # FIELD CHANGE TIMELINE
+        # ----------------------------------------------------
+
+        for (
+            field_name,
+            old_value,
+            new_value,
+        ) in changes:
+
+            record_video_updated(
+                video=video,
+                field_name=field_name,
+                old_value=old_value,
+                new_value=new_value,
+                admin=(
+                    actor["admin"]
+                    if actor["role"] == "admin"
+                    else None
+                ),
+                teacher=(
+                    actor["teacher"]
+                    if actor["role"] == "teacher"
+                    else None
+                ),
+            )
+
+        # ----------------------------------------------------
+        # VIDEO FILE CHANGE TIMELINE
+        # ----------------------------------------------------
+
+        if new_video_file:
+
+            new_video_public_id = (
+                _get_cloudinary_public_id(
+                    video.video_file,
+                )
+            )
+
+            record_video_updated(
+                video=video,
+                field_name="video_file",
+                old_value=old_video_public_id,
+                new_value=new_video_public_id,
+                admin=(
+                    actor["admin"]
+                    if actor["role"] == "admin"
+                    else None
+                ),
+                teacher=(
+                    actor["teacher"]
+                    if actor["role"] == "teacher"
+                    else None
+                ),
+            )
+
+            # ------------------------------------------------
+            # DELETE OLD CLOUDINARY VIDEO
+            # ONLY AFTER DB COMMIT
+            # ------------------------------------------------
+
+            _schedule_cloudinary_cleanup(
+                [
+                    (
+                        old_video_public_id,
+                        "video",
+                    )
+                ]
+            )
+
+    # --------------------------------------------------------
+    # SUCCESS
+    # --------------------------------------------------------
 
     messages.success(
         request,
-        "Video order updated successfully.",
+        "Video updated successfully.",
     )
+
+    # --------------------------------------------------------
+    # PRG REDIRECT
+    # --------------------------------------------------------
 
     return _builder_redirect(
         batch,
         subject,
-        chapter,
     )
-
-
-# ============================================================
+    
+# ===========================================================
 # PDF CREATE
 # ============================================================
 
@@ -1948,9 +3203,9 @@ def create_pdf_view(
     chapter_id,
 ):
     """
-    Create PDF.
+    Admin + assigned Teacher can create PDFs.
 
-    pdf_order automatically gets next order.
+    PDF itself is stored through Cloudinary raw storage.
     """
 
     batch, subject = _get_batch_subject(
@@ -1964,13 +3219,21 @@ def create_pdf_view(
         subject,
     )
 
+
     if actor is None:
+
         messages.error(
             request,
             "You do not have permission to create a PDF.",
         )
 
-        return redirect("teacher_login")
+        return _builder_redirect(
+            batch,
+            subject,
+        )
+
+    fullname = _get_actor_name(actor)
+    actor_role = _get_actor_role(actor)
 
     chapter = _get_chapter(
         batch,
@@ -2004,11 +3267,11 @@ def create_pdf_view(
     )
 
     pdf_file = request.FILES.get(
-        "pdf_file",
+        "pdf_file"
     )
 
     pdf_thumbnail = request.FILES.get(
-        "pdf_thumbnail",
+        "pdf_thumbnail"
     )
 
     errors = {}
@@ -2037,21 +3300,30 @@ def create_pdf_view(
         errors["pdf_file"] = (
             "Please select a PDF file."
         )
+    else:
 
-    if not status:
-        errors["status"] = (
-            "Please select a PDF status."
+        error = _validate_pdf_file(
+            pdf_file
         )
 
-    elif status not in {
-        "draft",
-        "published",
-    }:
+        if error:
+            errors["pdf_file"] = error
+
+    if pdf_thumbnail:
+
+        error = _validate_image_file(
+            pdf_thumbnail
+        )
+
+        if error:
+            errors["pdf_thumbnail"] = error
+
+    if status not in VALID_STATUS:
         errors["status"] = (
             "Please select a valid PDF status."
         )
 
-    duplicate_exists = (
+    duplicate = (
         ChapterPDF.objects
         .filter(
             chapter=chapter,
@@ -2060,26 +3332,29 @@ def create_pdf_view(
         .exists()
     )
 
-    if duplicate_exists:
+    if duplicate:
         errors["pdf_name"] = (
-            "A PDF with this name already exists "
-            "in this chapter."
+            "A PDF with this name already exists."
         )
 
     if errors:
-
-        for error in errors.values():
-            messages.error(
-                request,
-                error,
-            )
-
-        return _builder_redirect(
-            batch,
-            subject,
-            chapter,
+        return _render_builder_form_error(
+            request=request,
+            batch=batch,
+            subject=subject,
+            actor=actor,
+            selected_chapter=chapter,
+            errors=errors,
+            form_data={
+                "pdf_name": pdf_name,
+                "pdf_description": pdf_description,
+                "status": status,
+            },
+            form_error_key="pdf_form_errors",
+            form_data_key="pdf_form_data",
+            open_key="pdf_create_open",
+            selected_content="pdfs",
         )
-
     with transaction.atomic():
 
         queryset = ChapterPDF.objects.filter(
@@ -2096,28 +3371,27 @@ def create_pdf_view(
             pdf_name=pdf_name,
             pdf_description=pdf_description,
             pdf_file=pdf_file,
-            pdf_thumbnail=pdf_thumbnail,
+            pdf_thumbnail=(
+                pdf_thumbnail
+                if pdf_thumbnail
+                else DEFAULT_PDF_THUMBNAIL
+            ),
             pdf_order=pdf_order,
             status=status,
             **_get_creator_fields(actor),
         )
 
-        _log_pdf(
+        record_pdf_created(
             pdf=pdf,
-            actor=actor,
-            action="created",
-            field_name="pdf",
-            old_value="",
-            new_value=(
-                f"Name: {pdf.pdf_name}\n"
-                f"Description: {pdf.pdf_description}\n"
-                f"Order: {pdf.pdf_order}\n"
-                f"Status: {pdf.status}"
+            admin=(
+                actor["admin"]
+                if actor["role"] == "admin"
+                else None
             ),
-            summary=(
-                f"PDF created by "
-                f"{_get_actor_name(actor)} "
-                f"({actor['role'].title()})."
+            teacher=(
+                actor["teacher"]
+                if actor["role"] == "teacher"
+                else None
             ),
         )
 
@@ -2129,7 +3403,6 @@ def create_pdf_view(
     return _builder_redirect(
         batch,
         subject,
-        chapter,
     )
 
 
@@ -2147,9 +3420,10 @@ def edit_pdf_view(
     pdf_id,
 ):
     """
-    Edit PDF.
+    Admin + assigned Teacher can edit PDF.
 
-    pdf_order is editable here.
+    Existing Cloudinary PDF remains when no replacement
+    is uploaded.
     """
 
     batch, subject = _get_batch_subject(
@@ -2163,13 +3437,21 @@ def edit_pdf_view(
         subject,
     )
 
+
     if actor is None:
+
         messages.error(
             request,
             "You do not have permission to edit this PDF.",
         )
 
-        return redirect("teacher_login")
+        return _builder_redirect(
+            batch,
+            subject,
+        )
+
+    fullname = _get_actor_name(actor)
+    actor_role = _get_actor_role(actor)
 
     chapter = _get_chapter(
         batch,
@@ -2199,14 +3481,6 @@ def edit_pdf_view(
         .strip()
     )
 
-    raw_order = (
-        request.POST.get(
-            "pdf_order",
-            "",
-        )
-        .strip()
-    )
-
     status = (
         request.POST.get(
             "status",
@@ -2216,12 +3490,20 @@ def edit_pdf_view(
         .lower()
     )
 
+    raw_order = (
+        request.POST.get(
+            "pdf_order",
+            "",
+        )
+        .strip()
+    )
+
     new_pdf_file = request.FILES.get(
-        "pdf_file",
+        "pdf_file"
     )
 
     new_thumbnail = request.FILES.get(
-        "pdf_thumbnail",
+        "pdf_thumbnail"
     )
 
     errors = {}
@@ -2246,43 +3528,27 @@ def edit_pdf_view(
             "PDF description cannot exceed 250 characters."
         )
 
-    if not raw_order:
-        errors["pdf_order"] = (
-            "Please enter the PDF order."
-        )
-        new_order = None
-    else:
-        try:
-            new_order = int(raw_order)
-
-            if new_order < 1:
-                errors["pdf_order"] = (
-                    "PDF order must be greater than or equal to 1."
-                )
-
-        except (
-            TypeError,
-            ValueError,
-        ):
-            new_order = None
-            errors["pdf_order"] = (
-                "PDF order must be a valid whole number."
-            )
-
-    if not status:
-        errors["status"] = (
-            "Please select a PDF status."
-        )
-
-    elif status not in {
-        "draft",
-        "published",
-    }:
+    if status not in VALID_STATUS:
         errors["status"] = (
             "Please select a valid PDF status."
         )
 
-    duplicate_exists = (
+    try:
+        new_order = int(raw_order)
+
+        if new_order < 1:
+            raise ValueError
+
+    except (
+        ValueError,
+        TypeError,
+    ):
+        errors["pdf_order"] = (
+            "PDF order must be a valid number."
+        )
+        new_order = None
+
+    duplicate = (
         ChapterPDF.objects
         .filter(
             chapter=chapter,
@@ -2294,26 +3560,49 @@ def edit_pdf_view(
         .exists()
     )
 
-    if duplicate_exists:
+    if duplicate:
         errors["pdf_name"] = (
-            "A PDF with this name already exists "
-            "in this chapter."
+            "A PDF with this name already exists."
         )
+
+    if new_pdf_file:
+
+        error = _validate_pdf_file(
+            new_pdf_file
+        )
+
+        if error:
+            errors["pdf_file"] = error
+
+    if new_thumbnail:
+
+        error = _validate_image_file(
+            new_thumbnail
+        )
+
+        if error:
+            errors["pdf_thumbnail"] = error
 
     if errors:
-
-        for error in errors.values():
-            messages.error(
-                request,
-                error,
-            )
-
-        return _builder_redirect(
-            batch,
-            subject,
-            chapter,
+        return _render_builder_form_error(
+            request=request,
+            batch=batch,
+            subject=subject,
+            actor=actor,
+            selected_chapter=chapter,
+            errors=errors,
+            form_data={
+                "pdf_name": pdf_name,
+                "pdf_description": pdf_description,
+                "pdf_order": raw_order,
+                "status": status,
+            },
+            form_error_key="pdf_edit_form_errors",
+            form_data_key="pdf_edit_form_data",
+            open_key="pdf_edit_open",
+            selected_content="pdfs",
+            open_id=pdf.id,
         )
-
     changes = []
 
     if pdf.pdf_name != pdf_name:
@@ -2346,12 +3635,17 @@ def edit_pdf_view(
             )
         )
 
+    old_order = pdf.pdf_order
+
+    old_pdf_file = pdf.pdf_file
+    old_thumbnail = pdf.pdf_thumbnail
+
     if new_pdf_file:
         changes.append(
             (
                 "pdf_file",
-                "Existing file",
-                new_pdf_file.name,
+                _get_cloudinary_public_id(old_pdf_file),
+                getattr(new_pdf_file, "name", str(new_pdf_file)),
             )
         )
 
@@ -2359,40 +3653,37 @@ def edit_pdf_view(
         changes.append(
             (
                 "pdf_thumbnail",
-                "Existing thumbnail",
-                new_thumbnail.name,
+                _get_cloudinary_public_id(old_thumbnail),
+                getattr(new_thumbnail, "name", str(new_thumbnail)),
             )
         )
 
-    old_order = pdf.pdf_order
-
     with transaction.atomic():
-
-        queryset = ChapterPDF.objects.filter(
-            chapter=chapter,
-        )
 
         if old_order != new_order:
 
             move_item(
                 item=pdf,
-                queryset=queryset,
+                queryset=ChapterPDF.objects.filter(
+                    chapter=chapter,
+                ),
                 order_field="pdf_order",
                 new_order=new_order,
             )
 
-            _log_pdf(
+            record_pdf_order_changed(
                 pdf=pdf,
-                actor=actor,
-                action="order_changed",
-                field_name="pdf_order",
-                old_value=old_order,
-                new_value=new_order,
-                summary=(
-                    f"PDF order changed from "
-                    f"{old_order} to {new_order} by "
-                    f"{_get_actor_name(actor)} "
-                    f"({actor['role'].title()})."
+                old_order=old_order,
+                new_order=new_order,
+                admin=(
+                    actor["admin"]
+                    if actor["role"] == "admin"
+                    else None
+                ),
+                teacher=(
+                    actor["teacher"]
+                    if actor["role"] == "teacher"
+                    else None
                 ),
             )
 
@@ -2406,7 +3697,11 @@ def edit_pdf_view(
         if new_thumbnail:
             pdf.pdf_thumbnail = new_thumbnail
 
-        pdf.save()
+        if changes or old_order != new_order:
+            updater_fields = _get_updater_fields(actor)
+            pdf.updated_by_admin = updater_fields["updated_by_admin"]
+            pdf.updated_by_teacher = updater_fields["updated_by_teacher"]
+            pdf.save()
 
         for (
             field_name,
@@ -2414,19 +3709,50 @@ def edit_pdf_view(
             new_value,
         ) in changes:
 
-            _log_pdf(
+            record_pdf_updated(
                 pdf=pdf,
-                actor=actor,
-                action="updated",
                 field_name=field_name,
                 old_value=old_value,
                 new_value=new_value,
-                summary=(
-                    f"{field_name.replace('_', ' ').title()} "
-                    f"updated by "
-                    f"{_get_actor_name(actor)} "
-                    f"({actor['role'].title()})."
+                admin=(
+                    actor["admin"]
+                    if actor["role"] == "admin"
+                    else None
                 ),
+                teacher=(
+                    actor["teacher"]
+                    if actor["role"] == "teacher"
+                    else None
+                ),
+            )
+
+        cleanup_assets = []
+
+        if new_pdf_file:
+
+            cleanup_assets.append(
+                (
+                    _get_cloudinary_public_id(
+                        old_pdf_file
+                    ),
+                    "raw",
+                )
+            )
+
+        if new_thumbnail:
+
+            cleanup_assets.append(
+                (
+                    _get_cloudinary_public_id(
+                        old_thumbnail
+                    ),
+                    "image",
+                )
+            )
+
+        if cleanup_assets:
+            _schedule_cloudinary_cleanup(
+                cleanup_assets
             )
 
     messages.success(
@@ -2437,129 +3763,6 @@ def edit_pdf_view(
     return _builder_redirect(
         batch,
         subject,
-        chapter,
-    )
-
-
-# ============================================================
-# PDF ORDER
-# ============================================================
-
-
-@require_POST
-def change_pdf_order_view(
-    request,
-    batch_id,
-    subject_id,
-    chapter_id,
-    pdf_id,
-):
-    batch, subject = _get_batch_subject(
-        batch_id,
-        subject_id,
-    )
-
-    actor = _authorize_builder(
-        request,
-        batch,
-        subject,
-    )
-
-    if actor is None:
-        messages.error(
-            request,
-            "You do not have permission to change PDF order.",
-        )
-
-        return redirect("teacher_login")
-
-    chapter = _get_chapter(
-        batch,
-        subject,
-        chapter_id,
-    )
-
-    pdf = get_object_or_404(
-        ChapterPDF,
-        id=pdf_id,
-        chapter=chapter,
-    )
-
-    raw_order = (
-        request.POST.get(
-            "pdf_order",
-            "",
-        )
-        .strip()
-    )
-
-    try:
-        new_order = int(raw_order)
-    except (
-        TypeError,
-        ValueError,
-    ):
-        messages.error(
-            request,
-            "PDF order must be a valid whole number.",
-        )
-
-        return _builder_redirect(
-            batch,
-            subject,
-            chapter,
-        )
-
-    try:
-
-        old_order, new_order = move_item(
-            item=pdf,
-            queryset=ChapterPDF.objects.filter(
-                chapter=chapter,
-            ),
-            order_field="pdf_order",
-            new_order=new_order,
-        )
-
-    except ValueError as exc:
-
-        messages.error(
-            request,
-            str(exc),
-        )
-
-        return _builder_redirect(
-            batch,
-            subject,
-            chapter,
-        )
-
-    if old_order != new_order:
-
-        _log_pdf(
-            pdf=pdf,
-            actor=actor,
-            action="order_changed",
-            field_name="pdf_order",
-            old_value=old_order,
-            new_value=new_order,
-            summary=(
-                f"PDF order changed from "
-                f"{old_order} to {new_order} by "
-                f"{_get_actor_name(actor)} "
-                f"({actor['role'].title()})."
-            ),
-        )
-
-    messages.success(
-        request,
-        "PDF order updated successfully.",
-    )
-
-    return _builder_redirect(
-        batch,
-        subject,
-        chapter,
     )
 
 
@@ -2576,9 +3779,7 @@ def create_quiz_view(
     chapter_id,
 ):
     """
-    Create quiz.
-
-    quiz_order automatically gets next order.
+    Admin + assigned Teacher can create quizzes.
     """
 
     batch, subject = _get_batch_subject(
@@ -2592,13 +3793,21 @@ def create_quiz_view(
         subject,
     )
 
+
     if actor is None:
+
         messages.error(
             request,
             "You do not have permission to create a quiz.",
         )
 
-        return redirect("teacher_login")
+        return _builder_redirect(
+            batch,
+            subject,
+        )
+
+    fullname = _get_actor_name(actor)
+    actor_role = _get_actor_role(actor)
 
     chapter = _get_chapter(
         batch,
@@ -2622,7 +3831,7 @@ def create_quiz_view(
         .strip()
     )
 
-    maximum_attempts = (
+    raw_attempts = (
         request.POST.get(
             "maximum_attempts",
             "",
@@ -2640,8 +3849,6 @@ def create_quiz_view(
     )
 
     errors = {}
-
-    attempts_value = None
 
     if not quiz_name:
         errors["quiz_name"] = (
@@ -2663,49 +3870,32 @@ def create_quiz_view(
             "Quiz description cannot exceed 250 characters."
         )
 
-    if not maximum_attempts:
+    try:
+
+        maximum_attempts = int(
+            raw_attempts
+        )
+
+        if maximum_attempts < 1:
+            raise ValueError
+
+    except (
+        ValueError,
+        TypeError,
+    ):
+
+        maximum_attempts = None
 
         errors["maximum_attempts"] = (
-            "Please enter the maximum attempts."
+            "Maximum attempts must be at least 1."
         )
 
-    else:
-
-        try:
-            attempts_value = int(
-                maximum_attempts,
-            )
-        except (
-            TypeError,
-            ValueError,
-        ):
-            attempts_value = None
-            errors["maximum_attempts"] = (
-                "Maximum attempts must be a valid number."
-            )
-
-        if (
-            attempts_value is not None
-            and attempts_value < 1
-        ):
-            errors["maximum_attempts"] = (
-                "Maximum attempts must be at least 1."
-            )
-
-    if not status:
-        errors["status"] = (
-            "Please select a quiz status."
-        )
-
-    elif status not in {
-        "draft",
-        "published",
-    }:
+    if status not in VALID_STATUS:
         errors["status"] = (
             "Please select a valid quiz status."
         )
 
-    duplicate_exists = (
+    duplicate = (
         ChapterQuiz.objects
         .filter(
             chapter=chapter,
@@ -2714,26 +3904,30 @@ def create_quiz_view(
         .exists()
     )
 
-    if duplicate_exists:
+    if duplicate:
         errors["quiz_name"] = (
-            "A quiz with this name already exists "
-            "in this chapter."
+            "A quiz with this name already exists."
         )
 
     if errors:
-
-        for error in errors.values():
-            messages.error(
-                request,
-                error,
-            )
-
-        return _builder_redirect(
-            batch,
-            subject,
-            chapter,
+        return _render_builder_form_error(
+            request=request,
+            batch=batch,
+            subject=subject,
+            actor=actor,
+            selected_chapter=chapter,
+            errors=errors,
+            form_data={
+                "quiz_name": quiz_name,
+                "quiz_description": quiz_description,
+                "maximum_attempts": raw_attempts,
+                "status": status,
+            },
+            form_error_key="quiz_form_errors",
+            form_data_key="quiz_form_data",
+            open_key="quiz_create_open",
+            selected_content="quizzes",
         )
-
     with transaction.atomic():
 
         queryset = ChapterQuiz.objects.filter(
@@ -2750,29 +3944,22 @@ def create_quiz_view(
             quiz_name=quiz_name,
             quiz_description=quiz_description,
             quiz_order=quiz_order,
-            maximum_attempts=attempts_value,
+            maximum_attempts=maximum_attempts,
             status=status,
             **_get_creator_fields(actor),
         )
 
-        _log_quiz(
+        record_quiz_created(
             quiz=quiz,
-            actor=actor,
-            action="created",
-            field_name="quiz",
-            old_value="",
-            new_value=(
-                f"Name: {quiz.quiz_name}\n"
-                f"Description: {quiz.quiz_description}\n"
-                f"Order: {quiz.quiz_order}\n"
-                f"Maximum Attempts: "
-                f"{quiz.maximum_attempts}\n"
-                f"Status: {quiz.status}"
+            admin=(
+                actor["admin"]
+                if actor["role"] == "admin"
+                else None
             ),
-            summary=(
-                f"Quiz created by "
-                f"{_get_actor_name(actor)} "
-                f"({actor['role'].title()})."
+            teacher=(
+                actor["teacher"]
+                if actor["role"] == "teacher"
+                else None
             ),
         )
 
@@ -2784,7 +3971,6 @@ def create_quiz_view(
     return _builder_redirect(
         batch,
         subject,
-        chapter,
     )
 
 
@@ -2802,11 +3988,7 @@ def edit_quiz_view(
     quiz_id,
 ):
     """
-    Edit quiz.
-
-    quiz_order is part of edit.
-
-    Changing order automatically balances all sibling quizzes.
+    Admin + assigned Teacher can edit quiz.
     """
 
     batch, subject = _get_batch_subject(
@@ -2820,13 +4002,21 @@ def edit_quiz_view(
         subject,
     )
 
+
     if actor is None:
+
         messages.error(
             request,
             "You do not have permission to edit this quiz.",
         )
 
-        return redirect("teacher_login")
+        return _builder_redirect(
+            batch,
+            subject,
+        )
+
+    fullname = _get_actor_name(actor)
+    actor_role = _get_actor_role(actor)
 
     chapter = _get_chapter(
         batch,
@@ -2856,17 +4046,9 @@ def edit_quiz_view(
         .strip()
     )
 
-    maximum_attempts = (
+    raw_attempts = (
         request.POST.get(
             "maximum_attempts",
-            "",
-        )
-        .strip()
-    )
-
-    raw_order = (
-        request.POST.get(
-            "quiz_order",
             "",
         )
         .strip()
@@ -2881,10 +4063,15 @@ def edit_quiz_view(
         .lower()
     )
 
-    errors = {}
+    raw_order = (
+        request.POST.get(
+            "quiz_order",
+            "",
+        )
+        .strip()
+    )
 
-    attempts_value = None
-    new_order = None
+    errors = {}
 
     if not quiz_name:
         errors["quiz_name"] = (
@@ -2906,77 +4093,52 @@ def edit_quiz_view(
             "Quiz description cannot exceed 250 characters."
         )
 
-    if not maximum_attempts:
+    try:
+
+        maximum_attempts = int(
+            raw_attempts
+        )
+
+        if maximum_attempts < 1:
+            raise ValueError
+
+    except (
+        ValueError,
+        TypeError,
+    ):
+
+        maximum_attempts = None
 
         errors["maximum_attempts"] = (
-            "Please enter the maximum attempts."
+            "Maximum attempts must be at least 1."
         )
 
-    else:
-
-        try:
-            attempts_value = int(
-                maximum_attempts,
-            )
-        except (
-            TypeError,
-            ValueError,
-        ):
-            attempts_value = None
-            errors["maximum_attempts"] = (
-                "Maximum attempts must be a valid number."
-            )
-
-        if (
-            attempts_value is not None
-            and attempts_value < 1
-        ):
-            errors["maximum_attempts"] = (
-                "Maximum attempts must be at least 1."
-            )
-
-    if not raw_order:
-
-        errors["quiz_order"] = (
-            "Please enter the quiz order."
-        )
-
-    else:
-
-        try:
-
-            new_order = int(raw_order)
-
-            if new_order < 1:
-                errors["quiz_order"] = (
-                    "Quiz order must be greater than or equal to 1."
-                )
-
-        except (
-            TypeError,
-            ValueError,
-        ):
-
-            new_order = None
-
-            errors["quiz_order"] = (
-                "Quiz order must be a valid whole number."
-            )
-
-    if not status:
-        errors["status"] = (
-            "Please select a quiz status."
-        )
-
-    elif status not in {
-        "draft",
-        "published",
-    }:
+    if status not in VALID_STATUS:
         errors["status"] = (
             "Please select a valid quiz status."
         )
 
-    duplicate_exists = (
+    try:
+
+        new_order = int(
+            raw_order
+        )
+
+        if new_order < 1:
+            raise ValueError
+
+    except (
+        ValueError,
+        TypeError,
+    ):
+
+        new_order = None
+
+        errors["quiz_order"] = (
+            "Quiz order must be a valid number."
+        )
+
+    duplicate = (
         ChapterQuiz.objects
         .filter(
             chapter=chapter,
@@ -2988,26 +4150,32 @@ def edit_quiz_view(
         .exists()
     )
 
-    if duplicate_exists:
+    if duplicate:
         errors["quiz_name"] = (
-            "A quiz with this name already exists "
-            "in this chapter."
+            "A quiz with this name already exists."
         )
 
     if errors:
-
-        for error in errors.values():
-            messages.error(
-                request,
-                error,
-            )
-
-        return _builder_redirect(
-            batch,
-            subject,
-            chapter,
+        return _render_builder_form_error(
+            request=request,
+            batch=batch,
+            subject=subject,
+            actor=actor,
+            selected_chapter=chapter,
+            errors=errors,
+            form_data={
+                "quiz_name": quiz_name,
+                "quiz_description": quiz_description,
+                "maximum_attempts": raw_attempts,
+                "quiz_order": raw_order,
+                "status": status,
+            },
+            form_error_key="quiz_edit_form_errors",
+            form_data_key="quiz_edit_form_data",
+            open_key="quiz_edit_open",
+            selected_content="quizzes",
+            open_id=quiz.id,
         )
-
     changes = []
 
     if quiz.quiz_name != quiz_name:
@@ -3033,13 +4201,13 @@ def edit_quiz_view(
 
     if (
         quiz.maximum_attempts
-        != attempts_value
+        != maximum_attempts
     ):
         changes.append(
             (
                 "maximum_attempts",
                 quiz.maximum_attempts,
-                attempts_value,
+                maximum_attempts,
             )
         )
 
@@ -3056,40 +4224,47 @@ def edit_quiz_view(
 
     with transaction.atomic():
 
-        queryset = ChapterQuiz.objects.filter(
-            chapter=chapter,
-        )
-
         if old_order != new_order:
 
             move_item(
                 item=quiz,
-                queryset=queryset,
+                queryset=ChapterQuiz.objects.filter(
+                    chapter=chapter,
+                ),
                 order_field="quiz_order",
                 new_order=new_order,
             )
 
-            _log_quiz(
+            record_quiz_order_changed(
                 quiz=quiz,
-                actor=actor,
-                action="order_changed",
-                field_name="quiz_order",
-                old_value=old_order,
-                new_value=new_order,
-                summary=(
-                    f"Quiz order changed from "
-                    f"{old_order} to {new_order} by "
-                    f"{_get_actor_name(actor)} "
-                    f"({actor['role'].title()})."
+                old_order=old_order,
+                new_order=new_order,
+                admin=(
+                    actor["admin"]
+                    if actor["role"] == "admin"
+                    else None
+                ),
+                teacher=(
+                    actor["teacher"]
+                    if actor["role"] == "teacher"
+                    else None
                 ),
             )
 
         quiz.quiz_name = quiz_name
-        quiz.quiz_description = quiz_description
-        quiz.maximum_attempts = attempts_value
+        quiz.quiz_description = (
+            quiz_description
+        )
+        quiz.maximum_attempts = (
+            maximum_attempts
+        )
         quiz.status = status
 
-        quiz.save()
+        if changes or old_order != new_order:
+            updater_fields = _get_updater_fields(actor)
+            quiz.updated_by_admin = updater_fields["updated_by_admin"]
+            quiz.updated_by_teacher = updater_fields["updated_by_teacher"]
+            quiz.save()
 
         for (
             field_name,
@@ -3097,18 +4272,20 @@ def edit_quiz_view(
             new_value,
         ) in changes:
 
-            _log_quiz(
+            record_quiz_updated(
                 quiz=quiz,
-                actor=actor,
-                action="updated",
                 field_name=field_name,
                 old_value=old_value,
                 new_value=new_value,
-                summary=(
-                    f"{field_name.replace('_', ' ').title()} "
-                    f"updated by "
-                    f"{_get_actor_name(actor)} "
-                    f"({actor['role'].title()})."
+                admin=(
+                    actor["admin"]
+                    if actor["role"] == "admin"
+                    else None
+                ),
+                teacher=(
+                    actor["teacher"]
+                    if actor["role"] == "teacher"
+                    else None
                 ),
             )
 
@@ -3120,370 +4297,17 @@ def edit_quiz_view(
     return _builder_redirect(
         batch,
         subject,
-        chapter,
     )
 
 
 # ============================================================
-# QUIZ ORDER
+# DELETION AUDIT SNAPSHOT
 # ============================================================
-
-
-@require_POST
-def change_quiz_order_view(
-    request,
-    batch_id,
-    subject_id,
-    chapter_id,
-    quiz_id,
-):
-    batch, subject = _get_batch_subject(
-        batch_id,
-        subject_id,
-    )
-
-    actor = _authorize_builder(
-        request,
-        batch,
-        subject,
-    )
-
-    if actor is None:
-        messages.error(
-            request,
-            "You do not have permission to change quiz order.",
-        )
-
-        return redirect("teacher_login")
-
-    chapter = _get_chapter(
-        batch,
-        subject,
-        chapter_id,
-    )
-
-    quiz = get_object_or_404(
-        ChapterQuiz,
-        id=quiz_id,
-        chapter=chapter,
-    )
-
-    raw_order = (
-        request.POST.get(
-            "quiz_order",
-            "",
-        )
-        .strip()
-    )
-
-    try:
-        new_order = int(raw_order)
-    except (
-        TypeError,
-        ValueError,
-    ):
-        messages.error(
-            request,
-            "Quiz order must be a valid whole number.",
-        )
-
-        return _builder_redirect(
-            batch,
-            subject,
-            chapter,
-        )
-
-    try:
-
-        old_order, new_order = move_item(
-            item=quiz,
-            queryset=ChapterQuiz.objects.filter(
-                chapter=chapter,
-            ),
-            order_field="quiz_order",
-            new_order=new_order,
-        )
-
-    except ValueError as exc:
-
-        messages.error(
-            request,
-            str(exc),
-        )
-
-        return _builder_redirect(
-            batch,
-            subject,
-            chapter,
-        )
-
-    if old_order != new_order:
-
-        _log_quiz(
-            quiz=quiz,
-            actor=actor,
-            action="order_changed",
-            field_name="quiz_order",
-            old_value=old_order,
-            new_value=new_order,
-            summary=(
-                f"Quiz order changed from "
-                f"{old_order} to {new_order} by "
-                f"{_get_actor_name(actor)} "
-                f"({actor['role'].title()})."
-            ),
-        )
-
-    messages.success(
-        request,
-        "Quiz order updated successfully.",
-    )
-
-    return _builder_redirect(
-        batch,
-        subject,
-        chapter,
-    )
-
-
-# ============================================================
-# CHAPTER ORDER
-# ============================================================
-
-# Kept for URL compatibility.
-# Normal UI should change chapter order through Edit.
-
-
-@require_POST
-def change_chapter_order_view(
-    request,
-    batch_id,
-    subject_id,
-    chapter_id,
-):
-    batch, subject = _get_batch_subject(
-        batch_id,
-        subject_id,
-    )
-
-    actor = _authorize_builder(
-        request,
-        batch,
-        subject,
-    )
-
-    if actor is None:
-        messages.error(
-            request,
-            "You do not have permission to change chapter order.",
-        )
-
-        return redirect("teacher_login")
-
-    chapter = _get_chapter(
-        batch,
-        subject,
-        chapter_id,
-    )
-
-    raw_order = (
-        request.POST.get(
-            "chapter_order",
-            "",
-        )
-        .strip()
-    )
-
-    try:
-        new_order = int(raw_order)
-    except (
-        TypeError,
-        ValueError,
-    ):
-        messages.error(
-            request,
-            "Chapter order must be a valid whole number.",
-        )
-
-        return _builder_redirect(
-            batch,
-            subject,
-            chapter,
-        )
-
-    try:
-
-        old_order, new_order = move_item(
-            item=chapter,
-            queryset=CourseChapter.objects.filter(
-                batch=batch,
-                subject=subject,
-            ),
-            order_field="chapter_order",
-            new_order=new_order,
-        )
-
-    except ValueError as exc:
-
-        messages.error(
-            request,
-            str(exc),
-        )
-
-        return _builder_redirect(
-            batch,
-            subject,
-            chapter,
-        )
-
-    if old_order != new_order:
-
-        _log_chapter(
-            chapter=chapter,
-            actor=actor,
-            action="order_changed",
-            field_name="chapter_order",
-            old_value=old_order,
-            new_value=new_order,
-            summary=(
-                f"Chapter order changed from "
-                f"{old_order} to {new_order} by "
-                f"{_get_actor_name(actor)} "
-                f"({actor['role'].title()})."
-            ),
-        )
-
-    messages.success(
-        request,
-        "Chapter order updated successfully.",
-    )
-
-    return _builder_redirect(
-        batch,
-        subject,
-        chapter,
-    )
-
-
-# ============================================================
-# DELETE SNAPSHOT
-# ============================================================
-
-
-def _build_deletion_snapshot(
-    content_type,
-    obj,
-):
-    """
-    Snapshot content before permanent deletion.
-    """
-
-    if content_type == "chapter":
-        chapter = obj
-    else:
-        chapter = obj.chapter
-
-    snapshot = {
-        "content_type": content_type,
-        "object_id": obj.pk,
-        "content_name": (
-            obj.chapter_name
-            if content_type == "chapter"
-            else obj.video_name
-            if content_type == "video"
-            else obj.pdf_name
-            if content_type == "pdf"
-            else obj.quiz_name
-        ),
-        "batch_name": chapter.batch.batch_name,
-        "subject_name": chapter.subject.subject_name,
-        "chapter_name": chapter.chapter_name,
-    }
-
-    if content_type == "chapter":
-
-        snapshot.update(
-            {
-                "chapter_description": (
-                    obj.chapter_description
-                ),
-                "chapter_order": obj.chapter_order,
-                "status": obj.status,
-            }
-        )
-
-    elif content_type == "video":
-
-        snapshot.update(
-            {
-                "video_description": (
-                    obj.video_description
-                ),
-                "video_order": obj.video_order,
-                "status": obj.status,
-            }
-        )
-
-    elif content_type == "pdf":
-
-        snapshot.update(
-            {
-                "pdf_description": (
-                    obj.pdf_description
-                ),
-                "pdf_order": obj.pdf_order,
-                "status": obj.status,
-            }
-        )
-
-    elif content_type == "quiz":
-
-        snapshot.update(
-            {
-                "quiz_description": (
-                    obj.quiz_description
-                ),
-                "quiz_order": obj.quiz_order,
-                "maximum_attempts": (
-                    obj.maximum_attempts
-                ),
-                "status": obj.status,
-            }
-        )
-
-        questions = []
-
-        for question in obj.questions.all():
-
-            question_data = {
-                "id": question.id,
-                "question": question.question,
-                "options": [],
-            }
-
-            for option in question.options.all():
-
-                question_data["options"].append(
-                    {
-                        "id": option.id,
-                        "option_label": option.option_label,
-                        "option_text": option.option_text,
-                        "is_correct": option.is_correct,
-                    }
-                )
-
-            questions.append(
-                question_data
-            )
-
-        snapshot["questions"] = questions
-
-    return snapshot
 
 
 def _get_original_creator(obj):
     """
-    Return original creator.
+    Capture original creator.
     """
 
     if getattr(
@@ -3514,6 +4338,131 @@ def _get_original_creator(obj):
     }
 
 
+def _build_deletion_snapshot(
+    content_type,
+    obj,
+):
+    """
+    Permanent audit snapshot.
+
+    This is metadata about what was deleted.
+    It does not try to store the actual Cloudinary file.
+    """
+
+    if content_type == "chapter":
+        chapter = obj
+    else:
+        chapter = obj.chapter
+
+    content_name = ""
+
+    if content_type == "chapter":
+        content_name = obj.chapter_name
+
+    elif content_type == "video":
+        content_name = obj.video_name
+
+    elif content_type == "pdf":
+        content_name = obj.pdf_name
+
+    elif content_type == "quiz":
+        content_name = obj.quiz_name
+
+    snapshot = {
+        "content_type": content_type,
+        "object_id": obj.pk,
+        "content_name": content_name,
+
+        "batch_name": (
+            chapter.batch.batch_name
+        ),
+
+        "subject_name": (
+            chapter.subject.subject_name
+        ),
+
+        "chapter_name": (
+            chapter.chapter_name
+        ),
+    }
+
+    if content_type == "chapter":
+
+        snapshot.update(
+            {
+                "chapter_description": (
+                    obj.chapter_description
+                ),
+                "chapter_order": (
+                    obj.chapter_order
+                ),
+                "status": obj.status,
+            }
+        )
+
+    elif content_type == "video":
+
+        snapshot.update(
+            {
+                "video_description": (
+                    obj.video_description
+                ),
+                "video_order": (
+                    obj.video_order
+                ),
+                "status": obj.status,
+                "video_file": (
+                    _get_cloudinary_public_id(
+                        obj.video_file
+                    )
+                ),
+            }
+        )
+
+    elif content_type == "pdf":
+
+        snapshot.update(
+            {
+                "pdf_description": (
+                    obj.pdf_description
+                ),
+                "pdf_order": (
+                    obj.pdf_order
+                ),
+                "status": obj.status,
+                "pdf_file": (
+                    _get_cloudinary_public_id(
+                        obj.pdf_file
+                    )
+                ),
+                "pdf_thumbnail": (
+                    _get_cloudinary_public_id(
+                        obj.pdf_thumbnail
+                    )
+                ),
+            }
+        )
+
+    elif content_type == "quiz":
+
+        snapshot.update(
+            {
+                "quiz_description": (
+                    obj.quiz_description
+                ),
+                "quiz_order": (
+                    obj.quiz_order
+                ),
+                "maximum_attempts": (
+                    obj.maximum_attempts
+                ),
+                "status": obj.status,
+            }
+        )
+
+    return snapshot
+
+
 def _create_deletion_audit(
     content_type,
     obj,
@@ -3524,11 +4473,11 @@ def _create_deletion_audit(
     deletion_method="",
 ):
     """
-    Create permanent deletion audit.
+    Create one permanent deletion audit record.
     """
 
     creator = _get_original_creator(
-        obj,
+        obj
     )
 
     chapter = (
@@ -3537,28 +4486,49 @@ def _create_deletion_audit(
         else obj.chapter
     )
 
+    content_name = ""
+
+    if content_type == "chapter":
+        content_name = obj.chapter_name
+
+    elif content_type == "video":
+        content_name = obj.video_name
+
+    elif content_type == "pdf":
+        content_name = obj.pdf_name
+
+    elif content_type == "quiz":
+        content_name = obj.quiz_name
+
     return DeletionAudit.objects.create(
         content_type=content_type,
         object_id=obj.pk,
 
-        content_name=(
-            obj.chapter_name
-            if content_type == "chapter"
-            else obj.video_name
-            if content_type == "video"
-            else obj.pdf_name
-            if content_type == "pdf"
-            else obj.quiz_name
+        content_name=content_name,
+
+        batch_name=(
+            chapter.batch.batch_name
         ),
 
-        batch_name=chapter.batch.batch_name,
-        subject_name=chapter.subject.subject_name,
-        chapter_name=chapter.chapter_name,
+        subject_name=(
+            chapter.subject.subject_name
+        ),
 
-        created_by_admin=creator["admin"],
-        created_by_teacher=creator["teacher"],
+        chapter_name=(
+            chapter.chapter_name
+        ),
 
-        original_created_at=obj.created_at,
+        created_by_admin=(
+            creator["admin"]
+        ),
+
+        created_by_teacher=(
+            creator["teacher"]
+        ),
+
+        original_created_at=(
+            obj.created_at
+        ),
 
         requested_by_teacher=(
             actor["teacher"]
@@ -3593,7 +4563,9 @@ def _create_deletion_audit(
         ),
 
         deletion_method=deletion_method,
+
         status=status,
+
         admin_response=admin_response,
 
         snapshot=_build_deletion_snapshot(
@@ -3601,80 +4573,6 @@ def _create_deletion_audit(
             obj,
         ),
     )
-
-
-# ============================================================
-# FIND CONTENT FOR DELETE
-# ============================================================
-
-
-def _get_content_for_delete(
-    batch,
-    subject,
-    content_type,
-    object_id,
-    chapter_id=None,
-):
-    """
-    Safely resolve content under the requested
-    batch + subject.
-    """
-
-    if content_type == "chapter":
-
-        return get_object_or_404(
-            CourseChapter,
-            id=object_id,
-            batch=batch,
-            subject=subject,
-        )
-
-    if content_type == "video":
-
-        chapter = get_object_or_404(
-            CourseChapter,
-            id=chapter_id,
-            batch=batch,
-            subject=subject,
-        )
-
-        return get_object_or_404(
-            ChapterVideo,
-            id=object_id,
-            chapter=chapter,
-        )
-
-    if content_type == "pdf":
-
-        chapter = get_object_or_404(
-            CourseChapter,
-            id=chapter_id,
-            batch=batch,
-            subject=subject,
-        )
-
-        return get_object_or_404(
-            ChapterPDF,
-            id=object_id,
-            chapter=chapter,
-        )
-
-    if content_type == "quiz":
-
-        chapter = get_object_or_404(
-            CourseChapter,
-            id=chapter_id,
-            batch=batch,
-            subject=subject,
-        )
-
-        return get_object_or_404(
-            ChapterQuiz,
-            id=object_id,
-            chapter=chapter,
-        )
-
-    return None
 
 
 # ============================================================
@@ -3691,9 +4589,13 @@ def teacher_request_delete_view(
     object_id,
 ):
     """
-    Teacher cannot directly delete.
+    SENSITIVE OPERATION.
 
-    Teacher creates pending DeletionAudit.
+    Teacher CANNOT delete.
+
+    Teacher can ONLY create a pending DeletionAudit.
+
+    Actual deletion can happen only after Admin approval.
     """
 
     batch, subject = _get_batch_subject(
@@ -3701,17 +4603,29 @@ def teacher_request_delete_view(
         subject_id,
     )
 
-    actor = _authorize_builder(
+    actor = _authorize_teacher(
         request,
         batch,
         subject,
     )
 
-    if actor is None or actor["role"] != "teacher":
+    if actor is None:
 
         messages.error(
             request,
-            "Only the assigned teacher can request deletion.",
+            "Only the assigned Teacher can request deletion.",
+        )
+
+        return _builder_redirect(
+            batch,
+            subject,
+        )
+
+    if content_type not in VALID_CONTENT_TYPES:
+
+        messages.error(
+            request,
+            "Invalid content type.",
         )
 
         return _builder_redirect(
@@ -3739,11 +4653,13 @@ def teacher_request_delete_view(
             subject,
         )
 
-    chapter_id = request.POST.get(
-        "chapter_id",
+    chapter_id = (
+        request.POST.get(
+            "chapter_id"
+        )
     )
 
-    obj = _get_content_for_delete(
+    obj = _get_content_object(
         batch=batch,
         subject=subject,
         content_type=content_type,
@@ -3755,13 +4671,17 @@ def teacher_request_delete_view(
 
         messages.error(
             request,
-            "Invalid content type.",
+            "Invalid content.",
         )
 
         return _builder_redirect(
             batch,
             subject,
         )
+
+    # --------------------------------------------------------
+    # PREVENT DUPLICATE PENDING REQUEST
+    # --------------------------------------------------------
 
     pending_exists = (
         DeletionAudit.objects
@@ -3785,6 +4705,10 @@ def teacher_request_delete_view(
             subject,
         )
 
+    # --------------------------------------------------------
+    # CREATE AUDIT ONLY
+    # --------------------------------------------------------
+
     with transaction.atomic():
 
         _create_deletion_audit(
@@ -3793,11 +4717,12 @@ def teacher_request_delete_view(
             status="pending",
             actor=actor,
             request_reason=reason,
+            deletion_method="",
         )
 
     messages.success(
         request,
-        "Deletion request submitted successfully.",
+        "Deletion request submitted to Admin successfully.",
     )
 
     return _builder_redirect(
@@ -3820,13 +4745,14 @@ def admin_direct_delete_view(
     object_id,
 ):
     """
-    Admin can permanently delete directly.
+    SENSITIVE ADMIN-ONLY OPERATION.
 
-    IMPORTANT:
-    Audit is created before deletion.
+    Teacher cannot access this successfully even if they
+    manually construct the URL.
 
-    IMPORTANT:
-    Order gap is closed after deletion request is recorded.
+    Admin:
+        audit -> capture assets -> delete DB -> Cloudinary
+        cleanup after successful transaction.
     """
 
     batch, subject = _get_batch_subject(
@@ -3834,17 +4760,27 @@ def admin_direct_delete_view(
         subject_id,
     )
 
-    actor = _authorize_builder(
-        request,
-        batch,
-        subject,
+    actor = _authorize_admin(
+        request
     )
 
-    if actor is None or actor["role"] != "admin":
+    if actor is None:
 
         messages.error(
             request,
             "Only Admin can directly delete course content.",
+        )
+
+        return _builder_redirect(
+            batch,
+            subject,
+        )
+
+    if content_type not in VALID_CONTENT_TYPES:
+
+        messages.error(
+            request,
+            "Invalid content type.",
         )
 
         return _builder_redirect(
@@ -3872,11 +4808,13 @@ def admin_direct_delete_view(
             subject,
         )
 
-    chapter_id = request.POST.get(
-        "chapter_id",
+    chapter_id = (
+        request.POST.get(
+            "chapter_id"
+        )
     )
 
-    obj = _get_content_for_delete(
+    obj = _get_content_object(
         batch=batch,
         subject=subject,
         content_type=content_type,
@@ -3888,13 +4826,49 @@ def admin_direct_delete_view(
 
         messages.error(
             request,
-            "Invalid content type.",
+            "Invalid content.",
         )
 
         return _builder_redirect(
             batch,
             subject,
         )
+
+    # --------------------------------------------------------
+    # CAPTURE CLOUDINARY ASSETS BEFORE DELETE
+    # --------------------------------------------------------
+
+    if content_type == "chapter":
+
+        cleanup_assets = (
+            _capture_chapter_assets(
+                obj
+            )
+        )
+
+    elif content_type == "video":
+
+        cleanup_assets = (
+            _capture_video_assets(
+                obj
+            )
+        )
+
+    elif content_type == "pdf":
+
+        cleanup_assets = (
+            _capture_pdf_assets(
+                obj
+            )
+        )
+
+    else:
+
+        cleanup_assets = []
+
+    # --------------------------------------------------------
+    # AUDIT + ORDER + DELETE
+    # --------------------------------------------------------
 
     with transaction.atomic():
 
@@ -3909,54 +4883,51 @@ def admin_direct_delete_view(
 
         if content_type == "chapter":
 
-            queryset = CourseChapter.objects.filter(
-                batch=batch,
-                subject=subject,
-            )
-
             remove_item_and_close_gap(
                 item=obj,
-                queryset=queryset,
+                queryset=CourseChapter.objects.filter(
+                    batch=batch,
+                    subject=subject,
+                ),
                 order_field="chapter_order",
             )
 
         elif content_type == "video":
 
-            queryset = ChapterVideo.objects.filter(
-                chapter=obj.chapter,
-            )
-
             remove_item_and_close_gap(
                 item=obj,
-                queryset=queryset,
+                queryset=ChapterVideo.objects.filter(
+                    chapter=obj.chapter,
+                ),
                 order_field="video_order",
             )
 
         elif content_type == "pdf":
 
-            queryset = ChapterPDF.objects.filter(
-                chapter=obj.chapter,
-            )
-
             remove_item_and_close_gap(
                 item=obj,
-                queryset=queryset,
+                queryset=ChapterPDF.objects.filter(
+                    chapter=obj.chapter,
+                ),
                 order_field="pdf_order",
             )
 
         elif content_type == "quiz":
 
-            queryset = ChapterQuiz.objects.filter(
-                chapter=obj.chapter,
-            )
-
             remove_item_and_close_gap(
                 item=obj,
-                queryset=queryset,
+                queryset=ChapterQuiz.objects.filter(
+                    chapter=obj.chapter,
+                ),
                 order_field="quiz_order",
             )
 
         obj.delete()
+
+        if cleanup_assets:
+            _schedule_cloudinary_cleanup(
+                cleanup_assets
+            )
 
     messages.success(
         request,
@@ -3978,12 +4949,14 @@ def admin_deletion_audit_list_view(
     request,
 ):
     """
-    Read-only Admin deletion audit list.
+    Admin-only read-only deletion audit list.
     """
 
-    actor = _get_actor(request)
+    actor = _authorize_admin(
+        request
+    )
 
-    if actor is None or actor["role"] != "admin":
+    if actor is None:
 
         messages.error(
             request,
@@ -3991,7 +4964,7 @@ def admin_deletion_audit_list_view(
         )
 
         return redirect(
-            "teacher_login",
+            "teacher_login"
         )
 
     audits = (
@@ -4014,6 +4987,7 @@ def admin_deletion_audit_list_view(
         "courses/admin_deletion_audit_list.html",
         {
             "audits": audits,
+            "actor": actor,
         },
     )
 
@@ -4028,12 +5002,14 @@ def admin_deletion_audit_detail_view(
     audit_id,
 ):
     """
-    Read-only Admin deletion audit detail.
+    Admin-only deletion audit detail.
     """
 
-    actor = _get_actor(request)
+    actor = _authorize_admin(
+        request
+    )
 
-    if actor is None or actor["role"] != "admin":
+    if actor is None:
 
         messages.error(
             request,
@@ -4041,7 +5017,7 @@ def admin_deletion_audit_detail_view(
         )
 
         return redirect(
-            "teacher_login",
+            "teacher_login"
         )
 
     audit = get_object_or_404(
@@ -4054,12 +5030,13 @@ def admin_deletion_audit_detail_view(
         "courses/admin_deletion_audit_detail.html",
         {
             "audit": audit,
+            "actor": actor,
         },
     )
 
 
 # ============================================================
-# ADMIN APPROVE DELETE
+# ADMIN APPROVE TEACHER DELETE REQUEST
 # ============================================================
 
 
@@ -4069,17 +5046,28 @@ def admin_approve_delete_view(
     audit_id,
 ):
     """
-    Approve pending Teacher deletion.
+    SENSITIVE ADMIN-ONLY OPERATION.
 
-    After approval:
-        1. close order gap
-        2. delete content
-        3. mark audit deleted
+    Flow:
+
+        Teacher request
+              ↓
+        DeletionAudit pending
+              ↓
+        Admin approves
+              ↓
+        actual content delete
+              ↓
+        Cloudinary cleanup
+              ↓
+        audit becomes deleted
     """
 
-    actor = _get_actor(request)
+    actor = _authorize_admin(
+        request
+    )
 
-    if actor is None or actor["role"] != "admin":
+    if actor is None:
 
         messages.error(
             request,
@@ -4087,189 +5075,7 @@ def admin_approve_delete_view(
         )
 
         return redirect(
-            "teacher_login",
-        )
-
-    audit = get_object_or_404(
-        DeletionAudit,
-        id=audit_id,
-        status="pending",
-    )
-
-    admin_response = (
-        request.POST.get(
-            "admin_response",
-            "",
-        )
-        .strip()
-    )
-
-    content_type = audit.content_type
-    object_id = audit.object_id
-
-    with transaction.atomic():
-
-        audit.admin_decision = "approved"
-        audit.decision_by_admin = actor["admin"]
-        audit.decision_at = timezone.now()
-        audit.admin_response = admin_response
-        audit.status = "approved"
-
-        audit.save(
-            update_fields=[
-                "admin_decision",
-                "decision_by_admin",
-                "decision_at",
-                "admin_response",
-                "status",
-            ]
-        )
-
-        obj = None
-
-        if content_type == "chapter":
-
-            obj = (
-                CourseChapter.objects
-                .filter(
-                    id=object_id,
-                )
-                .first()
-            )
-
-        elif content_type == "video":
-
-            obj = (
-                ChapterVideo.objects
-                .filter(
-                    id=object_id,
-                )
-                .first()
-            )
-
-        elif content_type == "pdf":
-
-            obj = (
-                ChapterPDF.objects
-                .filter(
-                    id=object_id,
-                )
-                .first()
-            )
-
-        elif content_type == "quiz":
-
-            obj = (
-                ChapterQuiz.objects
-                .filter(
-                    id=object_id,
-                )
-                .first()
-            )
-
-        if obj is not None:
-
-            if content_type == "chapter":
-
-                queryset = CourseChapter.objects.filter(
-                    batch=obj.batch,
-                    subject=obj.subject,
-                )
-
-                remove_item_and_close_gap(
-                    item=obj,
-                    queryset=queryset,
-                    order_field="chapter_order",
-                )
-
-            elif content_type == "video":
-
-                queryset = ChapterVideo.objects.filter(
-                    chapter=obj.chapter,
-                )
-
-                remove_item_and_close_gap(
-                    item=obj,
-                    queryset=queryset,
-                    order_field="video_order",
-                )
-
-            elif content_type == "pdf":
-
-                queryset = ChapterPDF.objects.filter(
-                    chapter=obj.chapter,
-                )
-
-                remove_item_and_close_gap(
-                    item=obj,
-                    queryset=queryset,
-                    order_field="pdf_order",
-                )
-
-            elif content_type == "quiz":
-
-                queryset = ChapterQuiz.objects.filter(
-                    chapter=obj.chapter,
-                )
-
-                remove_item_and_close_gap(
-                    item=obj,
-                    queryset=queryset,
-                    order_field="quiz_order",
-                )
-
-            obj.delete()
-
-        audit.deletion_method = (
-            "teacher_request_approved"
-        )
-
-        audit.status = "deleted"
-        audit.deleted_at = timezone.now()
-
-        audit.save(
-            update_fields=[
-                "deletion_method",
-                "status",
-                "deleted_at",
-            ]
-        )
-
-    messages.success(
-        request,
-        "Deletion request approved and content deleted successfully.",
-    )
-
-    return redirect(
-        "courses:admin_deletion_audit_list",
-    )
-
-
-# ============================================================
-# ADMIN REJECT DELETE
-# ============================================================
-
-
-@require_POST
-def admin_reject_delete_view(
-    request,
-    audit_id,
-):
-    """
-    Reject pending Teacher deletion.
-    """
-
-    actor = _get_actor(request)
-
-    if actor is None or actor["role"] != "admin":
-
-        messages.error(
-            request,
-            "Only Admin can reject deletion requests.",
-        )
-
-        return redirect(
-            "teacher_login",
+            "teacher_login"
         )
 
     audit = get_object_or_404(
@@ -4290,7 +5096,7 @@ def admin_reject_delete_view(
 
         messages.error(
             request,
-            "Please enter an Admin response before rejecting the request.",
+            "Please enter an Admin response before approving.",
         )
 
         return redirect(
@@ -4298,10 +5104,291 @@ def admin_reject_delete_view(
             audit_id=audit.id,
         )
 
-    audit.admin_decision = "rejected"
-    audit.decision_by_admin = actor["admin"]
-    audit.decision_at = timezone.now()
-    audit.admin_response = admin_response
+    content_type = audit.content_type
+
+    obj = None
+
+    # --------------------------------------------------------
+    # FIND CURRENT CONTENT
+    # --------------------------------------------------------
+
+    if content_type == "chapter":
+
+        obj = (
+            CourseChapter.objects
+            .filter(
+                id=audit.object_id,
+            )
+            .first()
+        )
+
+    elif content_type == "video":
+
+        obj = (
+            ChapterVideo.objects
+            .filter(
+                id=audit.object_id,
+            )
+            .select_related(
+                "chapter",
+            )
+            .first()
+        )
+
+    elif content_type == "pdf":
+
+        obj = (
+            ChapterPDF.objects
+            .filter(
+                id=audit.object_id,
+            )
+            .select_related(
+                "chapter",
+            )
+            .first()
+        )
+
+    elif content_type == "quiz":
+
+        obj = (
+            ChapterQuiz.objects
+            .filter(
+                id=audit.object_id,
+            )
+            .select_related(
+                "chapter",
+            )
+            .first()
+        )
+
+    if obj is None:
+
+        messages.error(
+            request,
+            "The requested content no longer exists.",
+        )
+
+        return redirect(
+            "courses:admin_deletion_audit_detail",
+            audit_id=audit.id,
+        )
+
+    # --------------------------------------------------------
+    # CAPTURE CLOUDINARY ASSETS
+    # --------------------------------------------------------
+
+    if content_type == "chapter":
+
+        cleanup_assets = (
+            _capture_chapter_assets(
+                obj
+            )
+        )
+
+    elif content_type == "video":
+
+        cleanup_assets = (
+            _capture_video_assets(
+                obj
+            )
+        )
+
+    elif content_type == "pdf":
+
+        cleanup_assets = (
+            _capture_pdf_assets(
+                obj
+            )
+        )
+
+    else:
+
+        cleanup_assets = []
+
+    # --------------------------------------------------------
+    # APPROVE + DELETE
+    # --------------------------------------------------------
+
+    with transaction.atomic():
+
+        audit.admin_decision = (
+            "approved"
+        )
+
+        audit.decision_by_admin = (
+            actor["admin"]
+        )
+
+        audit.decision_at = (
+            timezone.now()
+        )
+
+        audit.admin_response = (
+            admin_response
+        )
+
+        audit.status = "approved"
+
+        audit.save(
+            update_fields=[
+                "admin_decision",
+                "decision_by_admin",
+                "decision_at",
+                "admin_response",
+                "status",
+            ]
+        )
+
+        if content_type == "chapter":
+
+            remove_item_and_close_gap(
+                item=obj,
+                queryset=CourseChapter.objects.filter(
+                    batch=obj.batch,
+                    subject=obj.subject,
+                ),
+                order_field="chapter_order",
+            )
+
+        elif content_type == "video":
+
+            remove_item_and_close_gap(
+                item=obj,
+                queryset=ChapterVideo.objects.filter(
+                    chapter=obj.chapter,
+                ),
+                order_field="video_order",
+            )
+
+        elif content_type == "pdf":
+
+            remove_item_and_close_gap(
+                item=obj,
+                queryset=ChapterPDF.objects.filter(
+                    chapter=obj.chapter,
+                ),
+                order_field="pdf_order",
+            )
+
+        elif content_type == "quiz":
+
+            remove_item_and_close_gap(
+                item=obj,
+                queryset=ChapterQuiz.objects.filter(
+                    chapter=obj.chapter,
+                ),
+                order_field="quiz_order",
+            )
+
+        obj.delete()
+
+        audit.deletion_method = (
+            "teacher_request_approved"
+        )
+
+        audit.status = "deleted"
+
+        audit.deleted_at = (
+            timezone.now()
+        )
+
+        audit.save(
+            update_fields=[
+                "deletion_method",
+                "status",
+                "deleted_at",
+            ]
+        )
+
+        if cleanup_assets:
+            _schedule_cloudinary_cleanup(
+                cleanup_assets
+            )
+
+    messages.success(
+        request,
+        "Deletion request approved and content deleted successfully.",
+    )
+
+    return redirect(
+        "courses:admin_deletion_audit_list"
+    )
+
+
+# ============================================================
+# ADMIN REJECT TEACHER DELETE REQUEST
+# ============================================================
+
+
+@require_POST
+def admin_reject_delete_view(
+    request,
+    audit_id,
+):
+    """
+    Admin rejects a pending Teacher request.
+
+    IMPORTANT:
+    No content deletion happens here.
+    """
+
+    actor = _authorize_admin(
+        request
+    )
+
+    if actor is None:
+
+        messages.error(
+            request,
+            "Only Admin can reject deletion requests.",
+        )
+
+        return redirect(
+            "teacher_login"
+        )
+
+    audit = get_object_or_404(
+        DeletionAudit,
+        id=audit_id,
+        status="pending",
+    )
+
+    admin_response = (
+        request.POST.get(
+            "admin_response",
+            "",
+        )
+        .strip()
+    )
+
+    if not admin_response:
+
+        messages.error(
+            request,
+            "Please enter an Admin response before rejecting.",
+        )
+
+        return redirect(
+            "courses:admin_deletion_audit_detail",
+            audit_id=audit.id,
+        )
+
+    audit.admin_decision = (
+        "rejected"
+    )
+
+    audit.decision_by_admin = (
+        actor["admin"]
+    )
+
+    audit.decision_at = (
+        timezone.now()
+    )
+
+    audit.admin_response = (
+        admin_response
+    )
+
     audit.status = "rejected"
 
     audit.save(
@@ -4320,5 +5407,5 @@ def admin_reject_delete_view(
     )
 
     return redirect(
-        "courses:admin_deletion_audit_list",
+        "courses:admin_deletion_audit_list"
     )
