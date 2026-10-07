@@ -691,6 +691,49 @@
             min-height: 280px;
         }
 
+        .pdf-thumbnail-frame {
+            position: relative;
+            overflow: hidden;
+            border-radius: 12px;
+            background: #f8fafc;
+        }
+
+        .pdf-thumbnail-frame img {
+            display: block;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .pdf-selector-card {
+            cursor: pointer;
+            transition:
+                border-color .18s ease,
+                background .18s ease,
+                box-shadow .18s ease,
+                transform .18s ease;
+        }
+
+        .pdf-selector-card:hover {
+            border-color: #93c5fd;
+            background: #f8fbff;
+            box-shadow: 0 8px 22px rgba(37, 99, 235, .10);
+            transform: translateY(-1px);
+        }
+
+        .pdf-selector-card.active {
+            border: 2px solid #2563eb !important;
+            background: #eff6ff;
+            box-shadow:
+                0 0 0 3px rgba(37, 99, 235, .10),
+                0 10px 26px rgba(37, 99, 235, .14);
+        }
+
+        .pdf-selector-card.active:hover {
+            border-color: #1d4ed8 !important;
+            background: #eff6ff;
+        }
+
         @media (max-width: 1100px) {
 
             .builder-layout {
@@ -2132,205 +2175,461 @@
 
                         {% elif selected_content == 'pdfs' %}
 
-                            <div>
-
-                                <div class="mb-4 flex items-center justify-between gap-3">
-
-                                    <div>
-
-                                        <h3 class="text-xl font-black text-slate-900">
-
-                                            PDFs
-
-                                        </h3>
-
-                                        <p class="mt-1 text-sm text-slate-500">
-
-                                            PDF notes and study materials inside this chapter.
-
-                                        </p>
-
-                                    </div>
-
-
-                                    <button
-                                        type="button"
-                                        id="openPdfUploadModal"
-                                        class="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-bold text-white">
-
-                                        <i class="ri-add-line"></i>
-
-                                        Add PDF
-
-                                    </button>
-
-                                </div>
-
+                            <div class="space-y-3">
 
                                 {% if pdfs %}
 
-                                    <div class="grid grid-cols-1 gap-4 xl:grid-cols-2">
+                                    <!-- ========================================= -->
+                                    <!-- SELECTED PDF PREVIEW + INFORMATION -->
+                                    <!-- ========================================= -->
 
-                                        {% for pdf in pdfs %}
+                                    <div class="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1.02fr)_minmax(360px,1fr)]">
 
-                                            <article class="content-card rounded-xl border border-slate-200 bg-white p-4">
+                                        <!-- PDF PREVIEW -->
 
-                                                <div class="flex items-start gap-4">
+                                        <div class="overflow-hidden rounded-xl border border-slate-200 bg-slate-50 shadow-sm">
 
-                                                    <div class="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-red-50 text-3xl text-red-500">
+                                            <div class="relative flex h-[300px] items-center justify-center overflow-hidden bg-slate-100 p-2 sm:h-[340px]">
 
-                                                        <i class="ri-file-pdf-2-line"></i>
+                                                <img
+                                                    id="pdfMainThumbnail"
+                                                    src="{% if pdfs.0.pdf_thumbnail %}{{ pdfs.0.pdf_thumbnail.url }}{% else %}{% static 'courses/images/default_pdf_thumbnail.png' %}{% endif %}"
+                                                    alt="{{ pdfs.0.pdf_name }}"
+                                                    class="h-full w-full rounded-lg object-contain">
 
-                                                    </div>
+                                                <span
+                                                    id="pdfMainOrderBadge"
+                                                    class="absolute left-3 top-3 rounded-lg bg-slate-950/75 px-2.5 py-1 text-[10px] font-black text-white">
+                                                    PDF {{ pdfs.0.pdf_order }}
+                                                </span>
 
+                                            </div>
 
-                                                    <div class="min-w-0 flex-1">
-
-                                                        <div class="flex items-start justify-between gap-3">
-
-                                                            <div class="min-w-0">
-
-                                                                <h4 class="truncate text-base font-black text-slate-900">
-
-                                                                    {{ pdf.pdf_name }}
-
-                                                                </h4>
-
-                                                                {% if pdf.pdf_description %}
-
-                                                                    <p class="mt-1 line-clamp-2 text-sm leading-5 text-slate-500">
-
-                                                                        {{ pdf.pdf_description }}
-
-                                                                    </p>
-
-                                                                {% endif %}
-
-                                                            </div>
+                                        </div>
 
 
-                                                            <div class="relative shrink-0">
+                                        <!-- PDF INFORMATION -->
 
-                                                                <button
-                                                                    type="button"
-                                                                    class="content-menu-button flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100">
+                                        <div class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
 
-                                                                    <i class="ri-more-2-fill"></i>
+                                            <div class="flex h-[46px] items-center justify-between border-b border-slate-100 px-3">
 
-                                                                </button>
+                                                <div class="min-w-0">
 
+                                                    <p class="text-[10px] font-black uppercase tracking-[0.08em] text-blue-600">
+                                                        PDF Information
+                                                    </p>
 
-                                                                <div class="menu hidden">
-
-                                                                    <button type="button" class="menu-item" data-open-modal="pdfEditModal-{{ pdf.id }}">
-
-                                                                        <i class="ri-edit-line"></i>
-
-                                                                        Edit
-
-                                                                    </button>
-
-
-                                                                    <a
-                                                                        href="{% url 'courses:course_builder' batch.id subject.id %}?chapter={{ selected_chapter.id }}&view=pdf_timeline&item={{ pdf.id }}"
-                                                                        class="menu-item">
-
-                                                                        <i class="ri-history-line"></i>
-
-                                                                        Timeline
-
-                                                                    </a>
-
-
-                                                                    <button type="button" class="menu-item danger" data-open-modal="deletePdfModal-{{ pdf.id }}">
-
-                                                                        <i class="ri-delete-bin-line"></i>
-
-                                                                        Delete
-
-                                                                    </button>
-
-                                                                </div>
-
-                                                            </div>
-
-                                                        </div>
-
-
-                                                        <div class="mt-4 flex flex-wrap gap-2">
-
-                                                            <a
-                                                                href="{{ pdf.pdf_file.url }}"
-                                                                target="_blank"
-                                                                rel="noopener"
-                                                                class="inline-flex items-center gap-2 rounded-lg bg-blue-50 px-3 py-2 text-xs font-bold text-blue-700 hover:bg-blue-100">
-
-                                                                <i class="ri-eye-line"></i>
-
-                                                                Open PDF
-
-                                                            </a>
-
-
-                                                            <span class="rounded-full bg-slate-100 px-2.5 py-1.5 text-[11px] font-bold text-slate-600">
-
-                                                                Order {{ pdf.pdf_order }}
-
-                                                            </span>
-
-
-                                                            <span
-                                                                class="rounded-full px-2.5 py-1.5 text-[11px] font-bold
-                                                                {% if pdf.status == 'published' %}
-                                                                    status-published
-                                                                {% else %}
-                                                                    status-draft
-                                                                {% endif %}">
-
-                                                                {{ pdf.get_status_display }}
-
-                                                            </span>
-
-                                                        </div>
-
-                                                    </div>
+                                                    <h3
+                                                        id="pdfInfoTitle"
+                                                        class="mt-0.5 truncate text-sm font-black text-slate-900">
+                                                        {{ pdfs.0.pdf_name }}
+                                                    </h3>
 
                                                 </div>
 
 
-                                                <div class="mt-4 border-t border-slate-100 pt-3">
+                                                <button
+                                                    type="button"
+                                                    id="pdfMainEditButton"
+                                                    data-open-modal="pdfEditModal-{{ pdfs.0.id }}"
+                                                    class="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-2 text-[11px] font-bold text-blue-700 transition hover:border-blue-300 hover:bg-blue-100">
 
-                                                    <p class="text-xs text-slate-500">
+                                                    <i class="ri-edit-line"></i>
+                                                    Edit PDF
 
-                                                        Created by
+                                                </button>
 
-                                                        <span class="font-semibold text-slate-700">
+                                            </div>
 
-                                                            {% if pdf.created_by_admin %}
 
-                                                                {{ pdf.created_by_admin.get_full_name|default:pdf.created_by_admin.username }}
+                                            <div class="max-h-[294px] overflow-y-auto px-3 py-2 silent-scroll">
 
-                                                            {% elif pdf.created_by_teacher %}
+                                                <div class="divide-y divide-slate-100 rounded-lg border border-slate-100 bg-slate-50/50">
 
-                                                                {{ pdf.created_by_teacher.full_name }}
+                                                    <div class="grid grid-cols-[88px_minmax(0,1fr)] gap-3 px-3 py-2">
 
+                                                        <span class="text-[10px] font-bold text-slate-500">
+                                                            Chapter
+                                                        </span>
+
+                                                        <span
+                                                            id="pdfInfoChapter"
+                                                            class="truncate text-[11px] font-semibold text-slate-800">
+                                                            {{ selected_chapter.chapter_order }}. {{ selected_chapter.chapter_name }}
+                                                        </span>
+
+                                                    </div>
+
+
+                                                    <div class="grid grid-cols-[88px_minmax(0,1fr)] gap-3 px-3 py-2">
+
+                                                        <span class="text-[10px] font-bold text-slate-500">
+                                                            Description
+                                                        </span>
+
+                                                        <span
+                                                            id="pdfInfoDescription"
+                                                            class="text-[11px] leading-4 text-slate-700">
+                                                            {{ pdfs.0.pdf_description|default:"No description provided." }}
+                                                        </span>
+
+                                                    </div>
+
+
+                                                    <div class="grid grid-cols-[88px_minmax(0,1fr)] gap-3 px-3 py-2">
+
+                                                        <span class="text-[10px] font-bold text-slate-500">
+                                                            File
+                                                        </span>
+
+                                                        <a
+                                                            id="pdfInfoFile"
+                                                            href="{{ pdfs.0.pdf_file.url }}"
+                                                            target="_blank"
+                                                            rel="noopener"
+                                                            class="inline-flex min-w-0 items-center gap-2 text-[11px] font-bold text-blue-600 hover:text-blue-800">
+
+                                                            <i class="ri-file-pdf-2-line text-red-500"></i>
+
+                                                            <span
+                                                                id="pdfInfoFileName"
+                                                                class="truncate">
+                                                                {{ pdfs.0.pdf_name }}
+                                                            </span>
+
+                                                            <i class="ri-external-link-line shrink-0"></i>
+
+                                                        </a>
+
+                                                    </div>
+
+
+                                                    <div class="grid grid-cols-[88px_minmax(0,1fr)] gap-3 px-3 py-2">
+
+                                                        <span class="text-[10px] font-bold text-slate-500">
+                                                            Thumbnail
+                                                        </span>
+
+                                                        <div class="flex items-center gap-3">
+
+                                                            <img
+                                                                id="pdfInfoThumbnail"
+                                                                src="{% if pdfs.0.pdf_thumbnail %}{{ pdfs.0.pdf_thumbnail.url }}{% else %}{% static 'courses/images/default_pdf_thumbnail.png' %}{% endif %}"
+                                                                alt="{{ pdfs.0.pdf_name }}"
+                                                                class="h-14 w-20 rounded-lg border border-slate-200 bg-white object-cover">
+
+                                                            <button
+                                                                type="button"
+                                                                id="pdfMainThumbnailButton"
+                                                                data-open-modal="pdfEditModal-{{ pdfs.0.id }}"
+                                                                class="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-[10px] font-bold text-blue-700 hover:bg-blue-100">
+
+                                                                Change Thumbnail
+
+                                                            </button>
+
+                                                        </div>
+
+                                                    </div>
+
+
+                                                    <div class="grid grid-cols-[88px_minmax(0,1fr)] gap-3 px-3 py-2">
+
+                                                        <span class="text-[10px] font-bold text-slate-500">
+                                                            Order
+                                                        </span>
+
+                                                        <span
+                                                            id="pdfInfoOrder"
+                                                            class="text-[11px] font-semibold text-slate-800">
+                                                            {{ pdfs.0.pdf_order }} (Automatically assigned)
+                                                        </span>
+
+                                                    </div>
+
+
+                                                    <div class="grid grid-cols-[88px_minmax(0,1fr)] gap-3 px-3 py-2">
+
+                                                        <span class="text-[10px] font-bold text-slate-500">
+                                                            Created by
+                                                        </span>
+
+                                                        <span
+                                                            id="pdfInfoCreatedBy"
+                                                            class="text-[11px] font-semibold text-slate-800">
+
+                                                            {% if pdfs.0.created_by_admin %}
+                                                                {{ pdfs.0.created_by_admin.get_full_name|default:pdfs.0.created_by_admin.username }} (Admin)
+                                                            {% elif pdfs.0.created_by_teacher %}
+                                                                {{ pdfs.0.created_by_teacher.full_name }} (Teacher)
                                                             {% else %}
-
                                                                 System
-
                                                             {% endif %}
 
                                                         </span>
 
-                                                    </p>
+                                                    </div>
+
+
+                                                    <div class="grid grid-cols-[88px_minmax(0,1fr)] gap-3 px-3 py-2">
+
+                                                        <span class="text-[10px] font-bold text-slate-500">
+                                                            Created at
+                                                        </span>
+
+                                                        <span
+                                                            id="pdfInfoCreatedAt"
+                                                            class="text-[11px] font-semibold text-slate-800">
+                                                            {{ pdfs.0.created_at|date:"d M Y, h:i A" }}
+                                                        </span>
+
+                                                    </div>
+
+
+                                                    <div class="grid grid-cols-[88px_minmax(0,1fr)] gap-3 px-3 py-2">
+
+                                                        <span class="text-[10px] font-bold text-slate-500">
+                                                            Updated by
+                                                        </span>
+
+                                                        <span
+                                                            id="pdfInfoUpdatedBy"
+                                                            class="text-[11px] font-semibold text-slate-800">
+
+                                                            {% if pdfs.0.updated_by_admin %}
+                                                                {{ pdfs.0.updated_by_admin.get_full_name|default:pdfs.0.updated_by_admin.username }} (Admin)
+                                                            {% elif pdfs.0.updated_by_teacher %}
+                                                                {{ pdfs.0.updated_by_teacher.full_name }} (Teacher)
+                                                            {% elif pdfs.0.created_by_admin %}
+                                                                {{ pdfs.0.created_by_admin.get_full_name|default:pdfs.0.created_by_admin.username }} (Admin)
+                                                            {% elif pdfs.0.created_by_teacher %}
+                                                                {{ pdfs.0.created_by_teacher.full_name }} (Teacher)
+                                                            {% else %}
+                                                                System
+                                                            {% endif %}
+
+                                                        </span>
+
+                                                    </div>
+
+
+                                                    <div class="grid grid-cols-[88px_minmax(0,1fr)] gap-3 px-3 py-2">
+
+                                                        <span class="text-[10px] font-bold text-slate-500">
+                                                            Updated at
+                                                        </span>
+
+                                                        <span
+                                                            id="pdfInfoUpdatedAt"
+                                                            class="text-[11px] font-semibold text-slate-800">
+                                                            {{ pdfs.0.updated_at|date:"d M Y, h:i A" }}
+                                                        </span>
+
+                                                    </div>
+
+
+                                                    <div class="flex items-center justify-between gap-3 px-3 py-2">
+
+                                                        <span class="text-[10px] font-bold text-slate-500">
+                                                            Status
+                                                        </span>
+
+                                                        <span
+                                                            id="pdfInfoStatus"
+                                                            class="rounded-md px-2.5 py-1 text-[10px] font-bold
+                                                            {% if pdfs.0.status == 'published' %}
+                                                                status-published
+                                                            {% else %}
+                                                                status-draft
+                                                            {% endif %}">
+                                                            {{ pdfs.0.get_status_display }}
+                                                        </span>
+
+                                                    </div>
 
                                                 </div>
 
-                                            </article>
+                                            </div>
 
-                                        {% endfor %}
+                                        </div>
 
                                     </div>
+
+
+                                    <!-- ========================================= -->
+                                    <!-- MORE PDFs -->
+                                    <!-- ========================================= -->
+
+                                    <section class="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+
+                                        <div class="mb-2 flex items-center justify-between gap-3">
+
+                                            <div class="min-w-0">
+
+                                                <h3 class="text-sm font-black text-slate-900">
+
+                                                    PDFs in this Chapter
+
+                                                    <span class="text-blue-600">
+                                                        ({{ pdfs|length }})
+                                                    </span>
+
+                                                </h3>
+
+                                                <p class="mt-0.5 text-[10px] text-slate-500">
+                                                    Select any PDF to change the preview and information above.
+                                                </p>
+
+                                            </div>
+
+
+                                            <button
+                                                type="button"
+                                                id="openPdfUploadModal"
+                                                class="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-[11px] font-bold text-white shadow-sm hover:bg-blue-700">
+
+                                                <i class="ri-add-line"></i>
+                                                Add PDF
+
+                                            </button>
+
+                                        </div>
+
+
+                                        <div class="flex gap-3 overflow-x-auto pb-1">
+
+                                            {% for pdf in pdfs %}
+
+                                                <article
+                                                    class="pdf-selector pdf-selector-card content-card relative w-[235px] shrink-0 rounded-xl border p-2
+                                                    {% if forloop.first %}
+                                                        active
+                                                    {% else %}
+                                                        border-slate-200 bg-white
+                                                    {% endif %}"
+                                                    tabindex="0"
+                                                    role="button"
+                                                    data-pdf-selector
+                                                    data-pdf-id="{{ pdf.id }}"
+                                                    data-pdf-url="{{ pdf.pdf_file.url|escape }}"
+                                                    data-pdf-name="{{ pdf.pdf_name|escape }}"
+                                                    data-pdf-description="{{ pdf.pdf_description|default:'No description provided.'|escape }}"
+                                                    data-pdf-status="{{ pdf.status }}"
+                                                    data-pdf-status-display="{{ pdf.get_status_display|escape }}"
+                                                    data-pdf-order="{{ pdf.pdf_order }}"
+                                                    data-pdf-thumbnail="{% if pdf.pdf_thumbnail %}{{ pdf.pdf_thumbnail.url|escape }}{% else %}{% static 'courses/images/default_pdf_thumbnail.png' %}{% endif %}"
+                                                    data-pdf-created-at="{{ pdf.created_at|date:'d M Y, h:i A' }}"
+                                                    data-pdf-updated-at="{{ pdf.updated_at|date:'d M Y, h:i A' }}"
+                                                    data-pdf-created-by="{% if pdf.created_by_admin %}{{ pdf.created_by_admin.get_full_name|default:pdf.created_by_admin.username|escape }} (Admin){% elif pdf.created_by_teacher %}{{ pdf.created_by_teacher.full_name|escape }} (Teacher){% else %}System{% endif %}"
+                                                    data-pdf-updated-by="{% if pdf.updated_by_admin %}{{ pdf.updated_by_admin.get_full_name|default:pdf.updated_by_admin.username|escape }} (Admin){% elif pdf.updated_by_teacher %}{{ pdf.updated_by_teacher.full_name|escape }} (Teacher){% elif pdf.created_by_admin %}{{ pdf.created_by_admin.get_full_name|default:pdf.created_by_admin.username|escape }} (Admin){% elif pdf.created_by_teacher %}{{ pdf.created_by_teacher.full_name|escape }} (Teacher){% else %}System{% endif %}">
+
+                                                    {% if forloop.first %}
+                                                        <span class="absolute right-2 top-2 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-blue-600 text-white shadow-sm">
+                                                            <i class="ri-check-line text-xs font-black"></i>
+                                                        </span>
+                                                    {% endif %}
+
+
+                                                    <div class="relative h-[105px] overflow-hidden rounded-lg bg-slate-100">
+
+                                                        <img
+                                                            src="{% if pdf.pdf_thumbnail %}{{ pdf.pdf_thumbnail.url }}{% else %}{% static 'courses/images/default_pdf_thumbnail.png' %}{% endif %}"
+                                                            alt="{{ pdf.pdf_name }}"
+                                                            class="h-full w-full rounded-lg object-cover">
+
+                                                        <span class="absolute left-1.5 top-1.5 rounded-md bg-slate-950/80 px-1.5 py-0.5 text-[9px] font-black text-white">
+                                                            {{ pdf.pdf_order }}
+                                                        </span>
+
+                                                    </div>
+
+
+                                                    <div class="mt-2 flex items-start justify-between gap-2">
+
+                                                        <p class="line-clamp-2 min-w-0 text-[11px] font-black leading-4 text-slate-900">
+                                                            {{ pdf.pdf_name }}
+                                                        </p>
+
+                                                        <span class="shrink-0 text-[9px] font-semibold text-slate-400">
+                                                            PDF {{ pdf.pdf_order }}
+                                                        </span>
+
+                                                    </div>
+
+
+                                                    <div class="mt-2 flex items-center justify-between gap-2">
+
+                                                        <span
+                                                            class="rounded-md px-2 py-0.5 text-[9px] font-bold
+                                                            {% if pdf.status == 'published' %}
+                                                                status-published
+                                                            {% else %}
+                                                                status-draft
+                                                            {% endif %}">
+                                                            {{ pdf.get_status_display }}
+                                                        </span>
+
+
+                                                        <div class="relative">
+
+                                                            <button
+                                                                type="button"
+                                                                class="content-menu-button flex h-6 w-6 items-center justify-center rounded-md text-slate-500 hover:bg-slate-100"
+                                                                onclick="event.stopPropagation();">
+
+                                                                <i class="ri-more-2-fill text-sm"></i>
+
+                                                            </button>
+
+
+                                                            <div class="menu hidden">
+
+                                                                <button
+                                                                    type="button"
+                                                                    class="menu-item"
+                                                                    data-open-modal="pdfEditModal-{{ pdf.id }}">
+
+                                                                    <i class="ri-edit-line"></i>
+                                                                    Edit
+
+                                                                </button>
+
+
+                                                                <a
+                                                                    href="{% url 'courses:course_builder' batch.id subject.id %}?chapter={{ selected_chapter.id }}&view=pdf_timeline&item={{ pdf.id }}"
+                                                                    class="menu-item">
+
+                                                                    <i class="ri-history-line"></i>
+                                                                    Timeline
+
+                                                                </a>
+
+
+                                                                <button
+                                                                    type="button"
+                                                                    class="menu-item danger"
+                                                                    data-open-modal="deletePdfModal-{{ pdf.id }}">
+
+                                                                    <i class="ri-delete-bin-line"></i>
+                                                                    Delete
+
+                                                                </button>
+
+                                                            </div>
+
+                                                        </div>
+
+                                                    </div>
+
+                                                </article>
+
+                                            {% endfor %}
+
+                                        </div>
+
+                                    </section>
+
 
                                 {% else %}
 
@@ -2339,21 +2638,15 @@
                                         <div class="text-center">
 
                                             <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-red-50 text-3xl text-red-500">
-
                                                 <i class="ri-file-pdf-2-line"></i>
-
                                             </div>
 
                                             <h4 class="mt-4 text-lg font-black text-slate-900">
-
                                                 No PDFs yet
-
                                             </h4>
 
                                             <p class="mt-1 text-sm text-slate-500">
-
                                                 Add PDF study material to this chapter.
-
                                             </p>
 
                                             <button
@@ -2374,7 +2667,6 @@
                             </div>
 
 
-                        <!-- ===================================== -->
                         <!-- QUIZZES -->
                         <!-- ===================================== -->
 
@@ -4493,11 +4785,29 @@
                         id="pdf_thumbnail"
                         type="file"
                         name="pdf_thumbnail"
-                        accept="image/*"
-                        class="neo-input">
+                         accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
+                         class="neo-input">
 
                     {% if pdf_form_errors.pdf_thumbnail %}<p class="field-error">{{ pdf_form_errors.pdf_thumbnail }}</p>{% endif %}
-                    <p class="mt-1.5 text-[10px] leading-4 text-slate-400">Optional. Maximum image size: 5 MB.</p>
+                    <p class="mt-1.5 text-[10px] leading-4 text-slate-400">
+                        Optional. JPG, JPEG, PNG or WEBP. Maximum image size: 5 MB.
+                        If you do not select a thumbnail, the default NeoLearn PDF thumbnail is used.
+                    </p>
+
+                    <div class="mt-3 flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
+                        <div class="flex h-16 w-24 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-white">
+                            <img
+                                src="{% static 'courses/images/default_pdf_thumbnail.png' %}"
+                                alt="Default PDF thumbnail"
+                                class="h-full w-full object-cover">
+                        </div>
+                        <div class="min-w-0">
+                            <p class="text-xs font-bold text-slate-700">Default thumbnail</p>
+                            <p class="mt-0.5 text-[10px] leading-4 text-slate-500">
+                                This image is shown automatically when no custom thumbnail is uploaded.
+                            </p>
+                        </div>
+                    </div>
 
                 </div>
 
@@ -4516,11 +4826,7 @@
                         name="status"
                         class="neo-input">
 
-                        <option value="">
-                            Select status
-                        </option>
-
-                        <option value="draft" {% if pdf_form_data.status == "draft" %}selected{% endif %}>
+                        <option value="draft" {% if not pdf_form_data.status or pdf_form_data.status == "draft" %}selected{% endif %}>
                             Draft
                         </option>
 
@@ -5709,14 +6015,42 @@
     {% endfor %}
 
     {% for pdf in pdfs %}
+
     <div id="pdfEditModal-{{ pdf.id }}" class="modal-overlay {% if pdf_edit_open and pdf_edit_open_id == pdf.id %}open{% endif %}">
+
         <div class="modal-panel modal-large">
-            <div class="flex items-center justify-between border-b border-slate-200 px-5 py-4"><div><h3 class="text-lg font-black text-slate-900">Edit PDF</h3><p class="mt-1 text-xs text-slate-500">{{ pdf.pdf_name }}</p></div><button type="button" data-close-modal="pdfEditModal-{{ pdf.id }}" class="flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100"><i class="ri-close-line text-xl"></i></button></div>
+
+            <div class="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+
+                <div>
+                    <h3 class="text-lg font-black text-slate-900">Edit PDF</h3>
+                    <p class="mt-1 text-xs text-slate-500">{{ pdf.pdf_name }}</p>
+                </div>
+
+                <button
+                    type="button"
+                    data-close-modal="pdfEditModal-{{ pdf.id }}"
+                    class="flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100">
+                    <i class="ri-close-line text-xl"></i>
+                </button>
+
+            </div>
+
+
             <form
-            novalidate method="POST" enctype="multipart/form-data" action="{% url 'courses:edit_pdf' batch.id subject.id selected_chapter.id pdf.id %}" class="modal-scroll max-h-[calc(100vh-150px)] overflow-y-auto p-5">
+                novalidate
+                method="POST"
+                enctype="multipart/form-data"
+                action="{% url 'courses:edit_pdf' batch.id subject.id selected_chapter.id pdf.id %}"
+                class="modal-scroll max-h-[calc(100vh-150px)] overflow-y-auto p-5">
+
                 {% csrf_token %}
+
+
                 <div class="mb-5 rounded-xl border border-slate-200 bg-slate-50/80 px-4 py-3">
+
                     <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+
                         <div class="min-w-0">
                             <p class="text-[10px] font-black uppercase tracking-[0.08em] text-slate-400">Created By</p>
                             <p class="mt-0.5 truncate text-xs font-bold text-slate-800">
@@ -5726,6 +6060,7 @@
                                 {% if pdf.created_by_admin %}Admin{% elif pdf.created_by_teacher %}Teacher{% else %}System{% endif %}
                             </p>
                         </div>
+
                         <div class="min-w-0">
                             <p class="text-[10px] font-black uppercase tracking-[0.08em] text-slate-400">Last Updated By</p>
                             <p class="mt-0.5 truncate text-xs font-bold text-slate-800">
@@ -5735,35 +6070,341 @@
                                 {% if pdf.updated_by_admin or pdf.created_by_admin %}Admin{% elif pdf.updated_by_teacher or pdf.created_by_teacher %}Teacher{% else %}System{% endif %}
                             </p>
                         </div>
+
                     </div>
+
                 </div>
 
-                {% if pdf_edit_open_id == pdf.id and pdf_edit_form_errors %}<div class="form-error-box rounded-xl border border-red-200 bg-red-50 px-4 py-3 mb-5"><p class="text-sm font-bold text-red-800">Please correct the highlighted fields.</p><p class="mt-1 text-xs text-red-700">The PDF was not updated.</p></div>{% endif %}
+
+                {% if pdf_edit_open_id == pdf.id and pdf_edit_form_errors %}
+                    <div class="form-error-box mb-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3">
+                        <p class="text-sm font-bold text-red-800">Please correct the highlighted fields.</p>
+                        <p class="mt-1 text-xs text-red-700">The PDF was not updated.</p>
+                    </div>
+                {% endif %}
+
+
                 <div class="space-y-5">
-                    <div><label class="neo-label">PDF Name <span class="text-red-500">*</span></label><input type="text" name="pdf_name" class="neo-input" value="{% if pdf_edit_open_id == pdf.id %}{{ pdf_edit_form_data.pdf_name }}{% else %}{{ pdf.pdf_name }}{% endif %}">{% if pdf_edit_open_id == pdf.id and pdf_edit_form_errors.pdf_name %}<p class="field-error">{{ pdf_edit_form_errors.pdf_name }}</p>{% endif %}</div>
-                    <div><label class="neo-label">PDF Description <span class="text-red-500">*</span></label><textarea name="pdf_description" rows="4" class="neo-input resize-none">{% if pdf_edit_open_id == pdf.id %}{{ pdf_edit_form_data.pdf_description }}{% else %}{{ pdf.pdf_description }}{% endif %}</textarea>{% if pdf_edit_open_id == pdf.id and pdf_edit_form_errors.pdf_description %}<p class="field-error">{{ pdf_edit_form_errors.pdf_description }}</p>{% endif %}</div>
-                    <div><label class="neo-label">Replace PDF File</label><input type="file" name="pdf_file" accept="application/pdf,.pdf" class="neo-input"><p class="mt-1 text-[11px] text-slate-400">Leave empty to keep the current PDF.</p>{% if pdf_edit_open_id == pdf.id and pdf_edit_form_errors.pdf_file %}<p class="field-error">{{ pdf_edit_form_errors.pdf_file }}</p>{% endif %}</div>
-                    <div><label class="neo-label">Replace Thumbnail</label><input type="file" name="pdf_thumbnail" accept="image/*" class="neo-input"><p class="mt-1 text-[11px] text-slate-400">Leave empty to keep the current thumbnail.</p>{% if pdf_edit_open_id == pdf.id and pdf_edit_form_errors.pdf_thumbnail %}<p class="field-error">{{ pdf_edit_form_errors.pdf_thumbnail }}</p>{% endif %}</div>
-                    <div><label class="neo-label">Status <span class="text-red-500">*</span></label><select name="status" class="neo-input"><option value="draft" {% if pdf_edit_open_id == pdf.id and pdf_edit_form_data.status == "draft" or pdf_edit_open_id != pdf.id and pdf.status == "draft" %}selected{% endif %}>Draft</option><option value="published" {% if pdf_edit_open_id == pdf.id and pdf_edit_form_data.status == "published" or pdf_edit_open_id != pdf.id and pdf.status == "published" %}selected{% endif %}>Published</option></select>{% if pdf_edit_open_id == pdf.id and pdf_edit_form_errors.status %}<p class="field-error">{{ pdf_edit_form_errors.status }}</p>{% endif %}</div>
-                    <div><label class="neo-label">PDF Order <span class="text-red-500">*</span></label><input type="number" min="1" name="pdf_order" class="neo-input" value="{% if pdf_edit_open_id == pdf.id %}{{ pdf_edit_form_data.pdf_order }}{% else %}{{ pdf.pdf_order }}{% endif %}">{% if pdf_edit_open_id == pdf.id and pdf_edit_form_errors.pdf_order %}<p class="field-error">{{ pdf_edit_form_errors.pdf_order }}</p>{% endif %}</div>
+
+                    <div>
+                        <label class="neo-label">
+                            PDF Name
+                            <span class="text-red-500">*</span>
+                        </label>
+
+                        <input
+                            type="text"
+                            name="pdf_name"
+                            class="neo-input"
+                            value="{% if pdf_edit_open_id == pdf.id %}{{ pdf_edit_form_data.pdf_name }}{% else %}{{ pdf.pdf_name }}{% endif %}">
+
+                        {% if pdf_edit_open_id == pdf.id and pdf_edit_form_errors.pdf_name %}
+                            <p class="field-error">{{ pdf_edit_form_errors.pdf_name }}</p>
+                        {% endif %}
+                    </div>
+
+
+                    <div>
+                        <label class="neo-label">
+                            PDF Description
+                            <span class="text-red-500">*</span>
+                        </label>
+
+                        <textarea
+                            name="pdf_description"
+                            rows="4"
+                            class="neo-input resize-none">{% if pdf_edit_open_id == pdf.id %}{{ pdf_edit_form_data.pdf_description }}{% else %}{{ pdf.pdf_description }}{% endif %}</textarea>
+
+                        {% if pdf_edit_open_id == pdf.id and pdf_edit_form_errors.pdf_description %}
+                            <p class="field-error">{{ pdf_edit_form_errors.pdf_description }}</p>
+                        {% endif %}
+                    </div>
+
+
+                    <div class="rounded-xl border border-red-100 bg-red-50/50 p-4">
+
+                        <div class="flex items-start justify-between gap-3">
+
+                            <div class="min-w-0">
+                                <label class="neo-label">Current PDF File</label>
+                                <p class="truncate text-xs font-semibold text-slate-700">{{ pdf.pdf_name }}</p>
+                            </div>
+
+                            <a
+                                href="{{ pdf.pdf_file.url }}"
+                                target="_blank"
+                                rel="noopener"
+                                class="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-white px-3 py-2 text-[10px] font-bold text-blue-700 shadow-sm hover:bg-blue-50">
+                                <i class="ri-external-link-line"></i>
+                                Open PDF
+                            </a>
+
+                        </div>
+
+
+                        <div class="mt-3">
+
+                            <label class="neo-label">Replace PDF File</label>
+
+                            <input
+                                type="file"
+                                name="pdf_file"
+                                accept="application/pdf,.pdf"
+                                class="neo-input">
+
+                            <p class="mt-1 text-[11px] text-slate-400">
+                                Leave empty to keep the current PDF. Maximum size: 50 MB.
+                            </p>
+
+                            {% if pdf_edit_open_id == pdf.id and pdf_edit_form_errors.pdf_file %}
+                                <p class="field-error">{{ pdf_edit_form_errors.pdf_file }}</p>
+                            {% endif %}
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="rounded-xl border border-blue-100 bg-blue-50/50 p-4">
+
+                        <label class="neo-label">Current Thumbnail</label>
+
+                        <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+
+                            {% if pdf.pdf_thumbnail %}
+                                <img
+                                    src="{{ pdf.pdf_thumbnail.url }}"
+                                    alt="{{ pdf.pdf_name }}"
+                                    class="h-24 w-36 rounded-lg border border-slate-200 bg-white object-cover">
+                            {% else %}
+                                <img
+                                    src="{% static 'courses/images/default_pdf_thumbnail.png' %}"
+                                    alt="Default PDF thumbnail"
+                                    class="h-24 w-36 rounded-lg border border-slate-200 bg-white object-cover">
+                            {% endif %}
+
+                            <div class="min-w-0 flex-1">
+                                <p class="text-xs font-bold text-slate-800">
+                                    Change or remove this thumbnail. If removed, the local default thumbnail is shown.
+                                </p>
+                                <p class="mt-1 text-[11px] leading-5 text-slate-500">
+                                    If no new thumbnail is selected, the existing thumbnail stays unchanged.
+                                    Removing it clears the custom thumbnail and restores the default NeoLearn PDF thumbnail.
+                                </p>
+                            </div>
+
+                        </div>
+
+
+                        <div class="mt-4">
+
+                            <label class="neo-label">Replace Thumbnail</label>
+
+                            <input
+                                type="file"
+                                name="pdf_thumbnail"
+                                 accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
+                                 class="neo-input">
+
+                            <p class="mt-1 text-[11px] text-slate-400">
+                                Optional. Maximum image size: 5 MB.
+                            </p>
+
+                            {% if pdf_edit_open_id == pdf.id and pdf_edit_form_errors.pdf_thumbnail %}
+                                <p class="field-error">{{ pdf_edit_form_errors.pdf_thumbnail }}</p>
+                            {% endif %}
+
+                        </div>
+
+
+                        <label class="mt-4 flex cursor-pointer items-start gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2.5">
+
+                            <input
+                                type="checkbox"
+                                name="remove_thumbnail"
+                                value="1"
+                                class="mt-0.5 h-4 w-4 rounded border-slate-300 text-blue-600">
+
+                            <span>
+                                <span class="block text-xs font-bold text-slate-700">
+                                    Remove current thumbnail
+                                </span>
+                                <span class="mt-0.5 block text-[10px] leading-4 text-slate-500">
+                                    This clears the custom thumbnail and restores the default PDF thumbnail.
+                                </span>
+                            </span>
+
+                        </label>
+
+                    </div>
+
+
+                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+
+                        <div>
+
+                            <label class="neo-label">
+                                Status
+                                <span class="text-red-500">*</span>
+                            </label>
+
+                            <select name="status" class="neo-input">
+
+                                <option
+                                    value="draft"
+                                    {% if pdf_edit_open_id == pdf.id and pdf_edit_form_data.status == "draft" or pdf_edit_open_id != pdf.id and pdf.status == "draft" %}
+                                        selected
+                                    {% endif %}>
+                                    Draft
+                                </option>
+
+                                <option
+                                    value="published"
+                                    {% if pdf_edit_open_id == pdf.id and pdf_edit_form_data.status == "published" or pdf_edit_open_id != pdf.id and pdf.status == "published" %}
+                                        selected
+                                    {% endif %}>
+                                    Published
+                                </option>
+
+                            </select>
+
+                            {% if pdf_edit_open_id == pdf.id and pdf_edit_form_errors.status %}
+                                <p class="field-error">{{ pdf_edit_form_errors.status }}</p>
+                            {% endif %}
+
+                        </div>
+
+
+                        <div>
+
+                            <label class="neo-label">
+                                PDF Order
+                                <span class="text-red-500">*</span>
+                            </label>
+
+                            <input
+                                type="number"
+                                min="1"
+                                name="pdf_order"
+                                class="neo-input"
+                                value="{% if pdf_edit_open_id == pdf.id %}{{ pdf_edit_form_data.pdf_order }}{% else %}{{ pdf.pdf_order }}{% endif %}">
+
+                            <p class="mt-1 text-[11px] leading-4 text-slate-400">
+                                Change the order here. The server will automatically shift the other PDFs and record the order change in the timeline.
+                            </p>
+
+                            {% if pdf_edit_open_id == pdf.id and pdf_edit_form_errors.pdf_order %}
+                                <p class="field-error">{{ pdf_edit_form_errors.pdf_order }}</p>
+                            {% endif %}
+
+                        </div>
+
+                    </div>
+
                 </div>
-                <div class="mt-6 flex justify-end gap-2 border-t border-slate-200 pt-4"><button type="button" data-close-modal="pdfEditModal-{{ pdf.id }}" class="rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-600">Cancel</button><button type="submit" class="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-bold text-white">Save Changes</button></div>
+
+
+                <div class="mt-6 flex justify-end gap-2 border-t border-slate-200 pt-4">
+
+                    <button
+                        type="button"
+                        data-close-modal="pdfEditModal-{{ pdf.id }}"
+                        class="rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-50">
+                        Cancel
+                    </button>
+
+                    <button
+                        type="submit"
+                        class="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-blue-700">
+                        Save PDF Changes
+                    </button>
+
+                </div>
+
             </form>
+
         </div>
+
     </div>
+
 
     <div id="deletePdfModal-{{ pdf.id }}" class="modal-overlay">
+
         <div class="modal-panel">
-            <div class="flex items-center justify-between border-b border-slate-200 px-5 py-4"><div><h3 class="text-lg font-black text-slate-900">Delete PDF</h3><p class="mt-1 text-xs text-slate-500">Enter a reason before deleting this PDF.</p></div><button type="button" data-close-modal="deletePdfModal-{{ pdf.id }}" class="flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100"><i class="ri-close-line text-xl"></i></button></div>
+
+            <div class="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+
+                <div>
+                    <h3 class="text-lg font-black text-slate-900">Delete PDF</h3>
+                    <p class="mt-1 text-xs text-slate-500">Enter a reason before deleting this PDF.</p>
+                </div>
+
+                <button
+                    type="button"
+                    data-close-modal="deletePdfModal-{{ pdf.id }}"
+                    class="flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100">
+                    <i class="ri-close-line text-xl"></i>
+                </button>
+
+            </div>
+
+
             <form
-            novalidate method="POST" action="{% url 'courses:admin_direct_delete' batch.id subject.id 'pdf' pdf.id %}" class="p-5">
-                {% csrf_token %}<input type="hidden" name="chapter_id" value="{{ selected_chapter.id }}">
-                <p class="text-sm font-bold text-slate-900">Delete: <span class="text-red-600">{{ pdf.pdf_name }}</span></p>
-                <div class="mt-5"><label class="neo-label">Reason <span class="text-red-500">*</span></label><textarea name="reason" rows="4" class="neo-input resize-none" placeholder="Enter deletion reason"></textarea></div>
-                <div class="mt-6 flex justify-end gap-2"><button type="button" data-close-modal="deletePdfModal-{{ pdf.id }}" class="rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-600">Cancel</button><button type="submit" class="rounded-lg bg-red-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-red-700">Delete</button></div>
+                novalidate
+                method="POST"
+                action="{% url 'courses:admin_direct_delete' batch.id subject.id 'pdf' pdf.id %}"
+                class="p-5">
+
+                {% csrf_token %}
+
+                <input
+                    type="hidden"
+                    name="chapter_id"
+                    value="{{ selected_chapter.id }}">
+
+                <p class="text-sm font-bold text-slate-900">
+                    Delete:
+                    <span class="text-red-600">{{ pdf.pdf_name }}</span>
+                </p>
+
+                <div class="mt-5">
+
+                    <label class="neo-label">
+                        Reason
+                        <span class="text-red-500">*</span>
+                    </label>
+
+                    <textarea
+                        name="reason"
+                        rows="4"
+                        class="neo-input resize-none"
+                        placeholder="Enter deletion reason"></textarea>
+
+                </div>
+
+                <div class="mt-6 flex justify-end gap-2">
+
+                    <button
+                        type="button"
+                        data-close-modal="deletePdfModal-{{ pdf.id }}"
+                        class="rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-600">
+                        Cancel
+                    </button>
+
+                    <button
+                        type="submit"
+                        class="rounded-lg bg-red-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-red-700">
+                        Delete
+                    </button>
+
+                </div>
+
             </form>
+
         </div>
+
     </div>
+
     {% endfor %}
 
     {% for quiz in quizzes %}
@@ -6524,6 +7165,351 @@ document.addEventListener("DOMContentLoaded", function () {
 
     }
 
+
+
+    /* =======================================================
+       PDF SELECTOR
+       Selecting the second/third/etc. PDF changes the main
+       preview and information card without a page reload.
+       Backend data and PDF URLs remain unchanged.
+    ======================================================= */
+
+    const pdfSelectors =
+        document.querySelectorAll("[data-pdf-selector]");
+
+    const pdfMainThumbnail =
+        document.getElementById("pdfMainThumbnail");
+
+    const pdfMainOrderBadge =
+        document.getElementById("pdfMainOrderBadge");
+
+    const pdfInfoTitle =
+        document.getElementById("pdfInfoTitle");
+
+    const pdfInfoChapter =
+        document.getElementById("pdfInfoChapter");
+
+    const pdfInfoDescription =
+        document.getElementById("pdfInfoDescription");
+
+    const pdfInfoFile =
+        document.getElementById("pdfInfoFile");
+
+    const pdfInfoFileName =
+        document.getElementById("pdfInfoFileName");
+
+    const pdfInfoThumbnail =
+        document.getElementById("pdfInfoThumbnail");
+
+    const pdfInfoOrder =
+        document.getElementById("pdfInfoOrder");
+
+    const pdfInfoCreatedBy =
+        document.getElementById("pdfInfoCreatedBy");
+
+    const pdfInfoCreatedAt =
+        document.getElementById("pdfInfoCreatedAt");
+
+    const pdfInfoUpdatedBy =
+        document.getElementById("pdfInfoUpdatedBy");
+
+    const pdfInfoUpdatedAt =
+        document.getElementById("pdfInfoUpdatedAt");
+
+    const pdfInfoStatus =
+        document.getElementById("pdfInfoStatus");
+
+    const pdfMainEditButton =
+        document.getElementById("pdfMainEditButton");
+
+    const pdfMainThumbnailButton =
+        document.getElementById("pdfMainThumbnailButton");
+
+
+    function updateSelectedPdf(card) {
+
+        if (!card) {
+            return;
+        }
+
+
+        pdfSelectors.forEach(function (item) {
+
+            item.classList.remove("active");
+
+            const selectedBadge =
+                item.querySelector(
+                    ".pdf-selected-badge"
+                );
+
+            if (selectedBadge) {
+                selectedBadge.remove();
+            }
+
+        });
+
+
+        card.classList.add("active");
+
+
+        if (!card.querySelector(".pdf-selected-badge")) {
+
+            const badge =
+                document.createElement("span");
+
+            badge.className =
+                "pdf-selected-badge absolute right-2 top-2 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-blue-600 text-white shadow-sm";
+
+            badge.innerHTML =
+                '<i class="ri-check-line text-xs font-black"></i>';
+
+            card.appendChild(badge);
+
+        }
+
+
+        const pdfId =
+            card.dataset.pdfId || "";
+
+        const pdfUrl =
+            card.dataset.pdfUrl || "";
+
+        const pdfName =
+            card.dataset.pdfName || "Untitled PDF";
+
+        const pdfDescription =
+            card.dataset.pdfDescription ||
+            "No description provided.";
+
+        const pdfStatus =
+            card.dataset.pdfStatus || "draft";
+
+        const pdfStatusDisplay =
+            card.dataset.pdfStatusDisplay || "Draft";
+
+        const pdfOrder =
+            card.dataset.pdfOrder || "—";
+
+        const pdfThumbnail =
+            card.dataset.pdfThumbnail || "";
+
+        const pdfCreatedBy =
+            card.dataset.pdfCreatedBy || "System";
+
+        const pdfCreatedAt =
+            card.dataset.pdfCreatedAt || "—";
+
+        const pdfUpdatedBy =
+            card.dataset.pdfUpdatedBy || "System";
+
+        const pdfUpdatedAt =
+            card.dataset.pdfUpdatedAt || "—";
+
+
+        if (pdfMainThumbnail) {
+
+            pdfMainThumbnail.src =
+                pdfThumbnail;
+
+            pdfMainThumbnail.alt =
+                pdfName;
+
+        }
+
+
+        if (pdfMainOrderBadge) {
+
+            pdfMainOrderBadge.textContent =
+                "PDF " + pdfOrder;
+
+        }
+
+
+        if (pdfInfoTitle) {
+
+            pdfInfoTitle.textContent =
+                pdfName;
+
+        }
+
+
+        if (pdfInfoChapter) {
+
+            pdfInfoChapter.textContent =
+                "{% if selected_chapter %}{{ selected_chapter.chapter_order }}. {{ selected_chapter.chapter_name|escapejs }}{% endif %}";
+
+        }
+
+
+        if (pdfInfoDescription) {
+
+            pdfInfoDescription.textContent =
+                pdfDescription;
+
+        }
+
+
+        if (pdfInfoFile) {
+
+            pdfInfoFile.href =
+                pdfUrl;
+
+        }
+
+
+        if (pdfInfoFileName) {
+
+            pdfInfoFileName.textContent =
+                pdfName;
+
+        }
+
+
+        if (pdfInfoThumbnail) {
+
+            pdfInfoThumbnail.src =
+                pdfThumbnail;
+
+            pdfInfoThumbnail.alt =
+                pdfName;
+
+        }
+
+
+        if (pdfInfoOrder) {
+
+            pdfInfoOrder.textContent =
+                pdfOrder +
+                " (Automatically assigned)";
+
+        }
+
+
+        if (pdfInfoCreatedBy) {
+
+            pdfInfoCreatedBy.textContent =
+                pdfCreatedBy;
+
+        }
+
+
+        if (pdfInfoCreatedAt) {
+
+            pdfInfoCreatedAt.textContent =
+                pdfCreatedAt;
+
+        }
+
+
+        if (pdfInfoUpdatedBy) {
+
+            pdfInfoUpdatedBy.textContent =
+                pdfUpdatedBy;
+
+        }
+
+
+        if (pdfInfoUpdatedAt) {
+
+            pdfInfoUpdatedAt.textContent =
+                pdfUpdatedAt;
+
+        }
+
+
+        if (pdfInfoStatus) {
+
+            pdfInfoStatus.textContent =
+                pdfStatusDisplay;
+
+            pdfInfoStatus.classList.remove(
+                "status-published",
+                "status-draft"
+            );
+
+            if (pdfStatus === "published") {
+
+                pdfInfoStatus.classList.add(
+                    "status-published"
+                );
+
+            } else {
+
+                pdfInfoStatus.classList.add(
+                    "status-draft"
+                );
+
+            }
+
+        }
+
+
+        if (pdfMainEditButton) {
+
+            pdfMainEditButton.dataset.openModal =
+                "pdfEditModal-" + pdfId;
+
+        }
+
+
+        if (pdfMainThumbnailButton) {
+
+            pdfMainThumbnailButton.dataset.openModal =
+                "pdfEditModal-" + pdfId;
+
+        }
+
+    }
+
+
+    pdfSelectors.forEach(function (card) {
+
+        card.addEventListener(
+            "click",
+            function (event) {
+
+                if (
+                    event.target.closest(
+                        ".content-menu-button, .menu"
+                    )
+                ) {
+                    return;
+                }
+
+                updateSelectedPdf(card);
+
+            }
+        );
+
+
+        card.addEventListener(
+            "keydown",
+            function (event) {
+
+                if (
+                    event.key === "Enter" ||
+                    event.key === " "
+                ) {
+
+                    event.preventDefault();
+
+                    updateSelectedPdf(card);
+
+                }
+
+            }
+        );
+
+    });
+
+
+    if (pdfSelectors.length) {
+
+        updateSelectedPdf(
+            pdfSelectors[0]
+        );
+
+    }
 
 
     /* =======================================================

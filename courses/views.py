@@ -1,8 +1,11 @@
 from django.contrib import messages
 from django.db import transaction
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
+
+from urllib.parse import urlencode
 
 import cloudinary.uploader
 
@@ -552,12 +555,40 @@ def _get_content_object(
 def _builder_redirect(
     batch,
     subject,
+    chapter_id=None,
+    selected_content=None,
+    item_id=None,
 ):
-    return redirect(
+    """
+    Redirect back to the Course Builder while optionally
+    preserving the selected chapter, workspace and item.
+
+    Existing callers can continue using only batch + subject.
+    """
+
+    url = reverse(
         "courses:course_builder",
-        batch_id=batch.id,
-        subject_id=subject.id,
+        kwargs={
+            "batch_id": batch.id,
+            "subject_id": subject.id,
+        },
     )
+
+    params = {}
+
+    if chapter_id is not None:
+        params["chapter"] = chapter_id
+
+    if selected_content:
+        params["view"] = selected_content
+
+    if item_id is not None:
+        params["item"] = item_id
+
+    if params:
+        url = f"{url}?{urlencode(params)}"
+
+    return redirect(url)
 
 
 def _render_builder_form_error(
@@ -1175,19 +1206,101 @@ def _validate_video_file(
     )
 
 
-def _validate_pdf_file(
-    uploaded_file,
-):
-    return _validate_upload(
-        uploaded_file=uploaded_file,
-        allowed_extensions={
-            "pdf",
-        },
-        allowed_mime_types={
-            "application/pdf",
-        },
-        max_size_mb=MAX_PDF_SIZE_MB,
-    )
+def _validate_pdf_file(uploaded_file):
+    """
+    Strict server-side PDF validation.
+
+    Checks: required file, .pdf extension, PDF MIME type,
+    50 MB maximum size and the actual PDF file signature.
+    """
+
+    if uploaded_file is None:
+        return "Please select a PDF file."
+
+    filename = (
+        getattr(uploaded_file, "name", "") or ""
+    ).strip()
+
+    if "." not in filename:
+        return "Only PDF files are allowed."
+
+    extension = filename.rsplit(".", 1)[1].lower()
+
+    if extension != "pdf":
+        return "Only PDF files are allowed."
+
+    content_type = (
+        getattr(uploaded_file, "content_type", "") or ""
+    ).lower()
+
+    if content_type and content_type != "application/pdf":
+        return "Only PDF files are allowed."
+
+    max_bytes = MAX_PDF_SIZE_MB * 1024 * 1024
+
+    if uploaded_file.size > max_bytes:
+        return "PDF file size cannot exceed 50 MB."
+
+    try:
+        current_position = uploaded_file.tell()
+        uploaded_file.seek(0)
+        file_signature = uploaded_file.read(5)
+        uploaded_file.seek(current_position)
+    except Exception:
+        return "The uploaded file is not a valid PDF."
+
+    if file_signature != b"%PDF-":
+        return "The uploaded file is not a valid PDF."
+
+    return None
+
+
+def _validate_pdf_thumbnail_file(uploaded_file):
+    """
+    Strict server-side PDF thumbnail validation.
+    """
+
+    if uploaded_file is None:
+        return None
+
+    filename = (
+        getattr(uploaded_file, "name", "") or ""
+    ).strip()
+
+    if "." not in filename:
+        return (
+            "Only JPG, JPEG, PNG, or WEBP "
+            "thumbnail images are allowed."
+        )
+
+    extension = filename.rsplit(".", 1)[1].lower()
+
+    if extension not in {"jpg", "jpeg", "png", "webp"}:
+        return (
+            "Only JPG, JPEG, PNG, or WEBP "
+            "thumbnail images are allowed."
+        )
+
+    content_type = (
+        getattr(uploaded_file, "content_type", "") or ""
+    ).lower()
+
+    if content_type and content_type not in {
+        "image/jpeg",
+        "image/png",
+        "image/webp",
+    }:
+        return (
+            "Only JPG, JPEG, PNG, or WEBP "
+            "thumbnail images are allowed."
+        )
+
+    max_bytes = MAX_IMAGE_SIZE_MB * 1024 * 1024
+
+    if uploaded_file.size > max_bytes:
+        return "PDF thumbnail size cannot exceed 5 MB."
+
+    return None
 
 
 def _validate_image_file(
@@ -3190,7 +3303,7 @@ def edit_video_view(
         subject,
     )
     
-# ===========================================================
+# ============================================================
 # PDF CREATE
 # ============================================================
 
@@ -3203,9 +3316,12 @@ def create_pdf_view(
     chapter_id,
 ):
     """
-    Admin + assigned Teacher can create PDFs.
+    Create one PDF for an authorized Admin or assigned Teacher.
 
-    PDF itself is stored through Cloudinary raw storage.
+    All validation is server-side. The PDF itself is stored in
+    Cloudinary and a custom thumbnail is optional. When no custom
+    thumbnail is supplied, pdf_thumbnail remains NULL so the HTML
+    can use the local static default image.
     """
 
     batch, subject = _get_batch_subject(
@@ -3219,21 +3335,15 @@ def create_pdf_view(
         subject,
     )
 
-
     if actor is None:
-
         messages.error(
             request,
             "You do not have permission to create a PDF.",
         )
-
         return _builder_redirect(
             batch,
             subject,
         )
-
-    fullname = _get_actor_name(actor)
-    actor_role = _get_actor_role(actor)
 
     chapter = _get_chapter(
         batch,
@@ -3242,45 +3352,29 @@ def create_pdf_view(
     )
 
     pdf_name = (
-        request.POST.get(
-            "pdf_name",
-            "",
-        )
+        request.POST.get("pdf_name", "")
         .strip()
     )
 
     pdf_description = (
-        request.POST.get(
-            "pdf_description",
-            "",
-        )
+        request.POST.get("pdf_description", "")
         .strip()
     )
 
     status = (
-        request.POST.get(
-            "status",
-            "",
-        )
+        request.POST.get("status", "draft")
         .strip()
         .lower()
+        or "draft"
     )
 
-    pdf_file = request.FILES.get(
-        "pdf_file"
-    )
-
-    pdf_thumbnail = request.FILES.get(
-        "pdf_thumbnail"
-    )
+    pdf_file = request.FILES.get("pdf_file")
+    pdf_thumbnail = request.FILES.get("pdf_thumbnail")
 
     errors = {}
 
     if not pdf_name:
-        errors["pdf_name"] = (
-            "Please enter the PDF name."
-        )
-
+        errors["pdf_name"] = "Please enter the PDF name."
     elif len(pdf_name) > 100:
         errors["pdf_name"] = (
             "PDF name cannot exceed 100 characters."
@@ -3290,52 +3384,40 @@ def create_pdf_view(
         errors["pdf_description"] = (
             "Please enter the PDF description."
         )
-
     elif len(pdf_description) > 250:
         errors["pdf_description"] = (
             "PDF description cannot exceed 250 characters."
         )
 
-    if not pdf_file:
-        errors["pdf_file"] = (
-            "Please select a PDF file."
-        )
-    else:
+    pdf_error = _validate_pdf_file(pdf_file)
+    if pdf_error:
+        errors["pdf_file"] = pdf_error
 
-        error = _validate_pdf_file(
-            pdf_file
-        )
-
-        if error:
-            errors["pdf_file"] = error
-
-    if pdf_thumbnail:
-
-        error = _validate_image_file(
-            pdf_thumbnail
-        )
-
-        if error:
-            errors["pdf_thumbnail"] = error
+    thumbnail_error = _validate_pdf_thumbnail_file(
+        pdf_thumbnail
+    )
+    if thumbnail_error:
+        errors["pdf_thumbnail"] = thumbnail_error
 
     if status not in VALID_STATUS:
         errors["status"] = (
             "Please select a valid PDF status."
         )
 
-    duplicate = (
-        ChapterPDF.objects
-        .filter(
-            chapter=chapter,
-            pdf_name__iexact=pdf_name,
+    if pdf_name:
+        duplicate = (
+            ChapterPDF.objects
+            .filter(
+                chapter=chapter,
+                pdf_name__iexact=pdf_name,
+            )
+            .exists()
         )
-        .exists()
-    )
 
-    if duplicate:
-        errors["pdf_name"] = (
-            "A PDF with this name already exists."
-        )
+        if duplicate:
+            errors["pdf_name"] = (
+                "A PDF with this name already exists."
+            )
 
     if errors:
         return _render_builder_form_error(
@@ -3355,44 +3437,75 @@ def create_pdf_view(
             open_key="pdf_create_open",
             selected_content="pdfs",
         )
-    with transaction.atomic():
 
-        queryset = ChapterPDF.objects.filter(
-            chapter=chapter,
+    try:
+        with transaction.atomic():
+            queryset = ChapterPDF.objects.filter(
+                chapter=chapter,
+            )
+
+            pdf_order = get_next_order(
+                queryset,
+                "pdf_order",
+            )
+
+            pdf = ChapterPDF.objects.create(
+                chapter=chapter,
+                pdf_name=pdf_name,
+                pdf_description=pdf_description,
+                pdf_file=pdf_file,
+                pdf_thumbnail=(
+                    pdf_thumbnail
+                    if pdf_thumbnail
+                    else None
+                ),
+                pdf_order=pdf_order,
+                status=status,
+                **_get_creator_fields(actor),
+            )
+
+            record_pdf_created(
+                pdf=pdf,
+                admin=(
+                    actor["admin"]
+                    if actor["role"] == "admin"
+                    else None
+                ),
+                teacher=(
+                    actor["teacher"]
+                    if actor["role"] == "teacher"
+                    else None
+                ),
+            )
+
+    except Exception:
+        messages.error(
+            request,
+            "The PDF could not be uploaded right now. "
+            "Please try again.",
         )
 
-        pdf_order = get_next_order(
-            queryset,
-            "pdf_order",
-        )
-
-        pdf = ChapterPDF.objects.create(
-            chapter=chapter,
-            pdf_name=pdf_name,
-            pdf_description=pdf_description,
-            pdf_file=pdf_file,
-            pdf_thumbnail=(
-                pdf_thumbnail
-                if pdf_thumbnail
-                else DEFAULT_PDF_THUMBNAIL
-            ),
-            pdf_order=pdf_order,
-            status=status,
-            **_get_creator_fields(actor),
-        )
-
-        record_pdf_created(
-            pdf=pdf,
-            admin=(
-                actor["admin"]
-                if actor["role"] == "admin"
-                else None
-            ),
-            teacher=(
-                actor["teacher"]
-                if actor["role"] == "teacher"
-                else None
-            ),
+        return _render_builder_form_error(
+            request=request,
+            batch=batch,
+            subject=subject,
+            actor=actor,
+            selected_chapter=chapter,
+            errors={
+                "pdf_file": (
+                    "The PDF could not be uploaded right now. "
+                    "Please try again."
+                )
+            },
+            form_data={
+                "pdf_name": pdf_name,
+                "pdf_description": pdf_description,
+                "status": status,
+            },
+            form_error_key="pdf_form_errors",
+            form_data_key="pdf_form_data",
+            open_key="pdf_create_open",
+            selected_content="pdfs",
         )
 
     messages.success(
@@ -3403,6 +3516,8 @@ def create_pdf_view(
     return _builder_redirect(
         batch,
         subject,
+        chapter_id=chapter.id,
+        selected_content="pdfs",
     )
 
 
@@ -3420,10 +3535,13 @@ def edit_pdf_view(
     pdf_id,
 ):
     """
-    Admin + assigned Teacher can edit PDF.
+    Edit one PDF for an authorized Admin or assigned Teacher.
 
-    Existing Cloudinary PDF remains when no replacement
-    is uploaded.
+    Thumbnail rules:
+        - no thumbnail action -> keep existing
+        - new thumbnail -> replace existing
+        - remove_thumbnail=1 -> set pdf_thumbnail to NULL
+          and let the template show the local static default
     """
 
     batch, subject = _get_batch_subject(
@@ -3437,21 +3555,15 @@ def edit_pdf_view(
         subject,
     )
 
-
     if actor is None:
-
         messages.error(
             request,
             "You do not have permission to edit this PDF.",
         )
-
         return _builder_redirect(
             batch,
             subject,
         )
-
-    fullname = _get_actor_name(actor)
-    actor_role = _get_actor_role(actor)
 
     chapter = _get_chapter(
         batch,
@@ -3466,53 +3578,40 @@ def edit_pdf_view(
     )
 
     pdf_name = (
-        request.POST.get(
-            "pdf_name",
-            "",
-        )
+        request.POST.get("pdf_name", "")
         .strip()
     )
 
     pdf_description = (
-        request.POST.get(
-            "pdf_description",
-            "",
-        )
+        request.POST.get("pdf_description", "")
         .strip()
     )
 
     status = (
-        request.POST.get(
-            "status",
-            "",
-        )
+        request.POST.get("status", "")
         .strip()
         .lower()
     )
 
     raw_order = (
-        request.POST.get(
-            "pdf_order",
-            "",
-        )
+        request.POST.get("pdf_order", "")
         .strip()
     )
 
-    new_pdf_file = request.FILES.get(
-        "pdf_file"
-    )
+    new_pdf_file = request.FILES.get("pdf_file")
+    new_thumbnail = request.FILES.get("pdf_thumbnail")
 
-    new_thumbnail = request.FILES.get(
-        "pdf_thumbnail"
+    remove_thumbnail = (
+        request.POST.get("remove_thumbnail", "")
+        .strip()
+        .lower()
+        == "1"
     )
 
     errors = {}
 
     if not pdf_name:
-        errors["pdf_name"] = (
-            "Please enter the PDF name."
-        )
-
+        errors["pdf_name"] = "Please enter the PDF name."
     elif len(pdf_name) > 100:
         errors["pdf_name"] = (
             "PDF name cannot exceed 100 characters."
@@ -3522,7 +3621,6 @@ def edit_pdf_view(
         errors["pdf_description"] = (
             "Please enter the PDF description."
         )
-
     elif len(pdf_description) > 250:
         errors["pdf_description"] = (
             "PDF description cannot exceed 250 characters."
@@ -3533,55 +3631,62 @@ def edit_pdf_view(
             "Please select a valid PDF status."
         )
 
+    new_order = None
     try:
         new_order = int(raw_order)
-
         if new_order < 1:
             raise ValueError
-
-    except (
-        ValueError,
-        TypeError,
-    ):
+    except (ValueError, TypeError):
         errors["pdf_order"] = (
             "PDF order must be a valid number."
         )
-        new_order = None
 
-    duplicate = (
-        ChapterPDF.objects
-        .filter(
-            chapter=chapter,
-            pdf_name__iexact=pdf_name,
-        )
-        .exclude(
-            pk=pdf.pk,
-        )
-        .exists()
+    pdf_queryset = ChapterPDF.objects.filter(
+        chapter=chapter,
     )
+    pdf_count = pdf_queryset.count()
 
-    if duplicate:
-        errors["pdf_name"] = (
-            "A PDF with this name already exists."
+    if (
+        new_order is not None
+        and new_order > pdf_count
+    ):
+        errors["pdf_order"] = (
+            f"PDF order must be between 1 and {pdf_count}."
         )
+
+    if pdf_name:
+        duplicate = (
+            ChapterPDF.objects
+            .filter(
+                chapter=chapter,
+                pdf_name__iexact=pdf_name,
+            )
+            .exclude(pk=pdf.pk)
+            .exists()
+        )
+
+        if duplicate:
+            errors["pdf_name"] = (
+                "A PDF with this name already exists."
+            )
 
     if new_pdf_file:
-
-        error = _validate_pdf_file(
-            new_pdf_file
-        )
-
-        if error:
-            errors["pdf_file"] = error
+        pdf_error = _validate_pdf_file(new_pdf_file)
+        if pdf_error:
+            errors["pdf_file"] = pdf_error
 
     if new_thumbnail:
-
-        error = _validate_image_file(
+        thumbnail_error = _validate_pdf_thumbnail_file(
             new_thumbnail
         )
+        if thumbnail_error:
+            errors["pdf_thumbnail"] = thumbnail_error
 
-        if error:
-            errors["pdf_thumbnail"] = error
+    if new_thumbnail and remove_thumbnail:
+        errors["pdf_thumbnail"] = (
+            "Choose either a new thumbnail or remove "
+            "the current thumbnail."
+        )
 
     if errors:
         return _render_builder_form_error(
@@ -3603,157 +3708,219 @@ def edit_pdf_view(
             selected_content="pdfs",
             open_id=pdf.id,
         )
-    changes = []
 
-    if pdf.pdf_name != pdf_name:
-        changes.append(
-            (
-                "pdf_name",
-                pdf.pdf_name,
-                pdf_name,
-            )
-        )
-
-    if (
-        pdf.pdf_description
-        != pdf_description
-    ):
-        changes.append(
-            (
-                "pdf_description",
-                pdf.pdf_description,
-                pdf_description,
-            )
-        )
-
-    if pdf.status != status:
-        changes.append(
-            (
-                "status",
-                pdf.status,
-                status,
-            )
-        )
-
+    old_name = pdf.pdf_name
+    old_description = pdf.pdf_description
+    old_status = pdf.status
     old_order = pdf.pdf_order
+    old_pdf_public_id = _get_cloudinary_public_id(
+        pdf.pdf_file
+    )
+    old_thumbnail_public_id = _get_cloudinary_public_id(
+        pdf.pdf_thumbnail
+    )
 
-    old_pdf_file = pdf.pdf_file
-    old_thumbnail = pdf.pdf_thumbnail
-
-    if new_pdf_file:
-        changes.append(
-            (
-                "pdf_file",
-                _get_cloudinary_public_id(old_pdf_file),
-                getattr(new_pdf_file, "name", str(new_pdf_file)),
-            )
-        )
+    thumbnail_changed = False
+    thumbnail_new_value = None
 
     if new_thumbnail:
-        changes.append(
-            (
-                "pdf_thumbnail",
-                _get_cloudinary_public_id(old_thumbnail),
-                getattr(new_thumbnail, "name", str(new_thumbnail)),
+        thumbnail_changed = True
+        thumbnail_new_value = new_thumbnail
+    elif remove_thumbnail and pdf.pdf_thumbnail:
+        thumbnail_changed = True
+        thumbnail_new_value = None
+
+    changes = []
+
+    if old_name != pdf_name:
+        changes.append((
+            "pdf_name",
+            old_name,
+            pdf_name,
+        ))
+
+    if old_description != pdf_description:
+        changes.append((
+            "pdf_description",
+            old_description,
+            pdf_description,
+        ))
+
+    if old_status != status:
+        changes.append((
+            "status",
+            old_status,
+            status,
+        ))
+
+    if new_pdf_file:
+        changes.append((
+            "pdf_file",
+            old_pdf_public_id,
+            getattr(
+                new_pdf_file,
+                "name",
+                str(new_pdf_file),
+            ),
+        ))
+
+    if thumbnail_changed:
+        new_thumbnail_timeline_value = (
+            getattr(
+                thumbnail_new_value,
+                "name",
+                "default_pdf_thumbnail",
             )
+            if thumbnail_new_value
+            else "default_pdf_thumbnail"
         )
 
-    with transaction.atomic():
+        changes.append((
+            "pdf_thumbnail",
+            old_thumbnail_public_id,
+            new_thumbnail_timeline_value,
+        ))
 
-        if old_order != new_order:
+    try:
+        with transaction.atomic():
+            if old_order != new_order:
+                try:
+                    move_item(
+                        item=pdf,
+                        queryset=pdf_queryset,
+                        order_field="pdf_order",
+                        new_order=new_order,
+                    )
+                except ValueError as exc:
+                    errors["pdf_order"] = str(exc)
+                    return _render_builder_form_error(
+                        request=request,
+                        batch=batch,
+                        subject=subject,
+                        actor=actor,
+                        selected_chapter=chapter,
+                        errors=errors,
+                        form_data={
+                            "pdf_name": pdf_name,
+                            "pdf_description": pdf_description,
+                            "pdf_order": raw_order,
+                            "status": status,
+                        },
+                        form_error_key="pdf_edit_form_errors",
+                        form_data_key="pdf_edit_form_data",
+                        open_key="pdf_edit_open",
+                        selected_content="pdfs",
+                        open_id=pdf.id,
+                    )
 
-            move_item(
-                item=pdf,
-                queryset=ChapterPDF.objects.filter(
-                    chapter=chapter,
-                ),
-                order_field="pdf_order",
-                new_order=new_order,
-            )
-
-            record_pdf_order_changed(
-                pdf=pdf,
-                old_order=old_order,
-                new_order=new_order,
-                admin=(
-                    actor["admin"]
-                    if actor["role"] == "admin"
-                    else None
-                ),
-                teacher=(
-                    actor["teacher"]
-                    if actor["role"] == "teacher"
-                    else None
-                ),
-            )
-
-        pdf.pdf_name = pdf_name
-        pdf.pdf_description = pdf_description
-        pdf.status = status
-
-        if new_pdf_file:
-            pdf.pdf_file = new_pdf_file
-
-        if new_thumbnail:
-            pdf.pdf_thumbnail = new_thumbnail
-
-        if changes or old_order != new_order:
-            updater_fields = _get_updater_fields(actor)
-            pdf.updated_by_admin = updater_fields["updated_by_admin"]
-            pdf.updated_by_teacher = updater_fields["updated_by_teacher"]
-            pdf.save()
-
-        for (
-            field_name,
-            old_value,
-            new_value,
-        ) in changes:
-
-            record_pdf_updated(
-                pdf=pdf,
-                field_name=field_name,
-                old_value=old_value,
-                new_value=new_value,
-                admin=(
-                    actor["admin"]
-                    if actor["role"] == "admin"
-                    else None
-                ),
-                teacher=(
-                    actor["teacher"]
-                    if actor["role"] == "teacher"
-                    else None
-                ),
-            )
-
-        cleanup_assets = []
-
-        if new_pdf_file:
-
-            cleanup_assets.append(
-                (
-                    _get_cloudinary_public_id(
-                        old_pdf_file
+                record_pdf_order_changed(
+                    pdf=pdf,
+                    old_order=old_order,
+                    new_order=new_order,
+                    admin=(
+                        actor["admin"]
+                        if actor["role"] == "admin"
+                        else None
                     ),
+                    teacher=(
+                        actor["teacher"]
+                        if actor["role"] == "teacher"
+                        else None
+                    ),
+                )
+
+            pdf.pdf_name = pdf_name
+            pdf.pdf_description = pdf_description
+            pdf.status = status
+
+            if new_pdf_file:
+                pdf.pdf_file = new_pdf_file
+
+            if thumbnail_changed:
+                pdf.pdf_thumbnail = thumbnail_new_value
+
+            if changes or old_order != new_order:
+                updater_fields = _get_updater_fields(actor)
+                pdf.updated_by_admin = updater_fields[
+                    "updated_by_admin"
+                ]
+                pdf.updated_by_teacher = updater_fields[
+                    "updated_by_teacher"
+                ]
+                pdf.save()
+
+            for (
+                field_name,
+                old_value,
+                new_value,
+            ) in changes:
+                record_pdf_updated(
+                    pdf=pdf,
+                    field_name=field_name,
+                    old_value=old_value,
+                    new_value=new_value,
+                    admin=(
+                        actor["admin"]
+                        if actor["role"] == "admin"
+                        else None
+                    ),
+                    teacher=(
+                        actor["teacher"]
+                        if actor["role"] == "teacher"
+                        else None
+                    ),
+                )
+
+            cleanup_assets = []
+
+            if new_pdf_file:
+                cleanup_assets.append((
+                    old_pdf_public_id,
                     "raw",
-                )
-            )
+                ))
 
-        if new_thumbnail:
-
-            cleanup_assets.append(
-                (
-                    _get_cloudinary_public_id(
-                        old_thumbnail
-                    ),
+            if thumbnail_changed:
+                cleanup_assets.append((
+                    old_thumbnail_public_id,
                     "image",
-                )
-            )
+                ))
 
-        if cleanup_assets:
-            _schedule_cloudinary_cleanup(
-                cleanup_assets
-            )
+            if cleanup_assets:
+                _schedule_cloudinary_cleanup(
+                    cleanup_assets
+                )
+
+    except Exception:
+        messages.error(
+            request,
+            "The PDF could not be updated right now. "
+            "Please try again.",
+        )
+
+        return _render_builder_form_error(
+            request=request,
+            batch=batch,
+            subject=subject,
+            actor=actor,
+            selected_chapter=chapter,
+            errors={
+                "pdf_file": (
+                    "The PDF could not be updated right now. "
+                    "Please try again."
+                )
+            },
+            form_data={
+                "pdf_name": pdf_name,
+                "pdf_description": pdf_description,
+                "pdf_order": raw_order,
+                "status": status,
+            },
+            form_error_key="pdf_edit_form_errors",
+            form_data_key="pdf_edit_form_data",
+            open_key="pdf_edit_open",
+            selected_content="pdfs",
+            open_id=pdf.id,
+        )
 
     messages.success(
         request,
@@ -3763,6 +3930,9 @@ def edit_pdf_view(
     return _builder_redirect(
         batch,
         subject,
+        chapter_id=chapter.id,
+        selected_content="pdfs",
+        item_id=pdf.id,
     )
 
 
