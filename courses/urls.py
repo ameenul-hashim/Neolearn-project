@@ -37,6 +37,14 @@ from .views import (
     edit_quiz_view,
 
     # ============================================================
+    # QUIZ QUESTION
+    # ============================================================
+
+    add_quiz_question_view,
+    edit_quiz_question_view,
+    delete_quiz_question_view,
+
+    # ============================================================
     # DELETE
     # ============================================================
 
@@ -150,6 +158,45 @@ urlpatterns = [
         "course-builder/chapter/<int:chapter_id>/quiz/<int:quiz_id>/edit/",
         edit_quiz_view,
         name="edit_quiz",
+    ),
+
+
+    # ============================================================
+    # QUIZ QUESTION - ADD
+    # ============================================================
+
+    path(
+        "batches/<int:batch_id>/subjects/<int:subject_id>/"
+        "course-builder/chapter/<int:chapter_id>/quiz/<int:quiz_id>/"
+        "question/add/",
+        add_quiz_question_view,
+        name="add_quiz_question",
+    ),
+
+
+    # ============================================================
+    # QUIZ QUESTION - EDIT
+    # ============================================================
+
+    path(
+        "batches/<int:batch_id>/subjects/<int:subject_id>/"
+        "course-builder/chapter/<int:chapter_id>/quiz/<int:quiz_id>/"
+        "question/<int:question_id>/edit/",
+        edit_quiz_question_view,
+        name="edit_quiz_question",
+    ),
+
+
+    # ============================================================
+    # QUIZ QUESTION - DELETE
+    # ============================================================
+
+    path(
+        "batches/<int:batch_id>/subjects/<int:subject_id>/"
+        "course-builder/chapter/<int:chapter_id>/quiz/<int:quiz_id>/"
+        "question/<int:question_id>/delete/",
+        delete_quiz_question_view,
+        name="delete_quiz_question",
     ),
 
 

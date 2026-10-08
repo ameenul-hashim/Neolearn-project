@@ -808,11 +808,9 @@ class PDFChangeLog(models.Model):
             f"{self.get_action_display()}"
         )
 
-
 # ============================================================
 # CHAPTER QUIZ
 # ============================================================
-
 
 class ChapterQuiz(models.Model):
 
@@ -836,8 +834,22 @@ class ChapterQuiz(models.Model):
         default=1,
     )
 
+    # --------------------------------------------------------
+    # QUIZ SETTINGS
+    # --------------------------------------------------------
+
     maximum_attempts = models.PositiveIntegerField(
         default=1,
+    )
+
+    answering_time = models.PositiveIntegerField(
+        default=30,
+        help_text="Maximum time allowed for one quiz attempt, in minutes.",
+    )
+
+    marks_per_question = models.PositiveIntegerField(
+        default=1,
+        help_text="Marks awarded for each question in this quiz.",
     )
 
     status = models.CharField(
@@ -898,6 +910,10 @@ class ChapterQuiz(models.Model):
         auto_now=True,
     )
 
+    # --------------------------------------------------------
+    # META
+    # --------------------------------------------------------
+
     class Meta:
         ordering = [
             "quiz_order",
@@ -914,10 +930,21 @@ class ChapterQuiz(models.Model):
             ),
         ]
 
+    # --------------------------------------------------------
+    # TOTAL MARKS
+    # --------------------------------------------------------
+
+    @property
+    def total_marks(self):
+        return self.questions.count() * self.marks_per_question
+
+    # --------------------------------------------------------
+    # STRING
+    # --------------------------------------------------------
+
     def __str__(self):
         return self.quiz_name
-
-
+    
 # ============================================================
 # QUIZ QUESTION
 # ============================================================
@@ -932,10 +959,6 @@ class QuizQuestion(models.Model):
     )
 
     question_text = models.TextField()
-
-    marks = models.PositiveIntegerField(
-        default=1,
-    )
 
     created_at = models.DateTimeField(
         auto_now_add=True,
@@ -952,8 +975,7 @@ class QuizQuestion(models.Model):
 
     def __str__(self):
         return self.question_text[:80]
-
-
+    
 # ============================================================
 # QUIZ OPTION
 # ============================================================

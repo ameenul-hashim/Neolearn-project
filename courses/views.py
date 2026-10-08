@@ -6,6 +6,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from urllib.parse import urlencode
+import re
 
 import cloudinary.uploader
 
@@ -20,6 +21,8 @@ from .models import (
     ChapterPDF,
     PDFChangeLog,
     ChapterQuiz,
+    QuizQuestion,
+    QuizOption,
     QuizChangeLog,
     DeletionAudit,
 )
@@ -41,8 +44,17 @@ from .timeline import (
     record_pdf_updated,
     record_pdf_order_changed,
     record_quiz_created,
+    record_quiz_saved,
+    build_quiz_snapshot,
     record_quiz_updated,
     record_quiz_order_changed,
+    record_quiz_question_added,
+    record_quiz_question_updated,
+    record_quiz_question_deleted,
+    record_quiz_option_added,
+    record_quiz_option_updated,
+    record_quiz_option_deleted,
+    record_correct_answer_changed,
 )
 
 # ============================================================
@@ -86,11 +98,9 @@ MAX_VIDEO_SIZE_MB = 500
 MAX_PDF_SIZE_MB = 50
 MAX_IMAGE_SIZE_MB = 5
 
-
 # ============================================================
 # COMMON ACTOR / ROLE HELPERS
 # ============================================================
-
 
 def _get_teacher(request):
     """
@@ -108,7 +118,6 @@ def _get_teacher(request):
     except Teacher.DoesNotExist:
         return None
 
-
 def _is_admin(request):
     """
     Admin access is determined by the authenticated User.
@@ -123,7 +132,6 @@ def _is_admin(request):
         request.user.is_staff
         or request.user.is_superuser
     )
-
 
 def _get_actor(request):
     """
@@ -169,7 +177,6 @@ def _get_actor(request):
         "admin": None,
         "teacher": teacher,
     }
-
 
 def _get_actor_name(actor):
     """
@@ -224,7 +231,6 @@ def _get_actor_name(actor):
 
     return "Teacher"
 
-
 def _get_actor_role(actor):
     """
     Human-readable role snapshot.
@@ -234,7 +240,6 @@ def _get_actor_role(actor):
         return "Admin"
 
     return "Teacher"
-
 
 def _get_creator_fields(actor):
     """
@@ -253,7 +258,6 @@ def _get_creator_fields(actor):
         "created_by_teacher": actor["teacher"],
     }
 
-
 def _get_updater_fields(actor):
     """
     Set the latest updater on content.
@@ -271,7 +275,6 @@ def _get_updater_fields(actor):
         "updated_by_admin": None,
         "updated_by_teacher": actor["teacher"],
     }
-
 
 def _get_change_actor_fields(actor):
     """
@@ -303,11 +306,9 @@ def _get_change_actor_fields(actor):
         "changed_by_role": actor_role,
     }
 
-
 # ============================================================
 # ROLE / ACCESS CONTROL
 # ============================================================
-
 
 def _get_teacher_assignment(
     teacher,
@@ -337,7 +338,6 @@ def _get_teacher_assignment(
         )
         .first()
     )
-
 
 def _authorize_builder(
     request,
@@ -387,7 +387,6 @@ def _authorize_builder(
 
     return actor
 
-
 def _authorize_admin(request):
     """
     Admin-only authorization.
@@ -404,7 +403,6 @@ def _authorize_admin(request):
         return None
 
     return actor
-
 
 def _authorize_teacher(
     request,
@@ -431,11 +429,9 @@ def _authorize_teacher(
 
     return actor
 
-
 # ============================================================
 # COMMON OBJECT LOOKUPS
 # ============================================================
-
 
 def _get_batch_subject(
     batch_id,
@@ -458,7 +454,6 @@ def _get_batch_subject(
 
     return batch, subject
 
-
 def _get_chapter(
     batch,
     subject,
@@ -474,7 +469,6 @@ def _get_chapter(
         batch=batch,
         subject=subject,
     )
-
 
 def _get_content_object(
     batch,
@@ -546,11 +540,9 @@ def _get_content_object(
 
     return None
 
-
 # ============================================================
 # COMMON REDIRECT
 # ============================================================
-
 
 def _builder_redirect(
     batch,
@@ -589,7 +581,6 @@ def _builder_redirect(
         url = f"{url}?{urlencode(params)}"
 
     return redirect(url)
-
 
 def _render_builder_form_error(
     request,
@@ -640,11 +631,9 @@ def _render_builder_form_error(
         context,
     )
 
-
 # ============================================================
 # COMMON TEMPLATE
 # ============================================================
-
 
 def _builder_template(actor):
     """
@@ -662,11 +651,9 @@ def _builder_template(actor):
 
     return "teachers/content_builder/course_builder.html"
 
-
 # ============================================================
 # COMMON BUILDER CONTEXT
 # ============================================================
-
 
 def _get_builder_context(
     batch,
@@ -821,11 +808,9 @@ def _get_builder_context(
 
     return context
 
-
 # ============================================================
 # TIMELINE HELPERS
 # ============================================================
-
 
 def _log_chapter(
     chapter,
@@ -846,7 +831,6 @@ def _log_chapter(
         change_summary=summary,
     )
 
-
 def _log_video(
     video,
     actor,
@@ -865,7 +849,6 @@ def _log_video(
         new_value=str(new_value),
         change_summary=summary,
     )
-
 
 def _log_pdf(
     pdf,
@@ -886,7 +869,6 @@ def _log_pdf(
         change_summary=summary,
     )
 
-
 def _log_quiz(
     quiz,
     actor,
@@ -906,11 +888,9 @@ def _log_quiz(
         change_summary=summary,
     )
 
-
 # ============================================================
 # CLOUDINARY HELPERS
 # ============================================================
-
 
 def _get_cloudinary_public_id(value):
     """
@@ -936,7 +916,6 @@ def _get_cloudinary_public_id(value):
 
     return value_string
 
-
 def _is_default_asset(public_id):
     """
     Default thumbnails are shared assets.
@@ -950,7 +929,6 @@ def _is_default_asset(public_id):
     return public_id.startswith(
         "neolearn/defaults/"
     )
-
 
 def _destroy_cloudinary_asset(
     value,
@@ -986,7 +964,6 @@ def _destroy_cloudinary_asset(
         # only because remote cleanup failed.
         pass
 
-
 def _destroy_cloudinary_public_id(
     public_id,
     resource_type,
@@ -1011,7 +988,6 @@ def _destroy_cloudinary_public_id(
     except Exception:
         pass
 
-
 def _capture_video_assets(video):
     """
     Capture video Cloudinary assets before deletion/replacement.
@@ -1025,7 +1001,6 @@ def _capture_video_assets(video):
             "video",
         ),
     ]
-
 
 def _capture_pdf_assets(pdf):
     """
@@ -1046,7 +1021,6 @@ def _capture_pdf_assets(pdf):
             "image",
         ),
     ]
-
 
 def _capture_chapter_assets(chapter):
     """
@@ -1077,7 +1051,6 @@ def _capture_chapter_assets(chapter):
         )
 
     return assets
-
 
 def _schedule_cloudinary_cleanup(assets):
     """
@@ -1113,11 +1086,9 @@ def _schedule_cloudinary_cleanup(assets):
 
     transaction.on_commit(cleanup)
 
-
 # ============================================================
 # SERVER-SIDE FILE VALIDATION
 # ============================================================
-
 
 def _validate_upload(
     uploaded_file,
@@ -1184,7 +1155,6 @@ def _validate_upload(
 
     return None
 
-
 def _validate_video_file(
     uploaded_file,
 ):
@@ -1204,7 +1174,6 @@ def _validate_video_file(
         },
         max_size_mb=MAX_VIDEO_SIZE_MB,
     )
-
 
 def _validate_pdf_file(uploaded_file):
     """
@@ -1254,7 +1223,6 @@ def _validate_pdf_file(uploaded_file):
 
     return None
 
-
 def _validate_pdf_thumbnail_file(uploaded_file):
     """
     Strict server-side PDF thumbnail validation.
@@ -1302,7 +1270,6 @@ def _validate_pdf_thumbnail_file(uploaded_file):
 
     return None
 
-
 def _validate_image_file(
     uploaded_file,
 ):
@@ -1322,11 +1289,9 @@ def _validate_image_file(
         max_size_mb=MAX_IMAGE_SIZE_MB,
     )
 
-
 # ============================================================
 # COURSE BUILDER
 # ============================================================
-
 
 def course_builder_view(
     request,
@@ -1573,11 +1538,9 @@ def course_builder_view(
         context,
     )
 
-
 # ============================================================
 # CHAPTER CREATE
 # ============================================================
-
 
 @require_POST
 def create_chapter_view(
@@ -1805,11 +1768,9 @@ def create_chapter_view(
 # CHAPTER EDIT
 # ============================================================
 
-
 # ============================================================
 # CHAPTER EDIT
 # ============================================================
-
 
 @require_POST
 def edit_chapter_view(
@@ -2270,7 +2231,6 @@ def edit_chapter_view(
 # CHAPTER DETAILS
 # ============================================================
 
-
 def chapter_details_view(
     request,
     batch_id,
@@ -2511,11 +2471,9 @@ def chapter_details_view(
         },
     )
 
-
 # ============================================================
 # VIDEO CREATE
 # ============================================================
-
 
 @require_POST
 def create_video_view(
@@ -2771,15 +2729,10 @@ def create_video_view(
         batch,
         subject,
     )
+    
 # ============================================================
 # VIDEO EDIT
 # ============================================================
-
-
-# ============================================================
-# VIDEO EDIT
-# ============================================================
-
 
 @require_POST
 def edit_video_view(
@@ -3307,7 +3260,6 @@ def edit_video_view(
 # PDF CREATE
 # ============================================================
 
-
 @require_POST
 def create_pdf_view(
     request,
@@ -3520,11 +3472,9 @@ def create_pdf_view(
         selected_content="pdfs",
     )
 
-
 # ============================================================
 # PDF EDIT
 # ============================================================
-
 
 @require_POST
 def edit_pdf_view(
@@ -3935,11 +3885,9 @@ def edit_pdf_view(
         item_id=pdf.id,
     )
 
-
 # ============================================================
 # QUIZ CREATE
 # ============================================================
-
 
 @require_POST
 def create_quiz_view(
@@ -3949,35 +3897,25 @@ def create_quiz_view(
     chapter_id,
 ):
     """
-    Admin + assigned Teacher can create quizzes.
+    Admin + assigned Teacher can create a quiz.
+
+    A quiz must contain at least one complete question.
+    All questions are created in the same normal Django POST
+    and the same database transaction.
+
+    The Quiz Timeline receives one complete creation event
+    after the Quiz and all of its questions/options exist.
     """
 
-    batch, subject = _get_batch_subject(
-        batch_id,
-        subject_id,
-    )
-
-    actor = _authorize_builder(
-        request,
-        batch,
-        subject,
-    )
-
+    batch, subject = _get_batch_subject(batch_id, subject_id)
+    actor = _authorize_builder(request, batch, subject)
 
     if actor is None:
-
         messages.error(
             request,
             "You do not have permission to create a quiz.",
         )
-
-        return _builder_redirect(
-            batch,
-            subject,
-        )
-
-    fullname = _get_actor_name(actor)
-    actor_role = _get_actor_role(actor)
+        return _builder_redirect(batch, subject)
 
     chapter = _get_chapter(
         batch,
@@ -3985,98 +3923,150 @@ def create_quiz_view(
         chapter_id,
     )
 
-    quiz_name = (
-        request.POST.get(
-            "quiz_name",
-            "",
-        )
-        .strip()
-    )
-
-    quiz_description = (
-        request.POST.get(
-            "quiz_description",
-            "",
-        )
-        .strip()
-    )
-
-    raw_attempts = (
-        request.POST.get(
-            "maximum_attempts",
-            "",
-        )
-        .strip()
-    )
-
-    status = (
-        request.POST.get(
-            "status",
-            "",
-        )
-        .strip()
-        .lower()
-    )
+    quiz_name = request.POST.get("quiz_name", "").strip()
+    quiz_description = request.POST.get("quiz_description", "").strip()
+    raw_attempts = request.POST.get("maximum_attempts", "").strip()
+    raw_answering_time = request.POST.get("answering_time", "").strip()
+    raw_marks_per_question = request.POST.get(
+        "marks_per_question",
+        "",
+    ).strip()
+    status = request.POST.get("status", "").strip().lower()
 
     errors = {}
 
     if not quiz_name:
-        errors["quiz_name"] = (
-            "Please enter the quiz name."
-        )
-
+        errors["quiz_name"] = "Please enter the quiz name."
     elif len(quiz_name) > 100:
-        errors["quiz_name"] = (
-            "Quiz name cannot exceed 100 characters."
-        )
+        errors["quiz_name"] = "Quiz name cannot exceed 100 characters."
 
     if not quiz_description:
         errors["quiz_description"] = (
             "Please enter the quiz description."
         )
-
     elif len(quiz_description) > 250:
         errors["quiz_description"] = (
             "Quiz description cannot exceed 250 characters."
         )
 
     try:
-
-        maximum_attempts = int(
-            raw_attempts
-        )
-
+        maximum_attempts = int(raw_attempts)
         if maximum_attempts < 1:
             raise ValueError
-
-    except (
-        ValueError,
-        TypeError,
-    ):
-
+    except (ValueError, TypeError):
         maximum_attempts = None
-
         errors["maximum_attempts"] = (
             "Maximum attempts must be at least 1."
         )
 
+    try:
+        answering_time = int(raw_answering_time)
+        if answering_time < 1:
+            raise ValueError
+    except (ValueError, TypeError):
+        answering_time = None
+        errors["answering_time"] = (
+            "Answering time must be at least 1 minute."
+        )
+
+    try:
+        marks_per_question = int(raw_marks_per_question)
+        if marks_per_question < 1:
+            raise ValueError
+    except (ValueError, TypeError):
+        marks_per_question = None
+        errors["marks_per_question"] = (
+            "Marks per question must be at least 1."
+        )
+
     if status not in VALID_STATUS:
-        errors["status"] = (
-            "Please select a valid quiz status."
+        errors["status"] = "Please select a valid quiz status."
+
+    if quiz_name:
+        duplicate = (
+            ChapterQuiz.objects
+            .filter(
+                chapter=chapter,
+                quiz_name__iexact=quiz_name,
+            )
+            .exists()
+        )
+        if duplicate:
+            errors["quiz_name"] = (
+                "A quiz with this name already exists."
+            )
+
+    question_numbers = set()
+    question_pattern = re.compile(r"^question_text_(\d+)$")
+
+    for key in request.POST.keys():
+        match = question_pattern.match(key)
+        if match:
+            question_numbers.add(int(match.group(1)))
+
+    for key in request.POST.keys():
+        match = re.match(
+            r"^(?:option_[abcd]|correct_answer)_(\d+)$",
+            key,
+        )
+        if match:
+            question_numbers.add(int(match.group(1)))
+
+    question_numbers = sorted(question_numbers)
+
+    if not question_numbers:
+        errors["questions"] = "Please add at least one question."
+
+    submitted_questions = []
+
+    for position, question_number in enumerate(
+        question_numbers,
+        start=1,
+    ):
+        form_data = {
+            "question_text": request.POST.get(
+                f"question_text_{question_number}",
+                "",
+            ).strip(),
+            "option_a": request.POST.get(
+                f"option_a_{question_number}",
+                "",
+            ).strip(),
+            "option_b": request.POST.get(
+                f"option_b_{question_number}",
+                "",
+            ).strip(),
+            "option_c": request.POST.get(
+                f"option_c_{question_number}",
+                "",
+            ).strip(),
+            "option_d": request.POST.get(
+                f"option_d_{question_number}",
+                "",
+            ).strip(),
+            "correct_answer": request.POST.get(
+                f"correct_answer_{question_number}",
+                "",
+            ).strip().upper(),
+        }
+
+        question_errors = _validate_question_form_data(form_data)
+
+        submitted_questions.append(
+            {
+                "number": position,
+                **form_data,
+                "errors": question_errors,
+            }
         )
 
-    duplicate = (
-        ChapterQuiz.objects
-        .filter(
-            chapter=chapter,
-            quiz_name__iexact=quiz_name,
-        )
-        .exists()
-    )
-
-    if duplicate:
-        errors["quiz_name"] = (
-            "A quiz with this name already exists."
+    if any(
+        question["errors"]
+        for question in submitted_questions
+    ):
+        errors["questions"] = (
+            errors.get("questions")
+            or "Please correct the question errors below."
         )
 
     if errors:
@@ -4091,21 +4081,24 @@ def create_quiz_view(
                 "quiz_name": quiz_name,
                 "quiz_description": quiz_description,
                 "maximum_attempts": raw_attempts,
+                "answering_time": raw_answering_time,
+                "marks_per_question": raw_marks_per_question,
                 "status": status,
+                "questions": submitted_questions,
             },
             form_error_key="quiz_form_errors",
             form_data_key="quiz_form_data",
             open_key="quiz_create_open",
             selected_content="quizzes",
         )
-    with transaction.atomic():
 
-        queryset = ChapterQuiz.objects.filter(
+    with transaction.atomic():
+        quiz_queryset = ChapterQuiz.objects.filter(
             chapter=chapter,
         )
 
         quiz_order = get_next_order(
-            queryset,
+            quiz_queryset,
             "quiz_order",
         )
 
@@ -4115,9 +4108,29 @@ def create_quiz_view(
             quiz_description=quiz_description,
             quiz_order=quiz_order,
             maximum_attempts=maximum_attempts,
+            answering_time=answering_time,
+            marks_per_question=marks_per_question,
             status=status,
             **_get_creator_fields(actor),
         )
+
+        for question_data in submitted_questions:
+            question = QuizQuestion.objects.create(
+                quiz=quiz,
+                question_text=question_data["question_text"],
+            )
+
+            for label in ("A", "B", "C", "D"):
+                QuizOption.objects.create(
+                    question=question,
+                    option_label=label,
+                    option_text=question_data[
+                        f"option_{label.lower()}"
+                    ],
+                    is_correct=(
+                        question_data["correct_answer"] == label
+                    ),
+                )
 
         record_quiz_created(
             quiz=quiz,
@@ -4135,7 +4148,8 @@ def create_quiz_view(
 
     messages.success(
         request,
-        "Quiz created successfully.",
+        f"Quiz created successfully with {len(submitted_questions)} "
+        f"question{'s' if len(submitted_questions) != 1 else ''}.",
     )
 
     return _builder_redirect(
@@ -4143,11 +4157,104 @@ def create_quiz_view(
         subject,
     )
 
-
 # ============================================================
 # QUIZ EDIT
 # ============================================================
 
+def _get_quiz_edit_question_data(
+    request,
+    question_id,
+):
+    return {
+        "question_text": request.POST.get(
+            f"question_text_{question_id}",
+            "",
+        ).strip(),
+        "option_a": request.POST.get(
+            f"option_a_{question_id}",
+            "",
+        ).strip(),
+        "option_b": request.POST.get(
+            f"option_b_{question_id}",
+            "",
+        ).strip(),
+        "option_c": request.POST.get(
+            f"option_c_{question_id}",
+            "",
+        ).strip(),
+        "option_d": request.POST.get(
+            f"option_d_{question_id}",
+            "",
+        ).strip(),
+        "correct_answer": request.POST.get(
+            f"correct_answer_{question_id}",
+            "",
+        ).strip().upper(),
+    }
+
+def _get_new_quiz_question_data(
+    request,
+    index,
+):
+    return {
+        "question_text": request.POST.get(
+            f"question_text_new_{index}",
+            "",
+        ).strip(),
+        "option_a": request.POST.get(
+            f"option_a_new_{index}",
+            "",
+        ).strip(),
+        "option_b": request.POST.get(
+            f"option_b_new_{index}",
+            "",
+        ).strip(),
+        "option_c": request.POST.get(
+            f"option_c_new_{index}",
+            "",
+        ).strip(),
+        "option_d": request.POST.get(
+            f"option_d_new_{index}",
+            "",
+        ).strip(),
+        "correct_answer": request.POST.get(
+            f"correct_answer_new_{index}",
+            "",
+        ).strip().upper(),
+    }
+
+def _render_quiz_edit_error(
+    request,
+    batch,
+    subject,
+    actor,
+    chapter,
+    quiz,
+    errors,
+    form_data,
+):
+    context = _get_builder_context(
+        batch=batch,
+        subject=subject,
+        actor=actor,
+        selected_chapter=chapter,
+        selected_content="quizzes",
+    )
+
+    context["quiz_edit_open"] = True
+    context["quiz_edit_open_id"] = quiz.id
+    context["quiz_edit_form_errors"] = errors
+    context["quiz_edit_form_data"] = form_data
+
+    for error in errors.values():
+        if isinstance(error, str):
+            messages.error(request, error)
+
+    return render(
+        request,
+        _builder_template(actor),
+        context,
+    )
 
 @require_POST
 def edit_quiz_view(
@@ -4158,7 +4265,21 @@ def edit_quiz_view(
     quiz_id,
 ):
     """
-    Admin + assigned Teacher can edit quiz.
+    Bulk Quiz Save.
+
+    One normal Django POST updates:
+        - Quiz settings
+        - existing questions
+        - existing options
+        - correct answers
+        - new questions
+        - deleted questions
+        - Quiz order
+
+    Everything is validated before mutation and saved in one
+    transaction.
+
+    One successful Save creates exactly one Quiz timeline event.
     """
 
     batch, subject = _get_batch_subject(
@@ -4172,21 +4293,17 @@ def edit_quiz_view(
         subject,
     )
 
-
     if actor is None:
-
         messages.error(
             request,
             "You do not have permission to edit this quiz.",
         )
-
         return _builder_redirect(
             batch,
             subject,
+            chapter_id=chapter_id,
+            selected_content="quizzes",
         )
-
-    fullname = _get_actor_name(actor)
-    actor_role = _get_actor_role(actor)
 
     chapter = _get_chapter(
         batch,
@@ -4200,54 +4317,45 @@ def edit_quiz_view(
         chapter=chapter,
     )
 
-    quiz_name = (
-        request.POST.get(
-            "quiz_name",
-            "",
-        )
-        .strip()
-    )
+    quiz_name = request.POST.get(
+        "quiz_name",
+        "",
+    ).strip()
 
-    quiz_description = (
-        request.POST.get(
-            "quiz_description",
-            "",
-        )
-        .strip()
-    )
+    quiz_description = request.POST.get(
+        "quiz_description",
+        "",
+    ).strip()
 
-    raw_attempts = (
-        request.POST.get(
-            "maximum_attempts",
-            "",
-        )
-        .strip()
-    )
+    raw_attempts = request.POST.get(
+        "maximum_attempts",
+        "",
+    ).strip()
 
-    status = (
-        request.POST.get(
-            "status",
-            "",
-        )
-        .strip()
-        .lower()
-    )
+    raw_answering_time = request.POST.get(
+        "answering_time",
+        "",
+    ).strip()
 
-    raw_order = (
-        request.POST.get(
-            "quiz_order",
-            "",
-        )
-        .strip()
-    )
+    raw_marks_per_question = request.POST.get(
+        "marks_per_question",
+        "",
+    ).strip()
+
+    raw_order = request.POST.get(
+        "quiz_order",
+        "",
+    ).strip()
+
+    status = request.POST.get(
+        "status",
+        "",
+    ).strip().lower()
 
     errors = {}
 
     if not quiz_name:
-        errors["quiz_name"] = (
-            "Please enter the quiz name."
-        )
-
+        errors["quiz_name"] = "Please enter the quiz name."
     elif len(quiz_name) > 100:
         errors["quiz_name"] = (
             "Quiz name cannot exceed 100 characters."
@@ -4257,145 +4365,279 @@ def edit_quiz_view(
         errors["quiz_description"] = (
             "Please enter the quiz description."
         )
-
     elif len(quiz_description) > 250:
         errors["quiz_description"] = (
             "Quiz description cannot exceed 250 characters."
         )
 
     try:
-
-        maximum_attempts = int(
-            raw_attempts
-        )
-
+        maximum_attempts = int(raw_attempts)
         if maximum_attempts < 1:
             raise ValueError
-
-    except (
-        ValueError,
-        TypeError,
-    ):
-
+    except (ValueError, TypeError):
         maximum_attempts = None
-
         errors["maximum_attempts"] = (
             "Maximum attempts must be at least 1."
         )
 
-    if status not in VALID_STATUS:
-        errors["status"] = (
-            "Please select a valid quiz status."
+    try:
+        answering_time = int(raw_answering_time)
+        if answering_time < 1:
+            raise ValueError
+    except (ValueError, TypeError):
+        answering_time = None
+        errors["answering_time"] = (
+            "Answering time must be at least 1 minute."
         )
 
     try:
-
-        new_order = int(
-            raw_order
+        marks_per_question = int(raw_marks_per_question)
+        if marks_per_question < 1:
+            raise ValueError
+    except (ValueError, TypeError):
+        marks_per_question = None
+        errors["marks_per_question"] = (
+            "Marks per question must be at least 1."
         )
 
+    if status not in VALID_STATUS:
+        errors["status"] = "Please select a valid quiz status."
+
+    try:
+        new_order = int(raw_order)
         if new_order < 1:
             raise ValueError
-
-    except (
-        ValueError,
-        TypeError,
-    ):
-
+    except (ValueError, TypeError):
         new_order = None
-
         errors["quiz_order"] = (
             "Quiz order must be a valid number."
         )
 
-    duplicate = (
-        ChapterQuiz.objects
-        .filter(
-            chapter=chapter,
-            quiz_name__iexact=quiz_name,
-        )
-        .exclude(
-            pk=quiz.pk,
-        )
-        .exists()
+    quiz_queryset = ChapterQuiz.objects.filter(
+        chapter=chapter,
     )
 
-    if duplicate:
-        errors["quiz_name"] = (
-            "A quiz with this name already exists."
+    quiz_count = quiz_queryset.count()
+
+    if (
+        new_order is not None
+        and new_order > quiz_count
+    ):
+        errors["quiz_order"] = (
+            f"Quiz order must be between 1 and {quiz_count}."
+        )
+
+    if quiz_name:
+        duplicate = (
+            ChapterQuiz.objects
+            .filter(
+                chapter=chapter,
+                quiz_name__iexact=quiz_name,
+            )
+            .exclude(pk=quiz.pk)
+            .exists()
+        )
+
+        if duplicate:
+            errors["quiz_name"] = (
+                "A quiz with this name already exists."
+            )
+
+    existing_questions = list(
+        QuizQuestion.objects
+        .filter(quiz=quiz)
+        .prefetch_related("options")
+        .order_by("pk")
+    )
+
+    existing_by_id = {
+        str(question.id): question
+        for question in existing_questions
+    }
+
+    submitted_question_ids = [
+        value.strip()
+        for value in request.POST.getlist("question_id")
+        if value.strip()
+    ]
+
+    deleted_question_ids = [
+        value.strip()
+        for value in request.POST.getlist("delete_question_id")
+        if value.strip()
+    ]
+
+    if len(submitted_question_ids) != len(
+        set(submitted_question_ids)
+    ):
+        errors["questions"] = (
+            "Duplicate question identifiers were submitted."
+        )
+
+    invalid_question_ids = [
+        value
+        for value in submitted_question_ids
+        if value not in existing_by_id
+    ]
+
+    if invalid_question_ids:
+        errors["questions"] = (
+            "One or more submitted questions are invalid."
+        )
+
+    invalid_deleted_ids = [
+        value
+        for value in deleted_question_ids
+        if value not in existing_by_id
+    ]
+
+    if invalid_deleted_ids:
+        errors["questions"] = (
+            "One or more questions marked for deletion are invalid."
+        )
+
+    deleted_set = set(deleted_question_ids)
+    submitted_set = set(submitted_question_ids)
+    existing_set = set(existing_by_id.keys())
+
+    missing_existing_ids = existing_set - (
+        submitted_set | deleted_set
+    )
+
+    if missing_existing_ids:
+        errors["questions"] = (
+            "Every existing question must be submitted or "
+            "explicitly marked for deletion."
+        )
+
+    active_existing_ids = submitted_set - deleted_set
+
+    new_question_indexes = [
+        value.strip()
+        for value in request.POST.getlist("new_question_index")
+        if value.strip()
+    ]
+
+    if len(new_question_indexes) != len(
+        set(new_question_indexes)
+    ):
+        errors["questions"] = (
+            "Duplicate new-question identifiers were submitted."
+        )
+
+    new_questions = []
+
+    for index in new_question_indexes:
+        form_data = _get_new_quiz_question_data(
+            request,
+            index,
+        )
+
+        question_errors = _validate_question_form_data(
+            form_data
+        )
+
+        new_questions.append(
+            {
+                "index": index,
+                **form_data,
+                "errors": question_errors,
+            }
+        )
+
+    existing_question_data = []
+
+    for question_id in sorted(
+        active_existing_ids,
+        key=lambda value: existing_by_id[value].pk,
+    ):
+        form_data = _get_quiz_edit_question_data(
+            request,
+            question_id,
+        )
+
+        question_errors = _validate_question_form_data(
+            form_data
+        )
+
+        existing_question_data.append(
+            {
+                "question_id": int(question_id),
+                **form_data,
+                "errors": question_errors,
+            }
+        )
+
+    remaining_question_count = (
+        len(existing_question_data)
+        + len(new_questions)
+    )
+
+    if remaining_question_count < 1:
+        errors["questions"] = (
+            "A quiz must always contain at least one question."
+        )
+
+    if any(
+        question["errors"]
+        for question in existing_question_data
+    ):
+        errors["questions"] = (
+            errors.get("questions")
+            or "Please correct the existing question errors."
+        )
+
+    if any(
+        question["errors"]
+        for question in new_questions
+    ):
+        errors["questions"] = (
+            errors.get("questions")
+            or "Please correct the new question errors."
         )
 
     if errors:
-        return _render_builder_form_error(
+        return _render_quiz_edit_error(
             request=request,
             batch=batch,
             subject=subject,
             actor=actor,
-            selected_chapter=chapter,
+            chapter=chapter,
+            quiz=quiz,
             errors=errors,
             form_data={
                 "quiz_name": quiz_name,
                 "quiz_description": quiz_description,
                 "maximum_attempts": raw_attempts,
+                "answering_time": raw_answering_time,
+                "marks_per_question": raw_marks_per_question,
                 "quiz_order": raw_order,
                 "status": status,
+                "submitted_question_ids": submitted_question_ids,
+                "deleted_question_ids": deleted_question_ids,
+                "existing_questions": existing_question_data,
+                "new_questions": new_questions,
             },
-            form_error_key="quiz_edit_form_errors",
-            form_data_key="quiz_edit_form_data",
-            open_key="quiz_edit_open",
-            selected_content="quizzes",
-            open_id=quiz.id,
-        )
-    changes = []
-
-    if quiz.quiz_name != quiz_name:
-        changes.append(
-            (
-                "quiz_name",
-                quiz.quiz_name,
-                quiz_name,
-            )
         )
 
-    if (
-        quiz.quiz_description
-        != quiz_description
-    ):
-        changes.append(
-            (
-                "quiz_description",
-                quiz.quiz_description,
-                quiz_description,
-            )
-        )
+    old_snapshot = build_quiz_snapshot(quiz)
 
-    if (
-        quiz.maximum_attempts
-        != maximum_attempts
-    ):
-        changes.append(
-            (
-                "maximum_attempts",
-                quiz.maximum_attempts,
-                maximum_attempts,
-            )
-        )
+    actor_admin = (
+        actor["admin"]
+        if actor["role"] == "admin"
+        else None
+    )
 
-    if quiz.status != status:
-        changes.append(
-            (
-                "status",
-                quiz.status,
-                status,
-            )
-        )
-
-    old_order = quiz.quiz_order
+    actor_teacher = (
+        actor["teacher"]
+        if actor["role"] == "teacher"
+        else None
+    )
 
     with transaction.atomic():
+        old_order = quiz.quiz_order
 
         if old_order != new_order:
-
             move_item(
                 item=quiz,
                 queryset=ChapterQuiz.objects.filter(
@@ -4405,75 +4647,868 @@ def edit_quiz_view(
                 new_order=new_order,
             )
 
-            record_quiz_order_changed(
-                quiz=quiz,
-                old_order=old_order,
-                new_order=new_order,
-                admin=(
-                    actor["admin"]
-                    if actor["role"] == "admin"
-                    else None
-                ),
-                teacher=(
-                    actor["teacher"]
-                    if actor["role"] == "teacher"
-                    else None
-                ),
-            )
-
         quiz.quiz_name = quiz_name
-        quiz.quiz_description = (
-            quiz_description
-        )
-        quiz.maximum_attempts = (
-            maximum_attempts
-        )
+        quiz.quiz_description = quiz_description
+        quiz.maximum_attempts = maximum_attempts
+        quiz.answering_time = answering_time
+        quiz.marks_per_question = marks_per_question
         quiz.status = status
 
-        if changes or old_order != new_order:
-            updater_fields = _get_updater_fields(actor)
-            quiz.updated_by_admin = updater_fields["updated_by_admin"]
-            quiz.updated_by_teacher = updater_fields["updated_by_teacher"]
-            quiz.save()
+        updater_fields = _get_updater_fields(actor)
 
-        for (
-            field_name,
-            old_value,
-            new_value,
-        ) in changes:
+        quiz.updated_by_admin = updater_fields[
+            "updated_by_admin"
+        ]
+        quiz.updated_by_teacher = updater_fields[
+            "updated_by_teacher"
+        ]
 
-            record_quiz_updated(
+        quiz.save()
+
+        if deleted_set:
+            QuizQuestion.objects.filter(
                 quiz=quiz,
-                field_name=field_name,
-                old_value=old_value,
-                new_value=new_value,
-                admin=(
-                    actor["admin"]
-                    if actor["role"] == "admin"
-                    else None
-                ),
-                teacher=(
-                    actor["teacher"]
-                    if actor["role"] == "teacher"
-                    else None
-                ),
+                id__in=deleted_set,
+            ).delete()
+
+        for question_data in existing_question_data:
+            question = existing_by_id[
+                str(question_data["question_id"])
+            ]
+
+            question.question_text = question_data[
+                "question_text"
+            ]
+            question.save()
+
+            options = {
+                option.option_label: option
+                for option in QuizOption.objects.filter(
+                    question=question,
+                )
+            }
+
+            for label in ("A", "B", "C", "D"):
+                option = options.get(label)
+
+                if option is None:
+                    QuizOption.objects.create(
+                        question=question,
+                        option_label=label,
+                        option_text=question_data[
+                            f"option_{label.lower()}"
+                        ],
+                        is_correct=(
+                            question_data["correct_answer"] == label
+                        ),
+                    )
+                else:
+                    option.option_text = question_data[
+                        f"option_{label.lower()}"
+                    ]
+                    option.is_correct = (
+                        question_data["correct_answer"] == label
+                    )
+                    option.save()
+
+        for question_data in new_questions:
+            question = QuizQuestion.objects.create(
+                quiz=quiz,
+                question_text=question_data["question_text"],
             )
+
+            for label in ("A", "B", "C", "D"):
+                QuizOption.objects.create(
+                    question=question,
+                    option_label=label,
+                    option_text=question_data[
+                        f"option_{label.lower()}"
+                    ],
+                    is_correct=(
+                        question_data["correct_answer"] == label
+                    ),
+                )
+
+        record_quiz_saved(
+            quiz=quiz,
+            old_snapshot=old_snapshot,
+            admin=actor_admin,
+            teacher=actor_teacher,
+            change_summary=(
+                f"Quiz '{quiz.quiz_name}' was saved with "
+                f"{quiz.questions.count()} question(s), "
+                f"{quiz.total_marks} total mark(s)."
+            ),
+        )
 
     messages.success(
         request,
-        "Quiz updated successfully.",
+        "Quiz saved successfully.",
     )
 
     return _builder_redirect(
         batch,
         subject,
+        chapter_id=chapter.id,
+        selected_content="quizzes",
+        item_id=quiz.id,
     )
 
+# ============================================================
+# QUIZ QUESTION HELPERS
+# ============================================================
+
+def _get_question_form_data(request):
+    return {
+        "question_text": request.POST.get(
+            "question_text",
+            "",
+        ).strip(),
+        "option_a": request.POST.get(
+            "option_a",
+            "",
+        ).strip(),
+        "option_b": request.POST.get(
+            "option_b",
+            "",
+        ).strip(),
+        "option_c": request.POST.get(
+            "option_c",
+            "",
+        ).strip(),
+        "option_d": request.POST.get(
+            "option_d",
+            "",
+        ).strip(),
+        "correct_answer": request.POST.get(
+            "correct_answer",
+            "",
+        ).strip().upper(),
+    }
+
+def _validate_question_form_data(form_data):
+    """
+    Validate one complete quiz question.
+
+    Rules:
+        - Question is required.
+        - Options A/B/C/D are all required.
+        - Every option must be at most 500 characters.
+        - A/B/C/D must contain four unique values.
+        - Option uniqueness is case-insensitive and ignores
+          surrounding whitespace.
+        - Exactly one correct-answer label must be selected.
+    """
+
+    errors = {}
+
+    # --------------------------------------------------------
+    # QUESTION
+    # --------------------------------------------------------
+
+    question_text = form_data["question_text"]
+
+    if not question_text:
+        errors["question_text"] = (
+            "Please enter the question."
+        )
+
+    elif len(question_text) > 1000:
+        errors["question_text"] = (
+            "Question cannot exceed 1000 characters."
+        )
+
+    # --------------------------------------------------------
+    # OPTIONS
+    # --------------------------------------------------------
+
+    for label in ("a", "b", "c", "d"):
+
+        field_name = f"option_{label}"
+        value = form_data[field_name]
+
+        if not value:
+            errors[field_name] = (
+                f"Please enter Option {label.upper()}."
+            )
+
+        elif len(value) > 500:
+            errors[field_name] = (
+                f"Option {label.upper()} cannot exceed "
+                f"500 characters."
+            )
+
+    # --------------------------------------------------------
+    # OPTION UNIQUENESS
+    #
+    # Example:
+    #     Tiger
+    #     tiger
+    #
+    # These are treated as duplicates.
+    # --------------------------------------------------------
+
+    normalized_options = {}
+
+    for label in ("a", "b", "c", "d"):
+
+        field_name = f"option_{label}"
+        value = form_data[field_name]
+
+        if not value:
+            continue
+
+        normalized_value = " ".join(
+            value.split()
+        ).casefold()
+
+        normalized_options.setdefault(
+            normalized_value,
+            [],
+        ).append(
+            label.upper()
+        )
+
+    duplicate_groups = [
+        labels
+        for labels in normalized_options.values()
+        if len(labels) > 1
+    ]
+
+    for labels in duplicate_groups:
+
+        label_text = ", ".join(
+            f"Option {label}"
+            for label in labels
+        )
+
+        message = (
+            f"{label_text} contain the same answer. "
+            "Each option must be unique."
+        )
+
+        for label in labels:
+            errors[
+                f"option_{label.lower()}"
+            ] = message
+
+    # --------------------------------------------------------
+    # CORRECT ANSWER
+    # --------------------------------------------------------
+
+    if form_data["correct_answer"] not in {
+        "A",
+        "B",
+        "C",
+        "D",
+    }:
+        errors["correct_answer"] = (
+            "Please select exactly one correct answer."
+        )
+
+    return errors
+
+def _render_question_form_error(
+    request,
+    batch,
+    subject,
+    actor,
+    chapter,
+    quiz,
+    errors,
+    form_data,
+    question_id=None,
+):
+    context = _get_builder_context(
+        batch=batch,
+        subject=subject,
+        actor=actor,
+        selected_chapter=chapter,
+        selected_content="quizzes",
+    )
+
+    context["quiz_edit_open"] = True
+    context["quiz_edit_open_id"] = quiz.id
+    context["quiz_question_form_errors"] = errors
+    context["quiz_question_form_data"] = form_data
+
+    if question_id is not None:
+        context["quiz_question_form_open_id"] = (
+            question_id
+        )
+
+    for error in errors.values():
+        messages.error(
+            request,
+            error,
+        )
+
+    return render(
+        request,
+        _builder_template(actor),
+        context,
+    )
+
+# ============================================================
+# QUIZ QUESTION ADD
+# ============================================================
+
+@require_POST
+def add_quiz_question_view(
+    request,
+    batch_id,
+    subject_id,
+    chapter_id,
+    quiz_id,
+):
+    batch, subject = _get_batch_subject(
+        batch_id,
+        subject_id,
+    )
+
+    actor = _authorize_builder(
+        request,
+        batch,
+        subject,
+    )
+
+    if actor is None:
+        messages.error(
+            request,
+            "You do not have permission to add a quiz question.",
+        )
+        return _builder_redirect(
+            batch,
+            subject,
+        )
+
+    chapter = _get_chapter(
+        batch,
+        subject,
+        chapter_id,
+    )
+
+    quiz = get_object_or_404(
+        ChapterQuiz,
+        id=quiz_id,
+        chapter=chapter,
+    )
+
+    form_data = _get_question_form_data(request)
+    errors = _validate_question_form_data(form_data)
+
+    if errors:
+        return _render_question_form_error(
+            request=request,
+            batch=batch,
+            subject=subject,
+            actor=actor,
+            chapter=chapter,
+            quiz=quiz,
+            errors=errors,
+            form_data=form_data,
+        )
+
+    with transaction.atomic():
+
+        question = QuizQuestion.objects.create(
+            quiz=quiz,
+            question_text=form_data[
+                "question_text"
+            ],
+        )
+
+        record_quiz_question_added(
+            question=question,
+            admin=(
+                actor["admin"]
+                if actor["role"] == "admin"
+                else None
+            ),
+            teacher=(
+                actor["teacher"]
+                if actor["role"] == "teacher"
+                else None
+            ),
+        )
+
+        for label in (
+            "A",
+            "B",
+            "C",
+            "D",
+        ):
+
+            option = QuizOption.objects.create(
+                question=question,
+                option_label=label,
+                option_text=form_data[
+                    f"option_{label.lower()}"
+                ],
+                is_correct=(
+                    form_data["correct_answer"] == label
+                ),
+            )
+
+            record_quiz_option_added(
+                option=option,
+                admin=(
+                    actor["admin"]
+                    if actor["role"] == "admin"
+                    else None
+                ),
+                teacher=(
+                    actor["teacher"]
+                    if actor["role"] == "teacher"
+                    else None
+                ),
+            )
+
+        correct_option = question.options.get(
+            option_label=form_data["correct_answer"],
+        )
+
+        record_correct_answer_changed(
+            option=correct_option,
+            old_value="",
+            new_value=form_data["correct_answer"],
+            admin=(
+                actor["admin"]
+                if actor["role"] == "admin"
+                else None
+            ),
+            teacher=(
+                actor["teacher"]
+                if actor["role"] == "teacher"
+                else None
+            ),
+        )
+
+        quiz.updated_by_admin = (
+            actor["admin"]
+            if actor["role"] == "admin"
+            else None
+        )
+
+        quiz.updated_by_teacher = (
+            actor["teacher"]
+            if actor["role"] == "teacher"
+            else None
+        )
+
+        quiz.save(
+            update_fields=[
+                "updated_by_admin",
+                "updated_by_teacher",
+                "updated_at",
+            ]
+        )
+
+    messages.success(
+        request,
+        "Question added successfully.",
+    )
+
+    return _builder_redirect(
+        batch,
+        subject,
+        chapter_id=chapter.id,
+        selected_content="quizzes",
+        item_id=quiz.id,
+    )
+
+# ============================================================
+# QUIZ QUESTION EDIT
+# ============================================================
+
+@require_POST
+def edit_quiz_question_view(
+    request,
+    batch_id,
+    subject_id,
+    chapter_id,
+    quiz_id,
+    question_id,
+):
+    batch, subject = _get_batch_subject(
+        batch_id,
+        subject_id,
+    )
+
+    actor = _authorize_builder(
+        request,
+        batch,
+        subject,
+    )
+
+    if actor is None:
+        messages.error(
+            request,
+            "You do not have permission to edit a quiz question.",
+        )
+        return _builder_redirect(
+            batch,
+            subject,
+        )
+
+    chapter = _get_chapter(
+        batch,
+        subject,
+        chapter_id,
+    )
+
+    quiz = get_object_or_404(
+        ChapterQuiz,
+        id=quiz_id,
+        chapter=chapter,
+    )
+
+    question = get_object_or_404(
+        QuizQuestion,
+        id=question_id,
+        quiz=quiz,
+    )
+
+    form_data = _get_question_form_data(request)
+    errors = _validate_question_form_data(form_data)
+
+    if errors:
+        return _render_question_form_error(
+            request=request,
+            batch=batch,
+            subject=subject,
+            actor=actor,
+            chapter=chapter,
+            quiz=quiz,
+            errors=errors,
+            form_data=form_data,
+            question_id=question.id,
+        )
+
+    options = {
+        option.option_label: option
+        for option in QuizOption.objects.filter(
+            question=question,
+        )
+    }
+
+    if set(options.keys()) != {
+        "A",
+        "B",
+        "C",
+        "D",
+    }:
+        messages.error(
+            request,
+            "This question must contain exactly "
+            "Options A, B, C and D.",
+        )
+        return _builder_redirect(
+            batch,
+            subject,
+            chapter_id=chapter.id,
+            selected_content="quizzes",
+            item_id=quiz.id,
+        )
+
+    old_question_text = question.question_text
+
+    old_correct_answer = next(
+        (
+            label
+            for label in (
+                "A",
+                "B",
+                "C",
+                "D",
+            )
+            if options[label].is_correct
+        ),
+        None,
+    )
+
+    with transaction.atomic():
+
+        if (
+            old_question_text
+            != form_data["question_text"]
+        ):
+
+            question.question_text = (
+                form_data["question_text"]
+            )
+            question.save()
+
+            record_quiz_question_updated(
+                question=question,
+                field_name="question_text",
+                old_value=old_question_text,
+                new_value=form_data["question_text"],
+                admin=(
+                    actor["admin"]
+                    if actor["role"] == "admin"
+                    else None
+                ),
+                teacher=(
+                    actor["teacher"]
+                    if actor["role"] == "teacher"
+                    else None
+                ),
+            )
+
+        for label in (
+            "A",
+            "B",
+            "C",
+            "D",
+        ):
+
+            option = options[label]
+
+            new_value = form_data[
+                f"option_{label.lower()}"
+            ]
+
+            if option.option_text != new_value:
+
+                old_value = option.option_text
+
+                option.option_text = new_value
+
+                option.save(
+                    update_fields=[
+                        "option_text",
+                        "updated_at",
+                    ]
+                )
+
+                record_quiz_option_updated(
+                    option=option,
+                    old_value=old_value,
+                    new_value=new_value,
+                    admin=(
+                        actor["admin"]
+                        if actor["role"] == "admin"
+                        else None
+                    ),
+                    teacher=(
+                        actor["teacher"]
+                        if actor["role"] == "teacher"
+                        else None
+                    ),
+                )
+
+        new_correct_answer = (
+            form_data["correct_answer"]
+        )
+
+        if old_correct_answer != new_correct_answer:
+
+            for label in (
+                "A",
+                "B",
+                "C",
+                "D",
+            ):
+
+                option = options[label]
+                option.is_correct = (
+                    label == new_correct_answer
+                )
+
+                option.save(
+                    update_fields=[
+                        "is_correct",
+                        "updated_at",
+                    ]
+                )
+
+            changed_option = options[
+                new_correct_answer
+            ]
+
+            record_correct_answer_changed(
+                option=changed_option,
+                old_value=(
+                    old_correct_answer or ""
+                ),
+                new_value=new_correct_answer,
+                admin=(
+                    actor["admin"]
+                    if actor["role"] == "admin"
+                    else None
+                ),
+                teacher=(
+                    actor["teacher"]
+                    if actor["role"] == "teacher"
+                    else None
+                ),
+            )
+
+        quiz.updated_by_admin = (
+            actor["admin"]
+            if actor["role"] == "admin"
+            else None
+        )
+
+        quiz.updated_by_teacher = (
+            actor["teacher"]
+            if actor["role"] == "teacher"
+            else None
+        )
+
+        quiz.save(
+            update_fields=[
+                "updated_by_admin",
+                "updated_by_teacher",
+                "updated_at",
+            ]
+        )
+
+    messages.success(
+        request,
+        "Question updated successfully.",
+    )
+
+    return _builder_redirect(
+        batch,
+        subject,
+        chapter_id=chapter.id,
+        selected_content="quizzes",
+        item_id=quiz.id,
+    )
+
+# ============================================================
+# QUIZ QUESTION DELETE
+# ============================================================
+
+@require_POST
+def delete_quiz_question_view(
+    request,
+    batch_id,
+    subject_id,
+    chapter_id,
+    quiz_id,
+    question_id,
+):
+    batch, subject = _get_batch_subject(
+        batch_id,
+        subject_id,
+    )
+
+    actor = _authorize_builder(
+        request,
+        batch,
+        subject,
+    )
+
+    if actor is None:
+        messages.error(
+            request,
+            "You do not have permission to delete a quiz question.",
+        )
+        return _builder_redirect(
+            batch,
+            subject,
+        )
+
+    chapter = _get_chapter(
+        batch,
+        subject,
+        chapter_id,
+    )
+
+    quiz = get_object_or_404(
+        ChapterQuiz,
+        id=quiz_id,
+        chapter=chapter,
+    )
+
+    question = get_object_or_404(
+        QuizQuestion,
+        id=question_id,
+        quiz=quiz,
+    )
+
+    question_count = (
+        QuizQuestion.objects
+        .filter(
+            quiz=quiz,
+        )
+        .count()
+    )
+
+    if question_count <= 1:
+        messages.error(
+            request,
+            "A quiz must always contain at least one "
+            "question. The final question cannot be deleted.",
+        )
+        return _builder_redirect(
+            batch,
+            subject,
+            chapter_id=chapter.id,
+            selected_content="quizzes",
+            item_id=quiz.id,
+        )
+
+    question_text = question.question_text
+
+    with transaction.atomic():
+
+        record_quiz_question_deleted(
+            quiz=quiz,
+            question_text=question_text,
+            admin=(
+                actor["admin"]
+                if actor["role"] == "admin"
+                else None
+            ),
+            teacher=(
+                actor["teacher"]
+                if actor["role"] == "teacher"
+                else None
+            ),
+        )
+
+        question.delete()
+
+        quiz.updated_by_admin = (
+            actor["admin"]
+            if actor["role"] == "admin"
+            else None
+        )
+
+        quiz.updated_by_teacher = (
+            actor["teacher"]
+            if actor["role"] == "teacher"
+            else None
+        )
+
+        quiz.save(
+            update_fields=[
+                "updated_by_admin",
+                "updated_by_teacher",
+                "updated_at",
+            ]
+        )
+
+    messages.success(
+        request,
+        "Question deleted successfully.",
+    )
+
+    return _builder_redirect(
+        batch,
+        subject,
+        chapter_id=chapter.id,
+        selected_content="quizzes",
+        item_id=quiz.id,
+    )
 
 # ============================================================
 # DELETION AUDIT SNAPSHOT
 # ============================================================
-
 
 def _get_original_creator(obj):
     """
@@ -4506,7 +5541,6 @@ def _get_original_creator(obj):
         "admin": None,
         "teacher": None,
     }
-
 
 def _build_deletion_snapshot(
     content_type,
@@ -4632,7 +5666,6 @@ def _build_deletion_snapshot(
 
     return snapshot
 
-
 def _create_deletion_audit(
     content_type,
     obj,
@@ -4744,11 +5777,9 @@ def _create_deletion_audit(
         ),
     )
 
-
 # ============================================================
 # TEACHER DELETE REQUEST
 # ============================================================
-
 
 @require_POST
 def teacher_request_delete_view(
@@ -4900,11 +5931,9 @@ def teacher_request_delete_view(
         subject,
     )
 
-
 # ============================================================
 # ADMIN DIRECT DELETE
 # ============================================================
-
 
 @require_POST
 def admin_direct_delete_view(
@@ -5109,11 +6138,9 @@ def admin_direct_delete_view(
         subject,
     )
 
-
 # ============================================================
 # ADMIN DELETION AUDIT LIST
 # ============================================================
-
 
 def admin_deletion_audit_list_view(
     request,
@@ -5161,11 +6188,9 @@ def admin_deletion_audit_list_view(
         },
     )
 
-
 # ============================================================
 # ADMIN DELETION AUDIT DETAIL
 # ============================================================
-
 
 def admin_deletion_audit_detail_view(
     request,
@@ -5204,11 +6229,9 @@ def admin_deletion_audit_detail_view(
         },
     )
 
-
 # ============================================================
 # ADMIN APPROVE TEACHER DELETE REQUEST
 # ============================================================
-
 
 @require_POST
 def admin_approve_delete_view(
@@ -5484,11 +6507,9 @@ def admin_approve_delete_view(
         "courses:admin_deletion_audit_list"
     )
 
-
 # ============================================================
 # ADMIN REJECT TEACHER DELETE REQUEST
 # ============================================================
-
 
 @require_POST
 def admin_reject_delete_view(
