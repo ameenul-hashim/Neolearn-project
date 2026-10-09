@@ -3,14 +3,13 @@
 {% load static %}
 
 {% block title %}
-    My Learning | NeoLearn
+    {{ batch.batch_name }} | My Learning | NeoLearn
 {% endblock %}
-
 
 {% block student_content %}
 
 <!-- ============================================================
-     MY LEARNING
+     BATCH SUBJECTS
      ============================================================ -->
 
 <div class="w-full max-w-[1800px] mx-auto">
@@ -21,7 +20,7 @@
 
     <div class="mb-7">
 
-        <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div class="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
 
             <!-- LEFT -->
 
@@ -57,7 +56,7 @@
                                 font-semibold
                             "
                         >
-                            Learning
+                            My Learning
                         </p>
 
                         <h1
@@ -69,7 +68,7 @@
                                 text-white
                             "
                         >
-                            My Learning
+                            {{ batch.batch_name }}
                         </h1>
 
                     </div>
@@ -81,10 +80,11 @@
                         text-[13px]
                         sm:text-[14px]
                         text-[#94A3B8]
-                        max-w-[650px]
+                        max-w-[700px]
+                        leading-6
                     "
                 >
-                    Continue learning from the batches you have purchased.
+                    Choose a subject to continue your learning journey.
                 </p>
 
             </div>
@@ -92,10 +92,12 @@
 
             <!-- RIGHT -->
 
-            <div
+            <a
+                href="{% url 'my_learning' %}"
                 class="
                     inline-flex
                     items-center
+                    justify-center
                     gap-2
                     self-start
                     sm:self-auto
@@ -108,19 +110,207 @@
                     text-cyan-300
                     text-[12px]
                     font-semibold
+                    hover:bg-cyan-400/15
+                    hover:border-cyan-400/30
+                    transition-all
+                "
+            >
+                <i class="ri-arrow-left-line text-[15px]"></i>
+                <span>My Learning</span>
+            </a>
+
+        </div>
+
+    </div>
+
+
+    <!-- ========================================================
+         BATCH INFORMATION
+         ======================================================== -->
+
+    <div
+        class="
+            mb-7
+            rounded-[20px]
+            border
+            border-white/8
+            bg-[#071224]
+            overflow-hidden
+        "
+    >
+
+        <div
+            class="
+                flex
+                flex-col
+                lg:flex-row
+                lg:items-center
+                gap-5
+                p-5
+                sm:p-6
+            "
+        >
+
+            <!-- BATCH THUMBNAIL -->
+
+            <div
+                class="
+                    relative
+                    w-full
+                    lg:w-[220px]
+                    shrink-0
+                    aspect-[16/9]
+                    lg:aspect-auto
+                    lg:h-[124px]
+                    overflow-hidden
+                    rounded-[15px]
+                    bg-[#0B172A]
+                    border
+                    border-white/5
                 "
             >
 
-                <i class="ri-graduation-cap-line text-[16px]"></i>
+                {% if batch.batch_thumbnail %}
 
-                <span>
+                    <img
+                        src="{{ batch.batch_thumbnail.url }}"
+                        alt="{{ batch.batch_name }}"
+                        loading="lazy"
+                        class="
+                            w-full
+                            h-full
+                            object-cover
+                        "
+                    >
 
-                    {{ purchased_batches|length }}
+                {% else %}
 
-                    {% if purchased_batches|length == 1 %}
-                        Batch
+                    <div
+                        class="
+                            w-full
+                            h-full
+                            flex
+                            items-center
+                            justify-center
+                            bg-gradient-to-br
+                            from-cyan-500/10
+                            via-[#071224]
+                            to-blue-500/10
+                        "
+                    >
+                        <i
+                            class="
+                                ri-graduation-cap-line
+                                text-[44px]
+                                text-cyan-400/40
+                            "
+                        ></i>
+                    </div>
+
+                {% endif %}
+
+            </div>
+
+
+            <!-- BATCH DETAILS -->
+
+            <div class="min-w-0 flex-1">
+
+                <div class="flex items-center gap-2 mb-2">
+
+                    <span
+                        class="
+                            inline-flex
+                            items-center
+                            gap-1.5
+                            px-2.5
+                            h-[26px]
+                            rounded-full
+                            bg-emerald-400/10
+                            border
+                            border-emerald-400/20
+                            text-emerald-400
+                            text-[10px]
+                            font-bold
+                        "
+                    >
+                        <span
+                            class="
+                                w-[6px]
+                                h-[6px]
+                                rounded-full
+                                bg-emerald-400
+                            "
+                        ></span>
+
+                        Active Learning
+                    </span>
+
+                </div>
+
+
+                <h2
+                    class="
+                        text-[18px]
+                        sm:text-[20px]
+                        font-extrabold
+                        text-white
+                        tracking-[-0.3px]
+                        leading-[1.35]
+                    "
+                >
+                    {{ batch.batch_name }}
+                </h2>
+
+
+                {% if batch.batch_description %}
+
+                    <p
+                        class="
+                            mt-2
+                            text-[12px]
+                            sm:text-[13px]
+                            text-[#94A3B8]
+                            leading-6
+                            max-w-[850px]
+                        "
+                    >
+                        {{ batch.batch_description }}
+                    </p>
+
+                {% endif %}
+
+            </div>
+
+
+            <!-- SUBJECT COUNT -->
+
+            <div
+                class="
+                    shrink-0
+                    inline-flex
+                    items-center
+                    gap-2
+                    px-4
+                    h-[42px]
+                    rounded-[13px]
+                    bg-cyan-400/10
+                    border
+                    border-cyan-400/20
+                    text-cyan-300
+                "
+            >
+
+                <i class="ri-book-2-line text-[16px]"></i>
+
+                <span class="text-[12px] font-semibold">
+
+                    {{ subjects|length }}
+
+                    {% if subjects|length == 1 %}
+                        Subject
                     {% else %}
-                        Batches
+                        Subjects
                     {% endif %}
 
                 </span>
@@ -133,10 +323,10 @@
 
 
     <!-- ========================================================
-         PURCHASED BATCHES
+         SUBJECTS
          ======================================================== -->
 
-    {% if purchased_batches %}
+    {% if subjects %}
 
         <div
             class="
@@ -151,10 +341,10 @@
             "
         >
 
-            {% for purchase in purchased_batches %}
+            {% for subject in subjects %}
 
                 <a
-                    href="{% url 'my_learning_batch' purchase.batch.id %}"
+                    href="{% url 'my_learning_subject' batch.id subject.id %}"
                     class="
                         group
                         block
@@ -173,7 +363,7 @@
                 >
 
                     <!-- =================================================
-                         THUMBNAIL
+                         SUBJECT THUMBNAIL
                          ================================================= -->
 
                     <div
@@ -186,11 +376,11 @@
                         "
                     >
 
-                        {% if purchase.batch.batch_thumbnail %}
+                        {% if subject.subject_thumbnail %}
 
                             <img
-                                src="{{ purchase.batch.batch_thumbnail.url }}"
-                                alt="{{ purchase.batch.batch_name }}"
+                                src="{{ subject.subject_thumbnail.url }}"
+                                alt="{{ subject.subject_name }}"
                                 loading="lazy"
                                 class="
                                     w-full
@@ -217,23 +407,19 @@
                                     to-blue-500/10
                                 "
                             >
-
                                 <i
                                     class="
-                                        ri-graduation-cap-line
+                                        ri-book-open-line
                                         text-[44px]
                                         text-cyan-400/40
                                     "
                                 ></i>
-
                             </div>
 
                         {% endif %}
 
 
-                        <!-- =================================================
-                             PURCHASED BADGE
-                             ================================================= -->
+                        <!-- PUBLISHED BADGE -->
 
                         <div
                             class="
@@ -256,14 +442,12 @@
 
                             <i class="ri-check-line text-[13px]"></i>
 
-                            Purchased
+                            Published
 
                         </div>
 
 
-                        <!-- =================================================
-                             HOVER ARROW
-                             ================================================= -->
+                        <!-- HOVER ARROW -->
 
                         <div
                             class="
@@ -289,9 +473,7 @@
                                 duration-300
                             "
                         >
-
                             <i class="ri-arrow-right-up-line text-[16px]"></i>
-
                         </div>
 
                     </div>
@@ -303,7 +485,7 @@
 
                     <div class="p-4 sm:p-[17px]">
 
-                        <!-- BATCH NAME -->
+                        <!-- SUBJECT NAME -->
 
                         <h2
                             class="
@@ -317,75 +499,44 @@
                                 transition-colors
                             "
                         >
-                            {{ purchase.batch.batch_name }}
+                            {{ subject.subject_name }}
                         </h2>
 
 
-                        <!-- SUBJECT COUNT -->
+                        <!-- SUBJECT DESCRIPTION -->
 
-                        <div
-                            class="
-                                mt-3
-                                flex
-                                items-center
-                                gap-2
-                                text-[11px]
-                                text-[#94A3B8]
-                            "
-                        >
+                        {% if subject.subject_description %}
 
-                            <i
+                            <p
                                 class="
-                                    ri-book-2-line
-                                    text-cyan-400
-                                    text-[14px]
+                                    mt-2
+                                    text-[11px]
+                                    text-[#94A3B8]
+                                    leading-5
+                                    line-clamp-2
                                 "
-                            ></i>
+                            >
+                                {{ subject.subject_description }}
+                            </p>
 
-                            <span>
+                        {% else %}
 
-                                {% with subject_count=purchase.batch.subjects.count %}
+                            <p
+                                class="
+                                    mt-2
+                                    text-[11px]
+                                    text-slate-600
+                                    leading-5
+                                    line-clamp-2
+                                "
+                            >
+                                Continue learning this subject.
+                            </p>
 
-                                    {{ subject_count }}
-
-                                    {% if subject_count == 1 %}
-                                        Subject
-                                    {% else %}
-                                        Subjects
-                                    {% endif %}
-
-                                {% endwith %}
-
-                            </span>
-
-                        </div>
-
-
-                        <!-- PURCHASE DATE -->
-
-                        <div
-                            class="
-                                mt-2
-                                flex
-                                items-center
-                                gap-2
-                                text-[10px]
-                                text-[#64748B]
-                            "
-                        >
-
-                            <i class="ri-calendar-line text-[13px]"></i>
-
-                            <span>
-                                Purchased {{ purchase.purchased_at|date:"d M Y" }}
-                            </span>
-
-                        </div>
+                        {% endif %}
 
 
-                        <!-- =================================================
-                            CARD FOOTER
-                        ================================================= -->
+                        <!-- CARD FOOTER -->
 
                         <div
                             class="
@@ -419,7 +570,7 @@
                                     "
                                 ></span>
 
-                                Active Learning
+                                Ready to Learn
 
                             </span>
 
@@ -433,7 +584,7 @@
                                     transition-colors
                                 "
                             >
-                                View Subjects
+                                Open Subject
                             </span>
 
                         </div>
@@ -450,7 +601,7 @@
     {% else %}
 
         <!-- ========================================================
-             EMPTY STATE
+             EMPTY SUBJECT STATE
              ======================================================== -->
 
         <div
@@ -485,9 +636,7 @@
                         text-cyan-400
                     "
                 >
-
                     <i class="ri-book-open-line text-[38px]"></i>
-
                 </div>
 
 
@@ -499,7 +648,7 @@
                         text-white
                     "
                 >
-                    Your Learning Space Is Empty
+                    No Subjects Available
                 </h2>
 
 
@@ -511,13 +660,13 @@
                         text-[#94A3B8]
                     "
                 >
-                    You haven't purchased any batches yet.
-                    Explore the marketplace and start your learning journey.
+                    There are currently no published subjects available
+                    in this batch. Please check again later.
                 </p>
 
 
                 <a
-                    href="{% url 'marketplace' %}"
+                    href="{% url 'my_learning' %}"
                     class="
                         mt-6
                         inline-flex
@@ -536,9 +685,9 @@
                     "
                 >
 
-                    <i class="ri-shopping-bag-3-line text-[17px]"></i>
+                    <i class="ri-arrow-left-line text-[17px]"></i>
 
-                    Explore Marketplace
+                    Back to My Learning
 
                 </a>
 

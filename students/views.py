@@ -36,6 +36,13 @@ from .models import (
     CartItem,
     CartCoupon,
 )
+from courses.models import (
+    CourseChapter,
+    ChapterVideo,
+    ChapterPDF,
+    ChapterQuiz,
+)
+
 import cloudinary.uploader
 
 from .models import (
@@ -1830,6 +1837,220 @@ def my_learning_view(request):
             'purchased_batches': purchased_batches,
         },
     )
+
+# ============================================================
+# MY LEARNING - BATCH SUBJECTS
+# ============================================================
+
+@login_required(login_url='signin')
+@cache_control(
+    no_cache=True,
+    must_revalidate=True,
+    no_store=True
+)
+def my_learning_batch_view(request, batch_id):
+
+    if not is_student_user(request.user):
+        messages.error(
+            request,
+            'Admin login is not allowed here. Please use the admin login area.'
+        )
+        return redirect('signin')
+
+    purchase = get_object_or_404(
+        StudentBatchPurchase.objects.select_related(
+            'batch'
+        ),
+        student=request.user,
+        batch_id=batch_id,
+        status=StudentBatchPurchase.Status.ACTIVE,
+    )
+
+    batch = purchase.batch
+
+    subjects = (
+        Subject.objects
+        .filter(
+            batch=batch,
+            subject_status='published',
+        )
+        .order_by(
+            'subject_name'
+        )
+    )
+
+    return render(
+        request,
+        'students/my_learning/batch_subjects.html',
+        {
+            'batch': batch,
+            'subjects': subjects,
+        },
+    )
+
+
+# ============================================================
+# MY LEARNING - SUBJECT CHAPTERS
+# ============================================================
+
+@login_required(login_url='signin')
+@cache_control(
+    no_cache=True,
+    must_revalidate=True,
+    no_store=True
+)
+def my_learning_subject_view(request, batch_id, subject_id):
+
+    if not is_student_user(request.user):
+        messages.error(
+            request,
+            'Admin login is not allowed here. Please use the admin login area.'
+        )
+        return redirect('signin')
+
+    purchase = get_object_or_404(
+        StudentBatchPurchase.objects.select_related(
+            'batch'
+        ),
+        student=request.user,
+        batch_id=batch_id,
+        status=StudentBatchPurchase.Status.ACTIVE,
+    )
+
+    batch = purchase.batch
+
+    subject = get_object_or_404(
+        Subject,
+        id=subject_id,
+        batch=batch,
+        subject_status='published',
+    )
+
+    chapters = (
+        CourseChapter.objects
+        .filter(
+            batch=batch,
+            subject=subject,
+            status='published',
+        )
+        .order_by(
+            'chapter_order',
+            'pk',
+        )
+    )
+
+    return render(
+        request,
+        'students/my_learning/subject_chapters.html',
+        {
+            'batch': batch,
+            'subject': subject,
+            'chapters': chapters,
+        },
+    )
+
+
+
+# ============================================================
+# MY LEARNING - CHAPTER CONTENT
+# ============================================================
+
+@login_required(login_url='signin')
+@cache_control(
+    no_cache=True,
+    must_revalidate=True,
+    no_store=True
+)
+def my_learning_chapter_view(
+    request,
+    batch_id,
+    subject_id,
+    chapter_id,
+):
+
+    if not is_student_user(request.user):
+        messages.error(
+            request,
+            'Admin login is not allowed here. Please use the admin login area.'
+        )
+        return redirect('signin')
+
+    purchase = get_object_or_404(
+        StudentBatchPurchase.objects.select_related(
+            'batch'
+        ),
+        student=request.user,
+        batch_id=batch_id,
+        status=StudentBatchPurchase.Status.ACTIVE,
+    )
+
+    batch = purchase.batch
+
+    subject = get_object_or_404(
+        Subject,
+        id=subject_id,
+        batch=batch,
+        subject_status='published',
+    )
+
+    chapter = get_object_or_404(
+        CourseChapter,
+        id=chapter_id,
+        batch=batch,
+        subject=subject,
+        status='published',
+    )
+
+    videos = (
+        ChapterVideo.objects
+        .filter(
+            chapter=chapter,
+            status='published',
+        )
+        .order_by(
+            'video_order',
+            'pk',
+        )
+    )
+
+    pdfs = (
+        ChapterPDF.objects
+        .filter(
+            chapter=chapter,
+            status='published',
+        )
+        .order_by(
+            'pdf_order',
+            'pk',
+        )
+    )
+
+    quizzes = (
+        ChapterQuiz.objects
+        .filter(
+            chapter=chapter,
+            status='published',
+        )
+        .order_by(
+            'quiz_order',
+            'pk',
+        )
+    )
+
+    return render(
+        request,
+        'students/my_learning/chapter_learning.html',
+        {
+            'batch': batch,
+            'subject': subject,
+            'chapter': chapter,
+            'videos': videos,
+            'pdfs': pdfs,
+            'quizzes': quizzes,
+        },
+    )
+
+
 
 # ============================================================
 # STUDENT ORDER HISTORY

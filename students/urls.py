@@ -7,7 +7,11 @@ from .views import (
 
     marketplace_view,
     marketplace_detail_view,
+
     my_learning_view,
+    my_learning_batch_view,
+    my_learning_subject_view,
+    my_learning_chapter_view,
 
     wishlist_view,
     toggle_wishlist_view,
@@ -143,6 +147,24 @@ urlpatterns = [
         "my-learning/",
         my_learning_view,
         name="my_learning",
+    ),
+
+    path(
+        "my-learning/<int:batch_id>/",
+        my_learning_batch_view,
+        name="my_learning_batch",
+    ),
+
+    path(
+        "my-learning/<int:batch_id>/subjects/<int:subject_id>/",
+        my_learning_subject_view,
+        name="my_learning_subject",
+    ),
+
+    path(
+        "my-learning/<int:batch_id>/subjects/<int:subject_id>/chapters/<int:chapter_id>/",
+        my_learning_chapter_view,
+        name="my_learning_chapter",
     ),
 
     # ============================================================

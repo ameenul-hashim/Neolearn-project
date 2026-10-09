@@ -1,0 +1,2150 @@
+{% extends "students/base_student.html" %}
+
+{% load static %}
+
+{% block title %}
+
+    {{ chapter.chapter_name }} | NeoLearn
+
+{% endblock %}
+
+{% block student_content %}
+
+<style>
+
+    .learning-workspace {
+
+        color: #e2e8f0;
+
+        color-scheme: dark;
+
+    }
+
+    .learning-workspace button,
+
+    .learning-workspace a {
+
+        -webkit-tap-highlight-color: transparent;
+
+    }
+
+    .learning-tab {
+
+        color: #94a3b8;
+
+        transition: background-color .18s ease, color .18s ease;
+
+    }
+
+    .learning-tab:hover {
+
+        color: #e2e8f0;
+
+        background: rgba(255, 255, 255, .045);
+
+    }
+
+    .learning-tab.active {
+
+        color: #22d3ee;
+
+        background: rgba(6, 182, 212, .12);
+
+        box-shadow: inset 0 -2px #22d3ee;
+
+    }
+
+    .learning-item {
+
+        transition: background-color .18s ease, color .18s ease;
+
+    }
+
+    .learning-item:hover {
+
+        background: rgba(255, 255, 255, .045);
+
+    }
+
+    .learning-item.active {
+
+        background: rgba(6, 182, 212, .10);
+
+        box-shadow: inset 3px 0 #22d3ee;
+
+    }
+
+    .learning-item[data-pdf-item].active {
+
+        outline: 1px solid rgba(34, 211, 238, .45);
+
+        outline-offset: -1px;
+
+    }
+
+    .learning-scroll {
+
+        scrollbar-width: thin;
+
+        scrollbar-color: #334155 transparent;
+
+    }
+
+    .learning-scroll::-webkit-scrollbar {
+
+        width: 6px;
+
+        height: 6px;
+
+    }
+
+    .learning-scroll::-webkit-scrollbar-track {
+
+        background: transparent;
+
+    }
+
+    .learning-scroll::-webkit-scrollbar-thumb {
+
+        background: #334155;
+
+        border-radius: 20px;
+
+    }
+
+    .learning-video-carousel {
+
+        display: flex; gap: 10px; overflow-x: auto; overflow-y: hidden;
+
+        padding: 3px 2px 8px; scroll-snap-type: x mandatory;
+
+        overscroll-behavior-x: contain; scrollbar-width: thin;
+
+    }
+
+    .learning-pdf-carousel {
+        display: flex;
+        gap: 10px;
+        overflow-x: auto;
+        overflow-y: hidden;
+        padding: 3px 2px 8px;
+        scroll-snap-type: x mandatory;
+        overscroll-behavior-x: contain;
+    }
+
+    .learning-pdf-card {
+        position: relative;
+        flex: 0 0 220px;
+        min-width: 0;
+        overflow: hidden;
+        border: 1px solid #263449;
+        border-radius: 12px;
+        background: #0f172a;
+        scroll-snap-align: start;
+        transition: border-color .18s ease, background .18s ease, box-shadow .18s ease;
+    }
+
+    .learning-pdf-card:hover {
+        border-color: #0891b2;
+        background: #111d30;
+    }
+
+    .learning-pdf-card.active {
+        border: 2px solid #22d3ee;
+        background: rgba(6, 182, 212, .10);
+        box-shadow: 0 0 0 2px rgba(34, 211, 238, .10);
+    }
+
+    .pdf-selected-badge {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        z-index: 2;
+        display: none;
+        width: 23px;
+        height: 23px;
+        align-items: center;
+        justify-content: center;
+        border-radius: 999px;
+        background: #06b6d4;
+        color: #04202a;
+    }
+
+    .learning-pdf-card.active .pdf-selected-badge {
+        display: flex;
+    }
+
+    .learning-pdf-card-thumbnail {
+        position: relative;
+        display: flex;
+        height: 120px;
+        overflow: hidden;
+        align-items: center;
+        justify-content: center;
+        background: #020617;
+    }
+
+    .learning-pdf-card-thumbnail > img {
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        background: #020617;
+    }
+
+    .pdf-card-placeholder {
+        display: flex;
+        width: 100%;
+        height: 100%;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 7px;
+        color: #fb7185;
+        background: linear-gradient(145deg, #111827, #020617);
+    }
+
+    .pdf-card-placeholder i {
+        font-size: 34px;
+    }
+
+    .pdf-card-placeholder span {
+        color: #94a3b8;
+        font-size: 11px;
+        font-weight: 600;
+    }
+
+
+    @keyframes pdf-thumbnail-heartbeat {
+        0%, 100% { transform: scale(1); }
+        18% { transform: scale(1.035); }
+        36% { transform: scale(1); }
+        54% { transform: scale(1.025); }
+        72% { transform: scale(1); }
+    }
+
+    .learning-pdf-card-thumbnail > img {
+        transition: filter .22s ease;
+        transform-origin: center;
+    }
+
+    .learning-pdf-card:hover .learning-pdf-card-thumbnail > img {
+        animation: pdf-thumbnail-heartbeat .8s ease-in-out;
+        filter: brightness(1.08);
+    }
+
+    .learning-pdf-card:not(:hover) .learning-pdf-card-thumbnail > img {
+        animation: none;
+        transform: scale(1);
+        filter: none;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .learning-pdf-card:hover .learning-pdf-card-thumbnail > img {
+            animation: none;
+        }
+    }
+
+    .learning-pdf-preview-image {
+        min-height: 220px;
+        object-fit: contain;
+        background: #020617;
+    }
+
+    @media (max-width: 639px) {
+        .learning-pdf-card {
+            flex-basis: min(72vw, 220px);
+        }
+
+        .learning-pdf-card-thumbnail {
+            height: 105px;
+        }
+    }
+
+    .learning-video-card {
+
+        position: relative; flex: 0 0 220px; min-width: 0; overflow: hidden;
+
+        border: 1px solid #263449; border-radius: 12px; background: #0f172a;
+
+        text-align: left; scroll-snap-align: start;
+
+        transition: border-color .18s ease, background .18s ease, box-shadow .18s ease;
+
+    }
+
+    .learning-video-card:hover { border-color: #0891b2; background: #111d30; }
+
+    .learning-video-card.active {
+
+        border: 2px solid #22d3ee; background: rgba(6,182,212,.10);
+
+        box-shadow: 0 0 0 2px rgba(34,211,238,.10);
+
+    }
+
+    .learning-video-card .video-selected-badge {
+
+        position: absolute; top: 8px; right: 8px; z-index: 2; display: none;
+
+        width: 23px; height: 23px; align-items: center; justify-content: center;
+
+        border-radius: 999px; background: #06b6d4; color: #04202a;
+
+    }
+
+    .learning-video-card.active .video-selected-badge { display: flex; }
+
+    .learning-video-thumbnail { position: relative; height: 104px; overflow: hidden; background: #020617; }
+
+    .learning-video-thumbnail video { display: block; width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
+
+    .learning-video-thumbnail .thumbnail-play {
+
+        position: absolute; inset: 0; display: flex; align-items: center;
+
+        justify-content: center; color: white; background: linear-gradient(transparent, rgba(2,6,23,.38));
+
+        font-size: 28px;
+
+    }
+
+    .learning-video-order {
+
+        position: absolute; left: 7px; top: 7px; z-index: 1; border-radius: 6px;
+
+        background: rgba(2,6,23,.82); padding: 3px 7px; color: white;
+
+        font-size: 10px; font-weight: 800;
+
+    }
+
+    .learning-media {
+
+        background:
+
+            radial-gradient(
+
+                circle at top right,
+
+                rgba(8, 145, 178, .13),
+
+                transparent 45%
+
+            ),
+
+            #050b16;
+
+    }
+
+    .learning-action {
+
+        transition: background-color .18s ease, transform .18s ease;
+
+    }
+
+    .learning-action:hover {
+
+        transform: translateY(-1px);
+
+    }
+
+    .learning-action:focus-visible,
+
+    .learning-tab:focus-visible,
+
+    .learning-item:focus-visible {
+
+        outline: 2px solid #22d3ee;
+
+        outline-offset: 2px;
+
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+
+        .learning-workspace \\\*,
+
+        .learning-workspace \\\*::before,
+
+        .learning-workspace \\\*::after {
+
+            transition: none !important;
+
+            animation: none !important;
+
+        }
+
+    }
+
+</style>
+
+<div
+
+    class="
+
+        learning-workspace
+
+        mx-auto
+
+        flex
+
+        w-full
+
+        max-w-[1600px]
+
+        min-w-0
+
+        flex-col
+
+        gap-4
+
+        overflow-hidden
+
+        pb-4
+
+        lg:h-[calc(100dvh-7rem)]
+
+        lg:min-h-[520px]
+
+        lg:pb-0
+
+    "
+
+>
+
+    <!-- Compact course location and chapter title -->
+
+    <header class="flex shrink-0 flex-col gap-1 border-b border-white/[0.06] pb-2 sm:flex-row sm:items-center sm:justify-between">
+
+        <nav aria-label="Breadcrumb" class="learning-scroll flex min-w-0 items-center gap-x-2 overflow-x-auto whitespace-nowrap text-xs text-slate-500 sm:text-sm">
+
+            <a href="{% url 'my_learning' %}" class="shrink-0 hover:text-cyan-400">My Learning</a>
+
+            <i class="ri-arrow-right-s-line shrink-0"></i>
+
+            <a href="{% url 'my_learning_batch' batch.id %}" class="max-w-[120px] truncate hover:text-cyan-400 sm:max-w-[180px]">{{ batch.batch_name }}</a>
+
+            <i class="ri-arrow-right-s-line shrink-0"></i>
+
+            <a href="{% url 'my_learning_subject' batch.id subject.id %}" class="max-w-[120px] truncate hover:text-cyan-400 sm:max-w-[180px]">{{ subject.subject_name }}</a>
+
+            <i class="ri-arrow-right-s-line shrink-0"></i>
+
+            <span class="max-w-[160px] truncate font-medium text-slate-300">{{ chapter.chapter_name }}</span>
+
+        </nav>
+
+        <h1 class="shrink-0 text-sm font-semibold text-white sm:text-base">{{ chapter.chapter_name }}</h1>
+
+    </header>
+
+    <!-- =====================================================
+
+         MAIN LEARNING WORKSPACE
+
+    ====================================================== -->
+
+    <section
+
+        class="
+
+            flex
+
+            min-h-0
+
+            flex-1
+
+            flex-col
+
+            overflow-hidden
+
+            rounded-xl
+
+            bg-[#0b1220]
+
+            lg:flex-row
+
+        "
+
+    >
+
+        <!-- =================================================
+
+             LEFT: SELECTED CONTENT DISPLAY
+
+        ================================================== -->
+
+        <main
+
+            class="
+
+                learning-scroll
+
+                flex
+
+                min-h-0
+
+                min-w-0
+
+                flex-1
+
+                flex-col
+
+                overflow-y-auto
+
+                lg:overflow-y-auto
+
+            "
+
+        >
+
+            <!-- ---------------------------------------------
+
+                 CONTENT TYPE TABS
+
+            ---------------------------------------------- -->
+
+            <div
+
+                class="
+
+                    learning-scroll
+
+                    sticky
+
+                    top-0
+
+                    z-20
+
+                    flex
+
+                    shrink-0
+
+                    gap-1
+
+                    overflow-x-auto
+
+                    border-b
+
+                    border-white/[0.07]
+
+                    bg-[#0b1220]
+
+                    px-2
+
+                    py-2
+
+                    sm:px-4
+
+                "
+
+                role="tablist"
+
+                aria-label="Chapter content types"
+
+            >
+
+                <button
+
+                    type="button"
+
+                    class="learning-tab active inline-flex shrink-0 items-center gap-2 rounded-lg px-3 py-2.5 text-xs font-semibold sm:text-sm"
+
+                    data-learning-tab="videos"
+
+                    role="tab"
+
+                    aria-selected="true"
+
+                    aria-controls="panel-videos"
+
+                >
+
+                    <i class="ri-video-line text-base"></i>
+
+                    Videos
+
+                    <span class="rounded-full bg-white/[0.07] px-1.5 py-0.5 text-[10px]">
+
+                        {{ videos|length }}
+
+                    </span>
+
+                </button>
+
+                <button
+
+                    type="button"
+
+                    class="learning-tab inline-flex shrink-0 items-center gap-2 rounded-lg px-3 py-2.5 text-xs font-semibold sm:text-sm"
+
+                    data-learning-tab="pdfs"
+
+                    role="tab"
+
+                    aria-selected="false"
+
+                    aria-controls="panel-pdfs"
+
+                    tabindex="-1"
+
+                >
+
+                    <i class="ri-file-pdf-line text-base"></i>
+
+                    PDFs
+
+                    <span class="rounded-full bg-white/[0.07] px-1.5 py-0.5 text-[10px]">
+
+                        {{ pdfs|length }}
+
+                    </span>
+
+                </button>
+
+                <button
+
+                    type="button"
+
+                    class="learning-tab inline-flex shrink-0 items-center gap-2 rounded-lg px-3 py-2.5 text-xs font-semibold sm:text-sm"
+
+                    data-learning-tab="quizzes"
+
+                    role="tab"
+
+                    aria-selected="false"
+
+                    aria-controls="panel-quizzes"
+
+                    tabindex="-1"
+
+                >
+
+                    <i class="ri-questionnaire-line text-base"></i>
+
+                    Quizzes
+
+                    <span class="rounded-full bg-white/[0.07] px-1.5 py-0.5 text-[10px]">
+
+                        {{ quizzes|length }}
+
+                    </span>
+
+                </button>
+
+                <button
+
+                    type="button"
+
+                    class="learning-tab inline-flex shrink-0 items-center gap-2 rounded-lg px-3 py-2.5 text-xs font-semibold sm:text-sm"
+
+                    data-learning-tab="live"
+
+                    role="tab"
+
+                    aria-selected="false"
+
+                    aria-controls="panel-live"
+
+                    tabindex="-1"
+
+                >
+
+                    <i class="ri-live-line text-base"></i>
+
+                    Live Classes
+
+                </button>
+
+                <button
+
+                    type="button"
+
+                    class="learning-tab inline-flex shrink-0 items-center gap-2 rounded-lg px-3 py-2.5 text-xs font-semibold sm:text-sm"
+
+                    data-learning-tab="comments"
+
+                    role="tab"
+
+                    aria-selected="false"
+
+                    aria-controls="panel-comments"
+
+                    tabindex="-1"
+
+                >
+
+                    <i class="ri-chat-3-line text-base"></i>
+
+                    Comments
+
+                </button>
+
+            </div>
+
+            <!-- ---------------------------------------------
+
+                 VIDEOS PANEL
+
+            ---------------------------------------------- -->
+
+            <section
+
+                id="panel-videos"
+
+                class="learning-panel min-h-0 min-w-0 flex-1 overflow-y-auto p-2 sm:p-3 lg:p-4"
+
+                data-learning-panel="videos"
+
+                role="tabpanel"
+
+            >
+
+                {% if videos %}
+
+                    {% with first_video=videos.0 %}
+
+                        <div
+
+                            class="
+
+                                learning-media
+
+                                overflow-hidden
+
+                                rounded-xl
+
+                            "
+
+                        >
+
+                            {% if first_video.video_file %}
+
+                                <video
+
+                                    id="learning-video-player"
+
+                                    class="
+
+                                        block
+
+                                        aspect-video
+
+                                        w-full
+
+                                        max-h-[calc(100dvh-14rem)]
+
+                                        bg-black
+
+                                        object-contain
+
+                                    "
+
+                                    controls
+
+                                    playsinline
+
+                                    preload="metadata"
+
+                                    controlslist="nodownload"
+
+                                >
+
+                                    <source
+
+                                        src="{{ first_video.video_file.url }}"
+
+                                    >
+
+                                    Your browser does not support HTML video.
+
+                                </video>
+
+                            {% else %}
+
+                                <div class="flex aspect-video items-center justify-center p-6 text-center">
+
+                                    <div>
+
+                                        <i class="ri-video-off-line text-4xl text-slate-500"></i>
+
+                                        <p class="mt-3 text-sm text-slate-300">
+
+                                            This video file is unavailable.
+
+                                        </p>
+
+                                    </div>
+
+                                </div>
+
+                            {% endif %}
+
+                        </div>
+
+                        <div class="mt-2">
+
+                            <p class="text-xs font-medium text-cyan-400">
+
+                                Now learning
+
+                            </p>
+
+                            <h2
+
+                                id="learning-video-title"
+
+                                class="mt-1 break-words text-lg font-bold text-white sm:text-xl"
+
+                            >
+
+                                {{ first_video.video_name }}
+
+                            </h2>
+
+                            <p
+
+                                id="learning-video-description"
+
+                                class="mt-1 whitespace-pre-line text-sm leading-5 text-slate-400"
+
+                            >
+
+                                {{ first_video.video_description|default:"No description has been added for this video." }}
+
+                            </p>
+
+                        </div>
+
+                    {% endwith %}
+
+                    <!-- VIDEO LIST -->
+
+                    <div class="mt-3">
+
+                        <div class="mb-2 flex items-center justify-between gap-3">
+
+                            <h3 class="text-sm font-bold text-white">
+
+                                Chapter videos
+
+                            </h3>
+
+                            <span class="text-xs text-slate-500">
+
+                                {{ videos|length }} published
+
+                            </span>
+
+                        </div>
+
+                        <div class="learning-scroll learning-video-carousel">
+
+                            {% for video in videos %}
+
+                                <button
+
+                                    type="button"
+
+                                    class="learning-video-card {% if forloop.first %}active{% endif %}"
+
+                                    data-video-item
+
+                                    data-video-key="{{ video.pk }}"
+
+                                    data-video-url="{% if video.video_file %}{{ video.video_file.url }}{% endif %}"
+
+                                    data-video-name="{{ video.video_name|escape }}"
+
+                                    data-video-description="{{ video.video_description|default:'No description has been added for this video.'|escape }}"
+
+                                    aria-pressed="{% if forloop.first %}true{% else %}false{% endif %}"
+
+                                >
+
+                                    <span class="video-selected-badge" aria-label="Selected video">
+
+                                        <i class="ri-check-line text-xs font-black"></i>
+
+                                    </span>
+
+                                    <span class="learning-video-thumbnail block">
+
+                                        {% if video.video_file %}
+
+                                            <video muted playsinline preload="metadata" src="{{ video.video_file.url }}" aria-hidden="true"></video>
+
+                                        {% else %}
+
+                                            <span class="flex h-full items-center justify-center text-3xl text-slate-500">
+
+                                                <i class="ri-video-off-line"></i>
+
+                                            </span>
+
+                                        {% endif %}
+
+                                        <span class="thumbnail-play"><i class="ri-play-circle-line"></i></span>
+
+                                        <span class="learning-video-order">{{ video.video_order|default:forloop.counter }}</span>
+
+                                    </span>
+
+                                    <span class="block p-3">
+
+                                        <span class="block truncate text-xs font-bold text-slate-100">
+
+                                            {{ forloop.counter }}. {{ video.video_name }}
+
+                                        </span>
+
+                                        <span class="mt-1 block truncate text-[10px] text-slate-400">
+
+                                            {{ video.video_description|default:"Video lesson" }}
+
+                                        </span>
+
+                                    </span>
+
+                                </button>
+
+                            {% endfor %}
+
+                        </div>
+
+                    </div>
+
+                {% else %}
+
+                    <div class="flex min-h-[300px] flex-col items-center justify-center px-5 py-12 text-center">
+
+                        <div class="flex h-16 w-16 items-center justify-center rounded-2xl bg-cyan-400/10 text-3xl text-cyan-400">
+
+                            <i class="ri-video-line"></i>
+
+                        </div>
+
+                        <h2 class="mt-5 text-base font-bold text-white">
+
+                            No published videos yet
+
+                        </h2>
+
+                        <p class="mt-2 max-w-sm text-sm leading-6 text-slate-400">
+
+                            Published video lessons for this chapter will appear here when they are available.
+
+                        </p>
+
+                    </div>
+
+                {% endif %}
+
+            </section>
+
+            <!-- ---------------------------------------------
+
+                 PDF PANEL
+
+            ---------------------------------------------- -->
+
+            <!-- ---------------------------------------------
+                 PDF PANEL
+            ---------------------------------------------- -->
+            <section
+                id="panel-pdfs"
+                class="learning-panel hidden min-h-0 min-w-0 flex-1 overflow-y-auto p-2 sm:p-3 lg:p-4"
+                data-learning-panel="pdfs"
+                role="tabpanel"
+                hidden
+            >
+                {% if pdfs %}
+                    {% with first_pdf=pdfs.0 %}
+                        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                            <div class="flex min-w-0 items-center gap-3">
+                                <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-rose-400/10 text-2xl text-rose-400">
+                                    <i class="ri-file-pdf-line"></i>
+                                </div>
+                                <div class="min-w-0">
+                                    <h2 id="learning-pdf-title" class="break-words text-base font-bold text-white">
+                                        {{ first_pdf.pdf_name }}
+                                    </h2>
+                                    <p class="mt-1 text-xs text-slate-500">Chapter PDF resource</p>
+                                </div>
+                            </div>
+
+                            {% if first_pdf.pdf_file %}
+                                <a
+                                    id="learning-pdf-download"
+                                    href="{{ first_pdf.pdf_file.url }}"
+                                    download
+                                    class="learning-action inline-flex w-full shrink-0 items-center justify-center gap-2 rounded-lg bg-cyan-400 px-3 py-2.5 text-sm font-bold text-slate-950 hover:bg-cyan-300 sm:w-auto sm:px-4"
+                                    aria-label="Download {{ first_pdf.pdf_name }}"
+                                >
+                                    <i class="ri-download-2-line text-lg"></i>
+                                    <span>Download PDF</span>
+                                </a>
+                            {% else %}
+                                <span class="inline-flex w-full shrink-0 items-center justify-center gap-2 rounded-lg bg-slate-700 px-3 py-2.5 text-sm font-semibold text-slate-400 sm:w-auto">
+                                    <i class="ri-download-2-line text-lg"></i>
+                                    PDF unavailable
+                                </span>
+                            {% endif %}
+                        </div>
+
+                        <div class="learning-media mt-3 overflow-hidden rounded-xl">
+                            <a
+                                id="learning-pdf-open"
+                                href="{% if first_pdf.pdf_file %}{{ first_pdf.pdf_file.url }}{% else %}#{% endif %}"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                class="learning-pdf-preview group relative flex min-h-[220px] items-center justify-center overflow-hidden bg-slate-950 sm:min-h-[280px] lg:min-h-[320px]"
+                                aria-label="Open {{ first_pdf.pdf_name }} in a new tab"
+                            >
+                                <img
+                                        id="learning-pdf-thumbnail"
+                                        src="{% if first_pdf.pdf_thumbnail %}{{ first_pdf.pdf_thumbnail.url }}{% else %}{% static 'courses/images/default_pdf_thumbnail.png' %}{% endif %}"
+                                        alt="Preview of {{ first_pdf.pdf_name }}"
+                                        class="learning-pdf-preview-image block max-h-[min(58dvh,560px)] w-full object-contain"
+                                    >
+                                    <div id="learning-pdf-thumbnail-fallback" class="hidden min-h-[220px] w-full flex-col items-center justify-center gap-3 px-6 py-10 text-center">
+                                        <i class="ri-file-pdf-line text-6xl text-rose-400"></i>
+                                        <span class="text-sm font-semibold text-slate-200">PDF document</span>
+                                    </div>
+                                <span class="absolute inset-x-0 bottom-0 flex items-center justify-center gap-2 bg-slate-950/85 px-3 py-3 text-xs font-semibold text-cyan-300 transition group-hover:bg-slate-900 sm:text-sm">
+                                    <i class="ri-external-link-line"></i>
+                                    Open PDF in new tab
+                                </span>
+                            </a>
+                        </div>
+
+                        <p id="learning-pdf-description" class="mt-2 whitespace-pre-line break-words text-sm leading-5 text-slate-400">
+                            {{ first_pdf.pdf_description|default:"No description has been added for this PDF." }}
+                        </p>
+                    {% endwith %}
+
+                    <!-- PDF SELECTOR: horizontal scroll like the video carousel -->
+                    <div class="mt-4">
+                        <div class="mb-2 flex items-center justify-between gap-3">
+                            <h3 class="text-sm font-bold text-white">Chapter PDFs</h3>
+                            <span class="shrink-0 text-xs text-slate-500">{{ pdfs|length }} published</span>
+                        </div>
+
+                        <div class="learning-scroll learning-pdf-carousel">
+                            {% for pdf in pdfs %}
+                                <button
+                                    type="button"
+                                    class="learning-pdf-card {% if forloop.first %}active{% endif %}"
+                                    data-pdf-item
+                                    data-pdf-key="{{ pdf.pk }}"
+                                    data-pdf-url="{% if pdf.pdf_file %}{{ pdf.pdf_file.url }}{% endif %}"
+                                    data-pdf-name="{{ pdf.pdf_name|escape }}"
+                                    data-pdf-description="{{ pdf.pdf_description|default:'No description has been added for this PDF.'|escape }}"
+                                    data-pdf-thumbnail="{% if pdf.pdf_thumbnail %}{{ pdf.pdf_thumbnail.url }}{% else %}{% static 'courses/images/default_pdf_thumbnail.png' %}{% endif %}"
+                                    aria-pressed="{% if forloop.first %}true{% else %}false{% endif %}"
+                                >
+                                    <span class="pdf-selected-badge" aria-label="Selected PDF">
+                                        <i class="ri-check-line"></i>
+                                    </span>
+                                    <span class="learning-pdf-card-thumbnail">
+                                        <img
+                                            src="{% if pdf.pdf_thumbnail %}{{ pdf.pdf_thumbnail.url }}{% else %}{% static 'courses/images/default_pdf_thumbnail.png' %}{% endif %}"
+                                            alt="Thumbnail for {{ pdf.pdf_name }}"
+                                            loading="lazy"
+                                        >
+                                        <span class="learning-video-order">{{ pdf.pdf_order|default:forloop.counter }}</span>
+                                    </span>
+                                    <span class="block p-3 text-left">
+                                        <span class="block break-words text-xs font-bold leading-5 text-slate-100">
+                                            {{ forloop.counter }}. {{ pdf.pdf_name }}
+                                        </span>
+                                        <span class="mt-1 block text-[10px] text-slate-400">PDF resource</span>
+                                    </span>
+                                </button>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% else %}
+                    <div class="flex min-h-[260px] flex-col items-center justify-center px-5 py-12 text-center">
+                        <div class="flex h-16 w-16 items-center justify-center rounded-2xl bg-rose-400/10 text-3xl text-rose-400">
+                            <i class="ri-file-pdf-line"></i>
+                        </div>
+                        <h2 class="mt-5 text-base font-bold text-white">No published PDFs yet</h2>
+                        <p class="mt-2 max-w-sm text-sm leading-6 text-slate-400">
+                            Study notes and downloadable PDF resources will appear here when published.
+                        </p>
+                    </div>
+                {% endif %}
+            </section>
+
+            <section
+
+                id="panel-quizzes"
+
+                class="learning-panel hidden min-h-0 min-w-0 flex-1 overflow-y-auto p-2 sm:p-3 lg:p-4"
+
+                data-learning-panel="quizzes"
+
+                role="tabpanel"
+
+                hidden
+
+            >
+
+                <div class="mb-5">
+
+                    <p class="text-xs font-semibold uppercase tracking-wider text-cyan-400">
+
+                        Check your understanding
+
+                    </p>
+
+                    <h2 class="mt-1 text-xl font-bold text-white">
+
+                        Chapter quizzes
+
+                    </h2>
+
+                    <p class="mt-2 text-sm leading-6 text-slate-400">
+
+                        Choose a published quiz to review its details.
+
+                    </p>
+
+                </div>
+
+                {% if quizzes %}
+
+                    <div class="space-y-3">
+
+                        {% for quiz in quizzes %}
+
+                            <article class="rounded-xl bg-white/[0.035] p-4 transition hover:bg-white/[0.055]" data-quiz-detail="{{ quiz.pk }}">
+
+                                <div class="flex items-start gap-3">
+
+                                    <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-violet-400/10 text-xl text-violet-300">
+
+                                        <i class="ri-questionnaire-line"></i>
+
+                                    </div>
+
+                                    <div class="min-w-0 flex-1">
+
+                                        <h3 class="break-words text-sm font-bold text-white sm:text-base">
+
+                                            {{ quiz.quiz_name }}
+
+                                        </h3>
+
+                                        <p class="mt-1 whitespace-pre-line text-sm leading-6 text-slate-400">
+
+                                            {{ quiz.quiz_description|default:"Test your understanding of this chapter." }}
+
+                                        </p>
+
+                                    </div>
+
+                                    <span class="shrink-0 rounded-full bg-emerald-400/10 px-2.5 py-1 text-[10px] font-bold text-emerald-400">
+
+                                        Published
+
+                                    </span>
+
+                                </div>
+
+                                <div class="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-xs text-slate-400">
+
+                                    <span class="inline-flex items-center gap-1.5">
+
+                                        <i class="ri-question-line text-cyan-400"></i>
+
+                                        {{ quiz.questions.count }} questions
+
+                                    </span>
+
+                                    <span class="inline-flex items-center gap-1.5">
+
+                                        <i class="ri-time-line text-cyan-400"></i>
+
+                                        {{ quiz.answering_time }} minutes
+
+                                    </span>
+
+                                    <span class="inline-flex items-center gap-1.5">
+
+                                        <i class="ri-repeat-line text-cyan-400"></i>
+
+                                        {{ quiz.maximum_attempts }} attempt{{ quiz.maximum_attempts|pluralize }}
+
+                                    </span>
+
+                                    <span class="inline-flex items-center gap-1.5">
+
+                                        <i class="ri-medal-line text-cyan-400"></i>
+
+                                        {{ quiz.total_marks }} marks
+
+                                    </span>
+
+                                </div>
+
+                            </article>
+
+                        {% endfor %}
+
+                    </div>
+
+                    <div class="mt-5 flex gap-3 rounded-xl bg-amber-400/[0.07] p-4">
+
+                        <i class="ri-information-line mt-0.5 shrink-0 text-lg text-amber-300"></i>
+
+                        <p class="text-xs leading-6 text-slate-300">
+
+                            Quiz details are displayed here. The quiz-taking, answer submission, attempt tracking, and results workflow must be connected to dedicated Django views before students can start an attempt.
+
+                        </p>
+
+                    </div>
+
+                {% else %}
+
+                    <div class="flex min-h-[260px] flex-col items-center justify-center px-5 py-12 text-center">
+
+                        <div class="flex h-16 w-16 items-center justify-center rounded-2xl bg-violet-400/10 text-3xl text-violet-300">
+
+                            <i class="ri-questionnaire-line"></i>
+
+                        </div>
+
+                        <h2 class="mt-5 text-base font-bold text-white">
+
+                            No published quizzes yet
+
+                        </h2>
+
+                        <p class="mt-2 max-w-sm text-sm leading-6 text-slate-400">
+
+                            Published quizzes for this chapter will appear here when they are available.
+
+                        </p>
+
+                    </div>
+
+                {% endif %}
+
+            </section>
+
+            <!-- ---------------------------------------------
+
+                 LIVE CLASSES PANEL
+
+            ---------------------------------------------- -->
+
+            <section
+
+                id="panel-live"
+
+                class="learning-panel hidden min-h-0 min-w-0 flex-1 overflow-y-auto p-2 sm:p-3 lg:p-4"
+
+                data-learning-panel="live"
+
+                role="tabpanel"
+
+                hidden
+
+            >
+
+                <div class="mb-5">
+
+                    <p class="text-xs font-semibold uppercase tracking-wider text-cyan-400">
+
+                        Learn with your teacher
+
+                    </p>
+
+                    <h2 class="mt-1 text-xl font-bold text-white">
+
+                        Live classes
+
+                    </h2>
+
+                    <p class="mt-2 text-sm leading-6 text-slate-400">
+
+                        Upcoming sessions, ongoing classes, and available recordings will be listed here.
+
+                    </p>
+
+                </div>
+
+                <div class="flex min-h-[260px] flex-col items-center justify-center px-5 py-12 text-center">
+
+                    <div class="flex h-16 w-16 items-center justify-center rounded-2xl bg-cyan-400/10 text-3xl text-cyan-400">
+
+                        <i class="ri-live-line"></i>
+
+                    </div>
+
+                    <h3 class="mt-5 text-base font-bold text-white">
+
+                        Live classes are not connected yet
+
+                    </h3>
+
+                    <p class="mt-2 max-w-md text-sm leading-6 text-slate-400">
+
+                        This area is ready for the live-session integration. Once the live-session model and student access views are implemented, this section can show upcoming, ongoing, and ended sessions with the appropriate Join Class or View Recording actions.
+
+                    </p>
+
+                </div>
+
+            </section>
+
+            <!-- ---------------------------------------------
+
+                 COMMENTS PANEL
+
+            ---------------------------------------------- -->
+
+            <section
+
+                id="panel-comments"
+
+                class="learning-panel hidden min-h-0 min-w-0 flex-1 overflow-y-auto p-2 sm:p-3 lg:p-4"
+
+                data-learning-panel="comments"
+
+                role="tabpanel"
+
+                hidden
+
+            >
+
+                <div class="mb-5">
+
+                    <p class="text-xs font-semibold uppercase tracking-wider text-cyan-400">
+
+                        Learning discussion
+
+                    </p>
+
+                    <h2 class="mt-1 text-xl font-bold text-white">
+
+                        Questions and comments
+
+                    </h2>
+
+                    <p class="mt-2 text-sm leading-6 text-slate-400">
+
+                        A dedicated space for chapter-related questions and discussion.
+
+                    </p>
+
+                </div>
+
+                <div class="flex min-h-[260px] flex-col items-center justify-center px-5 py-12 text-center">
+
+                    <div class="flex h-16 w-16 items-center justify-center rounded-2xl bg-cyan-400/10 text-3xl text-cyan-400">
+
+                        <i class="ri-chat-3-line"></i>
+
+                    </div>
+
+                    <h3 class="mt-5 text-base font-bold text-white">
+
+                        Discussion is not connected yet
+
+                    </h3>
+
+                    <p class="mt-2 max-w-md text-sm leading-6 text-slate-400">
+
+                        The comment and reply interface needs a Django model and server-side views to save discussions and enforce student access. No comments will be shown until that functionality is connected.
+
+                    </p>
+
+                </div>
+
+            </section>
+
+        </main>
+
+        <!-- =================================================
+
+             RIGHT: CHAPTER CONTENT LIST
+
+        ================================================== -->
+
+        <aside
+
+            class="
+
+                flex
+
+                max-h-[360px]
+
+                min-h-0
+
+                shrink-0
+
+                flex-col
+
+                bg-[#080f1c]
+
+                lg:max-h-none
+
+                lg:w-[280px]
+
+                lg:border-l
+
+                lg:border-white/[0.06]
+
+                xl:w-[310px]
+
+            "
+
+        >
+
+            <div class="flex shrink-0 items-center justify-between gap-3 px-3 py-2.5">
+
+                <div>
+
+                    <h2 class="text-sm font-bold text-white sm:text-base">
+
+                        Chapter content
+
+                    </h2>
+
+                    <p class="mt-1 text-xs text-slate-500">
+
+                        Published learning materials
+
+                    </p>
+
+                </div>
+
+                <i class="ri-list-check-2 text-xl text-cyan-400"></i>
+
+            </div>
+
+            <!-- CONTENT COUNTS -->
+
+            <div class="grid shrink-0 grid-cols-3 gap-2 px-3 pb-2">
+
+                <div class="rounded-lg bg-white/[0.035] px-2 py-2 text-center">
+
+                    <p class="text-base font-bold text-white">
+
+                        {{ videos|length }}
+
+                    </p>
+
+                    <p class="mt-1 text-[10px] text-slate-500">
+
+                        Videos
+
+                    </p>
+
+                </div>
+
+                <div class="rounded-lg bg-white/[0.035] px-2 py-2 text-center">
+
+                    <p class="text-base font-bold text-white">
+
+                        {{ pdfs|length }}
+
+                    </p>
+
+                    <p class="mt-1 text-[10px] text-slate-500">
+
+                        PDFs
+
+                    </p>
+
+                </div>
+
+                <div class="rounded-lg bg-white/[0.035] px-2 py-2 text-center">
+
+                    <p class="text-base font-bold text-white">
+
+                        {{ quizzes|length }}
+
+                    </p>
+
+                    <p class="mt-1 text-[10px] text-slate-500">
+
+                        Quizzes
+
+                    </p>
+
+                </div>
+
+            </div>
+
+            <!-- RIGHT SIDE CONTENT TYPE SELECTOR -->
+
+            <div class="learning-scroll grid shrink-0 grid-cols-4 gap-1 px-3 pb-2">
+
+                <button
+
+                    type="button"
+
+                    data-learning-tab="videos"
+
+                    class="learning-tab active min-w-0 rounded-md px-1 py-2 text-center text-[11px] font-semibold"
+
+                    aria-selected="true"
+
+                >
+
+                    Videos
+
+                </button>
+
+                <button
+
+                    type="button"
+
+                    data-learning-tab="pdfs"
+
+                    class="learning-tab min-w-0 rounded-md px-1 py-2 text-center text-[11px] font-semibold"
+
+                    aria-selected="false"
+
+                    tabindex="-1"
+
+                >
+
+                    PDFs
+
+                </button>
+
+                <button
+
+                    type="button"
+
+                    data-learning-tab="quizzes"
+
+                    class="learning-tab min-w-0 rounded-md px-1 py-2 text-center text-[11px] font-semibold"
+
+                    aria-selected="false"
+
+                    tabindex="-1"
+
+                >
+
+                    Quizzes
+
+                </button>
+
+                <button
+
+                    type="button"
+
+                    data-learning-tab="live"
+
+                    class="learning-tab min-w-0 rounded-md px-1 py-2 text-center text-[11px] font-semibold"
+
+                    aria-selected="false"
+
+                    tabindex="-1"
+
+                >
+
+                    Live
+
+                </button>
+
+            </div>
+
+            <!-- RIGHT SIDE VIDEO LIST -->
+
+            <div
+
+                class="learning-scroll min-h-0 flex-1 overflow-y-auto px-2 pb-2"
+
+                data-learning-list="videos"
+
+            >
+
+                {% if videos %}
+
+                    <div class="space-y-1">
+
+                        {% for video in videos %}
+
+                            <button
+
+                                type="button"
+
+                                class="
+
+                                    learning-item
+
+                                    {% if forloop.first %}active{% endif %}
+
+                                    flex
+
+                                    w-full
+
+                                    items-center
+
+                                    gap-3
+
+                                    rounded-lg
+
+                                    px-3
+
+                                    py-3
+
+                                    text-left
+
+                                "
+
+                                data-video-item
+
+                                data-video-key="{{ video.pk }}"
+
+                                data-video-url="{% if video.video_file %}{{ video.video_file.url }}{% endif %}"
+
+                                data-video-name="{{ video.video_name|escape }}"
+
+                                data-video-description="{{ video.video_description|default:'No description has been added for this video.'|escape }}"
+
+                                aria-pressed="{% if forloop.first %}true{% else %}false{% endif %}"
+
+                            >
+
+                                <i class="ri-play-circle-line shrink-0 text-xl text-cyan-400"></i>
+
+                                <span class="min-w-0 flex-1">
+
+                                    <span class="block break-words text-xs font-semibold leading-5 text-slate-200">
+
+                                        {{ forloop.counter }}. {{ video.video_name }}
+
+                                    </span>
+
+                                    <span class="mt-1 block text-[10px] text-slate-500">
+
+                                        Published video
+
+                                    </span>
+
+                                </span>
+
+                            </button>
+
+                        {% endfor %}
+
+                    </div>
+
+                {% else %}
+
+                    <p class="px-2 py-8 text-center text-xs leading-5 text-slate-500">
+
+                        No published videos are available.
+
+                    </p>
+
+                {% endif %}
+
+            </div>
+
+            <!-- RIGHT SIDE PDF LIST -->
+
+            <div
+
+                class="learning-scroll hidden min-h-0 flex-1 overflow-y-auto px-3 pb-3"
+
+                data-learning-list="pdfs"
+
+                hidden
+
+            >
+
+                {% if pdfs %}
+
+                    <div class="space-y-1">
+
+                        {% for pdf in pdfs %}
+
+                            <div
+
+                                class="learning-item {% if forloop.first %}active{% endif %} flex items-center gap-2 rounded-lg px-3 py-3"
+
+                                data-pdf-item
+
+                                data-pdf-key="{{ pdf.pk }}" data-pdf-url="{% if pdf.pdf_file %}{{ pdf.pdf_file.url }}{% endif %}"
+
+                                data-pdf-name="{{ pdf.pdf_name|escape }}"
+
+                                data-pdf-description="{{ pdf.pdf_description|default:'No description has been added for this PDF.'|escape }}" data-pdf-thumbnail="{% if pdf.pdf_thumbnail %}{{ pdf.pdf_thumbnail.url }}{% else %}{% static 'courses/images/default_pdf_thumbnail.png' %}{% endif %}" aria-pressed="{% if forloop.first %}true{% else %}false{% endif %}"
+
+                            >
+
+                                <button
+
+                                    type="button"
+
+                                    data-select-pdf
+
+                                    class="flex min-w-0 flex-1 items-center gap-3 text-left"
+
+                                >
+
+                                    <i class="ri-file-pdf-line shrink-0 text-xl text-rose-400"></i>
+
+                                    <span class="min-w-0 flex-1">
+
+                                        <span class="block break-words text-xs font-semibold leading-5 text-slate-200">
+
+                                            {{ forloop.counter }}. {{ pdf.pdf_name }}
+
+                                        </span>
+
+                                        <span class="mt-1 block text-[10px] text-slate-500">
+
+                                            PDF resource
+
+                                        </span>
+
+                                    </span>
+
+                                </button>
+
+                                {% if pdf.pdf_file %}
+
+                                    <a
+
+                                        href="{{ pdf.pdf_file.url }}"
+
+                                        download
+
+                                        target="\\_blank"
+
+                                        rel="noopener"
+
+                                        class="shrink-0 p-1.5 text-slate-400 hover:text-cyan-400"
+
+                                        aria-label="Download {{ pdf.pdf_name }}"
+
+                                    >
+
+                                        <i class="ri-download-2-line"></i>
+
+                                    </a>
+
+                                {% endif %}
+
+                            </div>
+
+                        {% endfor %}
+
+                    </div>
+
+                {% else %}
+
+                    <p class="px-2 py-8 text-center text-xs leading-5 text-slate-500">
+
+                        No published PDFs are available.
+
+                    </p>
+
+                {% endif %}
+
+            </div>
+
+            <!-- RIGHT SIDE QUIZ LIST -->
+
+            <div
+
+                class="learning-scroll hidden min-h-0 flex-1 overflow-y-auto px-3 pb-3"
+
+                data-learning-list="quizzes"
+
+                hidden
+
+            >
+
+                {% if quizzes %}
+
+                    <div class="space-y-1">
+
+                        {% for quiz in quizzes %}
+
+                            <button type="button" class="learning-item block w-full rounded-lg px-3 py-3 text-left" data-quiz-item="{{ quiz.pk }}" aria-pressed="false">
+
+                                <div class="flex items-start gap-3">
+
+                                    <i class="ri-questionnaire-line mt-0.5 shrink-0 text-lg text-violet-300"></i>
+
+                                    <div class="min-w-0">
+
+                                        <h3 class="break-words text-xs font-semibold leading-5 text-slate-200">
+
+                                            {{ forloop.counter }}. {{ quiz.quiz_name }}
+
+                                        </h3>
+
+                                        <p class="mt-1 text-[10px] leading-4 text-slate-500">
+
+                                            {{ quiz.questions.count }} questions · {{ quiz.answering_time }} minutes
+
+                                        </p>
+
+                                    </div>
+
+                                </div>
+
+                            </button>
+
+                        {% endfor %}
+
+                    </div>
+
+                {% else %}
+
+                    <p class="px-2 py-8 text-center text-xs leading-5 text-slate-500">
+
+                        No published quizzes are available.
+
+                    </p>
+
+                {% endif %}
+
+            </div>
+
+            <!-- RIGHT SIDE LIVE LIST -->
+
+            <div
+
+                class="learning-scroll hidden min-h-0 flex-1 overflow-y-auto px-3 pb-3"
+
+                data-learning-list="live"
+
+                hidden
+
+            >
+
+                <div class="px-2 py-8 text-center">
+
+                    <i class="ri-live-line text-2xl text-cyan-400"></i>
+
+                    <p class="mt-3 text-xs font-semibold text-slate-300">
+
+                        Live sessions are not connected yet
+
+                    </p>
+
+                    <p class="mt-2 text-[11px] leading-5 text-slate-500">
+
+                        Upcoming and ongoing sessions will appear here after live-session support is added.
+
+                    </p>
+
+                </div>
+
+            </div>
+
+            </aside>
+
+    </section>
+
+</div>
+
+<!-- =========================================================
+
+     SMALL JAVASCRIPT
+
+     Tabs + selecting a video or PDF.
+
+     No client-side business logic.
+
+========================================================== -->
+
+<script>
+
+(function () {
+
+    "use strict";
+
+    const workspace = document.querySelector(".learning-workspace");
+
+    if (!workspace) {
+
+        return;
+
+    }
+
+    const tabButtons = workspace.querySelectorAll("[data-learning-tab]");
+
+    const panels = workspace.querySelectorAll("[data-learning-panel]");
+
+    const listPanels = workspace.querySelectorAll("[data-learning-list]");
+
+    function activateTab(tabName) {
+
+        tabButtons.forEach(function (button) {
+
+            const isActive = button.dataset.learningTab === tabName;
+
+            button.classList.toggle("active", isActive);
+
+            button.setAttribute("aria-selected", String(isActive));
+
+            button.tabIndex = isActive ? 0 : -1;
+
+        });
+
+        panels.forEach(function (panel) {
+
+            const isActive = panel.dataset.learningPanel === tabName;
+
+            panel.hidden = !isActive;
+
+            panel.classList.toggle("hidden", !isActive);
+
+        });
+
+        listPanels.forEach(function (panel) {
+
+            const isActive = panel.dataset.learningList === tabName;
+
+            panel.hidden = !isActive;
+
+            panel.classList.toggle("hidden", !isActive);
+
+        });
+
+    }
+
+    tabButtons.forEach(function (button) {
+
+        button.addEventListener("click", function () {
+
+            activateTab(button.dataset.learningTab);
+
+        });
+
+    });
+
+    // ---------------------------------------------------------
+
+    // VIDEO SELECTION
+
+    // ---------------------------------------------------------
+
+    const videoPlayer = workspace.querySelector("#learning-video-player");
+
+    const videoTitle = workspace.querySelector("#learning-video-title");
+
+    const videoDescription = workspace.querySelector("#learning-video-description");
+
+    workspace.querySelectorAll("[data-video-item]").forEach(function (item) {
+
+        item.addEventListener("click", function () {
+
+            const videoUrl = item.dataset.videoUrl || "";
+
+            if (!videoPlayer || !videoUrl) {
+
+                return;
+
+            }
+
+            if (videoPlayer.currentSrc !== videoUrl) {
+
+                videoPlayer.pause();
+
+                videoPlayer.src = videoUrl;
+
+                videoPlayer.load();
+
+            }
+
+            if (videoTitle) {
+
+                videoTitle.textContent = item.dataset.videoName || "";
+
+            }
+
+            if (videoDescription) {
+
+                videoDescription.textContent = item.dataset.videoDescription || "";
+
+            }
+
+            // Sync the carousel card and right sidebar row by database ID.
+
+            const selectedVideoKey = item.dataset.videoKey || "";
+
+            workspace.querySelectorAll("[data-video-item]").forEach(function (other) {
+
+                const active = selectedVideoKey
+
+                    ? other.dataset.videoKey === selectedVideoKey
+
+                    : other === item;
+
+                other.classList.toggle("active", active);
+
+                other.setAttribute("aria-pressed", String(active));
+
+            });
+
+            activateTab("videos");
+
+        });
+
+    });
+
+    // ---------------------------------------------------------
+
+    // PDF SELECTION
+    // Keep the preview, thumbnail, open/download links, and both selectors synchronized.
+    const pdfTitle = workspace.querySelector("#learning-pdf-title");
+    const pdfDescription = workspace.querySelector("#learning-pdf-description");
+    const pdfDownload = workspace.querySelector("#learning-pdf-download");
+    const pdfOpen = workspace.querySelector("#learning-pdf-open");
+    const pdfThumbnail = workspace.querySelector("#learning-pdf-thumbnail");
+    const pdfThumbnailFallback = workspace.querySelector("#learning-pdf-thumbnail-fallback");
+
+    function selectPdf(item) {
+        if (!item) {
+            return;
+        }
+
+        const pdfUrl = item.dataset.pdfUrl || "";
+        if (!pdfUrl) {
+            return;
+        }
+
+        const pdfName = item.dataset.pdfName || "Chapter PDF";
+        const pdfDescriptionText =
+            item.dataset.pdfDescription || "No description has been added for this PDF.";
+        const pdfKey = item.dataset.pdfKey || "";
+        const thumbnailUrl = item.dataset.pdfThumbnail || "";
+
+        if (pdfTitle) {
+            pdfTitle.textContent = pdfName;
+        }
+
+        if (pdfDescription) {
+            pdfDescription.textContent = pdfDescriptionText;
+        }
+
+        if (pdfDownload) {
+            pdfDownload.href = pdfUrl;
+            pdfDownload.setAttribute("download", "");
+            pdfDownload.setAttribute("aria-label", "Download " + pdfName);
+        }
+
+        if (pdfOpen) {
+            pdfOpen.href = pdfUrl;
+            pdfOpen.setAttribute("target", "_blank");
+            pdfOpen.setAttribute("rel", "noopener noreferrer");
+            pdfOpen.setAttribute("aria-label", "Open " + pdfName + " in a new tab");
+        }
+
+        if (pdfThumbnail) {
+            if (thumbnailUrl) {
+                pdfThumbnail.src = thumbnailUrl;
+                pdfThumbnail.alt = "Preview of " + pdfName;
+                pdfThumbnail.classList.remove("hidden");
+                if (pdfThumbnailFallback) {
+                    pdfThumbnailFallback.classList.add("hidden");
+                }
+            } else {
+                pdfThumbnail.removeAttribute("src");
+                pdfThumbnail.alt = "";
+                pdfThumbnail.classList.add("hidden");
+                if (pdfThumbnailFallback) {
+                    pdfThumbnailFallback.classList.remove("hidden");
+                }
+            }
+
+            pdfThumbnail.onerror = function () {
+                pdfThumbnail.classList.add("hidden");
+                if (pdfThumbnailFallback) {
+                    pdfThumbnailFallback.classList.remove("hidden");
+                }
+            };
+        }
+
+        workspace.querySelectorAll("[data-pdf-item]").forEach(function (other) {
+            const samePdf = pdfKey
+                ? other.dataset.pdfKey === pdfKey
+                : other === item;
+            other.classList.toggle("active", samePdf);
+            other.setAttribute("aria-pressed", String(samePdf));
+        });
+
+        activateTab("pdfs");
+    }
+
+    workspace.querySelectorAll("[data-pdf-item]").forEach(function (item) {
+        item.addEventListener("click", function (event) {
+            if (event.target.closest("a")) {
+                return;
+            }
+            selectPdf(item);
+        });
+    });
+
+    // Keep keyboard navigation usable for the content tabs.
+
+    tabButtons.forEach(function (button) {
+
+        button.addEventListener("keydown", function (event) {
+
+            const keys = ["ArrowLeft", "ArrowRight", "Home", "End"];
+
+            if (!keys.includes(event.key)) {
+
+                return;
+
+            }
+
+            event.preventDefault();
+
+            const buttons = Array.from(tabButtons);
+
+            const currentIndex = buttons.indexOf(button);
+
+            let nextIndex = currentIndex;
+
+            if (event.key === "ArrowRight") {
+
+                nextIndex = (currentIndex + 1) % buttons.length;
+
+            } else if (event.key === "ArrowLeft") {
+
+                nextIndex = (currentIndex - 1 + buttons.length) % buttons.length;
+
+            } else if (event.key === "Home") {
+
+                nextIndex = 0;
+
+            } else if (event.key === "End") {
+
+                nextIndex = buttons.length - 1;
+
+            }
+
+            const nextButton = buttons[nextIndex];
+
+            nextButton.focus();
+
+            activateTab(nextButton.dataset.learningTab);
+
+        });
+
+    });
+
+})();
+
+</script>
+
+{% endblock %}
