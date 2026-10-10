@@ -1,0 +1,3061 @@
+{% extends "students/base_student.html" %}
+
+{% load static %}
+
+{% block title %}
+
+    {{ chapter.chapter_name }} | NeoLearn
+
+{% endblock %}
+
+{% block student_content %}
+
+<style>
+
+    .learning-workspace {
+
+        color: #e2e8f0;
+
+        color-scheme: dark;
+
+    }
+
+    .learning-workspace button,
+
+    .learning-workspace a {
+
+        -webkit-tap-highlight-color: transparent;
+
+    }
+
+    .learning-tab {
+
+        color: #94a3b8;
+
+        transition: background-color .18s ease, color .18s ease;
+
+    }
+
+    .learning-tab:hover {
+
+        color: #e2e8f0;
+
+        background: rgba(255, 255, 255, .045);
+
+    }
+
+    .learning-tab.active {
+
+        color: #22d3ee;
+
+        background: rgba(6, 182, 212, .12);
+
+        box-shadow: inset 0 -2px #22d3ee;
+
+    }
+
+    .learning-item {
+
+        transition: background-color .18s ease, color .18s ease;
+
+    }
+
+    .learning-item:hover {
+
+        background: rgba(255, 255, 255, .045);
+
+    }
+
+    .learning-item.active {
+
+        background: rgba(6, 182, 212, .10);
+
+        box-shadow: inset 3px 0 #22d3ee;
+
+    }
+
+    .learning-item[data-pdf-item].active {
+
+        outline: 1px solid rgba(34, 211, 238, .45);
+
+        outline-offset: -1px;
+
+    }
+
+    .learning-scroll {
+
+        scrollbar-width: thin;
+
+        scrollbar-color: #334155 transparent;
+
+    }
+
+    .learning-scroll::-webkit-scrollbar {
+
+        width: 6px;
+
+        height: 6px;
+
+    }
+
+    .learning-scroll::-webkit-scrollbar-track {
+
+        background: transparent;
+
+    }
+
+    .learning-scroll::-webkit-scrollbar-thumb {
+
+        background: #334155;
+
+        border-radius: 20px;
+
+    }
+
+    .learning-video-carousel {
+
+        display: flex; gap: 10px; overflow-x: auto; overflow-y: hidden;
+
+        padding: 3px 2px 8px; scroll-snap-type: x mandatory;
+
+        overscroll-behavior-x: contain; scrollbar-width: thin;
+
+    }
+
+    .learning-pdf-carousel {
+
+        display: flex;
+
+        gap: 10px;
+
+        overflow-x: auto;
+
+        overflow-y: hidden;
+
+        padding: 3px 2px 8px;
+
+        scroll-snap-type: x mandatory;
+
+        overscroll-behavior-x: contain;
+
+    }
+
+    .learning-pdf-card {
+
+        position: relative;
+
+        flex: 0 0 220px;
+
+        min-width: 0;
+
+        overflow: hidden;
+
+        border: 1px solid #263449;
+
+        border-radius: 12px;
+
+        background: #0f172a;
+
+        scroll-snap-align: start;
+
+        transition: border-color .18s ease, background .18s ease, box-shadow .18s ease;
+
+    }
+
+    .learning-pdf-card:hover {
+
+        border-color: #0891b2;
+
+        background: #111d30;
+
+    }
+
+    .learning-pdf-card.active {
+
+        border: 2px solid #22d3ee;
+
+        background: rgba(6, 182, 212, .10);
+
+        box-shadow: 0 0 0 2px rgba(34, 211, 238, .10);
+
+    }
+
+    .pdf-selected-badge {
+
+        position: absolute;
+
+        top: 8px;
+
+        right: 8px;
+
+        z-index: 2;
+
+        display: none;
+
+        width: 23px;
+
+        height: 23px;
+
+        align-items: center;
+
+        justify-content: center;
+
+        border-radius: 999px;
+
+        background: #06b6d4;
+
+        color: #04202a;
+
+    }
+
+    .learning-pdf-card.active .pdf-selected-badge {
+
+        display: flex;
+
+    }
+
+    .learning-pdf-card-thumbnail {
+
+        position: relative;
+
+        display: flex;
+
+        height: 120px;
+
+        overflow: hidden;
+
+        align-items: center;
+
+        justify-content: center;
+
+        background: #020617;
+
+    }
+
+    .learning-pdf-card-thumbnail > img {
+
+        display: block;
+
+        width: 100%;
+
+        height: 100%;
+
+        object-fit: contain;
+
+        background: #020617;
+
+    }
+
+    .pdf-card-placeholder {
+
+        display: flex;
+
+        width: 100%;
+
+        height: 100%;
+
+        flex-direction: column;
+
+        align-items: center;
+
+        justify-content: center;
+
+        gap: 7px;
+
+        color: #fb7185;
+
+        background: linear-gradient(145deg, #111827, #020617);
+
+    }
+
+    .pdf-card-placeholder i {
+
+        font-size: 34px;
+
+    }
+
+    .pdf-card-placeholder span {
+
+        color: #94a3b8;
+
+        font-size: 11px;
+
+        font-weight: 600;
+
+    }
+
+    @keyframes pdf-thumbnail-heartbeat {
+
+        0%, 100% { transform: scale(1); }
+
+        18% { transform: scale(1.035); }
+
+        36% { transform: scale(1); }
+
+        54% { transform: scale(1.025); }
+
+        72% { transform: scale(1); }
+
+    }
+
+    .learning-pdf-card-thumbnail > img {
+
+        transition: filter .22s ease;
+
+        transform-origin: center;
+
+    }
+
+    .learning-pdf-card:hover .learning-pdf-card-thumbnail > img {
+
+        animation: pdf-thumbnail-heartbeat .8s ease-in-out;
+
+        filter: brightness(1.08);
+
+    }
+
+    .learning-pdf-card:not(:hover) .learning-pdf-card-thumbnail > img {
+
+        animation: none;
+
+        transform: scale(1);
+
+        filter: none;
+
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+
+        .learning-pdf-card:hover .learning-pdf-card-thumbnail > img {
+
+            animation: none;
+
+        }
+
+    }
+
+    .learning-pdf-preview-image {
+
+        min-height: 220px;
+
+        object-fit: contain;
+
+        background: #020617;
+
+    }
+
+    @media (max-width: 639px) {
+
+        .learning-pdf-card {
+
+            flex-basis: min(72vw, 220px);
+
+        }
+
+        .learning-pdf-card-thumbnail {
+
+            height: 105px;
+
+        }
+
+    }
+
+    .learning-video-card {
+
+        position: relative; flex: 0 0 220px; min-width: 0; overflow: hidden;
+
+        border: 1px solid #263449; border-radius: 12px; background: #0f172a;
+
+        text-align: left; scroll-snap-align: start;
+
+        transition: border-color .18s ease, background .18s ease, box-shadow .18s ease;
+
+    }
+
+    .learning-video-card:hover { border-color: #0891b2; background: #111d30; }
+
+    .learning-video-card.active {
+
+        border: 2px solid #22d3ee; background: rgba(6,182,212,.10);
+
+        box-shadow: 0 0 0 2px rgba(34,211,238,.10);
+
+    }
+
+    .learning-video-card .video-selected-badge {
+
+        position: absolute; top: 8px; right: 8px; z-index: 2; display: none;
+
+        width: 23px; height: 23px; align-items: center; justify-content: center;
+
+        border-radius: 999px; background: #06b6d4; color: #04202a;
+
+    }
+
+    .learning-video-card.active .video-selected-badge { display: flex; }
+
+    .learning-video-thumbnail { position: relative; height: 104px; overflow: hidden; background: #020617; }
+
+    .learning-video-thumbnail video { display: block; width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
+
+    .learning-video-thumbnail .thumbnail-play {
+
+        position: absolute; inset: 0; display: flex; align-items: center;
+
+        justify-content: center; color: white; background: linear-gradient(transparent, rgba(2,6,23,.38));
+
+        font-size: 28px;
+
+    }
+
+    .learning-video-order {
+
+        position: absolute; left: 7px; top: 7px; z-index: 1; border-radius: 6px;
+
+        background: rgba(2,6,23,.82); padding: 3px 7px; color: white;
+
+        font-size: 10px; font-weight: 800;
+
+    }
+
+    .learning-media {
+
+        background:
+
+            radial-gradient(
+
+                circle at top right,
+
+                rgba(8, 145, 178, .13),
+
+                transparent 45%
+
+            ),
+
+            #050b16;
+
+    }
+
+    .learning-action {
+
+        transition: background-color .18s ease, transform .18s ease;
+
+    }
+
+    .learning-action:hover {
+
+        transform: translateY(-1px);
+
+    }
+
+    .learning-action:focus-visible,
+
+    .learning-tab:focus-visible,
+
+    .learning-item:focus-visible {
+
+        outline: 2px solid #22d3ee;
+
+        outline-offset: 2px;
+
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+
+        .learning-workspace *,
+
+        .learning-workspace *::before,
+
+        .learning-workspace *::after {
+
+            transition: none !important;
+
+            animation: none !important;
+
+        }
+
+    }
+
+
+    .quiz-question-card[hidden] { display: none !important; }
+    .quiz-option-label:focus-within { outline: 2px solid #22d3ee; outline-offset: 2px; }
+    .quiz-question-number:focus-visible { outline: 2px solid #22d3ee; outline-offset: 2px; }
+
+    /* Quiz controls stay in document flow and never cover the active question. */
+    #quiz-take-form > div:last-child {
+        position: static !important;
+        inset: auto !important;
+        z-index: auto !important;
+    }
+    .quiz-question-number {
+        color: #cbd5e1;
+        background-color: #0f172a;
+        border-color: #334155;
+        opacity: 1;
+    }
+    .quiz-question-number[aria-current="step"] {
+        color: #07131f !important;
+        background-color: #22d3ee !important;
+        border-color: #67e8f9 !important;
+        box-shadow: 0 0 0 2px rgba(34, 211, 238, .18);
+    }
+    .quiz-question-number[data-answered="true"]:not([aria-current="step"]) {
+        color: #6ee7b7 !important;
+        background-color: rgba(16, 185, 129, .13) !important;
+        border-color: rgba(52, 211, 153, .45) !important;
+    }
+    .quiz-question-number:focus-visible {
+        outline: 2px solid #67e8f9;
+        outline-offset: 2px;
+    }
+    .quiz-question-card[hidden] { display: none !important; }
+    .quiz-option-label:focus-within { outline: 2px solid #22d3ee; outline-offset: 2px; }
+
+    /* Custom quiz submission confirmation modal */
+    .quiz-confirmation-overlay[hidden] { display: none !important; }
+    .quiz-confirmation-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 1000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        background: rgba(2, 6, 23, .78);
+        -webkit-backdrop-filter: blur(7px);
+        backdrop-filter: blur(7px);
+    }
+    .quiz-confirmation-dialog {
+        width: 100%;
+        max-width: 440px;
+        padding: 28px;
+        border: 1px solid rgba(148, 163, 184, .22);
+        border-radius: 20px;
+        background: linear-gradient(160deg, #111c2e 0%, #080f1c 100%);
+        box-shadow: 0 24px 80px rgba(0, 0, 0, .48);
+        color: #e2e8f0;
+        animation: quiz-confirmation-enter .18s ease-out;
+    }
+    .quiz-confirmation-icon {
+        display: flex;
+        width: 52px;
+        height: 52px;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 18px;
+        border: 1px solid rgba(34, 211, 238, .22);
+        border-radius: 15px;
+        background: rgba(34, 211, 238, .10);
+        color: #67e8f9;
+        font-size: 26px;
+    }
+    .quiz-confirmation-eyebrow {
+        margin: 0 0 6px;
+        color: #67e8f9;
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: .16em;
+        text-transform: uppercase;
+    }
+    .quiz-confirmation-dialog h2 {
+        margin: 0;
+        color: #f8fafc;
+        font-size: 23px;
+        font-weight: 800;
+        line-height: 1.35;
+    }
+    .quiz-confirmation-dialog > p:not(.quiz-confirmation-eyebrow) {
+        margin: 12px 0 0;
+        color: #94a3b8;
+        font-size: 14px;
+        line-height: 1.75;
+    }
+    .quiz-confirmation-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        margin-top: 26px;
+    }
+    .quiz-confirmation-actions button {
+        display: inline-flex;
+        min-height: 43px;
+        align-items: center;
+        justify-content: center;
+        gap: 7px;
+        border-radius: 10px;
+        padding: 10px 14px;
+        font-size: 12px;
+        font-weight: 800;
+        transition: background .15s ease, transform .15s ease;
+    }
+    .quiz-confirmation-actions button:hover { transform: translateY(-1px); }
+    .quiz-confirmation-cancel {
+        border: 1px solid rgba(148, 163, 184, .22);
+        background: rgba(255, 255, 255, .04);
+        color: #cbd5e1;
+    }
+    .quiz-confirmation-cancel:hover { background: rgba(255, 255, 255, .09); }
+    .quiz-confirmation-confirm {
+        background: #34d399;
+        color: #052e24;
+    }
+    .quiz-confirmation-confirm:hover { background: #6ee7b7; }
+    .quiz-confirmation-actions button:focus-visible {
+        outline: 2px solid #67e8f9;
+        outline-offset: 3px;
+    }
+    body.quiz-confirmation-open { overflow: hidden; }
+    @keyframes quiz-confirmation-enter {
+        from { opacity: 0; transform: translateY(8px) scale(.985); }
+        to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    @media (max-width: 480px) {
+        .quiz-confirmation-dialog { padding: 22px; }
+        .quiz-confirmation-actions { flex-direction: column-reverse; }
+        .quiz-confirmation-actions button { width: 100%; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+        .quiz-confirmation-dialog { animation: none; }
+        .quiz-confirmation-actions button { transition: none; }
+    }
+</style>
+
+<div
+
+    class="
+
+        learning-workspace
+
+        mx-auto
+
+        flex
+
+        w-full
+
+        max-w-[1600px]
+
+        min-w-0
+
+        flex-col
+
+        gap-4
+
+        overflow-hidden
+
+        pb-4
+
+        lg:h-[calc(100dvh-7rem)]
+
+        lg:min-h-[520px]
+
+        lg:pb-0
+
+    "
+
+>
+
+    <!-- Compact course location and chapter title -->
+
+    <header class="flex shrink-0 flex-col gap-1 border-b border-white/[0.06] pb-2 sm:flex-row sm:items-center sm:justify-between">
+
+        <nav aria-label="Breadcrumb" class="learning-scroll flex min-w-0 items-center gap-x-2 overflow-x-auto whitespace-nowrap text-xs text-slate-500 sm:text-sm">
+
+            <a href="{% url 'my_learning' %}" class="shrink-0 hover:text-cyan-400">My Learning</a>
+
+            <i class="ri-arrow-right-s-line shrink-0"></i>
+
+            <a href="{% url 'my_learning_batch' batch.id %}" class="max-w-[120px] truncate hover:text-cyan-400 sm:max-w-[180px]">{{ batch.batch_name }}</a>
+
+            <i class="ri-arrow-right-s-line shrink-0"></i>
+
+            <a href="{% url 'my_learning_subject' batch.id subject.id %}" class="max-w-[120px] truncate hover:text-cyan-400 sm:max-w-[180px]">{{ subject.subject_name }}</a>
+
+            <i class="ri-arrow-right-s-line shrink-0"></i>
+
+            <span class="max-w-[160px] truncate font-medium text-slate-300">{{ chapter.chapter_name }}</span>
+
+        </nav>
+
+        <h1 class="shrink-0 text-sm font-semibold text-white sm:text-base">{{ chapter.chapter_name }}</h1>
+
+    </header>
+
+    <!-- =====================================================
+
+         MAIN LEARNING WORKSPACE
+
+    ====================================================== -->
+
+    <section
+
+        class="
+
+            flex
+
+            min-h-0
+
+            flex-1
+
+            flex-col
+
+            overflow-hidden
+
+            rounded-xl
+
+            bg-[#0b1220]
+
+            lg:flex-row
+
+        "
+
+    >
+
+        <!-- =================================================
+
+             LEFT: SELECTED CONTENT DISPLAY
+
+        ================================================== -->
+
+        <main
+
+            class="
+
+                learning-scroll
+
+                flex
+
+                min-h-0
+
+                min-w-0
+
+                flex-1
+
+                flex-col
+
+                overflow-y-auto
+
+                lg:overflow-y-auto
+
+            "
+
+        >
+
+            <!-- ---------------------------------------------
+
+                 CONTENT TYPE TABS
+
+            ---------------------------------------------- -->
+
+            <div
+
+                class="
+
+                    learning-scroll
+
+                    sticky
+
+                    top-0
+
+                    z-20
+
+                    flex
+
+                    shrink-0
+
+                    gap-1
+
+                    overflow-x-auto
+
+                    border-b
+
+                    border-white/[0.07]
+
+                    bg-[#0b1220]
+
+                    px-2
+
+                    py-2
+
+                    sm:px-4
+
+                "
+
+                role="tablist"
+
+                aria-label="Chapter content types"
+
+            >
+
+                <button
+
+                    type="button"
+
+                    class="learning-tab active inline-flex shrink-0 items-center gap-2 rounded-lg px-3 py-2.5 text-xs font-semibold sm:text-sm"
+
+                    data-learning-tab="videos"
+
+                    role="tab"
+
+                    aria-selected="true"
+
+                    aria-controls="panel-videos"
+
+                >
+
+                    <i class="ri-video-line text-base"></i>
+
+                    Videos
+
+                    <span class="rounded-full bg-white/[0.07] px-1.5 py-0.5 text-[10px]">
+
+                        {{ videos|length }}
+
+                    </span>
+
+                </button>
+
+                <button
+
+                    type="button"
+
+                    class="learning-tab inline-flex shrink-0 items-center gap-2 rounded-lg px-3 py-2.5 text-xs font-semibold sm:text-sm"
+
+                    data-learning-tab="pdfs"
+
+                    role="tab"
+
+                    aria-selected="false"
+
+                    aria-controls="panel-pdfs"
+
+                    tabindex="-1"
+
+                >
+
+                    <i class="ri-file-pdf-line text-base"></i>
+
+                    PDFs
+
+                    <span class="rounded-full bg-white/[0.07] px-1.5 py-0.5 text-[10px]">
+
+                        {{ pdfs|length }}
+
+                    </span>
+
+                </button>
+
+                <button
+
+                    type="button"
+
+                    class="learning-tab inline-flex shrink-0 items-center gap-2 rounded-lg px-3 py-2.5 text-xs font-semibold sm:text-sm"
+
+                    data-learning-tab="quizzes"
+
+                    role="tab"
+
+                    aria-selected="false"
+
+                    aria-controls="panel-quizzes"
+
+                    tabindex="-1"
+
+                >
+
+                    <i class="ri-questionnaire-line text-base"></i>
+
+                    Quizzes
+
+                    <span class="rounded-full bg-white/[0.07] px-1.5 py-0.5 text-[10px]">
+
+                        {{ quizzes|length }}
+
+                    </span>
+
+                </button>
+
+                <button
+
+                    type="button"
+
+                    class="learning-tab inline-flex shrink-0 items-center gap-2 rounded-lg px-3 py-2.5 text-xs font-semibold sm:text-sm"
+
+                    data-learning-tab="live"
+
+                    role="tab"
+
+                    aria-selected="false"
+
+                    aria-controls="panel-live"
+
+                    tabindex="-1"
+
+                >
+
+                    <i class="ri-live-line text-base"></i>
+
+                    Live Classes
+
+                </button>
+
+                <button
+
+                    type="button"
+
+                    class="learning-tab inline-flex shrink-0 items-center gap-2 rounded-lg px-3 py-2.5 text-xs font-semibold sm:text-sm"
+
+                    data-learning-tab="comments"
+
+                    role="tab"
+
+                    aria-selected="false"
+
+                    aria-controls="panel-comments"
+
+                    tabindex="-1"
+
+                >
+
+                    <i class="ri-chat-3-line text-base"></i>
+
+                    Comments
+
+                </button>
+
+            </div>
+
+            <!-- ---------------------------------------------
+
+                 VIDEOS PANEL
+
+            ---------------------------------------------- -->
+
+            <section
+
+                id="panel-videos"
+
+                class="learning-panel min-h-0 min-w-0 flex-1 overflow-y-auto p-2 sm:p-3 lg:p-4"
+
+                data-learning-panel="videos"
+
+                role="tabpanel"
+
+            >
+
+                {% if videos %}
+
+                    {% with first_video=videos.0 %}
+
+                        <div
+
+                            class="
+
+                                learning-media
+
+                                overflow-hidden
+
+                                rounded-xl
+
+                            "
+
+                        >
+
+                            {% if first_video.video_file %}
+
+                                <video
+
+                                    id="learning-video-player"
+
+                                    class="
+
+                                        block
+
+                                        aspect-video
+
+                                        w-full
+
+                                        max-h-[calc(100dvh-14rem)]
+
+                                        bg-black
+
+                                        object-contain
+
+                                    "
+
+                                    controls
+
+                                    playsinline
+
+                                    preload="metadata"
+
+                                    controlslist="nodownload"
+
+                                >
+
+                                    <source
+
+                                        src="{{ first_video.video_file.url }}"
+
+                                    >
+
+                                    Your browser does not support HTML video.
+
+                                </video>
+
+                            {% else %}
+
+                                <div class="flex aspect-video items-center justify-center p-6 text-center">
+
+                                    <div>
+
+                                        <i class="ri-video-off-line text-4xl text-slate-500"></i>
+
+                                        <p class="mt-3 text-sm text-slate-300">
+
+                                            This video file is unavailable.
+
+                                        </p>
+
+                                    </div>
+
+                                </div>
+
+                            {% endif %}
+
+                        </div>
+
+                        <div class="mt-2">
+
+                            <p class="text-xs font-medium text-cyan-400">
+
+                                Now learning
+
+                            </p>
+
+                            <h2
+
+                                id="learning-video-title"
+
+                                class="mt-1 break-words text-lg font-bold text-white sm:text-xl"
+
+                            >
+
+                                {{ first_video.video_name }}
+
+                            </h2>
+
+                            <p
+
+                                id="learning-video-description"
+
+                                class="mt-1 whitespace-pre-line text-sm leading-5 text-slate-400"
+
+                            >
+
+                                {{ first_video.video_description|default:"No description has been added for this video." }}
+
+                            </p>
+
+                        </div>
+
+                    {% endwith %}
+
+                    <!-- VIDEO LIST -->
+
+                    <div class="mt-3">
+
+                        <div class="mb-2 flex items-center justify-between gap-3">
+
+                            <h3 class="text-sm font-bold text-white">
+
+                                Chapter videos
+
+                            </h3>
+
+                            <span class="text-xs text-slate-500">
+
+                                {{ videos|length }} published
+
+                            </span>
+
+                        </div>
+
+                        <div class="learning-scroll learning-video-carousel">
+
+                            {% for video in videos %}
+
+                                <button
+
+                                    type="button"
+
+                                    class="learning-video-card {% if forloop.first %}active{% endif %}"
+
+                                    data-video-item
+
+                                    data-video-key="{{ video.pk }}"
+
+                                    data-video-url="{% if video.video_file %}{{ video.video_file.url }}{% endif %}"
+
+                                    data-video-name="{{ video.video_name|escape }}"
+
+                                    data-video-description="{{ video.video_description|default:'No description has been added for this video.'|escape }}"
+
+                                    aria-pressed="{% if forloop.first %}true{% else %}false{% endif %}"
+
+                                >
+
+                                    <span class="video-selected-badge" aria-label="Selected video">
+
+                                        <i class="ri-check-line text-xs font-black"></i>
+
+                                    </span>
+
+                                    <span class="learning-video-thumbnail block">
+
+                                        {% if video.video_file %}
+
+                                            <video muted playsinline preload="metadata" src="{{ video.video_file.url }}" aria-hidden="true"></video>
+
+                                        {% else %}
+
+                                            <span class="flex h-full items-center justify-center text-3xl text-slate-500">
+
+                                                <i class="ri-video-off-line"></i>
+
+                                            </span>
+
+                                        {% endif %}
+
+                                        <span class="thumbnail-play"><i class="ri-play-circle-line"></i></span>
+
+                                        <span class="learning-video-order">{{ video.video_order|default:forloop.counter }}</span>
+
+                                    </span>
+
+                                    <span class="block p-3">
+
+                                        <span class="block truncate text-xs font-bold text-slate-100">
+
+                                            {{ forloop.counter }}. {{ video.video_name }}
+
+                                        </span>
+
+                                        <span class="mt-1 block truncate text-[10px] text-slate-400">
+
+                                            {{ video.video_description|default:"Video lesson" }}
+
+                                        </span>
+
+                                    </span>
+
+                                </button>
+
+                            {% endfor %}
+
+                        </div>
+
+                    </div>
+
+                {% else %}
+
+                    <div class="flex min-h-[300px] flex-col items-center justify-center px-5 py-12 text-center">
+
+                        <div class="flex h-16 w-16 items-center justify-center rounded-2xl bg-cyan-400/10 text-3xl text-cyan-400">
+
+                            <i class="ri-video-line"></i>
+
+                        </div>
+
+                        <h2 class="mt-5 text-base font-bold text-white">
+
+                            No published videos yet
+
+                        </h2>
+
+                        <p class="mt-2 max-w-sm text-sm leading-6 text-slate-400">
+
+                            Published video lessons for this chapter will appear here when they are available.
+
+                        </p>
+
+                    </div>
+
+                {% endif %}
+
+            </section>
+
+            <!-- ---------------------------------------------
+
+                 PDF PANEL
+
+            ---------------------------------------------- -->
+
+            <!-- ---------------------------------------------
+
+                 PDF PANEL
+
+            ---------------------------------------------- -->
+
+            <section
+
+                id="panel-pdfs"
+
+                class="learning-panel hidden min-h-0 min-w-0 flex-1 overflow-y-auto p-2 pb-6 sm:p-3 sm:pb-8 lg:p-4 lg:pb-8"
+
+                data-learning-panel="pdfs"
+
+                role="tabpanel"
+
+                hidden
+
+            >
+
+                {% if pdfs %}
+
+                    {% with first_pdf=pdfs.0 %}
+
+                        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+
+                            <div class="flex min-w-0 items-center gap-3">
+
+                                <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-rose-400/10 text-2xl text-rose-400">
+
+                                    <i class="ri-file-pdf-line"></i>
+
+                                </div>
+
+                                <div class="min-w-0">
+
+                                    <h2 id="learning-pdf-title" class="break-words text-base font-bold text-white">
+
+                                        {{ first_pdf.pdf_name }}
+
+                                    </h2>
+
+                                    <p class="mt-1 text-xs text-slate-500">Chapter PDF resource</p>
+
+                                </div>
+
+                            </div>
+
+                            {% if first_pdf.pdf_file %}
+
+                                <a
+
+                                    id="learning-pdf-download"
+
+                                    href="{{ first_pdf.pdf_file.url }}"
+
+                                    download
+
+                                    class="learning-action inline-flex w-full shrink-0 items-center justify-center gap-2 rounded-lg bg-cyan-400 px-3 py-2.5 text-sm font-bold text-slate-950 hover:bg-cyan-300 sm:w-auto sm:px-4"
+
+                                    aria-label="Download {{ first_pdf.pdf_name }}"
+
+                                >
+
+                                    <i class="ri-download-2-line text-lg"></i>
+
+                                    <span>Download PDF</span>
+
+                                </a>
+
+                            {% else %}
+
+                                <span class="inline-flex w-full shrink-0 items-center justify-center gap-2 rounded-lg bg-slate-700 px-3 py-2.5 text-sm font-semibold text-slate-400 sm:w-auto">
+
+                                    <i class="ri-download-2-line text-lg"></i>
+
+                                    PDF unavailable
+
+                                </span>
+
+                            {% endif %}
+
+                        </div>
+
+                        <div class="learning-media mt-3 overflow-hidden rounded-xl">
+
+                            <a
+
+                                id="learning-pdf-open"
+
+                                href="{% if first_pdf.pdf_file %}{{ first_pdf.pdf_file.url }}{% else %}#{% endif %}"
+
+                                target="_blank"
+
+                                rel="noopener noreferrer"
+
+                                class="learning-pdf-preview group relative flex min-h-[220px] items-center justify-center overflow-hidden bg-slate-950 sm:min-h-[280px] lg:min-h-[320px]"
+
+                                aria-label="Open {{ first_pdf.pdf_name }} in a new tab"
+
+                            >
+
+                                <img
+
+                                        id="learning-pdf-thumbnail"
+
+                                        src="{% if first_pdf.pdf_thumbnail %}{{ first_pdf.pdf_thumbnail.url }}{% else %}{% static 'courses/images/default_pdf_thumbnail.png' %}{% endif %}"
+
+                                        alt="Preview of {{ first_pdf.pdf_name }}"
+
+                                        class="learning-pdf-preview-image block max-h-[min(58dvh,560px)] w-full object-contain"
+
+                                    >
+
+                                    <div id="learning-pdf-thumbnail-fallback" class="hidden min-h-[220px] w-full flex-col items-center justify-center gap-3 px-6 py-10 text-center">
+
+                                        <i class="ri-file-pdf-line text-6xl text-rose-400"></i>
+
+                                        <span class="text-sm font-semibold text-slate-200">PDF document</span>
+
+                                    </div>
+
+                                <span class="absolute inset-x-0 bottom-0 flex items-center justify-center gap-2 bg-slate-950/85 px-3 py-3 text-xs font-semibold text-cyan-300 transition group-hover:bg-slate-900 sm:text-sm">
+
+                                    <i class="ri-external-link-line"></i>
+
+                                    Open PDF in new tab
+
+                                </span>
+
+                            </a>
+
+                        </div>
+
+                        <p id="learning-pdf-description" class="mt-2 whitespace-pre-line break-words text-sm leading-5 text-slate-400">
+
+                            {{ first_pdf.pdf_description|default:"No description has been added for this PDF." }}
+
+                        </p>
+
+                    {% endwith %}
+
+                    <!-- PDF SELECTOR: horizontal scroll like the video carousel -->
+
+                    <div class="mt-4">
+
+                        <div class="mb-2 flex items-center justify-between gap-3">
+
+                            <h3 class="text-sm font-bold text-white">Chapter PDFs</h3>
+
+                            <span class="shrink-0 text-xs text-slate-500">{{ pdfs|length }} published</span>
+
+                        </div>
+
+                        <div class="learning-scroll learning-pdf-carousel">
+
+                            {% for pdf in pdfs %}
+
+                                <button
+
+                                    type="button"
+
+                                    class="learning-pdf-card {% if forloop.first %}active{% endif %}"
+
+                                    data-pdf-item
+
+                                    data-pdf-key="{{ pdf.pk }}"
+
+                                    data-pdf-url="{% if pdf.pdf_file %}{{ pdf.pdf_file.url }}{% endif %}"
+
+                                    data-pdf-name="{{ pdf.pdf_name|escape }}"
+
+                                    data-pdf-description="{{ pdf.pdf_description|default:'No description has been added for this PDF.'|escape }}"
+
+                                    data-pdf-thumbnail="{% if pdf.pdf_thumbnail %}{{ pdf.pdf_thumbnail.url }}{% else %}{% static 'courses/images/default_pdf_thumbnail.png' %}{% endif %}"
+
+                                    aria-pressed="{% if forloop.first %}true{% else %}false{% endif %}"
+
+                                >
+
+                                    <span class="pdf-selected-badge" aria-label="Selected PDF">
+
+                                        <i class="ri-check-line"></i>
+
+                                    </span>
+
+                                    <span class="learning-pdf-card-thumbnail">
+
+                                        <img
+
+                                            src="{% if pdf.pdf_thumbnail %}{{ pdf.pdf_thumbnail.url }}{% else %}{% static 'courses/images/default_pdf_thumbnail.png' %}{% endif %}"
+
+                                            alt="Thumbnail for {{ pdf.pdf_name }}"
+
+                                            loading="lazy"
+
+                                        >
+
+                                        <span class="learning-video-order">{{ pdf.pdf_order|default:forloop.counter }}</span>
+
+                                    </span>
+
+                                    <span class="block p-3 text-left">
+
+                                        <span class="block break-words text-xs font-bold leading-5 text-slate-100">
+
+                                            {{ forloop.counter }}. {{ pdf.pdf_name }}
+
+                                        </span>
+
+                                        <span class="mt-1 block text-[10px] text-slate-400">PDF resource</span>
+
+                                    </span>
+
+                                </button>
+
+                            {% endfor %}
+
+                        </div>
+
+                    </div>
+
+                {% else %}
+
+                    <div class="flex min-h-[260px] flex-col items-center justify-center px-5 py-12 text-center">
+
+                        <div class="flex h-16 w-16 items-center justify-center rounded-2xl bg-rose-400/10 text-3xl text-rose-400">
+
+                            <i class="ri-file-pdf-line"></i>
+
+                        </div>
+
+                        <h2 class="mt-5 text-base font-bold text-white">No published PDFs yet</h2>
+
+                        <p class="mt-2 max-w-sm text-sm leading-6 text-slate-400">
+
+                            Study notes and downloadable PDF resources will appear here when published.
+
+                        </p>
+
+                    </div>
+
+                {% endif %}
+
+            </section>
+
+            <section
+    id="panel-quizzes"
+    class="learning-panel hidden min-h-0 min-w-0 flex-1 overflow-y-auto p-2 pb-6 sm:p-3 sm:pb-8 lg:p-4 lg:pb-8"
+    data-learning-panel="quizzes"
+    role="tabpanel"
+    hidden
+>
+    {% if quiz_attempt and quiz_mode == "take" %}
+        <div class="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div class="min-w-0">
+                <p class="text-xs font-bold uppercase tracking-[0.16em] text-cyan-400">Assessment in progress</p>
+                <h2 class="mt-1 break-words text-xl font-bold text-white sm:text-2xl">{{ quiz_attempt.quiz_title_snapshot }}</h2>
+                <p class="mt-2 text-sm text-slate-400">
+                    Attempt {{ quiz_attempt.attempt_number }} of {{ quiz_attempt.maximum_attempts_snapshot }}
+                    <span class="px-1 text-slate-600">·</span>{{ quiz_answers|length }} questions
+                </p>
+            </div>
+            <div class="shrink-0 rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3">
+                <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Time remaining</p>
+                <p id="quiz-countdown" data-seconds="{{ remaining_seconds }}" class="mt-1 font-mono text-2xl font-bold tabular-nums text-white" aria-live="polite">--:--</p>
+            </div>
+        </div>
+
+        <form id="quiz-take-form" method="post" action="{% url 'student_quiz_take' quiz_attempt.pk %}" class="space-y-4">
+            {% csrf_token %}
+
+            <div class="rounded-xl border border-white/[0.08] bg-white/[0.025] p-3 sm:p-4">
+                <div class="flex items-center justify-between gap-3">
+                    <p class="text-xs font-semibold text-slate-300">Question progress</p>
+                    <p id="quiz-progress-label" class="text-xs font-bold tabular-nums text-cyan-300">Question 1 of {{ quiz_answers|length }}</p>
+                </div>
+                <div class="mt-3 h-1.5 overflow-hidden rounded-full bg-slate-800">
+                    <div id="quiz-progress-bar" class="h-full rounded-full bg-cyan-400 transition-all duration-200" style="width: 0%"></div>
+                </div>
+                <div id="quiz-question-numbers" class="mt-3 flex flex-wrap gap-2" aria-label="Question navigation">
+                    {% for answer in quiz_answers %}
+                        <button
+                            type="button"
+                            class="quiz-question-number flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 bg-slate-950/50 text-xs font-bold text-slate-300 hover:border-cyan-400/50"
+                            data-question-jump="{{ forloop.counter0 }}"
+                            aria-label="Go to question {{ forloop.counter }}"
+                        >{{ forloop.counter }}</button>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div id="quiz-question-stage" class="space-y-4">
+                {% for answer in quiz_answers %}
+                    <fieldset
+                        class="quiz-question-card rounded-xl border border-white/[0.08] bg-white/[0.035] p-4 sm:p-6"
+                        data-quiz-question
+                        data-question-index="{{ forloop.counter0 }}"
+                        data-answer-id="{{ answer.pk }}"
+                        data-save-url="{% url 'student_quiz_answer_save' quiz_attempt.pk answer.pk %}"
+                        data-locked="{% if answer.selected_option_label %}true{% else %}false{% endif %}"
+                        {% if not forloop.first %}hidden{% endif %}
+                    >
+                        <div class="mb-5 flex items-start justify-between gap-3">
+                            <div>
+                                <p class="text-[10px] font-bold uppercase tracking-[0.16em] text-cyan-400">Question {{ forloop.counter }}</p>
+                                <legend class="mt-2 block text-base font-bold leading-7 text-white sm:text-lg">{{ answer.question_text_snapshot }}</legend>
+                            </div>
+                            <span class="shrink-0 rounded-lg bg-slate-950/60 px-2.5 py-1.5 text-[10px] font-bold text-slate-400">Q{{ forloop.counter }}</span>
+                        </div>
+
+                        <div class="space-y-2.5">
+                            {% for option in answer.options_snapshot %}
+                                <label class="quiz-option-label flex cursor-pointer items-start gap-3 rounded-xl border border-white/[0.08] bg-slate-950/40 p-3.5 transition hover:border-cyan-400/40 hover:bg-cyan-400/[0.04] sm:p-4">
+                                    <input
+                                        type="radio"
+                                        name="answer_{{ answer.pk }}"
+                                        value="{{ option.label }}"
+                                        class="mt-1 h-4 w-4 shrink-0 accent-cyan-400"
+                                        {% if answer.selected_option_label == option.label %}checked{% endif %}
+                                    >
+                                    <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-white/[0.06] text-xs font-extrabold text-cyan-300">{{ option.label }}</span>
+                                    <span class="min-w-0 flex-1 break-words text-sm leading-6 text-slate-300">{{ option.text }}</span>
+                                </label>
+                            {% endfor %}
+                        </div>
+
+                        <div class="mt-4 flex min-h-6 items-center gap-2 text-xs" aria-live="polite">
+                            <i class="quiz-save-icon ri-information-line text-slate-500"></i>
+                            <p class="quiz-save-status text-slate-400">
+                                {% if answer.selected_option_label %}
+                                    Answer saved. This answer is locked and cannot be changed.
+                                {% else %}
+                                    Select one option to save your answer. Saved answers cannot be changed.
+                                {% endif %}
+                            </p>
+                        </div>
+                    </fieldset>
+                {% empty %}
+                    <div class="rounded-xl border border-amber-400/20 bg-amber-400/[0.06] p-4 text-sm leading-6 text-amber-200">
+                        No questions are available in this attempt. Please return to the quiz list and contact your teacher.
+                    </div>
+                {% endfor %}
+            </div>
+
+            <div class="mt-4 rounded-xl border border-white/[0.08] bg-[#0b1220] p-3 sm:p-4">
+                <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <a href="{% url 'my_learning_chapter' batch.id subject.id chapter.id %}?tab=quizzes" class="inline-flex items-center justify-center gap-2 rounded-lg border border-white/10 px-4 py-3 text-sm font-semibold text-slate-300 hover:bg-white/[0.05]">
+                        <i class="ri-arrow-left-line"></i> Quiz list
+                    </a>
+                    <div class="grid grid-cols-2 gap-2 sm:flex sm:items-center">
+                        <button id="quiz-previous-button" type="button" class="inline-flex items-center justify-center gap-2 rounded-lg border border-white/10 px-4 py-3 text-sm font-semibold text-slate-300 hover:bg-white/[0.05] disabled:cursor-not-allowed disabled:opacity-40">
+                            <i class="ri-arrow-left-line"></i> Previous
+                        </button>
+                        <button id="quiz-skip-button" type="button" class="inline-flex items-center justify-center gap-2 rounded-lg border border-white/10 px-4 py-3 text-sm font-semibold text-slate-300 hover:bg-white/[0.05]">
+                            Skip <i class="ri-skip-forward-line"></i>
+                        </button>
+                        <button id="quiz-next-button" type="button" class="col-span-2 inline-flex items-center justify-center gap-2 rounded-lg bg-cyan-400 px-5 py-3 text-sm font-bold text-slate-950 hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-50 sm:col-span-1">
+                            Next question <i class="ri-arrow-right-line"></i>
+                        </button>
+                        <button id="quiz-submit-button" type="submit" class="col-span-2 hidden items-center justify-center gap-2 rounded-lg bg-emerald-400 px-5 py-3 text-sm font-bold text-slate-950 hover:bg-emerald-300 disabled:cursor-not-allowed disabled:opacity-50 sm:col-span-1">
+                            Submit quiz <i class="ri-check-line"></i>
+                        </button>
+                    </div>
+                </div>
+                <p class="mt-3 text-center text-[11px] leading-5 text-slate-500">Your selected answer is saved immediately. Skipped questions remain unanswered.</p>
+            </div>
+        </form>
+
+        <!-- Custom NeoLearn quiz submission confirmation modal -->
+        <div
+            id="quiz-submit-confirmation"
+            class="quiz-confirmation-overlay"
+            hidden
+            aria-hidden="true"
+        >
+            <section
+                class="quiz-confirmation-dialog"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="quiz-confirmation-title"
+                aria-describedby="quiz-confirmation-description"
+                tabindex="-1"
+            >
+                <div class="quiz-confirmation-icon" aria-hidden="true">
+                    <i class="ri-file-check-line"></i>
+                </div>
+                <p class="quiz-confirmation-eyebrow">Final check</p>
+                <h2 id="quiz-confirmation-title">Submit this quiz?</h2>
+                <p id="quiz-confirmation-description">
+                    Your saved answers will be graded and this attempt will be closed.
+                    You cannot change your answers after submission.
+                </p>
+                <div class="quiz-confirmation-actions">
+                    <button id="quiz-submit-cancel" type="button" class="quiz-confirmation-cancel">
+                        Cancel
+                    </button>
+                    <button id="quiz-submit-confirm" type="button" class="quiz-confirmation-confirm">
+                        <i class="ri-check-line" aria-hidden="true"></i>
+                        Confirm submission
+                    </button>
+                </div>
+            </section>
+        </div>
+
+    {% elif quiz_attempt and quiz_mode == "result" %}
+        <div class="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div class="min-w-0">
+                <p class="text-xs font-bold uppercase tracking-[0.16em] text-cyan-400">Quiz result</p>
+                <h2 class="mt-1 break-words text-xl font-bold text-white sm:text-2xl">{{ quiz_attempt.quiz_title_snapshot }}</h2>
+                <p class="mt-2 text-sm text-slate-400">Attempt {{ quiz_attempt.attempt_number }} <span class="px-1 text-slate-600">·</span>{{ quiz_attempt.get_status_display }}</p>
+            </div>
+            <div class="rounded-xl border border-cyan-400/20 bg-cyan-400/[0.06] px-5 py-4">
+                <p class="text-[10px] font-bold uppercase tracking-wider text-cyan-200">Your score</p>
+                <p class="mt-1 text-3xl font-black text-white">{{ quiz_attempt.score }} <span class="text-base font-semibold text-slate-400">/ {{ quiz_attempt.maximum_marks }}</span></p>
+                <p class="mt-1 text-xs text-slate-400">{{ quiz_percentage }}%</p>
+            </div>
+        </div>
+
+        {% if quiz_attempt.status == "timed_out" %}
+            <div class="mb-4 rounded-xl border border-amber-400/20 bg-amber-400/[0.06] p-4 text-sm leading-6 text-amber-200">
+                The time limit ended before this attempt was submitted. This attempt is closed and its recorded score is shown above.
+            </div>
+        {% endif %}
+
+        <div class="mb-4 rounded-xl border border-white/[0.08] bg-white/[0.025] p-4">
+            <h3 class="text-sm font-bold text-white">How to read your result</h3>
+            <div class="mt-3 grid gap-3 sm:grid-cols-3">
+                <div class="flex items-start gap-2">
+                    <span class="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-400/15 text-emerald-300"><i class="ri-check-line"></i></span>
+                    <p class="text-xs leading-5 text-slate-300"><strong class="text-emerald-300">Correct</strong><br>Your selected answer matches the correct answer.</p>
+                </div>
+                <div class="flex items-start gap-2">
+                    <span class="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-rose-400/15 text-rose-300"><i class="ri-close-line"></i></span>
+                    <p class="text-xs leading-5 text-slate-300"><strong class="text-rose-300">Incorrect</strong><br>Your selected answer was wrong. It is marked red; the correct answer is marked green.</p>
+                </div>
+                <div class="flex items-start gap-2">
+                    <span class="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-400/15 text-slate-300"><i class="ri-minus-line"></i></span>
+                    <p class="text-xs leading-5 text-slate-300"><strong class="text-slate-200">Not attempted</strong><br>You did not select an answer. The green option shows the correct answer for review, not an answer you selected.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="space-y-4">
+            {% for answer in quiz_answers %}
+                <article class="rounded-xl border border-white/[0.08] bg-white/[0.035] p-4 sm:p-5">
+                    <div class="flex items-start justify-between gap-3">
+                        <h3 class="text-sm font-bold leading-6 text-white sm:text-base"><span class="mr-2 text-cyan-400">Q{{ forloop.counter }}.</span>{{ answer.question_text_snapshot }}</h3>
+                        {% if answer.is_correct %}
+                            <span class="shrink-0 rounded-full bg-emerald-400/10 px-2.5 py-1 text-[10px] font-bold text-emerald-300">Correct</span>
+                        {% elif answer.selected_option_label %}
+                            <span class="shrink-0 rounded-full bg-rose-400/10 px-2.5 py-1 text-[10px] font-bold text-rose-300">Incorrect</span>
+                        {% else %}
+                            <span class="shrink-0 rounded-full border border-slate-500/30 bg-slate-700/50 px-2.5 py-1 text-[10px] font-bold text-slate-200">Not attempted</span>
+                        {% endif %}
+                    </div>
+                    <div class="mt-3 space-y-2">
+                        {% for option in answer.options_snapshot %}
+                            <div class="flex items-start gap-3 rounded-lg border p-3 {% if option.label == answer.correct_option_label_snapshot %}border-emerald-400/25 bg-emerald-400/[0.06]{% elif option.label == answer.selected_option_label %}border-rose-400/25 bg-rose-400/[0.06]{% else %}border-white/[0.06] bg-slate-950/30{% endif %}">
+                                <span class="shrink-0 font-bold {% if option.label == answer.correct_option_label_snapshot %}text-emerald-300{% elif option.label == answer.selected_option_label %}text-rose-300{% else %}text-slate-400{% endif %}">{{ option.label }}.</span>
+                                <span class="min-w-0 flex-1 text-sm leading-6 text-slate-300">{{ option.text }}</span>
+                                {% if option.label == answer.correct_option_label_snapshot %}
+                                    <span class="shrink-0 text-[10px] font-bold uppercase text-emerald-300">Correct answer</span>
+                                {% elif option.label == answer.selected_option_label %}
+                                    <span class="shrink-0 text-[10px] font-bold uppercase text-rose-300">Your answer</span>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+                    </div>
+                    {% if answer.selected_option_label and not answer.is_correct %}
+                        <p class="mt-3 text-xs leading-5 text-slate-400"><i class="ri-lightbulb-line mr-1 text-emerald-300"></i> Review tip: the green option marked <strong class="text-emerald-300">Correct answer</strong> is the answer to remember.</p>
+                    {% endif %}
+                    {% if not answer.selected_option_label %}
+                        <div class="mt-3 rounded-lg border border-slate-500/20 bg-slate-800/40 p-3">
+                            <p class="text-xs font-bold text-slate-200"><i class="ri-information-line mr-1"></i> Not attempted</p>
+                            <p class="mt-1 text-xs leading-5 text-slate-400">You did not select an answer for this question. The option highlighted in green is the correct answer for learning and review; it was not counted as your selection.</p>
+                        </div>
+                    {% endif %}
+                </article>
+            {% endfor %}
+        </div>
+
+        <div class="mt-6 flex flex-col gap-3 sm:flex-row">
+            <a href="{% url 'my_learning_chapter' batch.id subject.id chapter.id %}?tab=quizzes" class="inline-flex items-center justify-center gap-2 rounded-lg bg-cyan-400 px-5 py-3 text-sm font-bold text-slate-950 hover:bg-cyan-300"><i class="ri-arrow-left-line"></i> Back to chapter quizzes</a>
+            <a href="{% url 'my_learning_chapter' batch.id subject.id chapter.id %}?tab=videos" class="inline-flex items-center justify-center gap-2 rounded-lg border border-white/10 px-5 py-3 text-sm font-semibold text-slate-300 hover:bg-white/[0.05]">Continue learning</a>
+        </div>
+
+    {% else %}
+        <div class="mb-5">
+            <p class="text-xs font-bold uppercase tracking-[0.16em] text-cyan-400">Check your understanding</p>
+            <h2 class="mt-1 text-xl font-bold text-white sm:text-2xl">Chapter quizzes</h2>
+            <p class="mt-2 max-w-2xl text-sm leading-6 text-slate-400">Choose a published quiz to begin. Your attempt and final result are saved to your student account.</p>
+        </div>
+
+        {% if messages %}
+            <div class="mb-4 space-y-2">
+                {% for message in messages %}
+                    <div class="rounded-lg border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-slate-200">{{ message }}</div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        {% if quiz_cards %}
+            <div class="space-y-3">
+                {% for card in quiz_cards %}
+                    <article class="rounded-xl border border-white/[0.07] bg-white/[0.035] p-4 transition hover:border-cyan-400/20 hover:bg-white/[0.055] sm:p-5">
+                        <div class="flex items-start gap-3">
+                            <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-violet-400/10 text-xl text-violet-300"><i class="ri-questionnaire-line"></i></div>
+                            <div class="min-w-0 flex-1">
+                                <h3 class="break-words text-sm font-bold text-white sm:text-base">{{ card.quiz.quiz_name }}</h3>
+                                <p class="mt-1 whitespace-pre-line text-sm leading-6 text-slate-400">{{ card.quiz.quiz_description|default:"Test your understanding of this chapter." }}</p>
+                            </div>
+                            <span class="shrink-0 rounded-full bg-emerald-400/10 px-2.5 py-1 text-[10px] font-bold text-emerald-300">Published</span>
+                        </div>
+                        <div class="mt-4 grid grid-cols-2 gap-3 border-t border-white/[0.07] pt-4 sm:grid-cols-4">
+                            <div class="rounded-lg bg-slate-950/40 p-3">
+                                <p class="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Questions</p>
+                                <p class="mt-1 text-sm font-bold text-slate-200">{{ card.quiz.questions.count }}</p>
+                            </div>
+                            <div class="rounded-lg bg-slate-950/40 p-3">
+                                <p class="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Duration</p>
+                                <p class="mt-1 text-sm font-bold text-slate-200">{{ card.quiz.answering_time }} min</p>
+                            </div>
+                            <div class="rounded-lg bg-slate-950/40 p-3">
+                                <p class="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Attempts used</p>
+                                <p class="mt-1 text-sm font-bold text-slate-200">{{ card.attempts_used }} / {{ card.quiz.maximum_attempts }}</p>
+                            </div>
+                            <div class="rounded-lg bg-slate-950/40 p-3">
+                                <p class="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Total marks</p>
+                                <p class="mt-1 text-sm font-bold text-slate-200">{{ card.quiz.total_marks }}</p>
+                            </div>
+                        </div>
+                        <div class="mt-4">
+                            {% if card.active_attempt %}
+                                <a href="{% url 'my_learning_chapter' batch.id subject.id chapter.id %}?attempt={{ card.active_attempt.pk }}&tab=quizzes" class="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-cyan-400 px-4 py-3 text-sm font-bold text-slate-950 hover:bg-cyan-300 sm:w-auto"><i class="ri-play-circle-line"></i> Resume quiz</a>
+                            {% elif card.attempts_used >= card.quiz.maximum_attempts %}
+                                <p class="inline-flex items-center gap-2 rounded-lg bg-slate-800 px-4 py-3 text-sm font-semibold text-slate-400"><i class="ri-lock-line"></i> All attempts used</p>
+                            {% else %}
+                                <form method="post" action="{% url 'student_quiz_start' batch.id subject.id chapter.id card.quiz.pk %}">
+                                    {% csrf_token %}
+                                    <button type="submit" class="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-cyan-400 px-4 py-3 text-sm font-bold text-slate-950 hover:bg-cyan-300 sm:w-auto"><i class="ri-play-circle-line"></i> Start quiz</button>
+                                </form>
+                            {% endif %}
+                        </div>
+                    </article>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="flex min-h-[260px] flex-col items-center justify-center px-5 py-12 text-center">
+                <div class="flex h-16 w-16 items-center justify-center rounded-2xl bg-violet-400/10 text-3xl text-violet-300"><i class="ri-questionnaire-line"></i></div>
+                <h2 class="mt-5 text-base font-bold text-white">No published quizzes yet</h2>
+                <p class="mt-2 max-w-sm text-sm leading-6 text-slate-400">Published quizzes for this chapter will appear here when they are available.</p>
+            </div>
+        {% endif %}
+    {% endif %}
+</section>
+
+<section
+
+                id="panel-live"
+
+                class="learning-panel hidden min-h-0 min-w-0 flex-1 overflow-y-auto p-2 pb-6 sm:p-3 sm:pb-8 lg:p-4 lg:pb-8"
+
+                data-learning-panel="live"
+
+                role="tabpanel"
+
+                hidden
+
+            >
+
+                <div class="mb-5">
+
+                    <p class="text-xs font-semibold uppercase tracking-wider text-cyan-400">
+
+                        Learn with your teacher
+
+                    </p>
+
+                    <h2 class="mt-1 text-xl font-bold text-white">
+
+                        Live classes
+
+                    </h2>
+
+                    <p class="mt-2 text-sm leading-6 text-slate-400">
+
+                        Upcoming sessions, ongoing classes, and available recordings will be listed here.
+
+                    </p>
+
+                </div>
+
+                <div class="flex min-h-[260px] flex-col items-center justify-center px-5 py-12 text-center">
+
+                    <div class="flex h-16 w-16 items-center justify-center rounded-2xl bg-cyan-400/10 text-3xl text-cyan-400">
+
+                        <i class="ri-live-line"></i>
+
+                    </div>
+
+                    <h3 class="mt-5 text-base font-bold text-white">
+
+                        Live classes are not connected yet
+
+                    </h3>
+
+                    <p class="mt-2 max-w-md text-sm leading-6 text-slate-400">
+
+                        This area is ready for the live-session integration. Once the live-session model and student access views are implemented, this section can show upcoming, ongoing, and ended sessions with the appropriate Join Class or View Recording actions.
+
+                    </p>
+
+                </div>
+
+            </section>
+
+            <!-- ---------------------------------------------
+
+                 COMMENTS PANEL
+
+            ---------------------------------------------- -->
+
+            <section
+
+                id="panel-comments"
+
+                class="learning-panel hidden min-h-0 min-w-0 flex-1 overflow-y-auto p-2 pb-6 sm:p-3 sm:pb-8 lg:p-4 lg:pb-8"
+
+                data-learning-panel="comments"
+
+                role="tabpanel"
+
+                hidden
+
+            >
+
+                <div class="mb-5">
+
+                    <p class="text-xs font-semibold uppercase tracking-wider text-cyan-400">
+
+                        Learning discussion
+
+                    </p>
+
+                    <h2 class="mt-1 text-xl font-bold text-white">
+
+                        Questions and comments
+
+                    </h2>
+
+                    <p class="mt-2 text-sm leading-6 text-slate-400">
+
+                        A dedicated space for chapter-related questions and discussion.
+
+                    </p>
+
+                </div>
+
+                <div class="flex min-h-[260px] flex-col items-center justify-center px-5 py-12 text-center">
+
+                    <div class="flex h-16 w-16 items-center justify-center rounded-2xl bg-cyan-400/10 text-3xl text-cyan-400">
+
+                        <i class="ri-chat-3-line"></i>
+
+                    </div>
+
+                    <h3 class="mt-5 text-base font-bold text-white">
+
+                        Discussion is not connected yet
+
+                    </h3>
+
+                    <p class="mt-2 max-w-md text-sm leading-6 text-slate-400">
+
+                        The comment and reply interface needs a Django model and server-side views to save discussions and enforce student access. No comments will be shown until that functionality is connected.
+
+                    </p>
+
+                </div>
+
+            </section>
+
+        </main>
+
+        <!-- =================================================
+
+             RIGHT: CHAPTER CONTENT LIST
+
+        ================================================== -->
+
+        <aside
+
+            class="
+
+                flex
+
+                max-h-[360px]
+
+                min-h-0
+
+                shrink-0
+
+                flex-col
+
+                bg-[#080f1c]
+
+                lg:max-h-none
+
+                lg:w-[280px]
+
+                lg:border-l
+
+                lg:border-white/[0.06]
+
+                xl:w-[310px]
+
+            "
+
+        >
+
+            <div class="flex shrink-0 items-center justify-between gap-3 px-3 py-2.5">
+
+                <div>
+
+                    <h2 class="text-sm font-bold text-white sm:text-base">
+
+                        Chapter content
+
+                    </h2>
+
+                    <p class="mt-1 text-xs text-slate-500">
+
+                        Published learning materials
+
+                    </p>
+
+                </div>
+
+                <i class="ri-list-check-2 text-xl text-cyan-400"></i>
+
+            </div>
+
+            <!-- CONTENT COUNTS -->
+
+            <div class="grid shrink-0 grid-cols-3 gap-2 px-3 pb-2">
+
+                <div class="rounded-lg bg-white/[0.035] px-2 py-2 text-center">
+
+                    <p class="text-base font-bold text-white">
+
+                        {{ videos|length }}
+
+                    </p>
+
+                    <p class="mt-1 text-[10px] text-slate-500">
+
+                        Videos
+
+                    </p>
+
+                </div>
+
+                <div class="rounded-lg bg-white/[0.035] px-2 py-2 text-center">
+
+                    <p class="text-base font-bold text-white">
+
+                        {{ pdfs|length }}
+
+                    </p>
+
+                    <p class="mt-1 text-[10px] text-slate-500">
+
+                        PDFs
+
+                    </p>
+
+                </div>
+
+                <div class="rounded-lg bg-white/[0.035] px-2 py-2 text-center">
+
+                    <p class="text-base font-bold text-white">
+
+                        {{ quizzes|length }}
+
+                    </p>
+
+                    <p class="mt-1 text-[10px] text-slate-500">
+
+                        Quizzes
+
+                    </p>
+
+                </div>
+
+            </div>
+
+            <!-- RIGHT SIDE CONTENT TYPE SELECTOR -->
+
+            <div class="learning-scroll grid shrink-0 grid-cols-4 gap-1 px-3 pb-2">
+
+                <button
+
+                    type="button"
+
+                    data-learning-tab="videos"
+
+                    class="learning-tab active min-w-0 rounded-md px-1 py-2 text-center text-[11px] font-semibold"
+
+                    aria-selected="true"
+
+                >
+
+                    Videos
+
+                </button>
+
+                <button
+
+                    type="button"
+
+                    data-learning-tab="pdfs"
+
+                    class="learning-tab min-w-0 rounded-md px-1 py-2 text-center text-[11px] font-semibold"
+
+                    aria-selected="false"
+
+                    tabindex="-1"
+
+                >
+
+                    PDFs
+
+                </button>
+
+                <button
+
+                    type="button"
+
+                    data-learning-tab="quizzes"
+
+                    class="learning-tab min-w-0 rounded-md px-1 py-2 text-center text-[11px] font-semibold"
+
+                    aria-selected="false"
+
+                    tabindex="-1"
+
+                >
+
+                    Quizzes
+
+                </button>
+
+                <button
+
+                    type="button"
+
+                    data-learning-tab="live"
+
+                    class="learning-tab min-w-0 rounded-md px-1 py-2 text-center text-[11px] font-semibold"
+
+                    aria-selected="false"
+
+                    tabindex="-1"
+
+                >
+
+                    Live
+
+                </button>
+
+            </div>
+
+            <!-- RIGHT SIDE VIDEO LIST -->
+
+            <div
+
+                class="learning-scroll min-h-0 flex-1 overflow-y-auto px-2 pb-2"
+
+                data-learning-list="videos"
+
+            >
+
+                {% if videos %}
+
+                    <div class="space-y-1">
+
+                        {% for video in videos %}
+
+                            <button
+
+                                type="button"
+
+                                class="
+
+                                    learning-item
+
+                                    {% if forloop.first %}active{% endif %}
+
+                                    flex
+
+                                    w-full
+
+                                    items-center
+
+                                    gap-3
+
+                                    rounded-lg
+
+                                    px-3
+
+                                    py-3
+
+                                    text-left
+
+                                "
+
+                                data-video-item
+
+                                data-video-key="{{ video.pk }}"
+
+                                data-video-url="{% if video.video_file %}{{ video.video_file.url }}{% endif %}"
+
+                                data-video-name="{{ video.video_name|escape }}"
+
+                                data-video-description="{{ video.video_description|default:'No description has been added for this video.'|escape }}"
+
+                                aria-pressed="{% if forloop.first %}true{% else %}false{% endif %}"
+
+                            >
+
+                                <i class="ri-play-circle-line shrink-0 text-xl text-cyan-400"></i>
+
+                                <span class="min-w-0 flex-1">
+
+                                    <span class="block break-words text-xs font-semibold leading-5 text-slate-200">
+
+                                        {{ forloop.counter }}. {{ video.video_name }}
+
+                                    </span>
+
+                                    <span class="mt-1 block text-[10px] text-slate-500">
+
+                                        Published video
+
+                                    </span>
+
+                                </span>
+
+                            </button>
+
+                        {% endfor %}
+
+                    </div>
+
+                {% else %}
+
+                    <p class="px-2 py-8 text-center text-xs leading-5 text-slate-500">
+
+                        No published videos are available.
+
+                    </p>
+
+                {% endif %}
+
+            </div>
+
+            <!-- RIGHT SIDE PDF LIST -->
+
+            <div
+
+                class="learning-scroll hidden min-h-0 flex-1 overflow-y-auto px-3 pb-3"
+
+                data-learning-list="pdfs"
+
+                hidden
+
+            >
+
+                {% if pdfs %}
+
+                    <div class="space-y-1">
+
+                        {% for pdf in pdfs %}
+
+                            <div
+
+                                class="learning-item {% if forloop.first %}active{% endif %} flex items-center gap-2 rounded-lg px-3 py-3"
+
+                                data-pdf-item
+
+                                data-pdf-key="{{ pdf.pk }}" data-pdf-url="{% if pdf.pdf_file %}{{ pdf.pdf_file.url }}{% endif %}"
+
+                                data-pdf-name="{{ pdf.pdf_name|escape }}"
+
+                                data-pdf-description="{{ pdf.pdf_description|default:'No description has been added for this PDF.'|escape }}" data-pdf-thumbnail="{% if pdf.pdf_thumbnail %}{{ pdf.pdf_thumbnail.url }}{% else %}{% static 'courses/images/default_pdf_thumbnail.png' %}{% endif %}" aria-pressed="{% if forloop.first %}true{% else %}false{% endif %}"
+
+                            >
+
+                                <button
+
+                                    type="button"
+
+                                    data-select-pdf
+
+                                    class="flex min-w-0 flex-1 items-center gap-3 text-left"
+
+                                >
+
+                                    <i class="ri-file-pdf-line shrink-0 text-xl text-rose-400"></i>
+
+                                    <span class="min-w-0 flex-1">
+
+                                        <span class="block break-words text-xs font-semibold leading-5 text-slate-200">
+
+                                            {{ forloop.counter }}. {{ pdf.pdf_name }}
+
+                                        </span>
+
+                                        <span class="mt-1 block text-[10px] text-slate-500">
+
+                                            PDF resource
+
+                                        </span>
+
+                                    </span>
+
+                                </button>
+
+                                {% if pdf.pdf_file %}
+
+                                    <a
+
+                                        href="{{ pdf.pdf_file.url }}"
+
+                                        download
+
+                                        target="\\\\_blank"
+
+                                        rel="noopener"
+
+                                        class="shrink-0 p-1.5 text-slate-400 hover:text-cyan-400"
+
+                                        aria-label="Download {{ pdf.pdf_name }}"
+
+                                    >
+
+                                        <i class="ri-download-2-line"></i>
+
+                                    </a>
+
+                                {% endif %}
+
+                            </div>
+
+                        {% endfor %}
+
+                    </div>
+
+                {% else %}
+
+                    <p class="px-2 py-8 text-center text-xs leading-5 text-slate-500">
+
+                        No published PDFs are available.
+
+                    </p>
+
+                {% endif %}
+
+            </div>
+
+            <!-- RIGHT SIDE QUIZ LIST -->
+
+            <div
+
+                class="learning-scroll hidden min-h-0 flex-1 overflow-y-auto px-3 pb-3"
+
+                data-learning-list="quizzes"
+
+                hidden
+
+            >
+
+                {% if quizzes %}
+
+                    <div class="space-y-1">
+
+                        {% for quiz in quizzes %}
+
+                            <button type="button" class="learning-item block w-full rounded-lg px-3 py-3 text-left" data-quiz-item="{{ quiz.pk }}" aria-pressed="false">
+
+                                <div class="flex items-start gap-3">
+
+                                    <i class="ri-questionnaire-line mt-0.5 shrink-0 text-lg text-violet-300"></i>
+
+                                    <div class="min-w-0">
+
+                                        <h3 class="break-words text-xs font-semibold leading-5 text-slate-200">
+
+                                            {{ forloop.counter }}. {{ quiz.quiz_name }}
+
+                                        </h3>
+
+                                        <p class="mt-1 text-[10px] leading-4 text-slate-500">
+
+                                            {{ quiz.questions.count }} questions · {{ quiz.answering_time }} minutes
+
+                                        </p>
+
+                                    </div>
+
+                                </div>
+
+                            </button>
+
+                        {% endfor %}
+
+                    </div>
+
+                {% else %}
+
+                    <p class="px-2 py-8 text-center text-xs leading-5 text-slate-500">
+
+                        No published quizzes are available.
+
+                    </p>
+
+                {% endif %}
+
+            </div>
+
+            <!-- RIGHT SIDE LIVE LIST -->
+
+            <div
+
+                class="learning-scroll hidden min-h-0 flex-1 overflow-y-auto px-3 pb-3"
+
+                data-learning-list="live"
+
+                hidden
+
+            >
+
+                <div class="px-2 py-8 text-center">
+
+                    <i class="ri-live-line text-2xl text-cyan-400"></i>
+
+                    <p class="mt-3 text-xs font-semibold text-slate-300">
+
+                        Live sessions are not connected yet
+
+                    </p>
+
+                    <p class="mt-2 text-[11px] leading-5 text-slate-500">
+
+                        Upcoming and ongoing sessions will appear here after live-session support is added.
+
+                    </p>
+
+                </div>
+
+            </div>
+
+            </aside>
+
+    </section>
+
+</div>
+
+<!-- =========================================================
+
+     SMALL JAVASCRIPT
+
+     Tabs + selecting a video or PDF.
+
+     No client-side business logic.
+
+\========================================================== -->
+
+<script>
+
+(function () {
+
+    "use strict";
+
+    const workspace = document.querySelector(".learning-workspace");
+
+    if (!workspace) {
+
+        return;
+
+    }
+
+    const tabButtons = workspace.querySelectorAll("[data-learning-tab]");
+
+    const panels = workspace.querySelectorAll("[data-learning-panel]");
+
+    const listPanels = workspace.querySelectorAll("[data-learning-list]");
+
+    function activateTab(tabName) {
+
+        tabButtons.forEach(function (button) {
+
+            const isActive = button.dataset.learningTab === tabName;
+
+            button.classList.toggle("active", isActive);
+
+            button.setAttribute("aria-selected", String(isActive));
+
+            button.tabIndex = isActive ? 0 : -1;
+
+        });
+
+        panels.forEach(function (panel) {
+
+            const isActive = panel.dataset.learningPanel === tabName;
+
+            panel.hidden = !isActive;
+
+            panel.classList.toggle("hidden", !isActive);
+
+        });
+
+        listPanels.forEach(function (panel) {
+
+            const isActive = panel.dataset.learningList === tabName;
+
+            panel.hidden = !isActive;
+
+            panel.classList.toggle("hidden", !isActive);
+
+        });
+
+    }
+
+    tabButtons.forEach(function (button) {
+
+        button.addEventListener("click", function () {
+
+            activateTab(button.dataset.learningTab);
+
+        });
+
+    });
+
+    // ---------------------------------------------------------
+
+    // VIDEO SELECTION
+
+    // ---------------------------------------------------------
+
+    const videoPlayer = workspace.querySelector("#learning-video-player");
+
+    const videoTitle = workspace.querySelector("#learning-video-title");
+
+    const videoDescription = workspace.querySelector("#learning-video-description");
+
+    workspace.querySelectorAll("[data-video-item]").forEach(function (item) {
+
+        item.addEventListener("click", function () {
+
+            const videoUrl = item.dataset.videoUrl || "";
+
+            if (!videoPlayer || !videoUrl) {
+
+                return;
+
+            }
+
+            if (videoPlayer.currentSrc !== videoUrl) {
+
+                videoPlayer.pause();
+
+                videoPlayer.src = videoUrl;
+
+                videoPlayer.load();
+
+            }
+
+            if (videoTitle) {
+
+                videoTitle.textContent = item.dataset.videoName || "";
+
+            }
+
+            if (videoDescription) {
+
+                videoDescription.textContent = item.dataset.videoDescription || "";
+
+            }
+
+            // Sync the carousel card and right sidebar row by database ID.
+
+            const selectedVideoKey = item.dataset.videoKey || "";
+
+            workspace.querySelectorAll("[data-video-item]").forEach(function (other) {
+
+                const active = selectedVideoKey
+
+                    ? other.dataset.videoKey === selectedVideoKey
+
+                    : other === item;
+
+                other.classList.toggle("active", active);
+
+                other.setAttribute("aria-pressed", String(active));
+
+            });
+
+            activateTab("videos");
+
+        });
+
+    });
+
+    // ---------------------------------------------------------
+
+    // PDF SELECTION
+
+    // Keep the preview, thumbnail, open/download links, and both selectors synchronized.
+
+    const pdfTitle = workspace.querySelector("#learning-pdf-title");
+
+    const pdfDescription = workspace.querySelector("#learning-pdf-description");
+
+    const pdfDownload = workspace.querySelector("#learning-pdf-download");
+
+    const pdfOpen = workspace.querySelector("#learning-pdf-open");
+
+    const pdfThumbnail = workspace.querySelector("#learning-pdf-thumbnail");
+
+    const pdfThumbnailFallback = workspace.querySelector("#learning-pdf-thumbnail-fallback");
+
+    function selectPdf(item) {
+
+        if (!item) {
+
+            return;
+
+        }
+
+        const pdfUrl = item.dataset.pdfUrl || "";
+
+        if (!pdfUrl) {
+
+            return;
+
+        }
+
+        const pdfName = item.dataset.pdfName || "Chapter PDF";
+
+        const pdfDescriptionText =
+
+            item.dataset.pdfDescription || "No description has been added for this PDF.";
+
+        const pdfKey = item.dataset.pdfKey || "";
+
+        const thumbnailUrl = item.dataset.pdfThumbnail || "";
+
+        if (pdfTitle) {
+
+            pdfTitle.textContent = pdfName;
+
+        }
+
+        if (pdfDescription) {
+
+            pdfDescription.textContent = pdfDescriptionText;
+
+        }
+
+        if (pdfDownload) {
+
+            pdfDownload.href = pdfUrl;
+
+            pdfDownload.setAttribute("download", "");
+
+            pdfDownload.setAttribute("aria-label", "Download " + pdfName);
+
+        }
+
+        if (pdfOpen) {
+
+            pdfOpen.href = pdfUrl;
+
+            pdfOpen.setAttribute("target", "_blank");
+
+            pdfOpen.setAttribute("rel", "noopener noreferrer");
+
+            pdfOpen.setAttribute("aria-label", "Open " + pdfName + " in a new tab");
+
+        }
+
+        if (pdfThumbnail) {
+
+            if (thumbnailUrl) {
+
+                pdfThumbnail.src = thumbnailUrl;
+
+                pdfThumbnail.alt = "Preview of " + pdfName;
+
+                pdfThumbnail.classList.remove("hidden");
+
+                if (pdfThumbnailFallback) {
+
+                    pdfThumbnailFallback.classList.add("hidden");
+
+                }
+
+            } else {
+
+                pdfThumbnail.removeAttribute("src");
+
+                pdfThumbnail.alt = "";
+
+                pdfThumbnail.classList.add("hidden");
+
+                if (pdfThumbnailFallback) {
+
+                    pdfThumbnailFallback.classList.remove("hidden");
+
+                }
+
+            }
+
+            pdfThumbnail.onerror = function () {
+
+                pdfThumbnail.classList.add("hidden");
+
+                if (pdfThumbnailFallback) {
+
+                    pdfThumbnailFallback.classList.remove("hidden");
+
+                }
+
+            };
+
+        }
+
+        workspace.querySelectorAll("[data-pdf-item]").forEach(function (other) {
+
+            const samePdf = pdfKey
+
+                ? other.dataset.pdfKey === pdfKey
+
+                : other === item;
+
+            other.classList.toggle("active", samePdf);
+
+            other.setAttribute("aria-pressed", String(samePdf));
+
+        });
+
+        activateTab("pdfs");
+
+    }
+
+    workspace.querySelectorAll("[data-pdf-item]").forEach(function (item) {
+
+        item.addEventListener("click", function (event) {
+
+            if (event.target.closest("a")) {
+
+                return;
+
+            }
+
+            selectPdf(item);
+
+        });
+
+    });
+
+    // Keep keyboard navigation usable for the content tabs.
+
+    tabButtons.forEach(function (button) {
+
+        button.addEventListener("keydown", function (event) {
+
+            const keys = ["ArrowLeft", "ArrowRight", "Home", "End"];
+
+            if (!keys.includes(event.key)) {
+
+                return;
+
+            }
+
+            event.preventDefault();
+
+            const buttons = Array.from(tabButtons);
+
+            const currentIndex = buttons.indexOf(button);
+
+            let nextIndex = currentIndex;
+
+            if (event.key === "ArrowRight") {
+
+                nextIndex = (currentIndex + 1) % buttons.length;
+
+            } else if (event.key === "ArrowLeft") {
+
+                nextIndex = (currentIndex - 1 + buttons.length) % buttons.length;
+
+            } else if (event.key === "Home") {
+
+                nextIndex = 0;
+
+            } else if (event.key === "End") {
+
+                nextIndex = buttons.length - 1;
+
+            }
+
+            const nextButton = buttons[nextIndex];
+
+            nextButton.focus();
+
+            activateTab(nextButton.dataset.learningTab);
+
+        });
+
+    });
+
+
+    // Open the requested workspace tab after a quiz start, resume, or result redirect.
+    const pageParams = new URLSearchParams(window.location.search);
+    const requestedTab = pageParams.get("tab");
+    if (requestedTab && ["videos", "pdfs", "quizzes", "live", "comments"].includes(requestedTab)) {
+        activateTab(requestedTab);
+    }
+
+    // Quiz UI: one question at a time, server-saved answers, and countdown.
+    // Django remains authoritative for answer validation, expiry, and grading.
+    const quizForm = workspace.querySelector("#quiz-take-form");
+    const countdown = workspace.querySelector("#quiz-countdown");
+
+    if (quizForm) {
+        const questionCards = Array.from(quizForm.querySelectorAll("[data-quiz-question]"));
+        const jumpButtons = Array.from(quizForm.querySelectorAll("[data-question-jump]"));
+        const previousButton = quizForm.querySelector("#quiz-previous-button");
+        const nextButton = quizForm.querySelector("#quiz-next-button");
+        const skipButton = quizForm.querySelector("#quiz-skip-button");
+        const submitButton = quizForm.querySelector("#quiz-submit-button");
+        const progressLabel = quizForm.querySelector("#quiz-progress-label");
+        const progressBar = quizForm.querySelector("#quiz-progress-bar");
+        let currentQuestion = Math.max(0, questionCards.findIndex(function (card) {
+            return !card.hidden;
+        }));
+        let quizSubmitted = false;
+        let saving = false;
+
+        function questionIsAnswered(card) {
+            return Boolean(card && card.querySelector('input[type="radio"]:checked'));
+        }
+
+        function updateQuestionNavigation() {
+            const total = questionCards.length;
+            const currentCard = questionCards[currentQuestion];
+            questionCards.forEach(function (card, index) {
+                card.hidden = index !== currentQuestion;
+            });
+            jumpButtons.forEach(function (button, index) {
+                const card = questionCards[index];
+                const answered = questionIsAnswered(card);
+                const isCurrent = index === currentQuestion;
+                button.dataset.answered = answered ? "true" : "false";
+                button.classList.toggle("border-cyan-300", isCurrent);
+                button.classList.toggle("bg-cyan-400", isCurrent);
+                button.classList.toggle("text-slate-950", isCurrent);
+                button.classList.toggle("border-emerald-400/40", !isCurrent && answered);
+                button.classList.toggle("bg-emerald-400/10", !isCurrent && answered);
+                button.classList.toggle("text-emerald-300", !isCurrent && answered);
+                button.classList.toggle("border-white/10", !isCurrent && !answered);
+                button.classList.toggle("text-slate-300", !isCurrent && !answered);
+                button.setAttribute("aria-current", isCurrent ? "step" : "false");
+            });
+            if (progressLabel) {
+                progressLabel.textContent = total
+                    ? "Question " + (currentQuestion + 1) + " of " + total
+                    : "No questions";
+            }
+            if (progressBar) {
+                progressBar.style.width = total ? (((currentQuestion + 1) / total) * 100) + "%" : "0%";
+            }
+            if (previousButton) {
+                previousButton.disabled = currentQuestion === 0 || saving;
+            }
+            if (skipButton) {
+                skipButton.disabled = saving || !total;
+                skipButton.classList.toggle("hidden", currentQuestion >= total - 1);
+            }
+            if (nextButton) {
+                const isLastQuestion = currentQuestion >= total - 1;
+                nextButton.classList.toggle("hidden", isLastQuestion);
+                nextButton.classList.toggle("inline-flex", !isLastQuestion);
+                nextButton.disabled = saving || !questionIsAnswered(currentCard);
+            }
+            if (submitButton) {
+                const lastQuestion = total > 0 && currentQuestion === total - 1;
+                submitButton.classList.toggle("hidden", !lastQuestion);
+                submitButton.classList.toggle("inline-flex", lastQuestion);
+                submitButton.disabled = saving || !total;
+            }
+        }
+
+        function setQuestionStatus(card, message, state) {
+            const status = card.querySelector(".quiz-save-status");
+            const icon = card.querySelector(".quiz-save-icon");
+            if (status) {
+                status.textContent = message;
+                status.className = "quiz-save-status " + (
+                    state === "success" ? "text-emerald-300" :
+                    state === "error" ? "text-rose-300" : "text-slate-400"
+                );
+            }
+            if (icon) {
+                icon.className = "quiz-save-icon " + (
+                    state === "success" ? "ri-check-line text-emerald-300" :
+                    state === "error" ? "ri-error-warning-line text-rose-300" :
+                    "ri-information-line text-slate-500"
+                );
+            }
+        }
+
+        function goToQuestion(index) {
+            if (saving || index < 0 || index >= questionCards.length) {
+                return;
+            }
+            currentQuestion = index;
+            updateQuestionNavigation();
+            const firstOption = questionCards[currentQuestion].querySelector('input[type="radio"]');
+            if (firstOption) {
+                firstOption.focus({ preventScroll: true });
+            }
+        }
+
+        function getCsrfToken() {
+            const input = quizForm.querySelector('input[name="csrfmiddlewaretoken"]');
+            return input ? input.value : "";
+        }
+
+        questionCards.forEach(function (card, index) {
+            const radios = Array.from(card.querySelectorAll('input[type="radio"]'));
+            const isAlreadyLocked = card.dataset.locked === "true";
+
+            if (isAlreadyLocked) {
+                radios.forEach(function (radio) {
+                    radio.addEventListener("change", function () {
+                        radios.forEach(function (item) {
+                            item.checked = item.value === (card.dataset.savedLabel || "");
+                        });
+                        setQuestionStatus(card, "Answer already saved. You cannot change it.", "success");
+                    });
+                    if (radio.checked) {
+                        card.dataset.savedLabel = radio.value;
+                    }
+                });
+                setQuestionStatus(card, "Answer saved. This answer is locked and cannot be changed.", "success");
+            }
+
+            radios.forEach(function (radio) {
+                radio.addEventListener("change", async function () {
+                    if (!radio.checked) {
+                        return;
+                    }
+                    if (card.dataset.locked === "true") {
+                        radios.forEach(function (item) {
+                            item.checked = item.value === (card.dataset.savedLabel || "");
+                        });
+                        return;
+                    }
+                    if (saving) {
+                        radio.checked = false;
+                        return;
+                    }
+
+                    saving = true;
+                    updateQuestionNavigation();
+                    radios.forEach(function (item) {
+                        item.disabled = true;
+                    });
+                    setQuestionStatus(card, "Saving your answer…", "pending");
+
+                    try {
+                        const body = new FormData();
+                        body.append("selected_option", radio.value);
+                        const response = await fetch(card.dataset.saveUrl, {
+                            method: "POST",
+                            body: body,
+                            credentials: "same-origin",
+                            headers: {
+                                "X-Requested-With": "XMLHttpRequest",
+                                "X-CSRFToken": getCsrfToken()
+                            }
+                        });
+                        const data = await response.json();
+
+                        if (!response.ok || !data.success) {
+                            if (data.time_expired) {
+                                setQuestionStatus(card, "Time expired. Submitting the attempt…", "error");
+                                quizSubmitted = true;
+                                quizForm.submit();
+                                return;
+                            }
+                            throw new Error(data.message || "Your answer could not be saved.");
+                        }
+
+                        card.dataset.locked = "true";
+                        card.dataset.savedLabel = data.selected_option || radio.value;
+                        radios.forEach(function (item) {
+                            item.checked = item.value === card.dataset.savedLabel;
+                        });
+                        setQuestionStatus(card, data.message || "Answer saved. This answer is now locked.", "success");
+                    } catch (error) {
+                        radio.checked = false;
+                        setQuestionStatus(card, error.message || "Could not save your answer. Please try again.", "error");
+                    } finally {
+                        radios.forEach(function (item) {
+                            item.disabled = false;
+                        });
+                        saving = false;
+                        updateQuestionNavigation();
+                    }
+                });
+            });
+
+            jumpButtons[index]?.addEventListener("click", function () {
+                goToQuestion(index);
+            });
+        });
+
+        if (previousButton) {
+            previousButton.addEventListener("click", function () {
+                goToQuestion(currentQuestion - 1);
+            });
+        }
+        if (nextButton) {
+            nextButton.addEventListener("click", function () {
+                goToQuestion(currentQuestion + 1);
+            });
+        }
+        if (skipButton) {
+            skipButton.addEventListener("click", function () {
+                goToQuestion(currentQuestion + 1);
+            });
+        }
+
+        updateQuestionNavigation();
+
+        // Keep the server-provided deadline as the source of truth.
+        if (countdown) {
+            let remaining = Math.max(0, parseInt(countdown.dataset.seconds || "0", 10));
+
+            function formatQuizTime(seconds) {
+                const minutes = Math.floor(seconds / 60);
+                const remainder = seconds % 60;
+                return String(minutes).padStart(2, "0") + ":" + String(remainder).padStart(2, "0");
+            }
+
+            function updateQuizTimer() {
+                countdown.textContent = formatQuizTime(remaining);
+                if (remaining <= 60) {
+                    countdown.classList.add("text-rose-400");
+                    countdown.classList.remove("text-white");
+                }
+                if (remaining <= 0 && !quizSubmitted) {
+                    quizSubmitted = true;
+                    countdown.textContent = "00:00";
+                    if (submitButton) {
+                        submitButton.disabled = true;
+                        submitButton.textContent = "Submitting…";
+                    }
+                    quizForm.submit();
+                    return;
+                }
+                if (remaining > 0) {
+                    remaining -= 1;
+                    window.setTimeout(updateQuizTimer, 1000);
+                }
+            }
+            updateQuizTimer();
+        }
+
+        const confirmationModal = workspace.querySelector("#quiz-submit-confirmation");
+        const confirmationDialog = confirmationModal
+            ? confirmationModal.querySelector("[role=\"dialog\"]")
+            : null;
+        const confirmationCancel = workspace.querySelector("#quiz-submit-cancel");
+        const confirmationConfirm = workspace.querySelector("#quiz-submit-confirm");
+        let previouslyFocusedElement = null;
+
+        function closeSubmissionConfirmation() {
+            if (!confirmationModal || confirmationModal.hidden) {
+                return;
+            }
+            confirmationModal.hidden = true;
+            confirmationModal.setAttribute("aria-hidden", "true");
+            document.body.classList.remove("quiz-confirmation-open");
+            if (previouslyFocusedElement && document.contains(previouslyFocusedElement)) {
+                previouslyFocusedElement.focus();
+            }
+        }
+
+        function openSubmissionConfirmation() {
+            if (!confirmationModal) {
+                return false;
+            }
+            previouslyFocusedElement = document.activeElement;
+            confirmationModal.hidden = false;
+            confirmationModal.setAttribute("aria-hidden", "false");
+            document.body.classList.add("quiz-confirmation-open");
+            if (confirmationDialog) {
+                confirmationDialog.focus();
+            }
+            return true;
+        }
+
+        quizForm.addEventListener("submit", function (event) {
+            if (quizSubmitted) {
+                return;
+            }
+            if (saving) {
+                event.preventDefault();
+                return;
+            }
+            event.preventDefault();
+            openSubmissionConfirmation();
+        });
+
+        if (confirmationCancel) {
+            confirmationCancel.addEventListener("click", closeSubmissionConfirmation);
+        }
+
+        if (confirmationConfirm) {
+            confirmationConfirm.addEventListener("click", function () {
+                if (quizSubmitted || saving) {
+                    return;
+                }
+                quizSubmitted = true;
+                closeSubmissionConfirmation();
+                if (submitButton) {
+                    submitButton.disabled = true;
+                    submitButton.innerHTML = '<i class=\"ri-loader-4-line animate-spin\"></i> Submitting…';
+                }
+                confirmationConfirm.disabled = true;
+                quizForm.submit();
+            });
+        }
+
+        if (confirmationModal) {
+            confirmationModal.addEventListener("click", function (event) {
+                if (event.target === confirmationModal) {
+                    closeSubmissionConfirmation();
+                }
+            });
+        }
+
+        document.addEventListener("keydown", function (event) {
+            if (event.key === "Escape" && confirmationModal && !confirmationModal.hidden) {
+                closeSubmissionConfirmation();
+            }
+        });
+    }
+
+})();
+
+</script>
+
+{% endblock %}

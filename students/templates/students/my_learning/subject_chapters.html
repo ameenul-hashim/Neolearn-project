@@ -1,0 +1,363 @@
+{% extends "students/base_student.html" %}
+
+{% block title %}{{ subject.subject_name }} Chapters | NeoLearn{% endblock %}
+
+{% block student_content %}
+
+<div class="min-h-full bg-[#050B18] px-4 py-6 sm:px-6 lg:px-8">
+
+    <div class="mx-auto w-full max-w-[1400px]">
+
+        <!-- =====================================================
+             BREADCRUMB NAVIGATION
+             ===================================================== -->
+
+        <nav class="mb-6 flex flex-wrap items-center gap-2 text-sm">
+
+            <a
+                href="{% url 'my_learning' %}"
+                class="text-slate-400 transition hover:text-cyan-400"
+            >
+                My Learning
+            </a>
+
+            <i class="ri-arrow-right-s-line text-slate-600"></i>
+
+            <a
+                href="{% url 'my_learning_batch' batch.id %}"
+                class="max-w-[180px] truncate text-slate-400 transition hover:text-cyan-400"
+            >
+                {{ batch.batch_name }}
+            </a>
+
+            <i class="ri-arrow-right-s-line text-slate-600"></i>
+
+            <span class="max-w-[220px] truncate font-semibold text-cyan-400">
+                {{ subject.subject_name }}
+            </span>
+
+        </nav>
+
+
+        <!-- =====================================================
+             SUBJECT HEADER
+             ===================================================== -->
+
+        <section
+            class="relative mb-8 overflow-hidden rounded-[24px]
+                   border border-white/10 bg-gradient-to-br
+                   from-[#10243A] via-[#0B1729] to-[#07101E]
+                   p-6 sm:p-8"
+        >
+
+            <div
+                class="pointer-events-none absolute -right-12 -top-16
+                       h-56 w-56 rounded-full bg-cyan-400/10 blur-3xl"
+            ></div>
+
+            <div class="relative z-10">
+
+                <a
+                    href="{% url 'my_learning_batch' batch.id %}"
+                    class="mb-6 inline-flex items-center gap-2
+                           text-sm font-medium text-slate-400
+                           transition hover:text-cyan-400"
+                >
+                    <i class="ri-arrow-left-line text-lg"></i>
+                    Back to subjects
+                </a>
+
+                <div class="flex flex-col gap-5 sm:flex-row sm:items-center">
+
+                    <div
+                        class="flex h-[68px] w-[68px] shrink-0
+                               items-center justify-center rounded-[20px]
+                               border border-cyan-400/20 bg-cyan-400/10
+                               text-cyan-400"
+                    >
+                        <i class="ri-book-open-line text-[34px]"></i>
+                    </div>
+
+                    <div class="min-w-0 flex-1">
+
+                        <p
+                            class="mb-2 text-xs font-bold uppercase
+                                   tracking-[0.22em] text-cyan-400"
+                        >
+                            Subject Curriculum
+                        </p>
+
+                        <h1
+                            class="break-words text-2xl font-extrabold
+                                   tracking-tight text-white
+                                   sm:text-3xl lg:text-4xl"
+                        >
+                            {{ subject.subject_name }}
+                        </h1>
+
+                        <p class="mt-3 max-w-2xl text-sm leading-6 text-slate-400">
+                            Explore the chapters in this subject.
+                            Open a chapter to access its available
+                            videos, study materials and quizzes.
+                        </p>
+
+                    </div>
+
+                    <div
+                        class="inline-flex w-fit shrink-0 items-center
+                               gap-2 rounded-full border border-white/10
+                               bg-white/5 px-4 py-2 text-sm
+                               font-semibold text-slate-300"
+                    >
+                        <i class="ri-list-ordered text-lg text-cyan-400"></i>
+
+                        {% if chapters %}
+                            {{ chapters|length }}
+                            {% if chapters|length == 1 %}
+                                Chapter
+                            {% else %}
+                                Chapters
+                            {% endif %}
+                        {% else %}
+                            0 Chapters
+                        {% endif %}
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- =====================================================
+             CHAPTER LIST HEADER
+             ===================================================== -->
+
+        <div class="mb-5 flex flex-col gap-3 sm:flex-row
+                    sm:items-center sm:justify-between">
+
+            <div>
+
+                <h2 class="text-xl font-bold text-white sm:text-2xl">
+                    Chapters
+                </h2>
+
+                <p class="mt-1 text-sm text-slate-400">
+                    Select a chapter to start learning.
+                </p>
+
+            </div>
+
+            {% if chapters %}
+                <span
+                    class="inline-flex w-fit items-center gap-2
+                           rounded-full border border-emerald-400/20
+                           bg-emerald-400/10 px-3 py-1.5
+                           text-xs font-semibold text-emerald-400"
+                >
+                    <i class="ri-checkbox-circle-line text-base"></i>
+                    Published content
+                </span>
+            {% endif %}
+
+        </div>
+
+
+        <!-- =====================================================
+             CHAPTER LIST
+             ===================================================== -->
+
+        {% if chapters %}
+
+            <div class="space-y-4">
+
+                {% for chapter in chapters %}
+
+                    <a
+                        href="{% url 'my_learning_chapter' batch.id subject.id chapter.id %}"
+                        class="group flex min-w-0 flex-col gap-4
+                               rounded-[20px] border border-white/10
+                               bg-[#0A1424] p-5
+                               transition duration-200
+                               hover:border-cyan-400/30
+                               hover:bg-[#0D1B2D]
+                               sm:flex-row sm:items-center sm:p-6"
+                    >
+
+                        <!-- CHAPTER NUMBER -->
+
+                        <div
+                            class="flex h-[56px] w-[56px] shrink-0
+                                   items-center justify-center
+                                   rounded-[17px] border border-cyan-400/20
+                                   bg-cyan-400/10 text-xl font-extrabold
+                                   text-cyan-400 transition
+                                   group-hover:bg-cyan-400/15"
+                        >
+                            {{ forloop.counter|stringformat:"02d" }}
+                        </div>
+
+
+                        <!-- CHAPTER INFORMATION -->
+
+                        <div class="min-w-0 flex-1">
+
+                            <div class="mb-2 flex flex-wrap
+                                        items-center gap-2">
+
+                                <span
+                                    class="text-[11px] font-bold
+                                           uppercase tracking-[0.16em]
+                                           text-slate-500"
+                                >
+                                    Chapter {{ forloop.counter }}
+                                </span>
+
+                                <span
+                                    class="rounded-full border
+                                           border-emerald-400/20
+                                           bg-emerald-400/10
+                                           px-2.5 py-1 text-[10px]
+                                           font-bold uppercase
+                                           tracking-wide text-emerald-400"
+                                >
+                                    Published
+                                </span>
+
+                            </div>
+
+                            <h3
+                                class="break-words text-base
+                                       font-bold text-white
+                                       transition group-hover:text-cyan-400
+                                       sm:text-lg"
+                            >
+                                {{ chapter.chapter_name }}
+                            </h3>
+
+                            <p class="mt-2 text-sm leading-6 text-slate-400">
+                                Open this chapter to view its available
+                                learning materials.
+                            </p>
+
+                        </div>
+
+
+                        <!-- OPEN CHAPTER -->
+
+                        <div
+                            class="flex shrink-0 items-center
+                                   justify-between gap-3
+                                   border-t border-white/5 pt-4
+                                   sm:justify-end sm:border-0 sm:pt-0"
+                        >
+
+                            <span
+                                class="text-sm font-semibold
+                                       text-slate-400 transition
+                                       group-hover:text-cyan-400"
+                            >
+                                Open chapter
+                            </span>
+
+                            <span
+                                class="flex h-10 w-10 shrink-0
+                                       items-center justify-center
+                                       rounded-full border border-white/10
+                                       bg-white/5 text-slate-300
+                                       transition duration-200
+                                       group-hover:border-cyan-400/30
+                                       group-hover:bg-cyan-400/10
+                                       group-hover:text-cyan-400"
+                            >
+                                <i class="ri-arrow-right-line text-xl"></i>
+                            </span>
+
+                        </div>
+
+                    </a>
+
+                {% endfor %}
+
+            </div>
+
+
+        {% else %}
+
+            <!-- =================================================
+                 EMPTY STATE: NO PUBLISHED CHAPTERS
+                 ================================================= -->
+
+            <section
+                class="flex min-h-[340px] items-center justify-center
+                       rounded-[24px] border border-white/10
+                       bg-[#0A1424] px-5 py-12 sm:px-8"
+            >
+
+                <div class="mx-auto max-w-[460px] text-center">
+
+                    <div
+                        class="mx-auto flex h-[82px] w-[82px]
+                               items-center justify-center rounded-[24px]
+                               border border-cyan-400/20 bg-cyan-400/10
+                               text-cyan-400"
+                    >
+                        <i class="ri-book-open-line text-[38px]"></i>
+                    </div>
+
+                    <h2 class="mt-6 text-xl font-extrabold text-white sm:text-2xl">
+                        No chapters available yet
+                    </h2>
+
+                    <p class="mt-3 text-sm leading-6 text-slate-400">
+                        There are no published chapters in this subject
+                        at the moment. Please check back later when
+                        your instructor publishes the learning content.
+                    </p>
+
+                    <a
+                        href="{% url 'my_learning_batch' batch.id %}"
+                        class="mt-7 inline-flex min-h-[46px]
+                               items-center justify-center gap-2
+                               rounded-xl border border-white/10
+                               bg-white/5 px-5 py-3 text-sm
+                               font-semibold text-white transition
+                               hover:border-cyan-400/30
+                               hover:bg-cyan-400/10
+                               hover:text-cyan-400"
+                    >
+                        <i class="ri-arrow-left-line text-lg"></i>
+                        Back to subjects
+                    </a>
+
+                </div>
+
+            </section>
+
+        {% endif %}
+
+
+        <!-- =====================================================
+             BOTTOM NAVIGATION
+             ===================================================== -->
+
+        <div class="mt-8 border-t border-white/10 pt-5">
+
+            <a
+                href="{% url 'my_learning_batch' batch.id %}"
+                class="inline-flex items-center gap-2 text-sm
+                       font-semibold text-slate-400 transition
+                       hover:text-cyan-400"
+            >
+                <i class="ri-arrow-left-line text-lg"></i>
+                Back to {{ batch.batch_name }} subjects
+            </a>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

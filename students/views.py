@@ -5,7 +5,9 @@ from django.contrib import messages
 from django.http import JsonResponse
 from django.db.models import Q
 from django.utils import timezone
+from django.db import transaction
 from datetime import datetime, timedelta
+from django.urls import reverse
 from admins.models import (
     Batch,
     Subject,
@@ -35,7 +37,19 @@ from .models import (
     Cart,
     CartItem,
     CartCoupon,
+    QuizAttempt,
+    QuizAttemptAnswer,
 )
+
+from courses.models import (
+    CourseChapter,
+    ChapterVideo,
+    ChapterPDF,
+    ChapterQuiz,
+    QuizQuestion,
+    QuizOption,
+)
+
 import cloudinary.uploader
 
 from .models import (
@@ -1832,6 +1846,316 @@ def my_learning_view(request):
     )
 
 # ============================================================
+# MY LEARNING - BATCH SUBJECTS
+# ============================================================
+
+@login_required(login_url='signin')
+@cache_control(
+    no_cache=True,
+    must_revalidate=True,
+    no_store=True
+)
+def my_learning_batch_view(request, batch_id):
+
+    if not is_student_user(request.user):
+        messages.error(
+            request,
+            'Admin login is not allowed here. Please use the admin login area.'
+        )
+        return redirect('signin')
+
+    purchase = get_object_or_404(
+        StudentBatchPurchase.objects.select_related(
+            'batch'
+        ),
+        student=request.user,
+        batch_id=batch_id,
+        status=StudentBatchPurchase.Status.ACTIVE,
+    )
+
+    batch = purchase.batch
+
+    subjects = (
+        Subject.objects
+        .filter(
+            batch=batch,
+            subject_status='published',
+        )
+        .order_by(
+            'subject_name'
+        )
+    )
+
+    return render(
+        request,
+        'students/my_learning/batch_subjects.html',
+        {
+            'batch': batch,
+            'subjects': subjects,
+        },
+    )
+
+
+# ============================================================
+# MY LEARNING - SUBJECT CHAPTERS
+# ============================================================
+
+@login_required(login_url='signin')
+@cache_control(
+    no_cache=True,
+    must_revalidate=True,
+    no_store=True
+)
+def my_learning_subject_view(request, batch_id, subject_id):
+
+    if not is_student_user(request.user):
+        messages.error(
+            request,
+            'Admin login is not allowed here. Please use the admin login area.'
+        )
+        return redirect('signin')
+
+    purchase = get_object_or_404(
+        StudentBatchPurchase.objects.select_related(
+            'batch'
+        ),
+        student=request.user,
+        batch_id=batch_id,
+        status=StudentBatchPurchase.Status.ACTIVE,
+    )
+
+    batch = purchase.batch
+
+    subject = get_object_or_404(
+        Subject,
+        id=subject_id,
+        batch=batch,
+        subject_status='published',
+    )
+
+    chapters = (
+        CourseChapter.objects
+        .filter(
+            batch=batch,
+            subject=subject,
+            status='published',
+        )
+        .order_by(
+            'chapter_order',
+            'pk',
+        )
+    )
+
+    return render(
+        request,
+        'students/my_learning/subject_chapters.html',
+        {
+            'batch': batch,
+            'subject': subject,
+            'chapters': chapters,
+        },
+    )
+
+# ============================================================
+# MY LEARNING - CHAPTER CONTENT
+# ============================================================
+
+
+# ============================================================
+# MY LEARNING - CHAPTER CONTENT
+# ============================================================
+
+@login_required(login_url="signin")
+@cache_control(
+    no_cache=True,
+    must_revalidate=True,
+    no_store=True,
+)
+def my_learning_chapter_view(request, batch_id, subject_id, chapter_id):
+    if not is_student_user(request.user):
+        messages.error(
+            request,
+            "Admin login is not allowed here. Please use the admin login area.",
+        )
+        return redirect("signin")
+
+    # VERIFY ACTIVE PURCHASE
+    purchase = get_object_or_404(
+        StudentBatchPurchase.objects.select_related("batch"),
+        student=request.user,
+        batch_id=batch_id,
+        status=StudentBatchPurchase.Status.ACTIVE,
+    )
+    batch = purchase.batch
+
+    # VERIFY SUBJECT AND CHAPTER ACCESS
+    subject = get_object_or_404(
+        Subject,
+        pk=subject_id,
+        batch=batch,
+        subject_status="published",
+    )
+    chapter = get_object_or_404(
+        CourseChapter,
+        pk=chapter_id,
+        batch=batch,
+        subject=subject,
+        status="published",
+    )
+
+    # LOAD PUBLISHED CHAPTER CONTENT
+    videos = ChapterVideo.objects.filter(
+        chapter=chapter,
+        status="published",
+    ).order_by("video_order", "pk")
+
+    pdfs = ChapterPDF.objects.filter(
+        chapter=chapter,
+        status="published",
+    ).order_by("pdf_order", "pk")
+
+    quizzes = list(
+        ChapterQuiz.objects.filter(
+            chapter=chapter,
+            status="published",
+        ).order_by("quiz_order", "pk")
+    )
+
+    # CLOSE EXPIRED ATTEMPTS. Timed-out attempts consume the limit.
+    now = timezone.now()
+    QuizAttempt.objects.filter(
+        student=request.user,
+        quiz__chapter=chapter,
+        status=QuizAttempt.Status.IN_PROGRESS,
+        expires_at__lte=now,
+    ).update(
+        status=QuizAttempt.Status.TIMED_OUT,
+        submitted_at=now,
+        score=0,
+    )
+
+    # FIND ACTIVE ATTEMPTS SO STUDENTS CAN RESUME THEIR TIMER
+    active_quiz_attempts = {}
+    active_attempts = (
+        QuizAttempt.objects.filter(
+            student=request.user,
+            quiz__chapter=chapter,
+            status=QuizAttempt.Status.IN_PROGRESS,
+            expires_at__gt=now,
+        )
+        .select_related("quiz")
+        .order_by("-started_at", "-pk")
+    )
+
+    for active_attempt in active_attempts:
+        if active_attempt.quiz_id not in active_quiz_attempts:
+            active_quiz_attempts[active_attempt.quiz_id] = active_attempt
+
+    # SUBMITTED AND TIMED_OUT ATTEMPTS BOTH CONSUME AN ATTEMPT
+    quiz_cards = []
+    for quiz in quizzes:
+        attempts_used = QuizAttempt.objects.filter(
+            student=request.user,
+            quiz=quiz,
+            status__in=[
+                QuizAttempt.Status.SUBMITTED,
+                QuizAttempt.Status.TIMED_OUT,
+            ],
+        ).count()
+
+        quiz_cards.append(
+            {
+                "quiz": quiz,
+                "active_attempt": active_quiz_attempts.get(quiz.pk),
+                "attempts_used": attempts_used,
+            }
+        )
+
+    # DEFAULT QUIZ DISPLAY STATE
+    quiz_attempt = None
+    quiz_answers = []
+    quiz_mode = "list"
+    remaining_seconds = 0
+    quiz_percentage = 0
+
+    # OPEN A SPECIFIC ATTEMPT OR RESULT
+    attempt_id = request.GET.get("attempt", "").strip()
+    if attempt_id:
+        quiz_attempt = get_object_or_404(
+            QuizAttempt.objects.select_related("quiz", "quiz__chapter"),
+            pk=attempt_id,
+            student=request.user,
+            quiz__chapter=chapter,
+        )
+
+        # CLOSE THIS ATTEMPT IF ITS TIMER HAS EXPIRED
+        if (
+            quiz_attempt.status == QuizAttempt.Status.IN_PROGRESS
+            and timezone.now() >= quiz_attempt.expires_at
+        ):
+            now = timezone.now()
+            quiz_attempt.status = QuizAttempt.Status.TIMED_OUT
+            quiz_attempt.submitted_at = now
+            quiz_attempt.score = 0
+            quiz_attempt.save(
+                update_fields=[
+                    "status",
+                    "submitted_at",
+                    "score",
+                    "updated_at",
+                ]
+            )
+
+            # Keep the displayed attempt count consistent immediately.
+            for card in quiz_cards:
+                if card["quiz"].pk == quiz_attempt.quiz_id:
+                    card["attempts_used"] += 1
+                    break
+
+        quiz_answers = list(quiz_attempt.answers.all().order_by("pk"))
+
+        if quiz_attempt.status == QuizAttempt.Status.IN_PROGRESS:
+            quiz_mode = "take"
+            remaining_seconds = max(
+                0,
+                int(
+                    (
+                        quiz_attempt.expires_at - timezone.now()
+                    ).total_seconds()
+                ),
+            )
+        else:
+            quiz_mode = "result"
+            if quiz_attempt.maximum_marks:
+                quiz_percentage = round(
+                    float(quiz_attempt.score or 0)
+                    / float(quiz_attempt.maximum_marks)
+                    * 100,
+                    2,
+                )
+
+    return render(
+        request,
+        "students/my_learning/chapter_learning.html",
+        {
+            "batch": batch,
+            "subject": subject,
+            "chapter": chapter,
+            "videos": videos,
+            "pdfs": pdfs,
+            "quizzes": quizzes,
+            "quiz_cards": quiz_cards,
+            "active_quiz_attempts": active_quiz_attempts,
+            "quiz_attempt": quiz_attempt,
+            "quiz_answers": quiz_answers,
+            "quiz_mode": quiz_mode,
+            "remaining_seconds": remaining_seconds,
+            "quiz_percentage": quiz_percentage,
+        },
+    )
+
+
+# ============================================================
 # STUDENT ORDER HISTORY
 # ============================================================
 
@@ -2776,4 +3100,549 @@ def order_details_view(request, order_number):
 
             "status_label": status_label,
         },
+    )
+
+
+# ============================================================
+# STUDENT QUIZ - START ATTEMPT
+# ============================================================
+
+@login_required(login_url="signin")
+@cache_control(
+    no_cache=True,
+    must_revalidate=True,
+    no_store=True,
+)
+def start_quiz_view(request, batch_id, subject_id, chapter_id, quiz_id):
+    if not is_student_user(request.user):
+        messages.error(request, "Student access required.")
+        return redirect("signin")
+
+    chapter_url = reverse(
+        "my_learning_chapter",
+        kwargs={
+            "batch_id": batch_id,
+            "subject_id": subject_id,
+            "chapter_id": chapter_id,
+        },
+    )
+
+    if request.method != "POST":
+        return redirect(f"{chapter_url}?tab=quizzes")
+
+    with transaction.atomic():
+        purchase = get_object_or_404(
+            StudentBatchPurchase.objects.select_for_update(),
+            student=request.user,
+            batch_id=batch_id,
+            status=StudentBatchPurchase.Status.ACTIVE,
+        )
+
+        quiz = get_object_or_404(
+            ChapterQuiz.objects.select_for_update().select_related(
+                "chapter",
+                "chapter__batch",
+                "chapter__subject",
+            ),
+            pk=quiz_id,
+            chapter_id=chapter_id,
+            chapter__batch_id=purchase.batch_id,
+            chapter__subject_id=subject_id,
+            chapter__status="published",
+            chapter__subject__subject_status="published",
+            status="published",
+        )
+
+        now = timezone.now()
+
+        # CLOSE EXPIRED ATTEMPTS FIRST
+        QuizAttempt.objects.filter(
+            student=request.user,
+            quiz=quiz,
+            status=QuizAttempt.Status.IN_PROGRESS,
+            expires_at__lte=now,
+        ).update(
+            status=QuizAttempt.Status.TIMED_OUT,
+            submitted_at=now,
+            score=0,
+        )
+
+        # RESUME AN ACTIVE ATTEMPT WITHOUT RESETTING ITS TIMER
+        active_attempt = (
+            QuizAttempt.objects.filter(
+                student=request.user,
+                quiz=quiz,
+                status=QuizAttempt.Status.IN_PROGRESS,
+                expires_at__gt=now,
+            )
+            .order_by("-started_at", "-pk")
+            .first()
+        )
+        if active_attempt:
+            return redirect(
+                f"{chapter_url}?attempt={active_attempt.pk}&tab=quizzes"
+            )
+
+        # VALIDATE QUIZ SETTINGS
+        if quiz.maximum_attempts < 1 or quiz.answering_time < 1:
+            messages.error(
+                request,
+                "This quiz has invalid attempt or timing settings.",
+            )
+            return redirect(f"{chapter_url}?tab=quizzes")
+
+        # SUBMITTED AND TIMED_OUT ATTEMPTS BOTH CONSUME THE LIMIT
+        attempts_used = QuizAttempt.objects.filter(
+            student=request.user,
+            quiz=quiz,
+            status__in=[
+                QuizAttempt.Status.SUBMITTED,
+                QuizAttempt.Status.TIMED_OUT,
+            ],
+        ).count()
+
+        if attempts_used >= quiz.maximum_attempts:
+            messages.error(
+                request,
+                "You have used all available attempts for this quiz.",
+            )
+            return redirect(f"{chapter_url}?tab=quizzes")
+
+        # LOAD AND VALIDATE QUESTIONS
+        questions = list(
+            QuizQuestion.objects.filter(quiz=quiz)
+            .prefetch_related("options")
+            .order_by("pk")
+        )
+
+        if not questions:
+            messages.error(
+                request,
+                "This quiz does not have any questions yet.",
+            )
+            return redirect(f"{chapter_url}?tab=quizzes")
+
+        question_data = []
+        for question in questions:
+            options = list(question.options.all())
+            correct_options = [
+                option for option in options if option.is_correct
+            ]
+
+            if len(options) != 4 or len(correct_options) != 1:
+                messages.error(
+                    request,
+                    "This quiz contains an incomplete question. "
+                    "Please contact your teacher.",
+                )
+                return redirect(f"{chapter_url}?tab=quizzes")
+
+            question_data.append(
+                {
+                    "question": question,
+                    "options": options,
+                    "correct_option": correct_options[0],
+                }
+            )
+
+        # INTERNAL ATTEMPT RECORD NUMBER; NOT THE ATTEMPTS-USED COUNT
+        previous_attempt_records = QuizAttempt.objects.filter(
+            student=request.user,
+            quiz=quiz,
+        ).count()
+
+        # CREATE THE NEW ATTEMPT
+        attempt = QuizAttempt.objects.create(
+            student=request.user,
+            quiz=quiz,
+            quiz_title_snapshot=quiz.quiz_name,
+            attempt_number=previous_attempt_records + 1,
+            answering_time_minutes_snapshot=quiz.answering_time,
+            maximum_attempts_snapshot=quiz.maximum_attempts,
+            marks_per_question_snapshot=quiz.marks_per_question,
+            maximum_marks=len(question_data) * quiz.marks_per_question,
+            expires_at=now + timedelta(minutes=quiz.answering_time),
+        )
+
+        # CREATE QUESTION AND OPTION SNAPSHOTS
+        answer_snapshots = []
+        for item in question_data:
+            question = item["question"]
+            options = item["options"]
+            correct_option = item["correct_option"]
+
+            answer_snapshots.append(
+                QuizAttemptAnswer(
+                    attempt=attempt,
+                    question=question,
+                    question_snapshot_key=str(question.pk),
+                    question_text_snapshot=question.question_text,
+                    options_snapshot=[
+                        {
+                            "label": option.option_label,
+                            "text": option.option_text,
+                        }
+                        for option in options
+                    ],
+                    correct_option_label_snapshot=correct_option.option_label,
+                )
+            )
+
+        QuizAttemptAnswer.objects.bulk_create(answer_snapshots)
+
+    return redirect(
+        f"{chapter_url}?attempt={attempt.pk}&tab=quizzes"
+    )
+
+
+# ============================================================
+# STUDENT QUIZ - SAVE INDIVIDUAL ANSWER
+# ============================================================
+
+@login_required(login_url="signin")
+@cache_control(
+    no_cache=True,
+    must_revalidate=True,
+    no_store=True,
+)
+def student_quiz_answer_save_view(request, attempt_id, answer_id):
+
+    if request.method != "POST":
+        return JsonResponse(
+            {
+                "success": False,
+                "message": "Only POST requests are allowed.",
+            },
+            status=405,
+        )
+
+    if not is_student_user(request.user):
+        return JsonResponse(
+            {
+                "success": False,
+                "message": "Student access required.",
+            },
+            status=403,
+        )
+
+    selected_label = (
+        request.POST.get("selected_option")
+        or request.POST.get("selected_option_label")
+        or request.POST.get("option_label")
+        or ""
+    ).strip().upper()
+
+    if not selected_label:
+        return JsonResponse(
+            {
+                "success": False,
+                "message": "Please select an answer.",
+            },
+            status=400,
+        )
+
+    with transaction.atomic():
+
+        attempt = (
+            QuizAttempt.objects
+            .select_for_update()
+            .filter(
+                pk=attempt_id,
+                student=request.user,
+            )
+            .first()
+        )
+
+        if attempt is None:
+            return JsonResponse(
+                {
+                    "success": False,
+                    "message": "Quiz attempt not found.",
+                },
+                status=404,
+            )
+
+        if attempt.status != QuizAttempt.Status.IN_PROGRESS:
+            return JsonResponse(
+                {
+                    "success": False,
+                    "message": "This quiz attempt is already closed.",
+                },
+                status=400,
+            )
+
+        now = timezone.now()
+
+        if now >= attempt.expires_at:
+            return JsonResponse(
+                {
+                    "success": False,
+                    "time_expired": True,
+                    "message": "Your quiz time has expired.",
+                },
+                status=400,
+            )
+
+        answer = (
+            QuizAttemptAnswer.objects
+            .select_for_update()
+            .filter(
+                pk=answer_id,
+                attempt=attempt,
+            )
+            .first()
+        )
+
+        if answer is None:
+            return JsonResponse(
+                {
+                    "success": False,
+                    "message": "Question answer record not found.",
+                },
+                status=404,
+            )
+
+        # A previously saved answer cannot be changed.
+        if answer.selected_option_label:
+            return JsonResponse(
+                {
+                    "success": True,
+                    "locked": True,
+                    "selected_option": answer.selected_option_label,
+                    "message": "This answer is already saved.",
+                }
+            )
+
+        selected_option = next(
+            (
+                option
+                for option in (answer.options_snapshot or [])
+                if str(option.get("label", "")).strip().upper()
+                == selected_label
+            ),
+            None,
+        )
+
+        if selected_option is None:
+            return JsonResponse(
+                {
+                    "success": False,
+                    "message": "Invalid answer option.",
+                },
+                status=400,
+            )
+
+        answer.selected_option_label = selected_label
+        answer.selected_option_text_snapshot = selected_option.get(
+            "text", ""
+        )
+        answer.answered_at = now
+
+        answer.save(
+            update_fields=[
+                "selected_option_label",
+                "selected_option_text_snapshot",
+                "answered_at",
+                "updated_at",
+            ]
+        )
+
+    return JsonResponse(
+        {
+            "success": True,
+            "locked": True,
+            "selected_option": selected_label,
+            "message": "Answer saved successfully.",
+        }
+    )
+
+
+# ============================================================
+# STUDENT QUIZ - TAKE AND SUBMIT
+# ============================================================
+
+@login_required(login_url="signin")
+@cache_control(
+    no_cache=True,
+    must_revalidate=True,
+    no_store=True,
+)
+def student_quiz_take_view(request, attempt_id):
+    if not is_student_user(request.user):
+        messages.error(request, "Student access required.")
+        return redirect("signin")
+
+    attempt = get_object_or_404(
+        QuizAttempt.objects.select_related("quiz", "quiz__chapter"),
+        pk=attempt_id,
+        student=request.user,
+    )
+
+    if attempt.quiz is None:
+        messages.error(
+            request,
+            "This quiz is no longer available. Your attempt record has been retained.",
+        )
+        return redirect("my_learning")
+
+    chapter = attempt.quiz.chapter
+    get_object_or_404(
+        StudentBatchPurchase,
+        student=request.user,
+        batch_id=chapter.batch_id,
+        status=StudentBatchPurchase.Status.ACTIVE,
+    )
+
+    chapter_url = reverse(
+        "my_learning_chapter",
+        kwargs={
+            "batch_id": chapter.batch_id,
+            "subject_id": chapter.subject_id,
+            "chapter_id": chapter.pk,
+        },
+    )
+
+    if request.method != "POST":
+        return redirect(
+            f"{chapter_url}?attempt={attempt.pk}&tab=quizzes"
+        )
+
+    with transaction.atomic():
+        # Lock only the QuizAttempt row. Do not combine select_for_update()
+        # with nullable quiz/chapter joins: PostgreSQL rejects FOR UPDATE on
+        # the nullable side of an outer join.
+        locked_attempt = get_object_or_404(
+            QuizAttempt.objects.select_for_update(),
+            pk=attempt.pk,
+            student=request.user,
+        )
+
+        if locked_attempt.status != QuizAttempt.Status.IN_PROGRESS:
+            return redirect(
+                f"{chapter_url}?attempt={locked_attempt.pk}&tab=quizzes"
+            )
+
+        submitted_at = timezone.now()
+        has_expired = submitted_at >= locked_attempt.expires_at
+        answers = list(
+            locked_attempt.answers.select_for_update().all().order_by("pk")
+        )
+        score = 0
+
+        # Grade the final POST even if it arrived just after the deadline.
+        # The attempt is marked timed_out, but submitted selections are retained.
+        for answer in answers:
+            selected_label = request.POST.get(
+                f"answer_{answer.pk}",
+                "",
+            ).strip().upper()
+
+            allowed_labels = {
+                str(option.get("label", "")).upper()
+                for option in (answer.options_snapshot or [])
+            }
+            if selected_label not in allowed_labels:
+                selected_label = ""
+
+            selected_text = ""
+            for option in (answer.options_snapshot or []):
+                if str(option.get("label", "")).upper() == selected_label:
+                    selected_text = option.get("text", "")
+                    break
+
+            is_correct = (
+                bool(selected_label)
+                and selected_label
+                == str(answer.correct_option_label_snapshot or "").upper()
+            )
+            marks_awarded = (
+                locked_attempt.marks_per_question_snapshot
+                if is_correct
+                else 0
+            )
+
+            answer.selected_option_label = selected_label
+            answer.selected_option_text_snapshot = selected_text
+            answer.answered_at = submitted_at if selected_label else None
+            answer.is_correct = is_correct
+            answer.marks_awarded = marks_awarded
+            answer.save(
+                update_fields=[
+                    "selected_option_label",
+                    "selected_option_text_snapshot",
+                    "answered_at",
+                    "is_correct",
+                    "marks_awarded",
+                    "updated_at",
+                ]
+            )
+            score += marks_awarded
+
+        locked_attempt.status = (
+            QuizAttempt.Status.TIMED_OUT
+            if has_expired
+            else QuizAttempt.Status.SUBMITTED
+        )
+        locked_attempt.score = score
+        locked_attempt.submitted_at = submitted_at
+        locked_attempt.save(
+            update_fields=[
+                "status",
+                "score",
+                "submitted_at",
+                "updated_at",
+            ]
+        )
+
+    return redirect(
+        f"{chapter_url}?attempt={attempt.pk}&tab=quizzes"
+    )
+
+
+# ============================================================
+# STUDENT QUIZ - RESULT
+# ============================================================
+
+@login_required(login_url="signin")
+@cache_control(
+    no_cache=True,
+    must_revalidate=True,
+    no_store=True,
+)
+def student_quiz_result_view(request, attempt_id):
+    if not is_student_user(request.user):
+        messages.error(request, "Student access required.")
+        return redirect("signin")
+
+    attempt = get_object_or_404(
+        QuizAttempt.objects.select_related("quiz", "quiz__chapter"),
+        pk=attempt_id,
+        student=request.user,
+    )
+
+    if attempt.quiz is None:
+        messages.error(
+            request,
+            "This quiz is no longer available. Your attempt record has been retained.",
+        )
+        return redirect("my_learning")
+
+    chapter = attempt.quiz.chapter
+    get_object_or_404(
+        StudentBatchPurchase,
+        student=request.user,
+        batch_id=chapter.batch_id,
+        status=StudentBatchPurchase.Status.ACTIVE,
+    )
+
+    chapter_url = reverse(
+        "my_learning_chapter",
+        kwargs={
+            "batch_id": chapter.batch_id,
+            "subject_id": chapter.subject_id,
+            "chapter_id": chapter.pk,
+        },
+    )
+    return redirect(
+        f"{chapter_url}?attempt={attempt.pk}&tab=quizzes"
     )
