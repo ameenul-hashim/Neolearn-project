@@ -1,3 +1,4 @@
+
 from django.urls import path
 
 from .views import (
@@ -26,6 +27,12 @@ from .views import (
 
     order_history_view,
     order_details_view,
+
+    # Student quiz views
+    start_quiz_view,
+    student_quiz_take_view,
+    student_quiz_result_view,
+    student_quiz_answer_save_view,
 )
 
 
@@ -165,6 +172,46 @@ urlpatterns = [
         "my-learning/<int:batch_id>/subjects/<int:subject_id>/chapters/<int:chapter_id>/",
         my_learning_chapter_view,
         name="my_learning_chapter",
+    ),
+
+    # ============================================================
+    # STUDENT QUIZ — START
+    # ============================================================
+
+    path(
+        "my-learning/<int:batch_id>/subjects/<int:subject_id>/chapters/<int:chapter_id>/quizzes/<int:quiz_id>/start/",
+        start_quiz_view,
+        name="student_quiz_start",
+    ),
+
+    # ============================================================
+    # STUDENT QUIZ — TAKE / SUBMIT
+    # ============================================================
+
+    path(
+        "my-learning/quiz-attempts/<int:attempt_id>/",
+        student_quiz_take_view,
+        name="student_quiz_take",
+    ),
+
+    # ============================================================
+    # STUDENT QUIZ — SAVE ONE ANSWER
+    # ============================================================
+
+    path(
+        "my-learning/quiz-attempts/<int:attempt_id>/answers/<int:answer_id>/save/",
+        student_quiz_answer_save_view,
+        name="student_quiz_answer_save",
+    ),
+
+    # ============================================================
+    # STUDENT QUIZ — RESULT
+    # ============================================================
+
+    path(
+        "my-learning/quiz-attempts/<int:attempt_id>/result/",
+        student_quiz_result_view,
+        name="student_quiz_result",
     ),
 
     # ============================================================
