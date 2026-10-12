@@ -3,6 +3,10 @@ from django.contrib.auth import authenticate,login,logout
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.cache import cache_control
 from django.contrib import messages
+import logging
+import re
+import secrets
+from django.db import IntegrityError, transaction
 from django.views.decorators.http import require_POST
 from django.core.validators import validate_email
 from django.core.exceptions import ValidationError
@@ -1257,114 +1261,673 @@ def delete_subject_view(request, subject_id):
 
 
 
+
+@cache_control(
+    no_cache=True,
+    must_revalidate=True,
+    no_store=True,
+)
+
+
 @cache_control(no_cache=True, must_revalidate=True, no_store=True)
 @admin_required
 def admin_teachers(request):
+    """
+    Admin teacher listing.
+
+    Supports:
+    - Search by teacher ID, name, email, phone and username.
+    - Filter by account status, batch and subject.
+    - Sort teachers.
+    - Paginate 12 teachers per page.
+    - Show unfiltered summary counts.
+    """
+
+    # --------------------------------------------------
+    # READ SEARCH AND FILTER VALUES
+    # --------------------------------------------------
     search = request.GET.get("search", "").strip()
+    status = request.GET.get("status", "all").strip().lower()
+    selected_batch = request.GET.get("batch", "").strip()
+    selected_subject = request.GET.get("subject", "").strip()
+    sort = request.GET.get("sort", "latest").strip().lower()
 
-    teachers = (Teacher.objects.select_related("user").order_by("-created_at"))
+    # --------------------------------------------------
+    # BASE QUERY
+    # --------------------------------------------------
+    teachers = (
+        Teacher.objects
+        .select_related("user")
+        .annotate(
+            batch_count=Count(
+                "assigned_batches",
+                filter=Q(assigned_batches__is_active=True),
+                distinct=True,
+            )
+        )
+    )
 
+    # --------------------------------------------------
+    # SEARCH
+    # --------------------------------------------------
     if search:
         teachers = teachers.filter(
-            Q(full_name__icontains=search) |
-            Q(email__icontains=search) |
-            Q(phone_number__icontains=search) |
-            Q(user__username__icontains=search))
+            Q(full_name__icontains=search)
+            | Q(email__icontains=search)
+            | Q(phone_number__icontains=search)
+            | Q(user__username__icontains=search)
+            | Q(teacher_id__icontains=search)
+        )
 
+    # --------------------------------------------------
+    # STATUS FILTER
+    # --------------------------------------------------
+    if status == "active":
+        teachers = teachers.filter(is_blocked=False)
+    elif status == "blocked":
+        teachers = teachers.filter(is_blocked=True)
+    else:
+        status = "all"
+
+    # --------------------------------------------------
+    # REAL BATCH OPTIONS
+    # --------------------------------------------------
+    batches = Batch.objects.order_by("batch_name")
+
+    valid_batch_ids = set(
+        batches.values_list("pk", flat=True)
+    )
+
+    if selected_batch:
+        if (
+            selected_batch.isdigit()
+            and int(selected_batch) in valid_batch_ids
+        ):
+            batch_id = int(selected_batch)
+
+            teachers = teachers.filter(
+                assigned_batches__batch_id=batch_id,
+                assigned_batches__is_active=True,
+            )
+        else:
+            selected_batch = ""
+
+    # --------------------------------------------------
+    # REAL SUBJECT OPTIONS
+    # When a batch is selected, show its subjects.
+    # Otherwise, show subjects from all batches.
+    # --------------------------------------------------
+    subjects = (
+        Subject.objects
+        .select_related("batch")
+        .order_by("batch__batch_name", "subject_name")
+    )
+
+    if selected_batch:
+        subjects = subjects.filter(
+            batch_id=int(selected_batch)
+        )
+
+    # --------------------------------------------------
+    # SUBJECT FILTER
+    # Works with or without a selected batch.
+    # --------------------------------------------------
+    valid_subject_ids = set(
+        subjects.values_list("pk", flat=True)
+    )
+
+    if selected_subject:
+        if (
+            selected_subject.isdigit()
+            and int(selected_subject) in valid_subject_ids
+        ):
+            subject_id = int(selected_subject)
+
+            subject_assignments = Q(
+                assigned_subjects__subject_id=subject_id,
+                assigned_subjects__is_active=True,
+            )
+
+            if selected_batch:
+                subject_assignments &= Q(
+                    assigned_subjects__batch_id=int(selected_batch)
+                )
+
+            teachers = teachers.filter(
+                subject_assignments
+            )
+        else:
+            selected_subject = ""
+
+    # Avoid duplicate teachers when multiple assignments match.
+    teachers = teachers.distinct()
+
+    # --------------------------------------------------
+    # SORTING
+    # Keep existing supported sort options.
+    # --------------------------------------------------
+    if sort == "oldest":
+        teachers = teachers.order_by("created_at", "pk")
+
+    elif sort == "a-z":
+        teachers = teachers.order_by("full_name", "pk")
+
+    elif sort == "z-a":
+        teachers = teachers.order_by("-full_name", "pk")
+
+    elif sort == "experience-high":
+        teachers = teachers.order_by(
+            "-experience", "full_name", "pk"
+        )
+
+    elif sort == "experience-low":
+        teachers = teachers.order_by(
+            "experience", "full_name", "pk"
+        )
+
+    else:
+        sort = "latest"
+        teachers = teachers.order_by("-created_at", "-pk")
+
+    # --------------------------------------------------
+    # SUMMARY COUNTS
+    # These do not change when filters are applied.
+    # --------------------------------------------------
     total_teachers = Teacher.objects.count()
-    active_teachers = Teacher.objects.filter(is_blocked=False).count()
-    blocked_teachers = Teacher.objects.filter(is_blocked=True).count()
-    pending_profiles = Teacher.objects.filter(profile_completed=False).count()
+
+    active_teachers = Teacher.objects.filter(
+        is_blocked=False
+    ).count()
+
+    blocked_teachers = Teacher.objects.filter(
+        is_blocked=True
+    ).count()
+
+    assigned_batches_count = (
+        TeacherBatch.objects
+        .filter(is_active=True)
+        .values("batch_id")
+        .distinct()
+        .count()
+    )
+
+    pending_profiles = Teacher.objects.filter(
+        profile_completed=False
+    ).count()
+
+    # --------------------------------------------------
+    # PAGINATION: 12 TEACHERS PER PAGE
+    # --------------------------------------------------
+    paginator = Paginator(teachers, 12)
+    page_obj = paginator.get_page(
+        request.GET.get("page")
+    )
+
+    teacher_list = list(page_obj.object_list)
+
+    # --------------------------------------------------
+    # TEMPLATE CONTEXT
+    # --------------------------------------------------
     context = {
-        "teachers": teachers,
+        "teachers": teacher_list,
+        "page_obj": page_obj,
+
         "search": search,
+        "status": status,
+        "selected_batch": selected_batch,
+        "selected_subject": selected_subject,
+        "sort": sort,
+
+        "batches": batches,
+        "subjects": subjects,
+
         "total_teachers": total_teachers,
         "active_teachers": active_teachers,
         "blocked_teachers": blocked_teachers,
+        "assigned_batches_count": assigned_batches_count,
         "pending_profiles": pending_profiles,
     }
 
-    return render(request,"admins/teachers/teachers.html",context)
+    return render(
+        request,
+        "admins/teachers/teachers.html",
+        context,
+    )
 
 
-@cache_control(no_cache=True,must_revalidate=True,no_store=True)
+@cache_control(no_cache=True, must_revalidate=True, no_store=True)
 @admin_required
 def create_teacher_view(request):
 
-    if request.method == "POST":
-        email = request.POST.get("email","").strip().lower()
-        phone = request.POST.get("phone_number","").strip()
-
-
-        # Empty validation
-        if not email or not phone:
-            messages.error(request,"Email and phone number required.")
-            return redirect("create_teacher")
-
-        # Already exists
-        if User.objects.filter(email=email).exists():
-
-            messages.error(request,"Teacher already exists.")
-            return redirect("create_teacher")
-
-
-        # Generate password
-        password = f"Neo{phone}*#"
-        # Create auth user
-
-        user = User.objects.create_user(
-            username=email,
-            email=email,
-            password=password)
-
-
-        # Create teacher
-        Teacher.objects.create(user=user,full_name=email.split("@")[0],email=email,phone_number=phone,created_by=request.user)
-
-        # Email send using existing SMTP
-        send_mail(
-
-            "NeoLearn Teacher Login Details",
-
-
-            f"""
-
-Welcome to NeoLearn Teacher Portal
-
-
-Login URL:
-http://127.0.0.1:8000/teacher/login/
-
-
-Username:
-{email}
-
-
-Password:
-{password}
-
-
-Please change password after first login.
-
-
-            """,
-
-
-            None,
-
-
-            [email],
-
-
-            fail_silently=False
-
+    if request.method != "POST":
+        return render(
+            request,
+            "admins/teachers/create_teacher.html",
         )
 
+    email = request.POST.get("email", "").strip().lower()
+    phone = request.POST.get("phone_number", "").strip()
 
-        messages.success(request,"Teacher created successfully.")
+    # --------------------------------------------------
+    # 1. Validate required fields
+    # --------------------------------------------------
+
+    if not email or not phone:
+        messages.error(
+            request,
+            "Email and phone number are required.",
+        )
+        return redirect("create_teacher")
+
+    # --------------------------------------------------
+    # 2. Validate email format
+    # --------------------------------------------------
+
+    try:
+        validate_email(email)
+    except ValidationError:
+        messages.error(
+            request,
+            "Please enter a valid email address.",
+        )
+        return redirect("create_teacher")
+
+    # --------------------------------------------------
+    # 3. Validate Indian mobile number
+    # --------------------------------------------------
+
+    if not re.fullmatch(r"[6-9]\d{9}", phone):
+        messages.error(
+            request,
+            "Enter a valid 10-digit Indian mobile number.",
+        )
+        return redirect("create_teacher")
+
+    # --------------------------------------------------
+    # 4. Check duplicate email and username
+    # --------------------------------------------------
+
+    if User.objects.filter(email__iexact=email).exists():
+        messages.error(
+            request,
+            "An account with this email already exists.",
+        )
+        return redirect("create_teacher")
+
+    if User.objects.filter(username__iexact=email).exists():
+        messages.error(
+            request,
+            "This username is already in use.",
+        )
+        return redirect("create_teacher")
+
+    if Teacher.objects.filter(email__iexact=email).exists():
+        messages.error(
+            request,
+            "A teacher profile with this email already exists.",
+        )
+        return redirect("create_teacher")
+
+    if Teacher.objects.filter(phone_number=phone).exists():
+        messages.error(
+            request,
+            "This phone number is already registered to a teacher.",
+        )
+        return redirect("create_teacher")
+
+    # --------------------------------------------------
+    # 5. Create account and profile atomically
+    # --------------------------------------------------
+
+    password = secrets.token_urlsafe(16)
+
+    try:
+        with transaction.atomic():
+
+            user = User.objects.create_user(
+                username=email,
+                email=email,
+                password=password,
+            )
+
+            teacher = Teacher.objects.create(
+                user=user,
+                full_name=email.split("@")[0],
+                email=email,
+                phone_number=phone,
+                created_by=request.user,
+                is_first_login=True,
+            )
+
+    except IntegrityError:
+        logging.exception(
+            "Database uniqueness error while creating a teacher."
+        )
+
+        messages.error(
+            request,
+            (
+                "The teacher could not be created because "
+                "some information conflicts with an existing record. "
+                "Check the email and phone number and try again."
+            ),
+        )
+        return redirect("create_teacher")
+
+    except Exception:
+        logging.exception(
+            "Unexpected error while creating a teacher account."
+        )
+
+        messages.error(
+            request,
+            (
+                "Unable to create the teacher account right now. "
+                "Please try again. If the problem continues, "
+                "check the server error log."
+            ),
+        )
+        return redirect("create_teacher")
+
+    # --------------------------------------------------
+    # 6. Send login details after the database commit
+    # --------------------------------------------------
+
+    try:
+        send_mail(
+            subject="NeoLearn Teacher Login Details",
+            message=(
+                "Welcome to NeoLearn Teacher Portal.\n\n"
+                "Your teacher account has been created.\n\n"
+                "Login URL:\n"
+                "http://127.0.0.1:8000/teacher/login/\n\n"
+                f"Username: {user.username}\n"
+                f"Temporary password: {password}\n\n"
+                "Please change your password after logging in."
+            ),
+            from_email=None,
+            recipient_list=[email],
+            fail_silently=False,
+        )
+
+    except Exception:
+        logging.exception(
+            "Teacher account created, but welcome email failed. "
+            "Teacher ID: %s",
+            teacher.pk,
+        )
+
+        messages.warning(
+            request,
+            (
+                "The teacher account was created, but the email "
+                "could not be sent. Do not create the account again. "
+                "Use the admin credential-reset workflow to issue "
+                "new temporary login details."
+            ),
+        )
+
         return redirect("admin_teachers")
 
-    return render(request,"admins/teachers/create_teacher.html")
+    messages.success(
+        request,
+        "Teacher created successfully. Login details were emailed.",
+    )
+
+    return redirect("admin_teachers")
+
+
+# ==========================================================
+# ADMIN TEACHER DETAILED VIEW
+# ==========================================================
+
+@cache_control(no_cache=True, must_revalidate=True, no_store=True)
+@admin_required
+def admin_teacher_detail_view(request, teacher_id):
+    teacher = get_object_or_404(
+        Teacher.objects.select_related("user"),
+        pk=teacher_id,
+    )
+
+    teacher_batches = (
+        TeacherBatch.objects
+        .filter(teacher=teacher, is_active=True)
+        .select_related("batch")
+        .order_by("batch__batch_name")
+    )
+
+    teacher_subjects = (
+        TeacherSubject.objects
+        .filter(teacher=teacher, is_active=True)
+        .select_related("batch", "subject")
+        .order_by("batch__batch_name", "subject__subject_name")
+    )
+
+    context = {
+        "teacher": teacher,
+        "teacher_batches": teacher_batches,
+        "teacher_subjects": teacher_subjects,
+    }
+
+    return render(
+        request,
+        "admins/teachers/teacher_detail.html",
+        context,
+    )
+
+
+# ==========================================================
+# ADMIN EDIT TEACHER PROFILE
+# ==========================================================
+
+
+@cache_control(no_cache=True, must_revalidate=True, no_store=True)
+@admin_required
+@require_POST
+def admin_edit_teacher_view(request, teacher_id):
+    """
+    Update only a teacher's account credentials from the
+    teacher-list edit popup.
+
+    Editable fields:
+    - Username
+    - Email
+    - Optional new password
+    - Confirm password
+
+    Returns JSON for popup-based form submission.
+    """
+
+    def error_response(errors, message="Please correct the errors below."):
+        return JsonResponse(
+            {
+                "success": False,
+                "message": message,
+                "errors": errors,
+            },
+            status=400,
+        )
+
+    # --------------------------------------------------
+    # GET TEACHER AND LINKED USER
+    # --------------------------------------------------
+    teacher = get_object_or_404(
+        Teacher.objects.select_related("user"),
+        pk=teacher_id,
+    )
+
+    user = teacher.user
+
+    # --------------------------------------------------
+    # READ FORM VALUES
+    # --------------------------------------------------
+    username = request.POST.get("username", "").strip()
+    email = request.POST.get("email", "").strip()
+    new_password = request.POST.get("new_password", "")
+    confirm_password = request.POST.get("confirm_password", "")
+
+    errors = {}
+
+    # --------------------------------------------------
+    # USERNAME VALIDATION
+    # --------------------------------------------------
+    if not username:
+        errors["username"] = "Username is required."
+
+    elif len(username) > 150:
+        errors["username"] = (
+            "Username cannot exceed 150 characters."
+        )
+
+    elif User.objects.filter(
+        username__iexact=username
+    ).exclude(
+        pk=user.pk
+    ).exists():
+        errors["username"] = (
+            "This username is already in use."
+        )
+
+    # --------------------------------------------------
+    # EMAIL VALIDATION
+    # --------------------------------------------------
+    if not email:
+        errors["email"] = "Email address is required."
+
+    else:
+        try:
+            validate_email(email)
+        except ValidationError:
+            errors["email"] = (
+                "Enter a valid email address."
+            )
+
+        if "email" not in errors:
+            if User.objects.filter(
+                email__iexact=email
+            ).exclude(
+                pk=user.pk
+            ).exists():
+                errors["email"] = (
+                    "This email is already used by another account."
+                )
+
+            elif Teacher.objects.filter(
+                email__iexact=email
+            ).exclude(
+                pk=teacher.pk
+            ).exists():
+                errors["email"] = (
+                    "This email is already used by another teacher."
+                )
+
+    # --------------------------------------------------
+    # PASSWORD VALIDATION
+    # Password is optional: blank means keep current password.
+    # --------------------------------------------------
+    if new_password:
+        if len(new_password) < 8:
+            errors["new_password"] = (
+                "Password must contain at least 8 characters."
+            )
+
+        elif not re.search(r"[A-Z]", new_password):
+            errors["new_password"] = (
+                "Password must contain at least one uppercase letter."
+            )
+
+        elif not re.search(r"[a-z]", new_password):
+            errors["new_password"] = (
+                "Password must contain at least one lowercase letter."
+            )
+
+        elif not re.search(r"[^A-Za-z0-9]", new_password):
+            errors["new_password"] = (
+                "Password must contain at least one special character."
+            )
+
+        if new_password != confirm_password:
+            errors["confirm_password"] = (
+                "Password and confirmation do not match."
+            )
+
+    elif confirm_password:
+        errors["confirm_password"] = (
+            "Enter a new password before confirming it."
+        )
+
+    # Return validation errors without saving anything.
+    if errors:
+        return error_response(errors)
+
+    # --------------------------------------------------
+    # SAVE ACCOUNT FIELDS ATOMICALLY
+    # --------------------------------------------------
+    try:
+        with transaction.atomic():
+            user.username = username
+            user.email = email
+
+            if new_password:
+                user.set_password(new_password)
+
+            user.save(
+                update_fields=[
+                    "username",
+                    "email",
+                    "password",
+                ]
+            )
+
+            teacher.email = email
+            teacher.save(update_fields=["email"])
+
+    except IntegrityError:
+        logging.exception(
+            "Teacher account update failed due to a database "
+            "uniqueness conflict. Teacher ID: %s",
+            teacher.pk,
+        )
+
+        return error_response(
+            {
+                "general": (
+                    "These account details conflict with an existing "
+                    "record. Please check the username and email."
+                )
+            },
+            "Unable to save the account details.",
+        )
+
+    except Exception:
+        logging.exception(
+            "Unexpected error updating teacher account. "
+            "Teacher ID: %s",
+            teacher.pk,
+        )
+
+        return JsonResponse(
+            {
+                "success": False,
+                "message": (
+                    "An unexpected error occurred. Please try again."
+                ),
+                "errors": {},
+            },
+            status=500,
+        )
+
+    return JsonResponse(
+        {
+            "success": True,
+            "message": "Teacher account updated successfully.",
+            "teacher": {
+                "id": teacher.pk,
+                "username": user.username,
+                "email": user.email,
+            },
+        }
+    )
 
 
 @login_required(login_url="admin_signin")
