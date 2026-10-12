@@ -302,8 +302,23 @@ ACCOUNT_SESSION_REMEMBER = True
 
 SOCIALACCOUNT_LOGIN_ON_GET = True
 
+SOCIALACCOUNT_ADAPTER = 'accounts.adapters.GoogleAccountAdapter'
 
-SOCIALACCOUNT_ADAPTER='accounts.adapters.GoogleAccountAdapter'
+SOCIALACCOUNT_PROVIDERS = {
+    'google': {
+        'SCOPE': [
+            'profile',
+            'email',
+        ],
+        'AUTH_PARAMS': {
+            'access_type': 'online',
+        },
+        'OAUTH_PKCE_ENABLED': True,
+    },
+}
+
+SOCIALACCOUNT_LOGIN_ON_GET = True
+
 
 import os
 

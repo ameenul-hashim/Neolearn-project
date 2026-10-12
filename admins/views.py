@@ -6,9 +6,12 @@ from django.contrib import messages
 from django.views.decorators.http import require_POST
 from django.core.validators import validate_email
 from django.core.exceptions import ValidationError
+from django.db.models import Q, Count
+from django.db.models.deletion import ProtectedError
 from django.contrib.auth.models import User
 from django.core.paginator import Paginator
-from django.db.models import Q
+from django.contrib.auth.password_validation import validate_password
+from orders.models import StudentBatchPurchase
 from orders.helpers import (
     execute_refund,
     create_order_timeline_event,
@@ -157,107 +160,362 @@ def admin_logout_view(request):
     return response      
 
 
-@cache_control(no_cache=True,must_revalidate=True,no_store=True)
+# ==========================================================
+# ADMIN STUDENT LISTING
+# ==========================================================
+
+@cache_control(
+    no_cache=True,
+    must_revalidate=True,
+    no_store=True,
+)
 @admin_required
 def admin_students_view(request):
+    """
+    Admin student listing.
 
-    # ADMIN CHECK
-    if (not request.user.is_staff and not request.user.is_superuser):
-        messages.error(request,'Access denied.')
-        return redirect('admin_signin')
+    Features:
+    - Search by username, email, first name, last name,
+      and NeoLearn Student ID.
+    - Filter by account status.
+    - Filter by purchased batch.
+    - Sort students.
+    - Paginate students.
+    - Show active purchase count and purchase history.
+    """
+
+    if not request.user.is_staff and not request.user.is_superuser:
+        messages.error(request, "Access denied.")
+        return redirect("admin_signin")
+
+    search = request.GET.get("search", "").strip()
+    status = request.GET.get("status", "all")
+    sort = request.GET.get("sort", "newest")
+    selected_batch = request.GET.get("batch", "").strip()
+
+    students = (
+        User.objects
+        .filter(
+            is_staff=False,
+            is_superuser=False,
+            teacher_profile__isnull=True,
+        )
+        .select_related("studentprofile")
+        .annotate(
+            enrolled_courses=Count(
+                "purchased_batches",
+                filter=Q(purchased_batches__status="active"),
+                distinct=True,
+            )
+        )
+    )
+
+    # ------------------------------------------------------
     # SEARCH
-
-    search=request.GET.get('search','')
-
-    # FILTER
-
-    status=request.GET.get('status','all')
-
-    # SORT
-
-    sort=request.GET.get('sort','newest')
-
-    students = User.objects.filter(is_staff=False,is_superuser=False,teacher_profile__isnull=True)
-
-    # SEARCH FILTER
+    # ------------------------------------------------------
 
     if search:
-        students=students.filter(
-            Q(username__icontains=search) |
-            Q(email__icontains=search))
+        students = students.filter(
+            Q(username__icontains=search)
+            | Q(email__icontains=search)
+            | Q(first_name__icontains=search)
+            | Q(last_name__icontains=search)
+            | Q(studentprofile__neo_student_id__icontains=search)
+        ).distinct()
 
-    # ACTIVE / INACTIVE
+    # ------------------------------------------------------
+    # ACCOUNT STATUS FILTER
+    # ------------------------------------------------------
 
-    if status=='active':
-        students=students.filter(is_active=True)
-    elif status=='inactive':
-        students=students.filter(is_active=False)
+    if status == "active":
+        students = students.filter(is_active=True)
 
+    elif status == "inactive":
+        students = students.filter(is_active=False)
+
+    # ------------------------------------------------------
+    # PURCHASED BATCH FILTER
+    # ------------------------------------------------------
+
+    if selected_batch:
+        if selected_batch.isdigit():
+            students = students.filter(
+                purchased_batches__batch_id=int(selected_batch)
+            ).distinct()
+        else:
+            selected_batch = ""
+
+    # ------------------------------------------------------
     # SORTING
+    # ------------------------------------------------------
 
-    if sort=='oldest':
-        students=students.order_by('date_joined')
-    elif sort=='a-z':
-        students=students.order_by('username')
-    elif sort=='z-a':
-        students=students.order_by('-username')
+    if sort == "oldest":
+        students = students.order_by("date_joined", "id")
+
+    elif sort == "a-z":
+        students = students.order_by("username", "id")
+
+    elif sort == "z-a":
+        students = students.order_by("-username", "id")
+
     else:
-        students=students.order_by('-date_joined')
+        sort = "newest"
+        students = students.order_by("-date_joined", "-id")
 
+    # ------------------------------------------------------
     # PAGINATION
+    # ------------------------------------------------------
 
-    paginator=Paginator(students,10)
-    page_number=request.GET.get('page')
-    page_obj=paginator.get_page(page_number)
-    context={
-        'page_obj':page_obj,
-        'search':search,
-        'status':status,
-        'sort':sort,
+    paginator = Paginator(students, 10)
+    page_obj = paginator.get_page(request.GET.get("page"))
+
+    # ------------------------------------------------------
+    # PREPARE STUDENT DETAILS AND PURCHASE HISTORY
+    # FOR THE CURRENT PAGE ONLY
+    # ------------------------------------------------------
+
+    student_list = list(page_obj.object_list)
+    student_ids = [student.id for student in student_list]
+
+    purchases_by_student = {
+        student_id: []
+        for student_id in student_ids
     }
 
-    return render(request, 'admins/students/students.html', context)
+    if student_ids:
+        purchases = (
+            StudentBatchPurchase.objects
+            .filter(student_id__in=student_ids)
+            .select_related("batch", "order", "order_item")
+            .order_by("-purchased_at", "-id")
+        )
+
+        for purchase in purchases:
+            purchases_by_student[purchase.student_id].append(purchase)
+
+    for student in student_list:
+        profile = getattr(student, "studentprofile", None)
+
+        student.neo_student_id_display = (
+            profile.neo_student_id
+            if profile
+            else ""
+        )
+
+        student.batch_purchases_list = (
+            purchases_by_student.get(student.id, [])
+        )
+
+    # ------------------------------------------------------
+    # FILTER DROPDOWN DATA
+    # ------------------------------------------------------
+
+    batches = Batch.objects.order_by("batch_name")
+
+    context = {
+        "page_obj": page_obj,
+        "students": student_list,
+        "search": search,
+        "status": status,
+        "sort": sort,
+        "batches": batches,
+        "selected_batch": selected_batch,
+    }
+
+    return render(
+        request,
+        "admins/students/students.html",
+        context,
+    )
 
 
+# ==========================================================
+# EDIT STUDENT
+# ==========================================================
 
-@cache_control(no_cache=True, must_revalidate=True, no_store=True)
+@cache_control(
+    no_cache=True,
+    must_revalidate=True,
+    no_store=True,
+)
 @admin_required
-def block_student_view(request,user_id):
-    user=User.objects.get(id=user_id)
-    if request.method=='POST':
-        user.is_active=False
-        user.save()
-        messages.success(request,'Student blocked successfully.')
-        return redirect('admin_students')
-    return render(request,'admins/students/block_student.html',{'student': user})
+@require_POST
+def edit_student_view(request, user_id):
+    """
+    Update a student's username and optionally their password.
+
+    Email is intentionally read-only.
+    An empty password field keeps the existing password.
+    """
+
+    student = get_object_or_404(
+        User.objects.filter(
+            is_staff=False,
+            is_superuser=False,
+            teacher_profile__isnull=True,
+        ),
+        id=user_id,
+    )
+
+    username = request.POST.get("username", "").strip()
+    new_password = request.POST.get("new_password", "")
+
+    # ------------------------------------------------------
+    # USERNAME VALIDATION
+    # ------------------------------------------------------
+
+    if not username:
+        messages.error(request, "Username is required.")
+        return redirect("admin_students")
+
+    if User.objects.filter(
+        username__iexact=username
+    ).exclude(
+        id=student.id
+    ).exists():
+        messages.error(request, "That username is already in use.")
+        return redirect("admin_students")
+
+    # ------------------------------------------------------
+    # PASSWORD VALIDATION
+    # ------------------------------------------------------
+
+    if new_password:
+        try:
+            validate_password(new_password, user=student)
+        except ValidationError as exc:
+            messages.error(request, " ".join(exc.messages))
+            return redirect("admin_students")
+
+    # ------------------------------------------------------
+    # SAVE
+    # ------------------------------------------------------
+
+    student.username = username
+
+    if new_password:
+        student.set_password(new_password)
+
+    student.save()
+
+    messages.success(
+        request,
+        f"Student '{student.username}' updated successfully.",
+    )
+
+    return redirect("admin_students")
 
 
+# ==========================================================
+# BLOCK STUDENT
+# ==========================================================
 
-@cache_control(no_cache=True, must_revalidate=True, no_store=True)
+@cache_control(
+    no_cache=True,
+    must_revalidate=True,
+    no_store=True,
+)
 @admin_required
-def unblock_student_view(request,user_id):
-    user=User.objects.get(id=user_id)
-    if request.method=='POST':
-        user.is_active=True
-        user.save()
-        messages.success(request,'Student unblocked successfully.')
-        return redirect('admin_students')
+@require_POST
+def block_student_view(request, user_id):
 
-    return render(request,'admins/students/unblock_student.html',{'student': user})
+    student = get_object_or_404(
+        User.objects.filter(
+            is_staff=False,
+            is_superuser=False,
+            teacher_profile__isnull=True,
+        ),
+        id=user_id,
+    )
+
+    student.is_active = False
+    student.save(update_fields=["is_active"])
+
+    messages.success(
+        request,
+        f"Student '{student.username}' blocked successfully.",
+    )
+
+    return redirect("admin_students")
 
 
+# ==========================================================
+# UNBLOCK STUDENT
+# ==========================================================
 
-@cache_control(no_cache=True, must_revalidate=True, no_store=True)
+@cache_control(
+    no_cache=True,
+    must_revalidate=True,
+    no_store=True,
+)
 @admin_required
-def delete_student_view(request,user_id):
-    user=User.objects.get(id=user_id)
-    if request.method=='POST':
-        user.delete()
-        messages.success(request,'Student deleted successfully.')
-        return redirect('admin_students')
+@require_POST
+def unblock_student_view(request, user_id):
 
-    return render(request,'admins/students/delete_student.html',{'student': user})
+    student = get_object_or_404(
+        User.objects.filter(
+            is_staff=False,
+            is_superuser=False,
+            teacher_profile__isnull=True,
+        ),
+        id=user_id,
+    )
 
+    student.is_active = True
+    student.save(update_fields=["is_active"])
+
+    messages.success(
+        request,
+        f"Student '{student.username}' unblocked successfully.",
+    )
+
+    return redirect("admin_students")
+
+
+# ==========================================================
+# DELETE STUDENT
+# ==========================================================
+
+@cache_control(
+    no_cache=True,
+    must_revalidate=True,
+    no_store=True,
+)
+@admin_required
+@require_POST
+def delete_student_view(request, user_id):
+
+    student = get_object_or_404(
+        User.objects.filter(
+            is_staff=False,
+            is_superuser=False,
+            teacher_profile__isnull=True,
+        ),
+        id=user_id,
+    )
+
+    username = student.username
+
+    try:
+        student.delete()
+
+    except ProtectedError:
+        messages.error(
+            request,
+            (
+                f"Student '{username}' has purchase or order "
+                "records that protect this account from deletion. "
+                "Keep the account and block it if access must stop."
+            ),
+        )
+        return redirect("admin_students")
+
+    messages.success(
+        request,
+        f"Student '{username}' deleted successfully.",
+    )
+
+    return redirect("admin_students")
 
 
 @cache_control(no_cache=True, must_revalidate=True, no_store=True)

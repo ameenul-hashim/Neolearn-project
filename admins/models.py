@@ -1,6 +1,11 @@
 from decimal import Decimal
 from datetime import timedelta
+import uuid
+from datetime import date
+from django.core.validators import RegexValidator
+from django.db import models
 
+from cloudinary.models import CloudinaryField
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
@@ -360,35 +365,266 @@ class Subject(models.Model):
         verbose_name_plural = 'Subjects'
     def __str__(self):
         return f"{self.batch.batch_name} - {self.subject_name}"
-    
-
-
-
 
 class Teacher(models.Model):
 
-    user = models.OneToOneField(User,on_delete=models.CASCADE,related_name="teacher_profile")
-    full_name = models.CharField(max_length=150)
+    # ==================================================
+    # VALIDATORS
+    # ==================================================
+
+    indian_mobile_validator = RegexValidator(
+        regex=r"^[6-9]\d{9}$",
+        message=(
+            "Enter a valid Indian mobile number containing exactly "
+            "10 digits and starting with 6, 7, 8, or 9."
+        ),
+    )
+
+    # ==================================================
+    # PERMANENT TEACHER ID
+    # Example: NEO-TEACHER-C6F84066
+    # ==================================================
+
+    teacher_id = models.CharField(
+        max_length=50,
+        unique=True,
+        null=True,
+        blank=True,
+        editable=False,
+        db_index=True,
+    )
+
+    # ==================================================
+    # BASIC INFORMATION
+    # ==================================================
+
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="teacher_profile",
+    )
+
+    full_name = models.CharField(max_length=100)
+
     email = models.EmailField(unique=True)
-    phone_number = models.CharField(max_length=10, unique=True)
-    profile_image = models.ImageField(upload_to="teachers/profile/",blank=True,null=True)
-    is_first_login = models.BooleanField(default=True)
-    is_blocked = models.BooleanField(default=False)
-    qualification = models.CharField(max_length=255,blank=True)
-    specialization = models.CharField(max_length=255,blank=True)
-    experience = models.PositiveIntegerField(default=0,help_text="Years of experience")
-    bio = models.TextField(blank=True)
-    linkedin = models.URLField(blank=True)
-    website = models.URLField(blank=True)
-    language = models.CharField(max_length=100,blank=True)
-    profile_completed = models.BooleanField(default=False)
-    created_by = models.ForeignKey(User,on_delete=models.SET_NULL,related_name="created_teachers",null=True,blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    
+
+    phone_number = models.CharField(
+        max_length=10,
+        unique=True,
+        validators=[indian_mobile_validator],
+    )
+
+    date_of_birth = models.DateField(
+        null=True,
+        blank=True,
+    )
+
+    GENDER_CHOICES = [
+        ("male", "Male"),
+        ("female", "Female"),
+    ]
+
+    gender = models.CharField(
+        max_length=10,
+        choices=GENDER_CHOICES,
+        blank=True,
+    )
+
+    # ==================================================
+    # PROFILE IMAGE — CLOUDINARY
+    # ==================================================
+
+    profile_image = CloudinaryField(
+        "image",
+        folder="neolearn/teachers/profile",
+        blank=True,
+        null=True,
+    )
+
+    # ==================================================
+    # ALTERNATE AND EMERGENCY CONTACT
+    # ==================================================
+
+    alternate_phone = models.CharField(
+        max_length=10,
+        blank=True,
+        validators=[indian_mobile_validator],
+    )
+
+    emergency_contact_name = models.CharField(
+        max_length=100,
+        blank=True,
+    )
+
+    RELATIONSHIP_CHOICES = [
+        ("father", "Father"),
+        ("mother", "Mother"),
+        ("husband", "Husband"),
+        ("wife", "Wife"),
+        ("brother", "Brother"),
+        ("sister", "Sister"),
+        ("other", "Other"),
+    ]
+
+    emergency_contact_relationship = models.CharField(
+        max_length=20,
+        choices=RELATIONSHIP_CHOICES,
+        blank=True,
+    )
+
+    emergency_contact_phone = models.CharField(
+        max_length=10,
+        blank=True,
+        validators=[indian_mobile_validator],
+    )
+
+    # ==================================================
+    # ADDRESS
+    # ==================================================
+
+    address_line_1 = models.CharField(
+        max_length=150,
+        blank=True,
+    )
+
+    address_line_2 = models.CharField(
+        max_length=150,
+        blank=True,
+    )
+
+    city = models.CharField(
+        max_length=50,
+        blank=True,
+    )
+
+    state = models.CharField(
+        max_length=50,
+        blank=True,
+    )
+
+    postal_code = models.CharField(
+        max_length=12,
+        blank=True,
+    )
+
+    country = models.CharField(
+        max_length=50,
+        default="India",
+        blank=True,
+    )
+
+    # ==================================================
+    # EDUCATION AND QUALIFICATIONS
+    # ==================================================
+
+    qualification = models.CharField(
+        max_length=100,
+        blank=True,
+    )
+
+    institution_name = models.CharField(
+        max_length=150,
+        blank=True,
+    )
+
+    graduation_year = models.PositiveSmallIntegerField(
+        null=True,
+        blank=True,
+    )
+
+    additional_qualifications = models.TextField(
+        blank=True,
+        help_text="Additional degrees, diplomas or certifications.",
+    )
+
+    specialization = models.CharField(
+        max_length=100,
+        blank=True,
+    )
+
+    qualified_subjects = models.TextField(
+        blank=True,
+        help_text="Subjects the teacher is qualified to teach.",
+    )
+
+    # ==================================================
+    # PROFESSIONAL EXPERIENCE
+    # ==================================================
+
+    experience = models.PositiveIntegerField(
+        default=1,
+        help_text="Years of teaching experience.",
+    )
+
+    previous_institution = models.CharField(
+        max_length=150,
+        blank=True,
+    )
+
+    bio = models.CharField(
+        max_length=250,
+        blank=True,
+        help_text="A short professional introduction (maximum 250 characters).",
+    )
+
+    language = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text="Languages the teacher can use for teaching.",
+    )
+
+    linkedin = models.URLField(
+        max_length=200,
+        blank=True,
+    )
+
+    website = models.URLField(
+        max_length=200,
+        blank=True,
+    )
+
+    # ==================================================
+    # ACCOUNT AND PROFILE STATUS
+    # ==================================================
+
+    is_first_login = models.BooleanField(
+        default=True,
+    )
+
+    is_blocked = models.BooleanField(
+        default=False,
+    )
+
+    profile_completed = models.BooleanField(
+        default=False,
+    )
+
+    # ==================================================
+    # AUDIT INFORMATION
+    # ==================================================
+
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        related_name="created_teachers",
+        null=True,
+        blank=True,
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+    )
+
+    # ==================================================
+    # DISPLAY HELPERS
+    # ==================================================
+
     @property
     def initials(self):
-
         if not self.full_name:
             return "NA"
 
@@ -398,8 +634,110 @@ class Teacher(models.Model):
             return (words[0][0] + words[1][0]).upper()
 
         return self.full_name[:2].upper()
-    def __str__(self):
 
+    # ==================================================
+    # MODEL VALIDATION
+    # ==================================================
+
+    def clean(self):
+        super().clean()
+
+        errors = {}
+
+        # Validate primary mobile number.
+        if self.phone_number:
+            if not self.indian_mobile_validator.regex.fullmatch(
+                self.phone_number
+            ):
+                errors["phone_number"] = (
+                    "Enter a valid Indian mobile number containing "
+                    "exactly 10 digits and starting with 6, 7, 8, or 9."
+                )
+
+        # Validate alternate mobile number.
+        if self.alternate_phone:
+            if not self.indian_mobile_validator.regex.fullmatch(
+                self.alternate_phone
+            ):
+                errors["alternate_phone"] = (
+                    "Alternate mobile number must contain exactly "
+                    "10 digits and start with 6, 7, 8, or 9."
+                )
+
+            if (
+                self.phone_number
+                and self.alternate_phone == self.phone_number
+            ):
+                errors["alternate_phone"] = (
+                    "Alternate mobile number must be different "
+                    "from the primary mobile number."
+                )
+
+        # Validate emergency contact number.
+        if self.emergency_contact_phone:
+            if not self.indian_mobile_validator.regex.fullmatch(
+                self.emergency_contact_phone
+            ):
+                errors["emergency_contact_phone"] = (
+                    "Emergency contact number must contain exactly "
+                    "10 digits and start with 6, 7, 8, or 9."
+                )
+
+        # Date of birth must be in the past.
+        if self.date_of_birth:
+            if self.date_of_birth >= date.today():
+                errors["date_of_birth"] = (
+                    "Date of birth must be in the past."
+                )
+
+        # Validate gender choice.
+        if self.gender and self.gender not in dict(self.GENDER_CHOICES):
+            errors["gender"] = "Select Male or Female."
+
+        # Validate emergency relationship choice.
+        if (
+            self.emergency_contact_relationship
+            and self.emergency_contact_relationship
+            not in dict(self.RELATIONSHIP_CHOICES)
+        ):
+            errors["emergency_contact_relationship"] = (
+                "Select a valid emergency contact relationship."
+            )
+
+        # Validate experience.
+        if self.experience is not None and self.experience > 80:
+            errors["experience"] = (
+                "Experience cannot exceed 80 years."
+            )
+
+        if errors:
+            raise ValidationError(errors)
+
+    # ==================================================
+    # PERMANENT SHORT TEACHER ID GENERATION
+    # Example: NEO-TEACHER-C6F84066
+    # ==================================================
+
+    def save(self, *args, **kwargs):
+        if not self.teacher_id:
+            while True:
+                new_teacher_id = (
+                    f"NEO-TEACHER-{uuid.uuid4().hex[:8].upper()}"
+                )
+
+                if not type(self).objects.filter(
+                    teacher_id=new_teacher_id
+                ).exists():
+                    self.teacher_id = new_teacher_id
+                    break
+
+        super().save(*args, **kwargs)
+
+    # ==================================================
+    # STRING REPRESENTATION
+    # ==================================================
+
+    def __str__(self):
         return self.full_name
     
     

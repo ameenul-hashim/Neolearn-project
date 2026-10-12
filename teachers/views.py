@@ -9,11 +9,14 @@ from django.contrib.auth import (
     authenticate,
     login,
     logout,
-    update_session_auth_hash,
-)
+    update_session_auth_hash)
+from datetime import date
+from django.core.validators import validate_email
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.views.decorators.cache import cache_control
+from PIL import Image, UnidentifiedImageError
+from django.core.exceptions import ValidationError
 import re
 
 from admins.models import (
@@ -641,3 +644,470 @@ def teacher_course_builder_entry_view(
         batch_id=batch.id,
         subject_id=subject.id,
     )
+
+
+
+# ============================================================
+# TEACHER MY PROFILE
+# ============================================================
+
+# ============================================================
+# TEACHER MY PROFILE - READ-ONLY DISPLAY
+# ============================================================
+
+@login_required(login_url="teacher_login")
+@cache_control(
+    no_cache=True,
+    must_revalidate=True,
+    no_store=True,
+)
+def teacher_my_profile_view(request):
+    if not hasattr(request.user, "teacher_profile"):
+        messages.error(request, "Access denied.")
+        return redirect("teacher_login")
+
+    teacher = request.user.teacher_profile
+
+    if teacher.is_blocked:
+        logout(request)
+        messages.error(
+            request,
+            "Your teacher account has been blocked.",
+        )
+        return redirect("teacher_login")
+
+    if teacher.is_first_login:
+        return redirect("teacher_change_password")
+
+    completion_fields = [
+        teacher.date_of_birth,
+        teacher.gender,
+        teacher.qualification,
+        teacher.specialization,
+        teacher.bio,
+        teacher.profile_image,
+    ]
+
+    completed_count = sum(bool(value) for value in completion_fields)
+
+    profile_completion = round(
+        completed_count / len(completion_fields) * 100
+    )
+
+    context = {
+        "teacher": teacher,
+        "profile_completion": profile_completion,
+    }
+
+    return render(
+        request,
+        "teachers/profile/my_profile.html",
+        context,
+    )
+
+
+# ============================================================
+# TEACHER EDIT PROFILE
+# ============================================================
+
+
+@login_required(login_url="teacher_login")
+@cache_control(
+    no_cache=True,
+    must_revalidate=True,
+    no_store=True,
+)
+def teacher_edit_profile_view(request):
+    """
+    Allow the logged-in teacher to update their own profile.
+
+    Protected fields:
+    - teacher_id
+    - full_name
+    - email
+    - phone_number
+    - is_first_login
+    - is_blocked
+    - profile_completed
+    - created_by
+    """
+
+    # --------------------------------------------------
+    # 1. CHECK TEACHER ACCESS
+    # --------------------------------------------------
+
+    try:
+        teacher = request.user.teacher_profile
+    except Teacher.DoesNotExist:
+        messages.error(
+            request,
+            "Your teacher profile could not be found. Please log in again.",
+        )
+        return redirect("teacher_login")
+
+    if teacher.is_blocked:
+        logout(request)
+        messages.error(
+            request,
+            "Your teacher account has been blocked. Please contact the administrator.",
+        )
+        return redirect("teacher_login")
+
+    if teacher.is_first_login:
+        return redirect("teacher_change_password")
+
+    # --------------------------------------------------
+    # 2. FIELDS THE TEACHER MAY EDIT
+    # --------------------------------------------------
+
+    editable_fields = [
+        "date_of_birth",
+        "gender",
+        "alternate_phone",
+        "emergency_contact_name",
+        "emergency_contact_relationship",
+        "emergency_contact_phone",
+        "address_line_1",
+        "address_line_2",
+        "city",
+        "state",
+        "postal_code",
+        "country",
+        "qualification",
+        "institution_name",
+        "graduation_year",
+        "additional_qualifications",
+        "specialization",
+        "qualified_subjects",
+        "experience",
+        "previous_institution",
+        "bio",
+        "language",
+        "linkedin",
+        "website",
+    ]
+
+    # --------------------------------------------------
+    # 3. PREPARE EXISTING VALUES
+    # --------------------------------------------------
+
+    form_values = {}
+
+    for field_name in editable_fields:
+        value = getattr(teacher, field_name)
+
+        if field_name == "date_of_birth" and value:
+            form_values[field_name] = value.isoformat()
+        elif value is None:
+            form_values[field_name] = ""
+        else:
+            form_values[field_name] = str(value)
+
+    errors = {}
+
+    # --------------------------------------------------
+    # 4. HANDLE FORM SUBMISSION
+    # --------------------------------------------------
+
+    if request.method == "POST":
+
+        # Read submitted values without modifying protected fields.
+        for field_name in editable_fields:
+            form_values[field_name] = request.POST.get(
+                field_name, ""
+            ).strip()
+
+        # ----------------------------------------------
+        # DATE OF BIRTH
+        # ----------------------------------------------
+
+        parsed_dob = None
+        dob_value = form_values["date_of_birth"]
+
+        if dob_value:
+            try:
+                parsed_dob = date.fromisoformat(dob_value)
+
+                if parsed_dob >= date.today():
+                    errors["date_of_birth"] = (
+                        "Date of birth must be in the past."
+                    )
+
+            except ValueError:
+                errors["date_of_birth"] = (
+                    "Enter a valid date of birth."
+                )
+
+        # ----------------------------------------------
+        # GRADUATION YEAR
+        # ----------------------------------------------
+
+        parsed_graduation_year = None
+        graduation_value = form_values["graduation_year"]
+
+        if graduation_value:
+            try:
+                parsed_graduation_year = int(graduation_value)
+
+                if not (
+                    1900
+                    <= parsed_graduation_year
+                    <= date.today().year + 10
+                ):
+                    errors["graduation_year"] = (
+                        "Enter a valid graduation year."
+                    )
+
+            except ValueError:
+                errors["graduation_year"] = (
+                    "Graduation year must be a whole number."
+                )
+
+        # ----------------------------------------------
+        # TEACHING EXPERIENCE
+        # ----------------------------------------------
+
+        parsed_experience = None
+        experience_value = form_values["experience"]
+
+        if experience_value:
+            try:
+                parsed_experience = int(experience_value)
+
+                if not 0 <= parsed_experience <= 80:
+                    errors["experience"] = (
+                        "Experience must be between 0 and 80 years."
+                    )
+
+            except ValueError:
+                errors["experience"] = (
+                    "Experience must be a whole number."
+                )
+        else:
+            errors["experience"] = (
+                "Please enter your years of teaching experience."
+            )
+
+        # ----------------------------------------------
+        # ALTERNATE AND EMERGENCY MOBILE NUMBERS
+        # ----------------------------------------------
+
+        for field_name, label in (
+            ("alternate_phone", "Alternate mobile number"),
+            ("emergency_contact_phone", "Emergency contact number"),
+        ):
+            phone = form_values[field_name]
+
+            if phone and not re.fullmatch(r"[6-9]\d{9}", phone):
+                errors[field_name] = (
+                    f"{label} must contain exactly 10 digits "
+                    "and start with 6, 7, 8, or 9."
+                )
+
+        alternate_phone = form_values["alternate_phone"]
+
+        if (
+            alternate_phone
+            and alternate_phone == teacher.phone_number
+        ):
+            errors["alternate_phone"] = (
+                "Alternate mobile number must differ from your primary number."
+            )
+
+        # ----------------------------------------------
+        # PROFILE IMAGE VALIDATION
+        # ----------------------------------------------
+
+        uploaded_image = request.FILES.get("profile_image")
+
+        if uploaded_image:
+            allowed_extensions = (
+                ".jpg",
+                ".jpeg",
+                ".png",
+                ".webp",
+            )
+
+            if not uploaded_image.name.lower().endswith(
+                allowed_extensions
+            ):
+                errors["profile_image"] = (
+                    "Upload a JPG, JPEG, PNG, or WEBP image."
+                )
+
+            elif uploaded_image.size > 5 * 1024 * 1024:
+                errors["profile_image"] = (
+                    "The profile image must be 5 MB or smaller."
+                )
+
+            else:
+                try:
+                    uploaded_image.seek(0)
+
+                    with Image.open(uploaded_image) as image:
+                        if image.format not in (
+                            "JPEG",
+                            "PNG",
+                            "WEBP",
+                        ):
+                            errors["profile_image"] = (
+                                "The uploaded image format is not supported."
+                            )
+                        else:
+                            image.verify()
+
+                except (
+                    UnidentifiedImageError,
+                    OSError,
+                    ValueError,
+                ):
+                    errors["profile_image"] = (
+                        "The uploaded file is not a valid image."
+                    )
+
+                finally:
+                    uploaded_image.seek(0)
+
+        # ----------------------------------------------
+        # CHECK MODEL FIELD LENGTHS
+        # ----------------------------------------------
+
+        for field_name in editable_fields:
+            model_field = Teacher._meta.get_field(field_name)
+            max_length = getattr(model_field, "max_length", None)
+            value = form_values[field_name]
+
+            if max_length and len(value) > max_length:
+                errors[field_name] = (
+                    f"This field cannot exceed {max_length} characters."
+                )
+
+        # --------------------------------------------------
+        # 5. VALIDATE AND SAVE
+        # --------------------------------------------------
+
+        if not errors:
+            try:
+                # Apply editable form values to this teacher only.
+                for field_name in editable_fields:
+                    setattr(
+                        teacher,
+                        field_name,
+                        form_values[field_name],
+                    )
+
+                # Convert typed fields to their correct Python values.
+                teacher.date_of_birth = parsed_dob
+                teacher.graduation_year = parsed_graduation_year
+                teacher.experience = parsed_experience
+
+                if uploaded_image:
+                    teacher.profile_image = uploaded_image
+
+                # Validate model fields, choices, URLs, and model.clean().
+                # This also checks model-level uniqueness constraints.
+                teacher.full_clean()
+
+                # Calculate completion from the same fields used by My Profile.
+                required_profile_fields = [
+                    teacher.date_of_birth,
+                    teacher.gender,
+                    teacher.qualification,
+                    teacher.specialization,
+                    teacher.bio,
+                    teacher.profile_image,
+                ]
+
+                teacher.profile_completed = all(
+                    bool(value)
+                    for value in required_profile_fields
+                )
+
+                teacher.save()
+
+                messages.success(
+                    request,
+                    "Your profile has been updated successfully.",
+                )
+
+                return redirect("teacher_my_profile")
+
+            except ValidationError as exc:
+                # Keep model validation errors visible to the teacher.
+                if hasattr(exc, "message_dict"):
+                    for field_name, field_errors in exc.message_dict.items():
+                        if field_name in editable_fields or field_name == "profile_image":
+                            errors[field_name] = " ".join(
+                                str(error) for error in field_errors
+                            )
+                        else:
+                            errors.setdefault("general", " ".join(
+                                str(error) for error in field_errors
+                            ))
+                else:
+                    errors["general"] = " ".join(
+                        str(error) for error in exc.messages
+                    )
+
+            except Exception:
+                # Avoid exposing internal server or Cloudinary details.
+                errors["general"] = (
+                    "We could not save your profile right now. "
+                    "Please check your information and try again."
+                )
+
+        # Show custom error messages through Django messages.
+        for error in errors.values():
+            messages.error(request, error)
+
+    # --------------------------------------------------
+    # 6. PROFILE COMPLETION
+    # --------------------------------------------------
+
+    completion_fields = [
+        teacher.date_of_birth,
+        teacher.gender,
+        teacher.qualification,
+        teacher.specialization,
+        teacher.bio,
+        teacher.profile_image,
+    ]
+
+    completed_count = sum(
+        bool(value) for value in completion_fields
+    )
+
+    profile_completion = round(
+        completed_count / len(completion_fields) * 100
+    )
+
+    # --------------------------------------------------
+    # 7. RENDER EDIT PROFILE
+    # --------------------------------------------------
+
+    context = {
+        "teacher": teacher,
+        "errors": errors,
+        "form_values": form_values,
+        "profile_completion": profile_completion,
+        "gender_choices": Teacher._meta.get_field(
+            "gender"
+        ).choices,
+        "relationship_choices": Teacher._meta.get_field(
+            "emergency_contact_relationship"
+        ).choices,
+    }
+
+    response = render(
+        request,
+        "teachers/profile/edit_profile.html",
+        context,
+    )
+
+    response["Cache-Control"] = (
+        "no-cache, no-store, must-revalidate"
+    )
+    response["Pragma"] = "no-cache"
+    response["Expires"] = "0"
+
+    return response

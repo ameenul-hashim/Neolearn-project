@@ -14,9 +14,11 @@ from .views import (
     # STUDENTS
     # ==========================================================
     admin_students_view,
+    edit_student_view,
     block_student_view,
     unblock_student_view,
     delete_student_view,
+
 
 
     # ==========================================================
@@ -119,6 +121,7 @@ urlpatterns = [
     ),
 
 
+    
     # ==========================================================
     # STUDENTS
     # ==========================================================
@@ -127,6 +130,12 @@ urlpatterns = [
         "students/",
         admin_students_view,
         name="admin_students",
+    ),
+
+    path(
+        "students/<int:user_id>/edit/",
+        edit_student_view,
+        name="edit_student",
     ),
 
     path(

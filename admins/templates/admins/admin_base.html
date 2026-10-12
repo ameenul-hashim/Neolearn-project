@@ -9,7 +9,7 @@
 
     <title>
         {% block title %}
-        NeoLearn Admin
+            NeoLearn Admin
         {% endblock %}
     </title>
 
@@ -17,27 +17,35 @@
     <script src="https://cdn.tailwindcss.com"></script>
 
     <!-- REMIX ICON -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/4.2.0/remixicon.min.css">
+    <link
+        rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/4.2.0/remixicon.min.css"
+    >
 
     <!-- TOAST MESSAGES CSS -->
     <link rel="stylesheet" href="{% static 'toast-messages.css' %}">
 
-    <!-- SCROLLBAR -->
     <style>
-        ::-webkit-scrollbar {
-            width: 0px;
-            height: 0px;
+        * {
+            box-sizing: border-box;
+            scrollbar-width: none;
         }
 
-        * {
-            scrollbar-width: none;
+        *::-webkit-scrollbar {
+            width: 0;
+            height: 0;
         }
 
         html {
             scroll-behavior: smooth;
         }
 
-        /* Fixed toast messages — float above content */
+        body {
+            margin: 0;
+            min-height: 100vh;
+        }
+
+        /* Fixed toast messages */
         .message-container {
             position: fixed;
             top: 90px;
@@ -46,198 +54,297 @@
             display: flex;
             flex-direction: column;
             gap: 12px;
+            width: min(400px, calc(100vw - 32px));
             max-width: 400px;
-            width: 100%;
+        }
+
+        /* Sidebar navigation */
+        .admin-nav-link {
+            position: relative;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            min-height: 52px;
+            padding: 12px 20px;
+            border: 1px solid transparent;
+            border-radius: 16px;
+            color: #94A3B8;
+            text-decoration: none;
+            transition:
+                background-color 0.25s ease,
+                color 0.25s ease,
+                border-color 0.25s ease;
+        }
+
+        .admin-nav-link:hover {
+            background-color: rgba(255, 255, 255, 0.05);
+            color: #FFFFFF;
+        }
+
+        .admin-nav-link.active {
+            background-color: rgba(34, 211, 238, 0.10);
+            border-color: rgba(34, 211, 238, 0.10);
+            color: #FFFFFF;
+        }
+
+        .admin-nav-link.active::before {
+            content: "";
+            position: absolute;
+            left: 0;
+            top: 50%;
+            width: 4px;
+            height: 30px;
+            border-radius: 0 999px 999px 0;
+            background: #00F5D4;
+            box-shadow: 0 0 14px #00F5D4;
+            transform: translateY(-50%);
+        }
+
+        .admin-nav-link.active .nav-icon {
+            color: #00F5D4;
+        }
+
+        /* Mobile sidebar backdrop */
+        .sidebar-backdrop {
+            display: none;
+        }
+
+        /* Responsive toast position */
+        @media (max-width: 640px) {
+            .message-container {
+                top: 82px;
+                right: 12px;
+                width: calc(100vw - 24px);
+                max-width: none;
+            }
+        }
+
+        /* Mobile sidebar */
+        @media (max-width: 1023px) {
+            .admin-sidebar {
+                width: 270px;
+                max-width: calc(100vw - 48px);
+                transform: translateX(-100%);
+                transition: transform 0.25s ease;
+            }
+
+            .admin-sidebar.sidebar-open {
+                transform: translateX(0);
+            }
+
+            .sidebar-backdrop.backdrop-open {
+                display: block;
+            }
+
+            .admin-navbar {
+                left: 0 !important;
+                padding-left: 16px !important;
+                padding-right: 16px !important;
+            }
+
+            .admin-main {
+                margin-left: 0 !important;
+            }
+
+            body.sidebar-is-open {
+                overflow: hidden;
+            }
+        }
+
+        @media (min-width: 1024px) {
+            .admin-sidebar {
+                transform: translateX(0);
+            }
+
+            .sidebar-backdrop {
+                display: none !important;
+            }
+
+            .mobile-menu-button {
+                display: none !important;
+            }
         }
     </style>
+
+    {% block extra_head %}{% endblock %}
 </head>
 
-<body class="bg-[#020617] overflow-hidden font-sans">
+<body class="bg-[#020617] overflow-hidden font-sans text-white">
 
     <!-- BACKGROUND -->
-    <div class="fixed inset-0 bg-[#030712] z-0"></div>
+    <div class="fixed inset-0 bg-[#030712] z-0 pointer-events-none"></div>
 
     <!-- CYAN GLOW -->
-    <div class="fixed top-[-260px] left-[-200px] w-[600px] h-[600px] rounded-full bg-cyan-400/10 blur-3xl z-0"></div>
+    <div
+        class="fixed top-[-260px] left-[-200px] w-[600px] h-[600px]
+               rounded-full bg-cyan-400/10 blur-3xl z-0 pointer-events-none">
+    </div>
 
     <!-- PURPLE GLOW -->
-    <div class="fixed bottom-[-260px] right-[-220px] w-[650px] h-[650px] rounded-full bg-violet-500/10 blur-3xl z-0"></div>
+    <div
+        class="fixed bottom-[-260px] right-[-220px] w-[650px] h-[650px]
+               rounded-full bg-violet-500/10 blur-3xl z-0 pointer-events-none">
+    </div>
 
     <!-- GRID -->
-    <div class="fixed inset-0 z-0 opacity-[0.14]"
+    <div
+        class="fixed inset-0 z-0 opacity-[0.14] pointer-events-none"
         style="
             background-image:
-            linear-gradient(rgba(255,255,255,0.06) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(255,255,255,0.06) 1px, transparent 1px);
-            background-size:40px 40px;
-        "></div>
+                linear-gradient(rgba(255,255,255,0.06) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.06) 1px, transparent 1px);
+            background-size: 40px 40px;
+        ">
+    </div>
+
+    <!-- MOBILE SIDEBAR BACKDROP -->
+    <div
+        id="sidebarBackdrop"
+        class="sidebar-backdrop fixed inset-0 z-40 bg-black/60 backdrop-blur-[2px]"
+        aria-hidden="true">
+    </div>
 
     <!-- SIDEBAR -->
-    <aside class="fixed top-0 left-0 z-40 w-[270px] h-screen bg-[#030712]/95 border-r border-white/5 backdrop-blur-[14px] flex flex-col">
+    <aside
+        id="adminSidebar"
+        class="admin-sidebar fixed top-0 left-0 z-50 w-[270px] h-screen
+               bg-[#030712]/95 border-r border-white/5 backdrop-blur-[14px]
+               flex flex-col"
+        aria-label="Admin navigation">
 
         <!-- LOGO -->
-        <div class="h-[74px] border-b border-white/5 flex items-center px-7">
-            <div class="flex items-center gap-3">
+        <div
+            class="h-[74px] min-h-[74px] border-b border-white/5
+                   flex items-center justify-between px-7">
+
+            <a href="{% url 'admin_dashboard' %}"
+               class="flex items-center gap-3 no-underline">
+
                 <i class="ri-flashlight-fill text-[#00F5D4] text-[24px]"></i>
+
                 <h1 class="text-[22px] font-extrabold tracking-wide text-white">
                     NEO<span class="text-[#00F5D4]">LEARN</span>
                 </h1>
-            </div>
+            </a>
+
+            <!-- MOBILE CLOSE BUTTON -->
+            <button
+                type="button"
+                id="closeSidebarButton"
+                class="lg:hidden w-9 h-9 flex items-center justify-center
+                       rounded-xl text-[#94A3B8] hover:text-white
+                       hover:bg-white/5 transition"
+                aria-label="Close navigation menu">
+
+                <i class="ri-close-line text-[22px]"></i>
+            </button>
         </div>
 
         <!-- NAVIGATION -->
-        <div class="flex-1 overflow-y-auto px-4 py-6">
-            <p class="text-[#64748B] text-[11px] uppercase tracking-[2px] font-bold mb-5 px-3">Admin Panel</p>
+        <div class="flex-1 min-h-0 overflow-y-auto px-4 py-6">
+
+            <p class="text-[#64748B] text-[11px] uppercase tracking-[2px]
+                      font-bold mb-5 px-3">
+                Admin Panel
+            </p>
 
             <nav class="space-y-2">
 
                 <!-- DASHBOARD -->
-                <a href="{% url 'admin_dashboard' %}"
-                    class="relative flex items-center gap-4 h-[52px] px-5 rounded-[16px] overflow-hidden transition duration-300
-                        {% if request.resolver_match.url_name == 'admin_dashboard' %}
-                            bg-cyan-400/10 border border-cyan-400/10 text-white
-                        {% else %}
-                            text-[#94A3B8] hover:bg-white/5 hover:text-white
-                        {% endif %}">
+                <a
+                    href="{% url 'admin_dashboard' %}"
+                    class="admin-nav-link {% if request.resolver_match.url_name == 'admin_dashboard' %}active{% endif %}"
+                    {% if request.resolver_match.url_name == 'admin_dashboard' %}aria-current="page"{% endif %}>
 
-                    {% if request.resolver_match.url_name == 'admin_dashboard' %}
-                    <div class="absolute left-0 top-1/2 -translate-y-1/2 w-[4px] h-[30px] rounded-r-full bg-[#00F5D4] shadow-[0_0_14px_#00F5D4]"></div>
-                    {% endif %}
-
-                    <i class="ri-layout-grid-fill text-[18px] {% if request.resolver_match.url_name == 'admin_dashboard' %}text-[#00F5D4]{% endif %}"></i>
+                    <i class="nav-icon ri-layout-grid-fill text-[18px]"></i>
                     <span class="text-[15px] font-semibold">Dashboard</span>
                 </a>
 
                 <!-- STUDENTS -->
-                <a href="{% url 'admin_students' %}"
-                    class="relative flex items-center gap-4 h-[52px] px-5 rounded-[16px] overflow-hidden transition duration-300
-                        {% if request.resolver_match.url_name == 'admin_students' %}
-                            bg-cyan-400/10 border border-cyan-400/10 text-white
-                        {% else %}
-                            text-[#94A3B8] hover:bg-white/5 hover:text-white
-                        {% endif %}">
+                <a
+                    href="{% url 'admin_students' %}"
+                    class="admin-nav-link {% if request.resolver_match.url_name == 'admin_students' %}active{% endif %}"
+                    {% if request.resolver_match.url_name == 'admin_students' %}aria-current="page"{% endif %}>
 
-                    {% if request.resolver_match.url_name == 'admin_students' %}
-                    <div class="absolute left-0 top-1/2 -translate-y-1/2 w-[4px] h-[30px] rounded-r-full bg-[#00F5D4] shadow-[0_0_14px_#00F5D4]"></div>
-                    {% endif %}
-
-                    <i class="ri-team-line text-[18px] {% if request.resolver_match.url_name == 'admin_students' %}text-[#00F5D4]{% endif %}"></i>
+                    <i class="nav-icon ri-team-line text-[18px]"></i>
                     <span class="text-[15px] font-medium">Students</span>
                 </a>
 
                 <!-- TEACHERS -->
-                <a href="{% url 'admin_teachers' %}"
-                    class="relative flex items-center gap-4 h-[52px] px-5 rounded-[16px] overflow-hidden transition duration-300
-                        {% if request.resolver_match.url_name == 'admin_teachers' %}
-                            bg-cyan-400/10 border border-cyan-400/10 text-white
-                        {% else %}
-                            text-[#94A3B8] hover:bg-white/5 hover:text-white
-                        {% endif %}">
+                <a
+                    href="{% url 'admin_teachers' %}"
+                    class="admin-nav-link {% if request.resolver_match.url_name == 'admin_teachers' %}active{% endif %}"
+                    {% if request.resolver_match.url_name == 'admin_teachers' %}aria-current="page"{% endif %}>
 
-                    {% if request.resolver_match.url_name == 'admin_teachers' %}
-                    <div class="absolute left-0 top-1/2 -translate-y-1/2 w-[4px] h-[30px] rounded-r-full bg-[#00F5D4] shadow-[0_0_14px_#00F5D4]"></div>
-                    {% endif %}
-
-                    <i class="ri-team-line text-[18px] {% if request.resolver_match.url_name == 'admin_teachers' %}text-[#00F5D4]{% endif %}"></i>
+                    <i class="nav-icon ri-team-line text-[18px]"></i>
                     <span class="text-[15px] font-medium">Teachers</span>
                 </a>
 
                 <!-- BATCHES -->
-                <a href="{% url 'admin_batches' %}"
-                    class="relative flex items-center gap-4 h-[52px] px-5 rounded-[16px] overflow-hidden transition duration-300
-                        {% if 'batch' in request.resolver_match.url_name %}
-                            bg-cyan-400/10 border border-cyan-400/10 text-white
-                        {% else %}
-                            text-[#94A3B8] hover:bg-white/5 hover:text-white
-                        {% endif %}">
+                <a
+                    href="{% url 'admin_batches' %}"
+                    class="admin-nav-link {% if 'batch' in request.resolver_match.url_name %}active{% endif %}"
+                    {% if 'batch' in request.resolver_match.url_name %}aria-current="page"{% endif %}>
 
-                    {% if 'batch' in request.resolver_match.url_name %}
-                    <div class="absolute left-0 top-1/2 -translate-y-1/2 w-[4px] h-[30px] rounded-r-full bg-[#00F5D4] shadow-[0_0_14px_#00F5D4]"></div>
-                    {% endif %}
-
-                    <i class="ri-book-open-line text-[18px] {% if 'batch' in request.resolver_match.url_name %}text-[#00F5D4]{% endif %}"></i>
+                    <i class="nav-icon ri-book-open-line text-[18px]"></i>
                     <span class="text-[15px] font-medium">Batches</span>
                 </a>
 
                 <!-- SUBJECTS -->
-                <a href="{% url 'admin_subjects' %}"
-                    class="relative flex items-center gap-4 h-[52px] px-5 rounded-[16px] overflow-hidden transition duration-300
-                        {% if 'subject' in request.resolver_match.url_name %}
-                            bg-cyan-400/10 border border-cyan-400/10 text-white
-                        {% else %}
-                            text-[#94A3B8] hover:bg-white/5 hover:text-white
-                        {% endif %}">
+                <a
+                    href="{% url 'admin_subjects' %}"
+                    class="admin-nav-link {% if 'subject' in request.resolver_match.url_name %}active{% endif %}"
+                    {% if 'subject' in request.resolver_match.url_name %}aria-current="page"{% endif %}>
 
-                    {% if 'subject' in request.resolver_match.url_name %}
-                    <div class="absolute left-0 top-1/2 -translate-y-1/2 w-[4px] h-[30px] rounded-r-full bg-[#00F5D4] shadow-[0_0_14px_#00F5D4]"></div>
-                    {% endif %}
-
-                    <i class="ri-stack-line text-[18px] {% if 'subject' in request.resolver_match.url_name %}text-[#00F5D4]{% endif %}"></i>
+                    <i class="nav-icon ri-stack-line text-[18px]"></i>
                     <span class="text-[15px] font-medium">Subjects</span>
                 </a>
 
-                <!-- LIVE -->
-                <a href="#"
-                    class="flex items-center gap-4 h-[52px] px-5 rounded-[16px] text-[#94A3B8] hover:bg-white/5 hover:text-white transition">
-                    <i class="ri-live-line text-[18px]"></i>
+                <!-- LIVE CLASSES -->
+                <a
+                    href="#"
+                    class="admin-nav-link">
+
+                    <i class="nav-icon ri-live-line text-[18px]"></i>
                     <span class="text-[15px] font-medium">Live Classes</span>
                 </a>
 
-                <!-- REVIEWS -->
-                <a href="#"
-                    class="flex items-center gap-4 h-[52px] px-5 rounded-[16px] text-[#94A3B8] hover:bg-white/5 hover:text-white transition">
-                    <i class="ri-star-line text-[18px]"></i>
-                    <span class="text-[15px] font-medium">Reviews</span>
-                </a>
+                <!-- ORDER MANAGEMENT -->
+                <a
+                    href="{% url 'admin_orders' %}"
+                    class="admin-nav-link {% if 'order' in request.resolver_match.url_name %}active{% endif %}"
+                    {% if 'order' in request.resolver_match.url_name %}aria-current="page"{% endif %}>
 
-                <!-- order management -->
-                <a href="{% url 'admin_orders' %}"
-                    class="flex items-center gap-4 h-[52px] px-5 rounded-[16px] text-[#94A3B8] hover:bg-white/5 hover:text-white transition">
-                    <i class="ri-bank-card-line text-[18px]"></i>
+                    <i class="nav-icon ri-bank-card-line text-[18px]"></i>
                     <span class="text-[15px] font-medium">Order Management</span>
                 </a>
-                <!-- refund management -->
-                <a href="{% url 'admin_refunds' %}"
-                    class="flex items-center gap-4 h-[52px] px-5 rounded-[16px] text-[#94A3B8] hover:bg-white/5 hover:text-white transition">
-                    <i class="ri-refund-2-line text-[18px]"></i>
+
+                <!-- REFUND MANAGEMENT -->
+                <a
+                    href="{% url 'admin_refunds' %}"
+                    class="admin-nav-link {% if 'refund' in request.resolver_match.url_name %}active{% endif %}"
+                    {% if 'refund' in request.resolver_match.url_name %}aria-current="page"{% endif %}>
+
+                    <i class="nav-icon ri-refund-2-line text-[18px]"></i>
                     <span class="text-[15px] font-medium">Refund Management</span>
                 </a>
+
                 <!-- COUPONS -->
-            <a href="{% url 'admin_coupons' %}"
-                class="relative flex items-center gap-4 h-[52px] px-5 rounded-[16px] overflow-hidden transition duration-300
-        {% if 'coupon' in request.resolver_match.url_name %}
-            bg-cyan-400/10 border border-cyan-400/10 text-white
-        {% else %}
-            text-[#94A3B8] hover:bg-white/5 hover:text-white
-        {% endif %}">
+                <a
+                    href="{% url 'admin_coupons' %}"
+                    class="admin-nav-link {% if 'coupon' in request.resolver_match.url_name %}active{% endif %}"
+                    {% if 'coupon' in request.resolver_match.url_name %}aria-current="page"{% endif %}>
 
-    {% if 'coupon' in request.resolver_match.url_name %}
-        <div class="absolute left-0 top-1/2 -translate-y-1/2 w-[4px] h-[30px] rounded-r-full bg-[#00F5D4] shadow-[0_0_14px_#00F5D4]"></div>
-    {% endif %}
-
-    <i class="ri-coupon-3-line text-[18px] {% if 'coupon' in request.resolver_match.url_name %}text-[#00F5D4]{% endif %}"></i>
-
-    <span class="text-[15px] font-medium">Coupons</span>
-</a>
-
-                <!-- INVOICES -->
-                <a href="#"
-                    class="flex items-center gap-4 h-[52px] px-5 rounded-[16px] text-[#94A3B8] hover:bg-white/5 hover:text-white transition">
-                    <i class="ri-file-list-3-line text-[18px]"></i>
-                    <span class="text-[15px] font-medium">Invoices</span>
-                </a>
-
-                <!-- CERTIFICATES -->
-                <a href="#"
-                    class="flex items-center gap-4 h-[52px] px-5 rounded-[16px] text-[#94A3B8] hover:bg-white/5 hover:text-white transition">
-                    <i class="ri-award-line text-[18px]"></i>
-                    <span class="text-[15px] font-medium">Certificates</span>
+                    <i class="nav-icon ri-coupon-3-line text-[18px]"></i>
+                    <span class="text-[15px] font-medium">Coupons</span>
                 </a>
 
                 <!-- ANALYTICS -->
-                <a href="#"
-                    class="flex items-center gap-4 h-[52px] px-5 rounded-[16px] text-[#94A3B8] hover:bg-white/5 hover:text-white transition">
-                    <i class="ri-line-chart-line text-[18px]"></i>
+                <a
+                    href="#"
+                    class="admin-nav-link">
+
+                    <i class="nav-icon ri-line-chart-line text-[18px]"></i>
                     <span class="text-[15px] font-medium">Analytics</span>
                 </a>
 
@@ -245,41 +352,107 @@
         </div>
 
         <!-- LOGOUT -->
-        <div class="p-4 border-t border-white/5">
-            <a href="{% url 'admin_logout' %}"
-                class="flex items-center justify-center gap-3 h-[50px] rounded-[16px] border border-red-500/10 bg-red-500/10 text-red-400 hover:bg-red-500/20 transition duration-300 font-semibold text-[14px]">
+        <div class="shrink-0 p-4 border-t border-white/5">
+
+            <a
+                href="{% url 'admin_logout' %}"
+                class="flex items-center justify-center gap-3 min-h-[50px]
+                       rounded-[16px] border border-red-500/10
+                       bg-red-500/10 text-red-400 hover:bg-red-500/20
+                       transition duration-300 font-semibold text-[14px]">
+
                 <i class="ri-logout-box-r-line text-[18px]"></i>
-                Logout
+                <span>Logout</span>
             </a>
         </div>
 
     </aside>
 
     <!-- NAVBAR -->
-    <header class="fixed top-0 left-[270px] right-0 z-30 h-[74px] border-b border-white/5 bg-[#030712]/95 backdrop-blur-[14px] flex items-center justify-between px-7">
+    <header
+        class="admin-navbar fixed top-0 left-[270px] right-0 z-30
+               h-[74px] border-b border-white/5
+               bg-[#030712]/95 backdrop-blur-[14px]
+               flex items-center justify-between gap-4 px-7">
 
-        <!-- SEARCH -->
-        <div class="relative w-[360px]">
-            <input type="text" placeholder="Search anything..."
-                class="w-full h-[46px] rounded-[15px] border border-white/10 bg-[#0B1120] pl-12 pr-4 text-[14px] text-white placeholder:text-[#64748B] outline-none focus:border-[#00F5D4] transition">
-            <i class="ri-search-line absolute left-4 top-1/2 -translate-y-1/2 text-[#64748B] text-[18px]"></i>
+        <!-- LEFT: MOBILE MENU + SEARCH -->
+        <div class="flex items-center gap-3 min-w-0 flex-1">
+
+            <!-- MOBILE MENU BUTTON -->
+            <button
+                type="button"
+                id="openSidebarButton"
+                class="mobile-menu-button shrink-0 w-10 h-10 rounded-xl
+                       border border-white/10 bg-[#0B1120]
+                       flex items-center justify-center text-[#94A3B8]
+                       hover:text-white hover:border-cyan-400/20 transition
+                       lg:hidden"
+                aria-label="Open navigation menu"
+                aria-controls="adminSidebar"
+                aria-expanded="false">
+
+                <i class="ri-menu-line text-[22px]"></i>
+            </button>
+
+            <!-- SEARCH -->
+            <div class="relative w-full max-w-[360px] min-w-0">
+
+                <input
+                    type="text"
+                    placeholder="Search anything..."
+                    aria-label="Search"
+                    class="w-full h-[46px] rounded-[15px]
+                           border border-white/10 bg-[#0B1120]
+                           pl-11 pr-4 text-[14px] text-white
+                           placeholder:text-[#64748B] outline-none
+                           focus:border-[#00F5D4] transition">
+
+                <i
+                    class="ri-search-line absolute left-4 top-1/2
+                           -translate-y-1/2 text-[#64748B] text-[18px]">
+                </i>
+            </div>
         </div>
 
-        <!-- RIGHT -->
-        <div class="flex items-center gap-7">
+        <!-- RIGHT: NOTIFICATION + PROFILE -->
+        <div class="flex items-center gap-3 sm:gap-5 shrink-0">
+
             <!-- NOTIFICATION -->
-            <button class="relative w-[42px] h-[42px] rounded-full border border-white/10 bg-[#0B1120] flex items-center justify-center text-[#94A3B8] hover:text-white hover:border-cyan-400/20 transition">
+            <button
+                type="button"
+                class="relative w-[40px] h-[40px] sm:w-[42px] sm:h-[42px]
+                       rounded-full border border-white/10 bg-[#0B1120]
+                       flex items-center justify-center text-[#94A3B8]
+                       hover:text-white hover:border-cyan-400/20 transition"
+                aria-label="Notifications">
+
                 <i class="ri-notification-3-line text-[18px]"></i>
-                <span class="absolute top-[9px] right-[10px] w-[7px] h-[7px] rounded-full bg-pink-500 shadow-[0_0_8px_#ec4899]"></span>
+
+                <span
+                    class="absolute top-[9px] right-[10px] w-[7px] h-[7px]
+                           rounded-full bg-pink-500
+                           shadow-[0_0_8px_#ec4899]">
+                </span>
             </button>
 
             <!-- PROFILE -->
-            <div class="flex items-center gap-3">
-                <img src="{% static 'admins/images/admin-profile.png' %}" alt="Admin"
-                    class="w-[42px] h-[42px] rounded-full border border-white/10 object-cover">
-                <div>
-                    <h3 class="text-white text-[14px] font-semibold leading-tight">Admin User</h3>
-                    <p class="text-[#94A3B8] text-[12px]">Super Admin</p>
+            <div class="flex items-center gap-3 min-w-0">
+
+                <img
+                    src="{% static 'admins/images/admin-profile.png' %}"
+                    alt="Admin profile"
+                    class="w-[38px] h-[38px] sm:w-[42px] sm:h-[42px]
+                           shrink-0 rounded-full border border-white/10
+                           object-cover">
+
+                <div class="hidden sm:block min-w-0">
+                    <h3 class="text-white text-[14px] font-semibold leading-tight">
+                        Admin User
+                    </h3>
+
+                    <p class="text-[#94A3B8] text-[12px]">
+                        Super Admin
+                    </p>
                 </div>
             </div>
         </div>
@@ -288,42 +461,127 @@
 
     <!-- FIXED TOAST MESSAGES -->
     {% if messages %}
-    <div class="message-container" id="messageContainer">
-        {% for message in messages %}
-        <div class="message-item {{ message.tags }}">
-            <div class="message-header">
-                <div class="message-left">
-                    <div class="message-icon">
-                        <i class="ri-{% if message.tags == 'success' %}check-line{% elif message.tags == 'error' %}close-circle-line{% elif message.tags == 'warning' %}alert-line{% else %}information-line{% endif %}"></i>
+        <div class="message-container" id="messageContainer">
+
+            {% for message in messages %}
+                <div class="message-item {{ message.tags }}">
+
+                    <div class="message-header">
+
+                        <div class="message-left">
+
+                            <div class="message-icon">
+                                <i class="ri-{% if message.tags == 'success' %}check-line{% elif message.tags == 'error' %}close-circle-line{% elif message.tags == 'warning' %}alert-line{% else %}information-line{% endif %}"></i>
+                            </div>
+
+                            <div class="message-title">
+                                {% if message.tags == "success" %}
+                                    Success
+                                {% elif message.tags == "error" %}
+                                    Error
+                                {% elif message.tags == "warning" %}
+                                    Warning
+                                {% else %}
+                                    Information
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <button
+                            class="message-close"
+                            type="button"
+                            aria-label="Close message">
+
+                            <i class="ri-close-line"></i>
+                        </button>
                     </div>
-                    <div class="message-title">
-                        {% if message.tags == "success" %}Success
-                        {% elif message.tags == "error" %}Error
-                        {% elif message.tags == "warning" %}Warning
-                        {% else %}Information{% endif %}
-                    </div>
+
+                    <div class="message-text">{{ message }}</div>
                 </div>
-                <button class="message-close" type="button">
-                    <i class="ri-close-line"></i>
-                </button>
-            </div>
-            <div class="message-text">{{ message }}</div>
+            {% endfor %}
+
         </div>
-        {% endfor %}
-    </div>
     {% endif %}
 
     <!-- MAIN CONTENT -->
-    <main class="ml-[270px] pt-[74px] h-screen overflow-y-auto relative z-10">
-        <div class="px-6 pt-6 pb-24">
+    <main
+        class="admin-main ml-[270px] pt-[74px] h-screen
+               overflow-y-auto relative z-10">
+
+        <div class="px-4 sm:px-6 pt-4 sm:pt-6 pb-12 sm:pb-24 min-w-0">
+
             {% block admin_content %}
             {% endblock %}
+
         </div>
     </main>
 
     <!-- TOAST MESSAGES JS -->
     <script src="{% static 'toast-messages.js' %}"></script>
 
-</body>
+    <!-- MOBILE SIDEBAR INTERACTION -->
+    <script>
+        (function () {
+            const sidebar = document.getElementById("adminSidebar");
+            const backdrop = document.getElementById("sidebarBackdrop");
+            const openButton = document.getElementById("openSidebarButton");
+            const closeButton = document.getElementById("closeSidebarButton");
 
+            if (!sidebar || !backdrop || !openButton || !closeButton) {
+                return;
+            }
+
+            function isMobileLayout() {
+                return window.innerWidth < 1024;
+            }
+
+            function openSidebar() {
+                if (!isMobileLayout()) {
+                    return;
+                }
+
+                sidebar.classList.add("sidebar-open");
+                backdrop.classList.add("backdrop-open");
+                document.body.classList.add("sidebar-is-open");
+                openButton.setAttribute("aria-expanded", "true");
+                backdrop.setAttribute("aria-hidden", "false");
+            }
+
+            function closeSidebar() {
+                sidebar.classList.remove("sidebar-open");
+                backdrop.classList.remove("backdrop-open");
+                document.body.classList.remove("sidebar-is-open");
+                openButton.setAttribute("aria-expanded", "false");
+                backdrop.setAttribute("aria-hidden", "true");
+            }
+
+            openButton.addEventListener("click", openSidebar);
+            closeButton.addEventListener("click", closeSidebar);
+            backdrop.addEventListener("click", closeSidebar);
+
+            document.addEventListener("keydown", function (event) {
+                if (event.key === "Escape") {
+                    closeSidebar();
+                }
+            });
+
+            sidebar.querySelectorAll("nav a").forEach(function (link) {
+                link.addEventListener("click", function () {
+                    if (isMobileLayout()) {
+                        closeSidebar();
+                    }
+                });
+            });
+
+            window.addEventListener("resize", function () {
+                if (!isMobileLayout()) {
+                    closeSidebar();
+                }
+            });
+        })();
+    </script>
+
+    {% block extra_js %}{% endblock %}
+
+</body>
 </html>
