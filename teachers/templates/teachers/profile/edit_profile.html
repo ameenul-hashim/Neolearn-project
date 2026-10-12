@@ -1,0 +1,417 @@
+
+{% extends "teachers/dashboard/teacher_base.html" %}
+{% block title %}Edit Profile | NeoLearn{% endblock %}
+{% block page_heading %}Edit Profile{% endblock %}
+{% block extra_head %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.js"></script>
+<style>
+.neo-edit{--line:#173b55;--muted:#9bb0c7;color:#edf6ff;width:100%;max-width:1500px;margin-inline:auto}
+.neo-edit *{box-sizing:border-box}
+.neo-edit .ne-card{min-width:0;border:1px solid var(--line);border-radius:14px;background:linear-gradient(145deg,#0b2032,#071625);padding:16px}
+.neo-edit .ne-heading{display:flex;align-items:center;gap:10px;margin-bottom:15px}
+.neo-edit .ne-icon{display:grid;place-items:center;flex:0 0 36px;width:36px;height:36px;border-radius:10px;background:linear-gradient(145deg,#0ea5e9,#0369a1);color:white;font-size:19px}
+.neo-edit .ne-title{color:#f8fafc;font-size:13px;font-weight:750}
+.neo-edit .ne-subtitle{margin-top:3px;color:var(--muted);font-size:11px;line-height:1.5}
+.neo-edit .ne-label{display:block;margin-bottom:6px;color:#c2d1e1;font-size:12px;font-weight:650}
+.neo-edit .ne-input,.neo-edit .ne-select,.neo-edit .ne-textarea{display:block;width:100%;min-width:0;border:1px solid #24465f;border-radius:9px;background:#0b2032;color:#edf6ff;padding:10px 11px;font:inherit;font-size:13px;line-height:1.5;outline:none}
+.neo-edit .ne-input:focus,.neo-edit .ne-select:focus,.neo-edit .ne-textarea:focus{border-color:#22d3ee;box-shadow:0 0 0 2px #22d3ee25}
+.neo-edit .ne-input::placeholder,.neo-edit .ne-textarea::placeholder{color:#71869b}
+.neo-edit .ne-input[readonly]{background:#10283a;color:#9bb0c7;cursor:not-allowed}
+.neo-edit .ne-textarea{min-height:110px;resize:vertical}
+.neo-edit .ne-field{min-width:0}
+.neo-edit .ne-error{margin-top:5px;color:#fca5a5;font-size:11px;line-height:1.5}
+.neo-edit .ne-help{margin-top:5px;color:#8197ae;font-size:11px;line-height:1.5}
+.neo-edit .ne-progress{height:9px;overflow:hidden;border-radius:999px;background:#18364c}
+.neo-edit .ne-progress>span{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,#22c55e,#06b6d4)}
+.neo-edit .ne-photo{width:104px;height:104px;flex:0 0 104px;overflow:hidden;border:3px solid #22d3ee;border-radius:50%;background:#10283a}
+.neo-edit .ne-photo img{display:block;width:100%;height:100%;object-fit:cover;object-position:center}
+.neo-edit .ne-upload{display:flex;min-height:95px;flex-direction:column;align-items:center;justify-content:center;gap:8px;border:1px dashed #42617a;border-radius:10px;background:#071727;padding:14px;text-align:center}
+.neo-edit .ne-upload input{width:100%;max-width:100%;color:#cbd5e1;font-size:12px}
+.neo-edit .ne-button{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:42px;border-radius:9px;padding:10px 17px;font-size:12px;font-weight:800;text-decoration:none;cursor:pointer}
+.neo-edit .ne-save{border:1px solid #facc15;background:linear-gradient(135deg,#fde047,#f59e0b);color:#172033}
+.neo-edit .ne-cancel{border:1px solid #36516a;background:#0c2033;color:#e2e8f0}
+.neo-edit .ne-button:disabled{opacity:.55;cursor:not-allowed}
+.neo-edit .ne-button:focus-visible{outline:2px solid #22d3ee;outline-offset:3px}
+.neo-edit [hidden]{display:none!important}
+/* Small centered responsive crop popup */
+.neo-edit .crop-modal{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;padding:12px}
+.neo-edit .crop-modal[hidden]{display:none!important}
+.neo-edit .crop-backdrop{position:absolute;inset:0;background:rgba(2,8,23,.84);backdrop-filter:blur(4px)}
+.neo-edit .crop-dialog{position:relative;z-index:1;width:min(100%,410px);max-height:92vh;max-height:92dvh;overflow-y:auto;border:1px solid #24465f;border-radius:15px;background:linear-gradient(145deg,#0b2032,#061321);padding:13px;box-shadow:0 24px 80px rgba(0,0,0,.55)}
+.neo-edit .crop-dialog-header{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:10px}
+.neo-edit .crop-close{display:grid;place-items:center;flex:0 0 32px;width:32px;height:32px;border:1px solid #36516a;border-radius:9px;background:#10283a;color:#e2e8f0;font-size:24px;line-height:1;cursor:pointer}
+.neo-edit .crop-stage{width:100%;height:clamp(185px,35vh,270px);overflow:hidden;border:1px solid #24465f;border-radius:10px;background:#020617}
+.neo-edit .crop-stage img{display:block;max-width:100%}
+.neo-edit .cropper-container{max-width:100%}
+.neo-edit .cropper-view-box,.neo-edit .cropper-face{border-radius:50%}
+.neo-edit .cropper-view-box{outline:2px solid #22d3ee}
+.neo-edit .cropper-line,.neo-edit .cropper-point{background-color:#22d3ee}
+.neo-edit .ne-range{width:100%;min-width:0;accent-color:#22d3ee}
+.neo-edit .crop-controls{margin-top:12px}
+.neo-edit .crop-zoom-button{display:grid;place-items:center;flex:0 0 32px;width:32px;height:32px;border:1px solid #36516a;border-radius:9px;background:#0c2033;color:#e2e8f0;font-size:20px;cursor:pointer}
+.neo-edit .crop-dialog-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:13px}
+.neo-edit .crop-dialog-actions #cropApply{grid-column:1/-1}
+@media(max-width:640px){
+ .neo-edit .ne-card{padding:12px}
+ .neo-edit .ne-actions{display:grid;grid-template-columns:1fr}
+ .neo-edit .ne-button{width:100%}
+ .neo-edit .crop-modal{padding:8px}
+ .neo-edit .crop-dialog{width:100%;max-width:360px;padding:11px;border-radius:13px}
+ .neo-edit .crop-stage{height:clamp(175px,32vh,235px)}
+ .neo-edit .crop-dialog-actions .ne-button{min-height:39px;padding:9px 10px}
+}
+</style>
+{% endblock %}
+{% block teacher_content %}
+<div class="neo-edit space-y-4">
+<header class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+<div>
+<p class="text-[10px] font-bold uppercase tracking-[.2em] text-cyan-400">NeoLearn / Teacher Portal</p>
+<h1 class="mt-1.5 text-2xl font-extrabold text-white sm:text-3xl">Edit Profile</h1>
+<p class="mt-1 text-sm leading-5 text-slate-400">Update your personal and professional information.</p>
+</div>
+<nav aria-label="Breadcrumb" class="flex w-fit flex-wrap items-center gap-2 rounded-xl border border-slate-800 bg-slate-900/70 px-3 py-2 text-[11px] text-slate-400">
+<a href="{% url 'teacher_dashboard' %}" class="hover:text-cyan-300">Dashboard</a><span>/</span>
+<a href="{% url 'teacher_my_profile' %}" class="hover:text-cyan-300">My Profile</a><span>/</span>
+<span class="text-cyan-300">Edit Profile</span>
+</nav>
+</header>
+{% if messages %}
+<div class="space-y-2" aria-live="polite">
+{% for message in messages %}
+<div role="status" class="rounded-xl border px-4 py-3 text-sm {% if message.tags == 'success' %}border-emerald-500/30 bg-emerald-500/10 text-emerald-200{% elif message.tags == 'error' %}border-red-500/30 bg-red-500/10 text-red-200{% else %}border-cyan-500/30 bg-cyan-500/10 text-cyan-100{% endif %}">{{ message }}</div>
+{% endfor %}
+</div>
+{% endif %}
+{% if errors.general %}
+<div role="alert" class="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">{{ errors.general }}</div>
+{% endif %}
+<section class="ne-card">
+<div class="flex items-center gap-3">
+<span class="ne-icon"><i class="ri-user-settings-line"></i></span>
+<div class="min-w-0 flex-1">
+<div class="flex items-center justify-between gap-3"><h2 class="text-xs font-bold text-white">Profile Completion</h2><strong class="text-xs text-emerald-300">{{ profile_completion|default:0 }}%</strong></div>
+<div class="ne-progress mt-2" role="progressbar" aria-label="Profile completion" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ profile_completion|default:0 }}"><span style="width:{{ profile_completion|default:0 }}%"></span></div>
+<p class="mt-1.5 text-[11px] text-slate-400">Your completion score updates after a successful save.</p>
+</div>
+</div>
+</section>
+<form id="editProfileForm" method="post" enctype="multipart/form-data" class="space-y-4">
+{% csrf_token %}
+<!-- PROFILE IMAGE -->
+<section class="ne-card">
+<div class="ne-heading"><span class="ne-icon"><i class="ri-image-line"></i></span><div><h2 class="ne-title">Profile Image</h2><p class="ne-subtitle">Choose a photo and crop it before saving.</p></div></div>
+<div class="grid grid-cols-1 items-start gap-5 md:grid-cols-[125px_minmax(0,1fr)]">
+<div class="flex flex-col items-center gap-2">
+<div class="ne-photo">
+<img id="profilePreview" {% if teacher.profile_image %}src="{{ teacher.profile_image.url }}"{% endif %} alt="Profile photo preview" {% if not teacher.profile_image %}hidden{% endif %}>
+<div id="profileInitials" class="grid h-full w-full place-items-center text-2xl font-extrabold text-cyan-200" {% if teacher.profile_image %}hidden{% endif %}>{{ teacher.initials|default:"T" }}</div>
+</div>
+<span class="text-center text-xs text-slate-400">Circular preview</span>
+</div>
+<div class="ne-field">
+<label for="profile_image" class="ne-label">Choose a profile photo</label>
+<div class="ne-upload">
+<i class="ri-upload-cloud-2-line text-2xl text-cyan-300" aria-hidden="true"></i>
+<p class="text-xs text-slate-200">Select JPG, PNG or WEBP</p>
+<input id="profile_image" name="profile_image" type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" aria-describedby="profile-image-help">
+</div>
+{% if errors.profile_image %}<p class="ne-error" role="alert">{{ errors.profile_image }}</p>{% endif %}
+<p id="profile-image-help" class="ne-help">Maximum original file size: 5 MB. Leave empty to keep your current photo.</p>
+</div>
+</div>
+</section>
+<!-- CROP POPUP: positioned over the page, not inside the form layout -->
+<div id="cropModal" class="crop-modal" hidden aria-hidden="true">
+<div class="crop-backdrop" data-crop-close></div>
+<section class="crop-dialog" role="dialog" aria-modal="true" aria-labelledby="cropTitle">
+<header class="crop-dialog-header">
+<div class="min-w-0"><h3 id="cropTitle" class="text-sm font-bold text-white">Crop profile photo</h3><p class="mt-1 text-xs text-slate-400">Move and zoom the photo inside the circle.</p></div>
+<button id="cropClose" type="button" class="crop-close" aria-label="Close crop popup">&times;</button>
+</header>
+<div class="crop-stage"><img id="cropSource" alt="Photo to crop"></div>
+<div class="crop-controls">
+<label for="cropZoom" class="ne-label !mb-0">Zoom</label>
+<div class="flex items-center gap-3">
+<button id="zoomOut" type="button" class="crop-zoom-button" aria-label="Zoom out">−</button>
+<input id="cropZoom" class="ne-range" type="range" min="0" max="100" value="0" step="1">
+<button id="zoomIn" type="button" class="crop-zoom-button" aria-label="Zoom in">+</button>
+</div>
+</div>
+<p id="cropError" class="ne-error" role="alert" hidden></p>
+<footer class="crop-dialog-actions">
+<button id="cropReset" type="button" class="ne-button ne-cancel">Reset</button>
+<button id="cropCancel" type="button" class="ne-button ne-cancel">Cancel</button>
+<button id="cropApply" type="button" class="ne-button ne-save">Apply Crop</button>
+</footer>
+</section>
+</div>
+<!-- PROTECTED ACCOUNT INFORMATION -->
+<section class="ne-card">
+<div class="ne-heading"><span class="ne-icon"><i class="ri-shield-user-line"></i></span><div><h2 class="ne-title">Account Information</h2><p class="ne-subtitle">These account details cannot be changed from this form.</p></div></div>
+<div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+<div class="ne-field"><label for="teacher_id" class="ne-label">Teacher ID</label><input id="teacher_id" class="ne-input" value="{{ teacher.teacher_id|default:'Not assigned' }}" readonly></div>
+<div class="ne-field"><label for="full_name" class="ne-label">Full name</label><input id="full_name" class="ne-input" value="{{ teacher.full_name }}" readonly></div>
+<div class="ne-field"><label for="email" class="ne-label">Email address</label><input id="email" class="ne-input" value="{{ teacher.email }}" readonly></div>
+<div class="ne-field"><label for="phone_number" class="ne-label">Primary phone</label><input id="phone_number" class="ne-input" value="{{ teacher.phone_number }}" readonly></div>
+<div class="ne-field"><label for="username" class="ne-label">Login username</label><input id="username" class="ne-input" value="{{ teacher.user.username }}" readonly></div>
+</div>
+</section>
+<!-- PERSONAL INFORMATION -->
+<section class="ne-card">
+<div class="ne-heading"><span class="ne-icon"><i class="ri-user-3-line"></i></span><div><h2 class="ne-title">Personal Information</h2><p class="ne-subtitle">Your personal and alternate contact details.</p></div></div>
+<div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+<div class="ne-field"><label for="date_of_birth" class="ne-label">Date of birth</label><input class="ne-input" id="date_of_birth" name="date_of_birth" type="date" value="{{ form_values.date_of_birth }}">{% if errors.date_of_birth %}<p class="ne-error">{{ errors.date_of_birth }}</p>{% endif %}</div>
+<div class="ne-field"><label for="gender" class="ne-label">Gender</label><select class="ne-select" id="gender" name="gender"><option value="">Select gender</option>{% for value, label in gender_choices %}<option value="{{ value }}" {% if form_values.gender == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select>{% if errors.gender %}<p class="ne-error">{{ errors.gender }}</p>{% endif %}</div>
+<div class="ne-field"><label for="alternate_phone" class="ne-label">Alternate mobile number</label><input class="ne-input" id="alternate_phone" name="alternate_phone" type="tel" inputmode="numeric" maxlength="10" value="{{ form_values.alternate_phone }}" placeholder="Optional">{% if errors.alternate_phone %}<p class="ne-error">{{ errors.alternate_phone }}</p>{% endif %}</div>
+</div>
+</section>
+<!-- EMERGENCY CONTACT -->
+<section class="ne-card">
+<div class="ne-heading"><span class="ne-icon"><i class="ri-first-aid-kit-line"></i></span><div><h2 class="ne-title">Emergency Contact</h2><p class="ne-subtitle">Information for contacting someone in an emergency.</p></div></div>
+<div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+<div class="ne-field"><label for="emergency_contact_name" class="ne-label">Contact name</label><input class="ne-input" id="emergency_contact_name" name="emergency_contact_name" value="{{ form_values.emergency_contact_name }}">{% if errors.emergency_contact_name %}<p class="ne-error">{{ errors.emergency_contact_name }}</p>{% endif %}</div>
+<div class="ne-field"><label for="emergency_contact_relationship" class="ne-label">Relationship</label><select class="ne-select" id="emergency_contact_relationship" name="emergency_contact_relationship"><option value="">Select relationship</option>{% for value, label in relationship_choices %}<option value="{{ value }}" {% if form_values.emergency_contact_relationship == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select>{% if errors.emergency_contact_relationship %}<p class="ne-error">{{ errors.emergency_contact_relationship }}</p>{% endif %}</div>
+<div class="ne-field"><label for="emergency_contact_phone" class="ne-label">Contact number</label><input class="ne-input" id="emergency_contact_phone" name="emergency_contact_phone" type="tel" inputmode="numeric" maxlength="10" value="{{ form_values.emergency_contact_phone }}">{% if errors.emergency_contact_phone %}<p class="ne-error">{{ errors.emergency_contact_phone }}</p>{% endif %}</div>
+</div>
+</section>
+<!-- ADDRESS -->
+<section class="ne-card">
+<div class="ne-heading"><span class="ne-icon"><i class="ri-map-pin-2-line"></i></span><div><h2 class="ne-title">Address Information</h2><p class="ne-subtitle">Your current residential address.</p></div></div>
+<div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+<div class="ne-field"><label for="address_line_1" class="ne-label">Address line 1</label><input class="ne-input" id="address_line_1" name="address_line_1" value="{{ form_values.address_line_1 }}">{% if errors.address_line_1 %}<p class="ne-error">{{ errors.address_line_1 }}</p>{% endif %}</div>
+<div class="ne-field"><label for="address_line_2" class="ne-label">Address line 2</label><input class="ne-input" id="address_line_2" name="address_line_2" value="{{ form_values.address_line_2 }}">{% if errors.address_line_2 %}<p class="ne-error">{{ errors.address_line_2 }}</p>{% endif %}</div>
+<div class="ne-field"><label for="city" class="ne-label">City</label><input class="ne-input" id="city" name="city" value="{{ form_values.city }}">{% if errors.city %}<p class="ne-error">{{ errors.city }}</p>{% endif %}</div>
+<div class="ne-field"><label for="state" class="ne-label">State</label><input class="ne-input" id="state" name="state" value="{{ form_values.state }}">{% if errors.state %}<p class="ne-error">{{ errors.state }}</p>{% endif %}</div>
+<div class="ne-field"><label for="postal_code" class="ne-label">Postal code</label><input class="ne-input" id="postal_code" name="postal_code" value="{{ form_values.postal_code }}">{% if errors.postal_code %}<p class="ne-error">{{ errors.postal_code }}</p>{% endif %}</div>
+<div class="ne-field"><label for="country" class="ne-label">Country</label><input class="ne-input" id="country" name="country" value="{{ form_values.country|default:'India' }}">{% if errors.country %}<p class="ne-error">{{ errors.country }}</p>{% endif %}</div>
+</div>
+</section>
+<!-- EDUCATION -->
+<section class="ne-card">
+<div class="ne-heading"><span class="ne-icon"><i class="ri-graduation-cap-line"></i></span><div><h2 class="ne-title">Education &amp; Qualifications</h2><p class="ne-subtitle">Your academic background and qualified subjects.</p></div></div>
+<div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+<div class="ne-field"><label for="qualification" class="ne-label">Highest qualification</label><input class="ne-input" id="qualification" name="qualification" value="{{ form_values.qualification }}">{% if errors.qualification %}<p class="ne-error">{{ errors.qualification }}</p>{% endif %}</div>
+<div class="ne-field"><label for="institution_name" class="ne-label">Institution name</label><input class="ne-input" id="institution_name" name="institution_name" value="{{ form_values.institution_name }}">{% if errors.institution_name %}<p class="ne-error">{{ errors.institution_name }}</p>{% endif %}</div>
+<div class="ne-field"><label for="graduation_year" class="ne-label">Graduation year</label><input class="ne-input" id="graduation_year" name="graduation_year" type="number" min="1900" max="2100" value="{{ form_values.graduation_year }}">{% if errors.graduation_year %}<p class="ne-error">{{ errors.graduation_year }}</p>{% endif %}</div>
+<div class="ne-field"><label for="additional_qualifications" class="ne-label">Additional qualifications</label><textarea class="ne-textarea" id="additional_qualifications" name="additional_qualifications">{{ form_values.additional_qualifications }}</textarea>{% if errors.additional_qualifications %}<p class="ne-error">{{ errors.additional_qualifications }}</p>{% endif %}</div>
+<div class="ne-field"><label for="specialization" class="ne-label">Specialization</label><input class="ne-input" id="specialization" name="specialization" value="{{ form_values.specialization }}">{% if errors.specialization %}<p class="ne-error">{{ errors.specialization }}</p>{% endif %}</div>
+<div class="ne-field"><label for="qualified_subjects" class="ne-label">Qualified subjects</label><textarea class="ne-textarea" id="qualified_subjects" name="qualified_subjects">{{ form_values.qualified_subjects }}</textarea>{% if errors.qualified_subjects %}<p class="ne-error">{{ errors.qualified_subjects }}</p>{% endif %}</div>
+</div>
+</section>
+<!-- PROFESSIONAL DETAILS -->
+<section class="ne-card">
+<div class="ne-heading"><span class="ne-icon"><i class="ri-briefcase-4-line"></i></span><div><h2 class="ne-title">Professional Details</h2><p class="ne-subtitle">Your teaching experience and work background.</p></div></div>
+<div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+<div class="ne-field"><label for="experience" class="ne-label">Teaching experience (years)</label><input class="ne-input" id="experience" name="experience" type="number" min="0" max="80" step="1" value="{{ form_values.experience }}" required>{% if errors.experience %}<p class="ne-error">{{ errors.experience }}</p>{% endif %}</div>
+<div class="ne-field"><label for="previous_institution" class="ne-label">Previous institution</label><input class="ne-input" id="previous_institution" name="previous_institution" value="{{ form_values.previous_institution }}">{% if errors.previous_institution %}<p class="ne-error">{{ errors.previous_institution }}</p>{% endif %}</div>
+<div class="ne-field"><label for="language" class="ne-label">Languages known</label><input class="ne-input" id="language" name="language" value="{{ form_values.language }}" placeholder="e.g. English, Malayalam">{% if errors.language %}<p class="ne-error">{{ errors.language }}</p>{% endif %}</div>
+</div>
+</section>
+<!-- ABOUT ME -->
+<section class="ne-card">
+<div class="ne-heading"><span class="ne-icon"><i class="ri-file-text-line"></i></span><div><h2 class="ne-title">About Me</h2><p class="ne-subtitle">Introduce yourself and your teaching approach.</p></div></div>
+<div class="ne-field"><label for="bio" class="ne-label">Professional introduction</label><textarea class="ne-textarea" id="bio" name="bio" maxlength="250" placeholder="Describe your teaching experience, approach and expertise.">{{ form_values.bio }}</textarea>{% if errors.bio %}<p class="ne-error">{{ errors.bio }}</p>{% endif %}<p class="ne-help">Maximum 250 characters.</p></div>
+</section>
+<!-- PROFESSIONAL LINKS -->
+<section class="ne-card">
+<div class="ne-heading"><span class="ne-icon"><i class="ri-share-line"></i></span><div><h2 class="ne-title">Professional Links</h2><p class="ne-subtitle">Optional links to your professional profiles.</p></div></div>
+<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+<div class="ne-field"><label for="linkedin" class="ne-label">LinkedIn URL</label><input class="ne-input" id="linkedin" name="linkedin" type="url" value="{{ form_values.linkedin }}" placeholder="https://www.linkedin.com/in/your-profile">{% if errors.linkedin %}<p class="ne-error">{{ errors.linkedin }}</p>{% endif %}</div>
+<div class="ne-field"><label for="website" class="ne-label">Website / portfolio URL</label><input class="ne-input" id="website" name="website" type="url" value="{{ form_values.website }}" placeholder="https://example.com">{% if errors.website %}<p class="ne-error">{{ errors.website }}</p>{% endif %}</div>
+</div>
+</section>
+<div class="ne-actions flex flex-col-reverse gap-3 border-t border-slate-800 pt-4 sm:flex-row sm:justify-end">
+<a href="{% url 'teacher_my_profile' %}" class="ne-button ne-cancel"><i class="ri-close-line" aria-hidden="true"></i> Cancel</a>
+<button id="saveProfileButton" type="submit" class="ne-button ne-save"><i class="ri-save-line" aria-hidden="true"></i> Save Changes</button>
+</div>
+</form>
+</div>
+<script>
+(function () {
+"use strict";
+const input = document.getElementById("profile_image");
+const form = document.getElementById("editProfileForm");
+const modal = document.getElementById("cropModal");
+const source = document.getElementById("cropSource");
+const preview = document.getElementById("profilePreview");
+const initials = document.getElementById("profileInitials");
+const zoom = document.getElementById("cropZoom");
+const applyButton = document.getElementById("cropApply");
+const cancelButton = document.getElementById("cropCancel");
+const closeButton = document.getElementById("cropClose");
+const resetButton = document.getElementById("cropReset");
+const zoomIn = document.getElementById("zoomIn");
+const zoomOut = document.getElementById("zoomOut");
+const errorBox = document.getElementById("cropError");
+const saveButton = document.getElementById("saveProfileButton");
+if (!input || !form || !modal || !source) return;
+let cropper = null;
+let sourceUrl = null;
+let previewUrl = null;
+let appliedFile = null;
+let zoomBase = 1;
+let cropPending = false;
+let isApplied = false;
+function showError(message) { errorBox.textContent = message; errorBox.hidden = false; }
+function clearError() { errorBox.textContent = ""; errorBox.hidden = true; }
+function releaseSource() { if (sourceUrl) URL.revokeObjectURL(sourceUrl); sourceUrl = null; }
+function setInputFile(file) {
+const transfer = new DataTransfer();
+if (file) transfer.items.add(file);
+input.files = transfer.files;
+}
+function closeModal() {
+if (cropper) cropper.destroy();
+cropper = null;
+source.onload = null;
+source.onerror = null;
+releaseSource();
+modal.hidden = true;
+modal.setAttribute("aria-hidden", "true");
+document.body.style.overflow = "";
+cropPending = false;
+}
+function openModal(file) {
+if (typeof Cropper === "undefined") {
+setInputFile(appliedFile);
+showError("The crop editor could not load. Check your internet connection and try again.");
+return;
+}
+if (cropper) cropper.destroy();
+cropper = null;
+releaseSource();
+clearError();
+cropPending = true;
+modal.hidden = false;
+modal.setAttribute("aria-hidden", "false");
+document.body.style.overflow = "hidden";
+sourceUrl = URL.createObjectURL(file);
+source.onload = function () {
+cropper = new Cropper(source, {
+aspectRatio: 1,
+viewMode: 1,
+dragMode: "move",
+autoCropArea: 0.78,
+responsive: true,
+restore: false,
+guides: false,
+center: true,
+highlight: false,
+background: false,
+movable: true,
+zoomable: true,
+zoomOnTouch: true,
+zoomOnWheel: true,
+cropBoxMovable: false,
+cropBoxResizable: false,
+toggleDragModeOnDblclick: false,
+ready: function () { zoomBase = cropper.getImageData().ratio || 1; zoom.value = "0"; },
+zoom: function (event) { if (event.detail.ratio < zoomBase * 0.6) event.preventDefault(); }
+});
+};
+source.onerror = function () {
+closeModal();
+setInputFile(appliedFile);
+showError("This image could not be opened. Please select another photo.");
+};
+source.src = sourceUrl;
+}
+input.addEventListener("change", function () {
+clearError();
+const file = input.files && input.files[0];
+if (!file) return;
+const validType = ["image/jpeg", "image/png", "image/webp"].includes(file.type);
+const validExtension = /\.(jpe?g|png|webp)$/i.test(file.name);
+if (!validType || !validExtension) {
+setInputFile(appliedFile);
+showError("Choose a valid JPG, PNG or WEBP image.");
+return;
+}
+if (file.size > 5 * 1024 * 1024) {
+setInputFile(appliedFile);
+showError("The original image must be 5 MB or smaller.");
+return;
+}
+isApplied = false;
+openModal(file);
+});
+zoom.addEventListener("input", function () {
+if (cropper && zoomBase) cropper.zoomTo(zoomBase * (1 + (Number(zoom.value) / 100) * 1.5));
+});
+zoomIn.addEventListener("click", function () { if (cropper) cropper.zoom(0.1); });
+zoomOut.addEventListener("click", function () { if (cropper) cropper.zoom(-0.1); });
+resetButton.addEventListener("click", function () {
+if (!cropper) return;
+cropper.reset();
+zoomBase = cropper.getImageData().ratio || 1;
+zoom.value = "0";
+clearError();
+});
+function cancelCrop() {
+closeModal();
+setInputFile(appliedFile);
+isApplied = Boolean(appliedFile);
+clearError();
+}
+cancelButton.addEventListener("click", cancelCrop);
+closeButton.addEventListener("click", cancelCrop);
+modal.querySelectorAll("[data-crop-close]").forEach(function (element) { element.addEventListener("click", cancelCrop); });
+document.addEventListener("keydown", function (event) { if (!modal.hidden && event.key === "Escape") cancelCrop(); });
+applyButton.addEventListener("click", function () {
+if (!cropper) { showError("Choose a photo and adjust the crop first."); return; }
+clearError();
+applyButton.disabled = true;
+const canvas = cropper.getCroppedCanvas({
+width: 320,
+height: 320,
+fillColor: "#ffffff",
+imageSmoothingEnabled: true,
+imageSmoothingQuality: "high"
+});
+if (!canvas) {
+applyButton.disabled = false;
+showError("The crop could not be created. Please try another photo.");
+return;
+}
+canvas.toBlob(function (blob) {
+applyButton.disabled = false;
+if (!blob) { showError("Could not create the cropped image. Please try again."); return; }
+const croppedFile = new File([blob], "teacher-profile-cropped.jpg", {
+type: "image/jpeg",
+lastModified: Date.now()
+});
+appliedFile = croppedFile;
+setInputFile(croppedFile);
+isApplied = true;
+if (previewUrl) URL.revokeObjectURL(previewUrl);
+previewUrl = URL.createObjectURL(blob);
+preview.src = previewUrl;
+preview.hidden = false;
+initials.hidden = true;
+closeModal();
+clearError();
+}, "image/jpeg", 0.88);
+});
+form.addEventListener("submit", function (event) {
+if (cropPending) {
+event.preventDefault();
+showError("Apply or cancel the crop before saving your profile.");
+return;
+}
+if (input.files.length && !isApplied) {
+event.preventDefault();
+showError("Please apply the crop before saving your photo.");
+return;
+}
+saveButton.disabled = true;
+saveButton.innerHTML = '<i class="ri-loader-4-line" aria-hidden="true"></i> Saving...';
+});
+window.addEventListener("beforeunload", function () {
+releaseSource();
+if (previewUrl) URL.revokeObjectURL(previewUrl);
+});
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,871 @@
+
+{% extends "teachers/dashboard/teacher_base.html" %}
+
+{% block title %}My Profile | NeoLearn{% endblock %}
+{% block page_heading %}My Profile{% endblock %}
+
+{% block extra_head %}
+<style>
+.neo-profile {
+    --line: #153b54;
+    --muted: #9bb0c7;
+    --cyan: #22d3ee;
+    color: #edf6ff;
+    width: 100%;
+    max-width: 1600px;
+    margin-inline: auto;
+    min-width: 0;
+}
+.neo-profile *,
+.neo-profile *::before,
+.neo-profile *::after { box-sizing: border-box; }
+
+.neo-profile .np-card {
+    min-width: 0;
+    border: 1px solid var(--line);
+    border-radius: 15px;
+    background: linear-gradient(145deg, #0b2032, #071625);
+    padding: 15px;
+}
+
+.neo-profile .np-heading {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+.neo-profile .np-heading-icon {
+    display: grid;
+    place-items: center;
+    flex: 0 0 36px;
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: linear-gradient(145deg, #0ea5e9, #0369a1);
+    color: #fff;
+    font-size: 20px;
+}
+.neo-profile .np-title {
+    color: #f8fafc;
+    font-size: 14px;
+    line-height: 1.4;
+    font-weight: 750;
+}
+.neo-profile .np-subtitle {
+    margin-top: 3px;
+    color: var(--muted);
+    font-size: 11px;
+    line-height: 1.5;
+}
+.neo-profile .np-avatar {
+    display: grid;
+    place-items: center;
+    width: 108px;
+    height: 108px;
+    flex: 0 0 108px;
+    overflow: hidden;
+    border: 3px solid var(--cyan);
+    border-radius: 50%;
+    background: #102c43;
+    color: #a5f3fc;
+    font-size: 30px;
+    font-weight: 800;
+    object-fit: cover;
+    object-position: center;
+}
+.neo-profile .np-detail {
+    display: grid;
+    grid-template-columns: 26px minmax(75px, .85fr) minmax(0, 1.15fr);
+    align-items: start;
+    gap: 8px;
+    min-width: 0;
+    font-size: 12px;
+    line-height: 1.55;
+}
+.neo-profile .np-detail-icon {
+    display: grid;
+    place-items: center;
+    width: 25px;
+    height: 25px;
+    border-radius: 7px;
+    background: #102b41;
+    color: #67e8f9;
+    font-size: 14px;
+}
+.neo-profile .np-label {
+    color: #a7bad0;
+    overflow-wrap: anywhere;
+}
+.neo-profile .np-value {
+    min-width: 0;
+    color: #edf6ff;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+.neo-profile .np-missing {
+    color: #8195aa;
+    font-style: italic;
+}
+.neo-profile .np-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    max-width: 100%;
+    padding: 5px 9px;
+    border: 1px solid #1d5269;
+    border-radius: 99px;
+    background: #08283b;
+    color: #b6f5ff;
+    font-size: 10px;
+    overflow-wrap: anywhere;
+}
+.neo-profile .np-edit {
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    min-height: 43px;
+    padding: 10px 17px;
+    border: 1px solid #facc15;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #fde047, #f59e0b);
+    color: #172033;
+    font-size: 13px;
+    font-weight: 800;
+    text-decoration: none;
+    box-shadow: 0 5px 18px #f59e0b22;
+    white-space: nowrap;
+    transition: filter .2s ease, transform .2s ease;
+}
+.neo-profile .np-edit:hover {
+    filter: brightness(1.06);
+    transform: translateY(-1px);
+}
+.neo-profile .np-edit:focus-visible {
+    outline: 2px solid #22d3ee;
+    outline-offset: 3px;
+}
+
+.neo-profile .np-hero {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid #126184;
+    border-radius: 18px;
+    background:
+        radial-gradient(ellipse at 0 0, #07598555, transparent 42%),
+        radial-gradient(ellipse at 100% 100%, #4f46e533, transparent 40%),
+        linear-gradient(120deg, #071d30, #061426 65%, #11102d);
+}
+.neo-profile .np-hero-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: center;
+    gap: 16px;
+}
+.neo-profile .np-hero-info {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    min-width: 0;
+}
+.neo-profile .np-hero-copy {
+    min-width: 0;
+    flex: 1;
+}
+.neo-profile .np-hero-progress {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    justify-items: center;
+    gap: 14px;
+    border-top: 1px solid #22d3ee1a;
+    padding-top: 14px;
+}
+.neo-profile .np-ring-wrap {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+.neo-profile .np-hero-contact {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 14px;
+    min-width: 0;
+    margin-top: 10px;
+    color: #cbd5e1;
+    font-size: 11px;
+    line-height: 1.5;
+}
+.neo-profile .np-hero-contact > span {
+    display: inline-flex;
+    align-items: flex-start;
+    gap: 6px;
+    min-width: 0;
+}
+.neo-profile .np-hero-contact i {
+    flex: 0 0 auto;
+    margin-top: 1px;
+    color: #67e8f9;
+}
+.neo-profile .np-hero-contact .np-contact-value {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+/* Completion ring: explicitly fill the whole circle at 100%. */
+.neo-profile .np-ring {
+    --pct: 0;
+    display: grid;
+    place-items: center;
+    position: relative;
+    width: 92px;
+    height: 92px;
+    flex: 0 0 92px;
+    border-radius: 50%;
+    background: conic-gradient(
+        #22d3ee 0%,
+        #22d3ee calc(clamp(0, var(--pct), 100) * 1%),
+        #18384c calc(clamp(0, var(--pct), 100) * 1%),
+        #18384c 100%
+    );
+}
+.neo-profile .np-ring::before {
+    content: "";
+    position: absolute;
+    inset: 8px;
+    border-radius: 50%;
+    background: #071829;
+}
+.neo-profile .np-ring span {
+    position: relative;
+    z-index: 1;
+    color: #fff;
+    font-size: 17px;
+    font-weight: 850;
+}
+
+/* About Me: attractive panel with independent scrolling. */
+.neo-profile .np-about {
+    max-height: 180px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    white-space: pre-line;
+    overflow-wrap: anywhere;
+    word-break: normal;
+    padding: 12px 13px;
+    border: 1px solid #173b54;
+    border-radius: 11px;
+    background: linear-gradient(145deg, #0b2033, #081827);
+    color: #d5e3f1;
+    font-size: 12px;
+    line-height: 1.9;
+    scrollbar-width: thin;
+    scrollbar-color: #2c6685 #0a1a2b;
+}
+.neo-profile .np-about::-webkit-scrollbar { width: 5px; }
+.neo-profile .np-about::-webkit-scrollbar-track {
+    background: #0a1a2b;
+    border-radius: 8px;
+}
+.neo-profile .np-about::-webkit-scrollbar-thumb {
+    background: #2c6685;
+    border-radius: 8px;
+}
+.neo-profile .np-about::-webkit-scrollbar-thumb:hover {
+    background: #22d3ee;
+}
+
+.neo-profile .np-link {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    padding: 9px;
+    border: 1px solid #193b55;
+    border-radius: 10px;
+    background: #0b2033;
+}
+.neo-profile .np-link-icon {
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    flex: 0 0 36px;
+    border-radius: 9px;
+    background: #123c60;
+    color: #7dd3fc;
+    font-size: 19px;
+}
+.neo-profile .np-link-body {
+    min-width: 0;
+    flex: 1;
+}
+.neo-profile .np-link-label {
+    color: #e7f0fb;
+    font-size: 11px;
+    font-weight: 700;
+}
+.neo-profile .np-url {
+    display: block;
+    margin-top: 3px;
+    color: #7dd3fc;
+    font-size: 11px;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    text-decoration: none;
+}
+.neo-profile .np-url:hover {
+    color: #cffafe;
+    text-decoration: underline;
+}
+
+@media (min-width: 1024px) {
+    .neo-profile .np-main-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        align-items: stretch;
+    }
+    .neo-profile .np-column { min-height: 100%; }
+    .neo-profile .np-column:first-child > .np-card:last-child,
+    .neo-profile .np-column:last-child > .np-card:last-child {
+        flex: 1 1 auto;
+    }
+}
+@media (min-width: 641px) and (max-width: 1023px) {
+    .neo-profile .np-main-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .neo-profile .np-column:last-child {
+        grid-column: 1 / -1;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        align-items: start;
+    }
+}
+@media (min-width: 760px) {
+    .neo-profile .np-hero-layout {
+        grid-template-columns: minmax(0, 1fr) minmax(245px, .43fr);
+        gap: 20px;
+    }
+    .neo-profile .np-hero-progress {
+        border-top: 0;
+        border-left: 1px solid #22d3ee1a;
+        padding: 0 0 0 20px;
+    }
+}
+@media (max-width: 640px) {
+    .neo-profile .np-column { gap: 12px; }
+    .neo-profile .np-card { padding: 13px; }
+    .neo-profile .np-detail {
+        grid-template-columns: 24px minmax(70px, .85fr) minmax(0, 1.15fr);
+        gap: 6px;
+        font-size: 11px;
+    }
+    .neo-profile .np-avatar {
+        width: 94px;
+        height: 94px;
+        flex-basis: 94px;
+    }
+    .neo-profile .np-about {
+        max-height: 200px;
+        padding: 11px;
+        font-size: 12px;
+        line-height: 1.8;
+    }
+    .neo-profile .np-hero-info {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+    .neo-profile .np-hero-copy { text-align: center; }
+    .neo-profile .np-hero-contact { justify-content: center; }
+    .neo-profile .np-hero-progress {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 12px;
+    }
+}
+</style>
+{% endblock %}
+
+{% block teacher_content %}
+<div class="neo-profile space-y-4">
+
+    <header class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div class="min-w-0">
+            <p class="text-[10px] font-bold uppercase tracking-[.2em] text-cyan-400">
+                NeoLearn / Teacher Portal
+            </p>
+            <h1 class="mt-1.5 text-2xl font-extrabold tracking-tight text-white sm:text-3xl">
+                My Profile
+            </h1>
+            <p class="mt-1 text-sm leading-5 text-slate-400">
+                View your personal information, academic background and teaching experience.
+            </p>
+        </div>
+        <nav aria-label="Breadcrumb"
+             class="flex w-fit items-center gap-2 rounded-xl border border-slate-800 bg-slate-900/70 px-3 py-2 text-[11px] text-slate-400">
+            <a href="{% url 'teacher_dashboard' %}" class="hover:text-cyan-300">Dashboard</a>
+            <i class="ri-arrow-right-s-line" aria-hidden="true"></i>
+            <span class="font-semibold text-cyan-300" aria-current="page">My Profile</span>
+        </nav>
+    </header>
+
+    <section class="np-hero p-4 sm:p-5" aria-labelledby="np-name">
+        <div class="np-hero-layout relative z-10">
+
+            <div class="np-hero-info">
+                <div class="shrink-0">
+                    {% if teacher.profile_image %}
+                    <img src="{{ teacher.profile_image.url }}"
+                         alt="Profile photo of {{ teacher.full_name }}"
+                         class="np-avatar"
+                         onerror="this.style.display='none'; this.nextElementSibling.style.display='grid';">
+                    <div class="np-avatar"
+                         role="img"
+                         aria-label="Teacher initials"
+                         style="display:none;">
+                        {{ teacher.initials|default:"T" }}
+                    </div>
+                    {% else %}
+                    <div class="np-avatar" role="img" aria-label="Teacher initials">
+                        {{ teacher.initials|default:"T" }}
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="np-hero-copy">
+                    <h2 id="np-name"
+                        class="break-words text-xl font-extrabold tracking-tight text-white sm:text-2xl">
+                        {{ teacher.full_name|default:teacher.user.get_full_name|default:teacher.user.username }}
+                    </h2>
+
+                    <div class="mt-2 flex flex-wrap justify-center gap-2 sm:justify-start">
+                        <span class="np-pill">
+                            <i class="ri-id-card-line" aria-hidden="true"></i>
+                            Teacher ID: {{ teacher.teacher_id|default:"Pending assignment" }}
+                        </span>
+                        {% if teacher.is_blocked %}
+                        <span class="np-pill !border-red-500/30 !bg-red-500/10 !text-red-200">
+                            <i class="ri-shield-cross-line" aria-hidden="true"></i> Restricted
+                        </span>
+                        {% else %}
+                        <span class="np-pill !border-emerald-500/30 !bg-emerald-500/10 !text-emerald-200">
+                            <i class="ri-checkbox-circle-line" aria-hidden="true"></i> Active account
+                        </span>
+                        {% endif %}
+                    </div>
+
+                    <p class="mt-2 text-xs font-medium text-slate-300">
+                        {{ teacher.specialization|default:"Teaching professional" }}
+                    </p>
+
+                    {% if teacher.qualification or teacher.institution_name %}
+                    <div class="mt-2 flex flex-wrap justify-center gap-2 sm:justify-start">
+                        {% if teacher.qualification %}
+                        <span class="rounded-lg border border-blue-400/20 bg-blue-500/10 px-2.5 py-1 text-[11px] text-blue-100">
+                            <i class="ri-graduation-cap-line mr-1"></i>{{ teacher.qualification }}
+                        </span>
+                        {% endif %}
+                        {% if teacher.institution_name %}
+                        <span class="rounded-lg border border-blue-400/20 bg-blue-500/10 px-2.5 py-1 text-[11px] text-blue-100">
+                            <i class="ri-building-4-line mr-1"></i>{{ teacher.institution_name }}
+                        </span>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+
+                    <div class="np-hero-contact">
+                        <span>
+                            <i class="ri-mail-line" aria-hidden="true"></i>
+                            <span class="np-contact-value">
+                                {{ teacher.email|default:teacher.user.email|default:"Email not provided" }}
+                            </span>
+                        </span>
+                        <span>
+                            <i class="ri-phone-line" aria-hidden="true"></i>
+                            <span class="np-contact-value">
+                                {{ teacher.phone_number|default:"Phone not provided" }}
+                            </span>
+                        </span>
+                        {% if teacher.qualified_subjects %}
+                        <span>
+                            <i class="ri-book-open-line" aria-hidden="true"></i>
+                            <span class="np-contact-value">
+                                <strong class="text-slate-100">Qualified subjects:</strong>
+                                {{ teacher.qualified_subjects }}
+                            </span>
+                        </span>
+                        {% endif %}
+                    </div>
+
+                    <div class="mt-3 flex flex-wrap justify-center gap-x-5 gap-y-2 text-xs text-slate-300 sm:justify-start">
+                        <span class="inline-flex items-center gap-2">
+                            <i class="ri-briefcase-4-line text-xl text-cyan-300"></i>
+                            <span>
+                                <strong class="text-white">{{ teacher.experience|default:0 }} years</strong>
+                                <span class="block text-[10px] text-slate-400">Experience</span>
+                            </span>
+                        </span>
+                        {% if teacher.city or teacher.state %}
+                        <span class="inline-flex items-center gap-2">
+                            <i class="ri-map-pin-line text-xl text-cyan-300"></i>
+                            <span>
+                                <strong class="text-white">
+                                    {% if teacher.city %}{{ teacher.city }}{% endif %}
+                                    {% if teacher.city and teacher.state %}, {% endif %}
+                                    {{ teacher.state }}
+                                </strong>
+                                <span class="block text-[10px] text-slate-400">Location</span>
+                            </span>
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="np-hero-progress">
+                <div class="np-ring-wrap">
+                    <div class="np-ring"
+                         style="--pct: {{ profile_completion|default:0 }}"
+                         role="progressbar"
+                         aria-label="Profile completion"
+                         aria-valuemin="0"
+                         aria-valuemax="100"
+                         aria-valuenow="{{ profile_completion|default:0 }}">
+                        <span>{{ profile_completion|default:0 }}%</span>
+                    </div>
+                    <p class="mt-2 text-xs font-bold text-white">Profile Completion</p>
+                    {% if profile_completion|default:0 >= 100 %}
+                    <p class="mt-1 text-[10px] text-emerald-300">Your profile is complete</p>
+                    {% else %}
+                    <p class="mt-1 max-w-40 text-center text-[10px] leading-4 text-slate-400">
+                        Add your missing details to complete your profile.
+                    </p>
+                    {% endif %}
+                </div>
+                <a href="{% url 'teacher_edit_profile' %}" class="np-edit w-full sm:w-auto">
+                    <i class="ri-edit-line text-base" aria-hidden="true"></i>
+                    Edit Profile
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <div class="np-main-grid grid grid-cols-1 items-stretch gap-3 lg:grid-cols-3">
+
+        <!-- Column 1 -->
+        <div class="np-column flex min-w-0 flex-col gap-3">
+            <section class="np-card" aria-labelledby="np-personal">
+                <div class="np-heading">
+                    <span class="np-heading-icon"><i class="ri-user-3-line"></i></span>
+                    <div>
+                        <h3 id="np-personal" class="np-title">Personal Information</h3>
+                        <p class="np-subtitle">Your basic details</p>
+                    </div>
+                </div>
+
+                <div class="space-y-2.5">
+                    <div class="np-detail">
+                        <span class="np-detail-icon"><i class="ri-user-line"></i></span>
+                        <span class="np-label">Full name</span>
+                        <span class="np-value">{{ teacher.full_name|default:"Not provided" }}</span>
+                    </div>
+                    <div class="np-detail">
+                        <span class="np-detail-icon"><i class="ri-at-line"></i></span>
+                        <span class="np-label">Username</span>
+                        <span class="np-value">{{ teacher.user.username|default:"Not provided" }}</span>
+                    </div>
+                    <div class="np-detail">
+                        <span class="np-detail-icon"><i class="ri-mail-line"></i></span>
+                        <span class="np-label">Email</span>
+                        <span class="np-value">{{ teacher.email|default:teacher.user.email|default:"Not provided" }}</span>
+                    </div>
+                    <div class="np-detail">
+                        <span class="np-detail-icon"><i class="ri-phone-line"></i></span>
+                        <span class="np-label">Phone</span>
+                        <span class="np-value">{{ teacher.phone_number|default:"Not provided" }}</span>
+                    </div>
+                    <div class="np-detail">
+                        <span class="np-detail-icon"><i class="ri-calendar-line"></i></span>
+                        <span class="np-label">Date of birth</span>
+                        <span class="np-value">
+                            {% if teacher.date_of_birth %}
+                                {{ teacher.date_of_birth|date:"j F Y" }}
+                            {% else %}
+                                <span class="np-missing">Not provided</span>
+                            {% endif %}
+                        </span>
+                    </div>
+                    <div class="np-detail">
+                        <span class="np-detail-icon"><i class="ri-user-settings-line"></i></span>
+                        <span class="np-label">Gender</span>
+                        <span class="np-value">
+                            {% if teacher.gender %}
+                                {{ teacher.get_gender_display }}
+                            {% else %}
+                                <span class="np-missing">Not provided</span>
+                            {% endif %}
+                        </span>
+                    </div>
+                    <div class="np-detail">
+                        <span class="np-detail-icon"><i class="ri-smartphone-line"></i></span>
+                        <span class="np-label">Alternate phone</span>
+                        <span class="np-value">
+                            {% if teacher.alternate_phone %}
+                                {{ teacher.alternate_phone }}
+                            {% else %}
+                                <span class="np-missing">Not provided</span>
+                            {% endif %}
+                        </span>
+                    </div>
+                </div>
+            </section>
+
+            <section class="np-card" aria-labelledby="np-about-title">
+                <div class="np-heading">
+                    <span class="np-heading-icon"><i class="ri-file-text-line"></i></span>
+                    <div>
+                        <h3 id="np-about-title" class="np-title">About Me</h3>
+                        <p class="np-subtitle">Your professional introduction</p>
+                    </div>
+                </div>
+
+                {% if teacher.bio %}
+                <div class="np-about">{{ teacher.bio }}</div>
+                {% else %}
+                <div class="rounded-xl border border-dashed border-slate-700 bg-slate-950/30 p-3 text-xs leading-6 text-slate-400">
+                    Your professional introduction has not been added yet. Use Edit Profile
+                    to tell students about your teaching approach, expertise and interests.
+                </div>
+                {% endif %}
+            </section>
+        </div>
+
+        <!-- Column 2 -->
+        <div class="np-column flex min-w-0 flex-col gap-3">
+            <section class="np-card" aria-labelledby="np-emergency">
+                <div class="np-heading">
+                    <span class="np-heading-icon"><i class="ri-first-aid-kit-line"></i></span>
+                    <div>
+                        <h3 id="np-emergency" class="np-title">Emergency Contact</h3>
+                        <p class="np-subtitle">Contact details for emergencies</p>
+                    </div>
+                </div>
+
+                <div class="space-y-2.5">
+                    <div class="np-detail">
+                        <span class="np-detail-icon"><i class="ri-user-line"></i></span>
+                        <span class="np-label">Contact name</span>
+                        <span class="np-value">
+                            {% if teacher.emergency_contact_name %}
+                                {{ teacher.emergency_contact_name }}
+                            {% else %}
+                                <span class="np-missing">Not provided</span>
+                            {% endif %}
+                        </span>
+                    </div>
+                    <div class="np-detail">
+                        <span class="np-detail-icon"><i class="ri-group-line"></i></span>
+                        <span class="np-label">Relationship</span>
+                        <span class="np-value">
+                            {% if teacher.emergency_contact_relationship %}
+                                {{ teacher.get_emergency_contact_relationship_display }}
+                            {% else %}
+                                <span class="np-missing">Not provided</span>
+                            {% endif %}
+                        </span>
+                    </div>
+                    <div class="np-detail">
+                        <span class="np-detail-icon"><i class="ri-phone-line"></i></span>
+                        <span class="np-label">Contact number</span>
+                        <span class="np-value">
+                            {% if teacher.emergency_contact_phone %}
+                                {{ teacher.emergency_contact_phone }}
+                            {% else %}
+                                <span class="np-missing">Not provided</span>
+                            {% endif %}
+                        </span>
+                    </div>
+                </div>
+            </section>
+
+            <section class="np-card" aria-labelledby="np-education">
+                <div class="np-heading">
+                    <span class="np-heading-icon"><i class="ri-graduation-cap-line"></i></span>
+                    <div>
+                        <h3 id="np-education" class="np-title">Education &amp; Qualifications</h3>
+                        <p class="np-subtitle">Academic background</p>
+                    </div>
+                </div>
+
+                <div class="space-y-2.5">
+                    <div class="np-detail">
+                        <span class="np-detail-icon"><i class="ri-award-line"></i></span>
+                        <span class="np-label">Qualification</span>
+                        <span class="np-value">{{ teacher.qualification|default:"Not provided" }}</span>
+                    </div>
+                    <div class="np-detail">
+                        <span class="np-detail-icon"><i class="ri-building-4-line"></i></span>
+                        <span class="np-label">Institution</span>
+                        <span class="np-value">{{ teacher.institution_name|default:"Not provided" }}</span>
+                    </div>
+                    <div class="np-detail">
+                        <span class="np-detail-icon"><i class="ri-calendar-check-line"></i></span>
+                        <span class="np-label">Graduation year</span>
+                        <span class="np-value">{{ teacher.graduation_year|default:"Not provided" }}</span>
+                    </div>
+                    <div class="np-detail">
+                        <span class="np-detail-icon"><i class="ri-medal-line"></i></span>
+                        <span class="np-label">Additional qualifications</span>
+                        <span class="np-value">{{ teacher.additional_qualifications|default:"Not provided" }}</span>
+                    </div>
+                    <div class="np-detail">
+                        <span class="np-detail-icon"><i class="ri-book-marked-line"></i></span>
+                        <span class="np-label">Qualified subjects</span>
+                        <span class="np-value">{{ teacher.qualified_subjects|default:"Not provided" }}</span>
+                    </div>
+                </div>
+            </section>
+
+            <section class="np-card" aria-labelledby="np-links-title">
+                <div class="np-heading">
+                    <span class="np-heading-icon"><i class="ri-share-line"></i></span>
+                    <div>
+                        <h3 id="np-links-title" class="np-title">Professional Links</h3>
+                        <p class="np-subtitle">Your online presence</p>
+                    </div>
+                </div>
+
+                <div class="space-y-2.5">
+                    <div class="np-link">
+                        <span class="np-link-icon"><i class="ri-linkedin-fill"></i></span>
+                        <div class="np-link-body">
+                            <p class="np-link-label">LinkedIn</p>
+                            {% if teacher.linkedin %}
+                            <a class="np-url" href="{{ teacher.linkedin }}" target="_blank" rel="noopener noreferrer">
+                                {{ teacher.linkedin }}
+                            </a>
+                            {% else %}
+                            <p class="np-url !text-slate-500">Not added yet</p>
+                            {% endif %}
+                        </div>
+                        {% if teacher.linkedin %}
+                        <i class="ri-external-link-line text-slate-400" aria-hidden="true"></i>
+                        {% endif %}
+                    </div>
+
+                    <div class="np-link">
+                        <span class="np-link-icon"><i class="ri-global-line"></i></span>
+                        <div class="np-link-body">
+                            <p class="np-link-label">Website / Portfolio</p>
+                            {% if teacher.website %}
+                            <a class="np-url" href="{{ teacher.website }}" target="_blank" rel="noopener noreferrer">
+                                {{ teacher.website }}
+                            </a>
+                            {% else %}
+                            <p class="np-url !text-slate-500">Not added yet</p>
+                            {% endif %}
+                        </div>
+                        {% if teacher.website %}
+                        <i class="ri-external-link-line text-slate-400" aria-hidden="true"></i>
+                        {% endif %}
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- Column 3 -->
+        <div class="np-column flex min-w-0 flex-col gap-3">
+            <section class="np-card" aria-labelledby="np-address">
+                <div class="np-heading">
+                    <span class="np-heading-icon"><i class="ri-map-pin-2-line"></i></span>
+                    <div>
+                        <h3 id="np-address" class="np-title">Address Information</h3>
+                        <p class="np-subtitle">Your current address</p>
+                    </div>
+                </div>
+
+                <div class="space-y-2.5">
+                    <div class="np-detail">
+                        <span class="np-detail-icon"><i class="ri-home-4-line"></i></span>
+                        <span class="np-label">Address line 1</span>
+                        <span class="np-value">{{ teacher.address_line_1|default:"Not provided" }}</span>
+                    </div>
+                    <div class="np-detail">
+                        <span class="np-detail-icon"><i class="ri-road-map-line"></i></span>
+                        <span class="np-label">Address line 2</span>
+                        <span class="np-value">{{ teacher.address_line_2|default:"Not provided" }}</span>
+                    </div>
+                    <div class="np-detail">
+                        <span class="np-detail-icon"><i class="ri-building-line"></i></span>
+                        <span class="np-label">City</span>
+                        <span class="np-value">{{ teacher.city|default:"Not provided" }}</span>
+                    </div>
+                    <div class="np-detail">
+                        <span class="np-detail-icon"><i class="ri-map-2-line"></i></span>
+                        <span class="np-label">State</span>
+                        <span class="np-value">{{ teacher.state|default:"Not provided" }}</span>
+                    </div>
+                    <div class="np-detail">
+                        <span class="np-detail-icon"><i class="ri-mail-open-line"></i></span>
+                        <span class="np-label">Postal code</span>
+                        <span class="np-value">{{ teacher.postal_code|default:"Not provided" }}</span>
+                    </div>
+                    <div class="np-detail">
+                        <span class="np-detail-icon"><i class="ri-earth-line"></i></span>
+                        <span class="np-label">Country</span>
+                        <span class="np-value">{{ teacher.country|default:"Not provided" }}</span>
+                    </div>
+                </div>
+            </section>
+
+            <section class="np-card" aria-labelledby="np-professional">
+                <div class="np-heading">
+                    <span class="np-heading-icon"><i class="ri-briefcase-4-line"></i></span>
+                    <div>
+                        <h3 id="np-professional" class="np-title">Professional Details</h3>
+                        <p class="np-subtitle">Your teaching experience</p>
+                    </div>
+                </div>
+
+                <div class="space-y-2.5">
+                    <div class="np-detail">
+                        <span class="np-detail-icon"><i class="ri-time-line"></i></span>
+                        <span class="np-label">Experience</span>
+                        <span class="np-value">{{ teacher.experience|default:0 }} years</span>
+                    </div>
+                    <div class="np-detail">
+                        <span class="np-detail-icon"><i class="ri-building-2-line"></i></span>
+                        <span class="np-label">Previous institution</span>
+                        <span class="np-value">{{ teacher.previous_institution|default:"Not provided" }}</span>
+                    </div>
+                    <div class="np-detail">
+                        <span class="np-detail-icon"><i class="ri-book-open-line"></i></span>
+                        <span class="np-label">Specialization</span>
+                        <span class="np-value">{{ teacher.specialization|default:"Not provided" }}</span>
+                    </div>
+                    <div class="np-detail">
+                        <span class="np-detail-icon"><i class="ri-translate-2"></i></span>
+                        <span class="np-label">Languages</span>
+                        <span class="np-value">{{ teacher.language|default:"Not provided" }}</span>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <footer class="flex flex-col gap-3 rounded-xl border border-slate-800 bg-slate-950/35 p-3.5 sm:flex-row sm:items-center sm:justify-between">
+        <p class="text-[10px] leading-5 text-slate-400">
+            <i class="ri-lock-line mr-1 text-cyan-300" aria-hidden="true"></i>
+            Your account identifiers and security settings are managed separately from your profile details.
+        </p>
+        <a href="{% url 'teacher_edit_profile' %}" class="np-edit w-full sm:w-auto">
+            <i class="ri-edit-line" aria-hidden="true"></i>
+            Edit Profile
+        </a>
+    </footer>
+</div>
+{% endblock %}
