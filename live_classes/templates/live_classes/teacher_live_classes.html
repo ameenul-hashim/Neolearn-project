@@ -1,0 +1,407 @@
+{% extends "teachers/dashboard/teacher_base.html" %}
+
+{% block title %}Live Classes | NeoLearn Teacher{% endblock %}
+
+{% block teacher_content %}
+<style>
+    .live-page {
+        width: 100%;
+        max-width: 1500px;
+        margin: 0 auto;
+        padding: 24px;
+        color: #e2e8f0;
+    }
+
+    .live-panel {
+        background: rgba(15, 23, 42, .78);
+        border: 1px solid rgba(148, 163, 184, .15);
+        border-radius: 20px;
+        padding: 22px;
+        min-width: 0;
+    }
+
+    .live-muted {
+        color: #94a3b8;
+    }
+
+    .booking-input {
+        display: block;
+        width: 100%;
+        min-width: 0;
+        margin-top: 8px;
+        padding: 12px 13px;
+        border: 1px solid #334155;
+        border-radius: 11px;
+        background: #0b1120;
+        color: #f8fafc;
+        outline: none;
+    }
+
+    .booking-input:focus {
+        border-color: #67e8f9;
+        box-shadow: 0 0 0 3px rgba(103, 232, 249, .1);
+    }
+
+    .booking-input option {
+        background: #0b1120;
+        color: #f8fafc;
+    }
+
+    .live-label {
+        display: block;
+        color: #cbd5e1;
+        font-size: 13px;
+        font-weight: 650;
+    }
+
+    .live-primary-button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        min-height: 46px;
+        padding: 12px 18px;
+        border: 1px solid rgba(103, 232, 249, .3);
+        border-radius: 12px;
+        background: linear-gradient(120deg, #164e63, #075985);
+        color: #ecfeff;
+        font-weight: 700;
+        cursor: pointer;
+        transition: .2s ease;
+    }
+
+    .live-primary-button:hover {
+        background: linear-gradient(120deg, #155e75, #0369a1);
+        transform: translateY(-1px);
+    }
+
+    .live-primary-button:disabled {
+        opacity: .6;
+        cursor: not-allowed;
+        transform: none;
+    }
+
+    .live-error {
+        margin-top: 6px;
+        color: #fda4af;
+        font-size: 12px;
+    }
+
+    .live-stat {
+        padding: 18px;
+        border: 1px solid rgba(103, 232, 249, .12);
+        border-radius: 16px;
+        background: rgba(8, 47, 73, .23);
+    }
+
+    .live-class-card {
+        padding: 17px;
+        border: 1px solid rgba(148, 163, 184, .12);
+        border-radius: 15px;
+        background: rgba(2, 6, 23, .35);
+    }
+
+    @media (max-width: 640px) {
+        .live-page {
+            padding: 14px;
+        }
+
+        .live-panel {
+            padding: 16px;
+            border-radius: 16px;
+        }
+
+        .live-primary-button {
+            width: 100%;
+        }
+    }
+</style>
+
+<div class="live-page space-y-6">
+
+    <section class="flex flex-col gap-4 sm:flex-row sm:items-center
+                    sm:justify-between">
+        <div>
+            <div class="flex items-center gap-2 text-xs font-bold
+                        uppercase tracking-[.18em] text-cyan-300">
+                <i class="ri-live-line text-lg"></i>
+                Teacher workspace
+            </div>
+
+            <h1 class="mt-3 text-2xl font-bold tracking-tight
+                       text-white sm:text-3xl">
+                Live Classes
+            </h1>
+
+            <p class="live-muted mt-2 max-w-2xl text-sm leading-6">
+                Schedule classes for your assigned batches and manage
+                your confirmed teaching sessions from one place.
+            </p>
+        </div>
+
+        <div class="live-stat min-w-36">
+            <p class="live-muted text-xs">Upcoming confirmed classes</p>
+            <p class="mt-2 text-3xl font-bold text-cyan-300">
+                {{ upcoming_count }}
+            </p>
+        </div>
+    </section>
+
+    {% if form.non_field_errors %}
+        <div class="rounded-xl border border-rose-400/20
+                    bg-rose-500/10 p-4 text-sm text-rose-200">
+            {% for error in form.non_field_errors %}
+                <p>{{ error }}</p>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <section class="live-panel">
+        <div class="mb-6 flex items-start gap-3">
+            <div class="flex h-11 w-11 shrink-0 items-center
+                        justify-center rounded-xl border
+                        border-cyan-300/20 bg-cyan-300/10
+                        text-xl text-cyan-300">
+                <i class="ri-calendar-event-line"></i>
+            </div>
+
+            <div>
+                <h2 class="text-lg font-bold text-white">
+                    Book a live class
+                </h2>
+                <p class="live-muted mt-1 text-sm leading-6">
+                    Choose your assigned content and a time within
+                    the batch timetable. The configured class duration
+                    will be applied automatically.
+                </p>
+            </div>
+        </div>
+
+        <form method="post" class="space-y-5">
+            {% csrf_token %}
+
+            <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
+                <div>
+                    <label for="{{ form.batch.id_for_label }}"
+                           class="live-label">
+                        Batch
+                    </label>
+
+                    {{ form.batch }}
+
+                    {% for error in form.batch.errors %}
+                        <p class="live-error">{{ error }}</p>
+                    {% endfor %}
+                </div>
+
+                <div>
+                    <label for="{{ form.subject.id_for_label }}"
+                           class="live-label">
+                        Subject
+                    </label>
+
+                    {{ form.subject }}
+
+                    {% for error in form.subject.errors %}
+                        <p class="live-error">{{ error }}</p>
+                    {% endfor %}
+                </div>
+
+                <div class="md:col-span-2">
+                    <label for="{{ form.chapter.id_for_label }}"
+                           class="live-label">
+                        Published chapter
+                    </label>
+
+                    {{ form.chapter }}
+
+                    {% for error in form.chapter.errors %}
+                        <p class="live-error">{{ error }}</p>
+                    {% endfor %}
+                </div>
+
+                <div>
+                    <label for="{{ form.class_date.id_for_label }}"
+                           class="live-label">
+                        Class date
+                    </label>
+
+                    {{ form.class_date }}
+
+                    {% for error in form.class_date.errors %}
+                        <p class="live-error">{{ error }}</p>
+                    {% endfor %}
+                </div>
+
+                <div>
+                    <label for="{{ form.start_time.id_for_label }}"
+                           class="live-label">
+                        Start time
+                    </label>
+
+                    {{ form.start_time }}
+
+                    {% for error in form.start_time.errors %}
+                        <p class="live-error">{{ error }}</p>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="rounded-xl border border-slate-700/70
+                        bg-slate-950/40 p-4">
+                <div class="flex items-start gap-3">
+                    <i class="ri-information-line mt-0.5
+                              text-lg text-cyan-300"></i>
+
+                    <p class="live-muted text-xs leading-6">
+                        Your selection is checked against the active
+                        timetable, assigned teacher permissions,
+                        published content, booking limits and existing
+                        confirmed classes. An invalid booking will not
+                        be saved.
+                    </p>
+                </div>
+            </div>
+
+            <div class="flex flex-col gap-3 sm:flex-row
+                        sm:items-center sm:justify-end">
+                <button type="reset"
+                        class="rounded-xl border border-slate-700
+                               px-5 py-3 text-sm font-semibold
+                               text-slate-300 transition
+                               hover:bg-slate-800">
+                    Clear form
+                </button>
+
+                <button type="submit" class="live-primary-button">
+                    <i class="ri-calendar-check-line text-lg"></i>
+                    Confirm booking
+                </button>
+            </div>
+        </form>
+    </section>
+
+    <section class="live-panel">
+        <div class="mb-5 flex items-center justify-between gap-3">
+            <div>
+                <h2 class="text-lg font-bold text-white">
+                    Upcoming classes
+                </h2>
+                <p class="live-muted mt-1 text-sm">
+                    Your confirmed teaching schedule
+                </p>
+            </div>
+
+            <i class="ri-calendar-schedule-line text-2xl
+                      text-cyan-300"></i>
+        </div>
+
+        <div class="space-y-3">
+            {% for live_class in upcoming_classes %}
+                <article class="live-class-card">
+                    <div class="flex flex-col gap-4 sm:flex-row
+                                sm:items-center sm:justify-between">
+                        <div class="min-w-0">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <span class="rounded-full border
+                                             border-emerald-400/20
+                                             bg-emerald-400/10 px-2.5
+                                             py-1 text-xs font-semibold
+                                             text-emerald-300">
+                                    Confirmed
+                                </span>
+
+                                <span class="live-muted text-xs">
+                                    {{ live_class.start_at|date:"D, d M Y" }}
+                                </span>
+                            </div>
+
+                            <h3 class="mt-3 break-words font-semibold
+                                       text-white">
+                                {{ live_class.batch.batch_name }}
+                            </h3>
+
+                            <p class="live-muted mt-1 text-sm">
+                                {{ live_class.subject.subject_name }}
+                                <span class="mx-1">·</span>
+                                {{ live_class.chapter.chapter_name }}
+                            </p>
+                        </div>
+
+                        <div class="shrink-0 sm:text-right">
+                            <p class="font-semibold text-cyan-200">
+                                {{ live_class.start_at|date:"g:i A" }}
+                                –
+                                {{ live_class.end_at|date:"g:i A" }}
+                            </p>
+
+                            <p class="live-muted mt-1 text-xs">
+                                {{ live_class.start_at|date:"l" }}
+                            </p>
+                        </div>
+                    </div>
+                </article>
+            {% empty %}
+                <div class="rounded-xl border border-dashed
+                            border-slate-700 p-8 text-center">
+                    <i class="ri-calendar-line text-3xl
+                              text-slate-500"></i>
+
+                    <h3 class="mt-3 font-semibold text-white">
+                        No upcoming classes
+                    </h3>
+
+                    <p class="live-muted mt-2 text-sm">
+                        Once you book a valid class, it will appear here.
+                    </p>
+                </div>
+            {% endfor %}
+        </div>
+    </section>
+
+    <section class="live-panel">
+        <h2 class="text-lg font-bold text-white">
+            Recent and past classes
+        </h2>
+
+        <p class="live-muted mt-1 text-sm">
+            Your latest completed, cancelled and other previous sessions
+        </p>
+
+        <div class="mt-5 space-y-3">
+            {% for live_class in recent_classes %}
+                <article class="live-class-card">
+                    <div class="flex flex-col gap-2 sm:flex-row
+                                sm:items-center sm:justify-between">
+                        <div class="min-w-0">
+                            <h3 class="font-semibold text-white">
+                                {{ live_class.batch.batch_name }}
+                                · {{ live_class.subject.subject_name }}
+                            </h3>
+
+                            <p class="live-muted mt-1 text-sm">
+                                {{ live_class.chapter.chapter_name }}
+                            </p>
+
+                            <p class="live-muted mt-2 text-xs">
+                                {{ live_class.start_at|date:"d M Y, g:i A" }}
+                            </p>
+                        </div>
+
+                        <span class="w-fit rounded-full border
+                                     border-slate-600 px-3 py-1
+                                     text-xs font-semibold text-slate-300">
+                            {{ live_class.get_status_display }}
+                        </span>
+                    </div>
+                </article>
+            {% empty %}
+                <p class="live-muted py-5 text-sm">
+                    No previous sessions to display yet.
+                </p>
+            {% endfor %}
+        </div>
+    </section>
+
+</div>
+{% endblock %}

@@ -4,7 +4,13 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
+from datetime import datetime, timedelta
 
+from django.core.exceptions import ValidationError
+
+from live_classes.forms import LiveClassBookingForm
+from live_classes.models import LiveClass
+from live_classes.services import create_live_class
 from urllib.parse import urlencode
 import re
 
@@ -661,12 +667,13 @@ def _get_builder_context(
     actor,
     selected_chapter=None,
     selected_content="videos",
+    request=None,
 ):
     """
-    Complete shared Course Builder context.
+    Build the shared context for Admin and Teacher Course Builder.
 
-    Both Admin and Teacher receive the same data structure.
-    Their templates remain separate.
+    Existing Video, PDF, Quiz and Timeline context is preserved.
+    Live Sessions are scoped to the selected chapter.
     """
 
     chapters = (
@@ -694,9 +701,9 @@ def _get_builder_context(
     context = {
         "batch": batch,
         "subject": subject,
-
         "chapters": chapters,
         "chapter_count": chapters.count(),
+        "now": timezone.now(),
 
         "actor": actor,
         "actor_role": actor["role"],
@@ -722,6 +729,10 @@ def _get_builder_context(
         "quizzes": [],
         "quiz_count": 0,
 
+        "live_classes": [],
+        "live_class_count": 0,
+        "live_booking_form": None,
+
         "next_video_order": 1,
         "next_pdf_order": 1,
         "next_quiz_order": 1,
@@ -741,70 +752,129 @@ def _get_builder_context(
 
     videos = (
         ChapterVideo.objects
-        .filter(
-            chapter=selected_chapter,
-        )
-        .order_by(
-            "video_order",
-            "pk",
-        )
+        .filter(chapter=selected_chapter)
+        .order_by("video_order", "pk")
     )
 
     pdfs = (
         ChapterPDF.objects
-        .filter(
-            chapter=selected_chapter,
-        )
-        .order_by(
-            "pdf_order",
-            "pk",
-        )
+        .filter(chapter=selected_chapter)
+        .order_by("pdf_order", "pk")
     )
 
     quizzes = (
         ChapterQuiz.objects
+        .filter(chapter=selected_chapter)
+        .order_by("quiz_order", "pk")
+    )
+
+    live_classes = (
+        LiveClass.objects
         .filter(
+            batch=batch,
+            subject=subject,
             chapter=selected_chapter,
         )
-        .order_by(
-            "quiz_order",
-            "pk",
+        .select_related(
+            "batch",
+            "subject",
+            "chapter",
+            "teacher",
         )
+        .prefetch_related("recordings")
+        .order_by("-start_at", "-pk")
     )
 
-    context.update(
-        {
-            "videos": videos,
-            "video_count": videos.count(),
+    context.update({
+        "videos": videos,
+        "video_count": videos.count(),
 
-            "pdfs": pdfs,
-            "pdf_count": pdfs.count(),
+        "pdfs": pdfs,
+        "pdf_count": pdfs.count(),
 
-            "quizzes": quizzes,
-            "quiz_count": quizzes.count(),
+        "quizzes": quizzes,
+        "quiz_count": quizzes.count(),
 
-            "next_video_order": get_next_order(
-                ChapterVideo.objects.filter(
-                    chapter=selected_chapter,
-                ),
-                "video_order",
+        "live_classes": live_classes,
+        "live_class_count": live_classes.count(),
+
+        "next_video_order": get_next_order(
+            ChapterVideo.objects.filter(
+                chapter=selected_chapter,
             ),
+            "video_order",
+        ),
 
-            "next_pdf_order": get_next_order(
-                ChapterPDF.objects.filter(
-                    chapter=selected_chapter,
-                ),
-                "pdf_order",
+        "next_pdf_order": get_next_order(
+            ChapterPDF.objects.filter(
+                chapter=selected_chapter,
             ),
+            "pdf_order",
+        ),
 
-            "next_quiz_order": get_next_order(
-                ChapterQuiz.objects.filter(
-                    chapter=selected_chapter,
-                ),
-                "quiz_order",
+        "next_quiz_order": get_next_order(
+            ChapterQuiz.objects.filter(
+                chapter=selected_chapter,
             ),
+            "quiz_order",
+        ),
+    })
+
+    # --------------------------------------------------------
+    # LIVE BOOKING FORM
+    # --------------------------------------------------------
+
+    if selected_content == "live":
+        form_kwargs = {
+            "initial": {
+                "batch": batch.pk,
+                "subject": subject.pk,
+                "chapter": selected_chapter.pk,
+            },
         }
-    )
+
+        is_booking_post = (
+            request is not None
+            and request.method == "POST"
+            and request.POST.get("action") == "schedule_live_class"
+        )
+
+        if is_booking_post:
+            form_kwargs["data"] = request.POST
+
+        if actor["role"] == "teacher":
+            form_kwargs["teacher"] = actor["teacher"]
+        else:
+            form_kwargs["admin_mode"] = True
+
+        booking_form = LiveClassBookingForm(**form_kwargs)
+
+        # Keep this form within the current builder scope.
+        booking_form.fields["batch"].queryset = (
+            Batch.objects.filter(
+                pk=batch.pk,
+                batch_status__in=["published", "archived"],
+            )
+        )
+
+        booking_form.fields["subject"].queryset = (
+            Subject.objects.filter(
+                pk=subject.pk,
+                batch=batch,
+                subject_status="published",
+            )
+        )
+
+        booking_form.fields["chapter"].queryset = (
+            CourseChapter.objects.filter(
+                pk=selected_chapter.pk,
+                batch=batch,
+                subject=subject,
+                status="published",
+            )
+        )
+
+        context["live_booking_form"] = booking_form
 
     return context
 
@@ -1299,21 +1369,24 @@ def course_builder_view(
     subject_id,
 ):
     """
-    Main Course Builder.
+    Main Course Builder shared by Admin and assigned Teacher.
 
-    Shared backend.
-
-    Admin:
-        full access.
-
-    Teacher:
-        active assignment required.
+    Supports Live Session booking without changing the existing
+    Video, PDF, Quiz or Timeline workflows.
     """
+
+    # --------------------------------------------------------
+    # GET BATCH + SUBJECT
+    # --------------------------------------------------------
 
     batch, subject = _get_batch_subject(
         batch_id,
         subject_id,
     )
+
+    # --------------------------------------------------------
+    # AUTHORIZE ADMIN / ASSIGNED TEACHER
+    # --------------------------------------------------------
 
     actor = _authorize_builder(
         request,
@@ -1322,45 +1395,43 @@ def course_builder_view(
     )
 
     if actor is None:
-
         messages.error(
             request,
             "You do not have permission to access this course builder.",
         )
+        return redirect("teacher_login")
 
-        return redirect(
-            "teacher_login"
-        )
+    # --------------------------------------------------------
+    # SELECTED CHAPTER
+    # --------------------------------------------------------
 
     selected_chapter = None
-
-    chapter_id = (
-        request.GET.get(
-            "chapter"
-        )
-    )
+    chapter_id = request.GET.get("chapter")
 
     if chapter_id:
-
         try:
             selected_chapter = _get_chapter(
                 batch,
                 subject,
                 int(chapter_id),
             )
-        except (
-            ValueError,
-            TypeError,
-        ):
+        except (ValueError, TypeError):
             selected_chapter = None
 
+    # --------------------------------------------------------
+    # SELECTED WORKSPACE
+    # --------------------------------------------------------
+
     selected_content = (
-        request.GET.get(
-            "view",
-            "videos",
-        )
-        or "videos"
+        request.GET.get("view", "videos") or "videos"
     ).strip().lower()
+
+    if selected_content not in VALID_BUILDER_VIEWS:
+        selected_content = "videos"
+
+    # --------------------------------------------------------
+    # SHARED CONTEXT
+    # --------------------------------------------------------
 
     context = _get_builder_context(
         batch=batch,
@@ -1368,7 +1439,121 @@ def course_builder_view(
         actor=actor,
         selected_chapter=selected_chapter,
         selected_content=selected_content,
+        request=request,
     )
+
+    # Use the actual chapter selected by the context helper.
+    selected_chapter = context["selected_chapter"]
+
+    # --------------------------------------------------------
+    # LIVE SESSION BOOKING
+    # --------------------------------------------------------
+
+    if (
+        request.method == "POST"
+        and request.POST.get("action") == "schedule_live_class"
+    ):
+        if selected_content != "live":
+            messages.error(
+                request,
+                "Please open the Live Sessions workspace and try again.",
+            )
+            return _builder_redirect(
+                batch,
+                subject,
+                selected_chapter.id if selected_chapter else None,
+                "live",
+            )
+
+        if selected_chapter is None:
+            messages.error(
+                request,
+                "Create or select a chapter before scheduling a live session.",
+            )
+            return _builder_redirect(
+                batch,
+                subject,
+                selected_content="live",
+            )
+
+        booking_form = context["live_booking_form"]
+
+        if booking_form is None:
+            messages.error(
+                request,
+                "The Live Session booking form could not be loaded.",
+            )
+            return _builder_redirect(
+                batch,
+                subject,
+                selected_chapter.id,
+                "live",
+            )
+
+        if booking_form.is_valid():
+            class_date = booking_form.cleaned_data["class_date"]
+            start_time = booking_form.cleaned_data["start_time"]
+            duration_minutes = booking_form.cleaned_data[
+                "duration_minutes"
+            ]
+
+            start_at = timezone.make_aware(
+                datetime.combine(
+                    class_date,
+                    start_time,
+                ),
+                timezone.get_current_timezone(),
+            )
+
+            end_at = start_at + timedelta(
+                minutes=duration_minutes,
+            )
+
+            booking_teacher = (
+                booking_form.cleaned_data["teacher"]
+                if actor["role"] == "admin"
+                else actor["teacher"]
+            )
+
+            try:
+                create_live_class(
+                    teacher=booking_teacher,
+                    batch=booking_form.cleaned_data["batch"],
+                    subject=booking_form.cleaned_data["subject"],
+                    chapter=booking_form.cleaned_data["chapter"],
+                    start_at=start_at,
+                    end_at=end_at,
+                    created_by=request.user,
+                )
+
+            except ValidationError as exc:
+                error_messages = getattr(
+                    exc,
+                    "messages",
+                    [str(exc)],
+                )
+
+                for error_message in error_messages:
+                    booking_form.add_error(
+                        None,
+                        error_message,
+                    )
+
+            else:
+                messages.success(
+                    request,
+                    "Live session scheduled successfully.",
+                )
+
+                return _builder_redirect(
+                    batch,
+                    subject,
+                    selected_chapter.id,
+                    "live",
+                )
+
+        # If validation fails, keep the bound form and its errors.
+        # Continue rendering the same workspace below.
 
     # --------------------------------------------------------
     # CHAPTER TIMELINE
@@ -1378,12 +1563,9 @@ def course_builder_view(
         selected_chapter is not None
         and selected_content == "timeline"
     ):
-
         context["chapter_timeline"] = (
             ChapterChangeLog.objects
-            .filter(
-                chapter=selected_chapter,
-            )
+            .filter(chapter=selected_chapter)
             .select_related(
                 "changed_by_admin",
                 "changed_by_teacher",
@@ -1402,28 +1584,20 @@ def course_builder_view(
         selected_chapter is not None
         and selected_content == "video_timeline"
     ):
-
-        item_id = request.GET.get(
-            "item"
-        )
+        item_id = request.GET.get("item")
 
         try:
-
             selected_video = get_object_or_404(
                 ChapterVideo,
                 id=int(item_id),
                 chapter=selected_chapter,
             )
 
-            context["selected_video"] = (
-                selected_video
-            )
+            context["selected_video"] = selected_video
 
             context["video_timeline"] = (
                 VideoChangeLog.objects
-                .filter(
-                    video=selected_video,
-                )
+                .filter(video=selected_video)
                 .select_related(
                     "changed_by_admin",
                     "changed_by_teacher",
@@ -1434,10 +1608,7 @@ def course_builder_view(
                 )
             )
 
-        except (
-            ValueError,
-            TypeError,
-        ):
+        except (ValueError, TypeError):
             pass
 
     # --------------------------------------------------------
@@ -1448,28 +1619,20 @@ def course_builder_view(
         selected_chapter is not None
         and selected_content == "pdf_timeline"
     ):
-
-        item_id = request.GET.get(
-            "item"
-        )
+        item_id = request.GET.get("item")
 
         try:
-
             selected_pdf = get_object_or_404(
                 ChapterPDF,
                 id=int(item_id),
                 chapter=selected_chapter,
             )
 
-            context["selected_pdf"] = (
-                selected_pdf
-            )
+            context["selected_pdf"] = selected_pdf
 
             context["pdf_timeline"] = (
                 PDFChangeLog.objects
-                .filter(
-                    pdf=selected_pdf,
-                )
+                .filter(pdf=selected_pdf)
                 .select_related(
                     "changed_by_admin",
                     "changed_by_teacher",
@@ -1480,10 +1643,7 @@ def course_builder_view(
                 )
             )
 
-        except (
-            ValueError,
-            TypeError,
-        ):
+        except (ValueError, TypeError):
             pass
 
     # --------------------------------------------------------
@@ -1494,28 +1654,20 @@ def course_builder_view(
         selected_chapter is not None
         and selected_content == "quiz_timeline"
     ):
-
-        item_id = request.GET.get(
-            "item"
-        )
+        item_id = request.GET.get("item")
 
         try:
-
             selected_quiz = get_object_or_404(
                 ChapterQuiz,
                 id=int(item_id),
                 chapter=selected_chapter,
             )
 
-            context["selected_quiz"] = (
-                selected_quiz
-            )
+            context["selected_quiz"] = selected_quiz
 
             context["quiz_timeline"] = (
                 QuizChangeLog.objects
-                .filter(
-                    quiz=selected_quiz,
-                )
+                .filter(quiz=selected_quiz)
                 .select_related(
                     "changed_by_admin",
                     "changed_by_teacher",
@@ -1526,11 +1678,12 @@ def course_builder_view(
                 )
             )
 
-        except (
-            ValueError,
-            TypeError,
-        ):
+        except (ValueError, TypeError):
             pass
+
+    # --------------------------------------------------------
+    # RENDER COURSE BUILDER
+    # --------------------------------------------------------
 
     return render(
         request,

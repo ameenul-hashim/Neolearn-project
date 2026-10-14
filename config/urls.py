@@ -27,7 +27,8 @@ urlpatterns = [
     path("teachers/", include("teachers.urls")),
     path("courses/", include("courses.urls")),
     path("orders/",include("orders.urls")),
-    
+    path("live-classes/", include("live_classes.urls")),
+
 ]
 
 if settings.DEBUG:

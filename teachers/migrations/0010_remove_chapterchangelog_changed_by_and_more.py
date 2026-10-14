@@ -112,7 +112,7 @@ class Migration(migrations.Migration):
         ),
         migrations.RemoveConstraint(
             model_name='quizoption',
-            name='unique_quiz_question_option_label',
+            name='unique_teacher_quiz_question_option_label',
         ),
         migrations.RemoveField(
             model_name='videochangelog',
