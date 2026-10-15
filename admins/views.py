@@ -4714,10 +4714,10 @@ def admin_reject_refund_view(
                 },
             )
 
-        messages.success(
+        messages.warning(
             request,
             (
-                f"Refund #{refund.id} was rejected."
+                f"Refund #{ refund.refund_request_id } was rejected."
             ),
         )
 
