@@ -87,6 +87,6 @@ class Migration(migrations.Migration):
         ),
         migrations.AddConstraint(
             model_name='quizoption',
-            constraint=models.UniqueConstraint(fields=('question', 'option_label'), name='unique_quiz_question_option_label'),
+            constraint=models.UniqueConstraint(fields=('question', 'option_label'), name='unique_teacher_quiz_question_option_label'),
         ),
     ]

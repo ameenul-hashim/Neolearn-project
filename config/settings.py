@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     'teachers',
     'courses',
     'orders',
+    'live_classes',
 
     # DJANGO ALLAUTH
 

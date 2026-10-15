@@ -11,7 +11,7 @@
 
     <!-- Remix Icons -->
     <link rel="stylesheet"
-          href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/4.6.0/remixicon.min.css">
+        href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/4.6.0/remixicon.min.css">
 
     <!-- Existing Toast Messages CSS -->
     <link rel="stylesheet" href="{% static 'toast-messages.css' %}">
@@ -54,7 +54,7 @@
             background: var(--teacher-bg);
             color: #fff;
             font-family: Inter, ui-sans-serif, system-ui, -apple-system,
-                         BlinkMacSystemFont, "Segoe UI", sans-serif;
+                        BlinkMacSystemFont, "Segoe UI", sans-serif;
             -webkit-font-smoothing: antialiased;
         }
 
@@ -315,6 +315,25 @@
         .teacher-nav-link-placeholder {
             cursor: default;
             opacity: .8;
+        }
+
+        .teacher-live-group { margin: 3px 0; }
+        .teacher-live-group > summary { list-style: none; cursor: pointer; }
+        .teacher-live-group > summary::-webkit-details-marker { display: none; }
+        .teacher-live-group[open] .teacher-live-arrow { transform: rotate(180deg); }
+        .teacher-live-arrow { margin-left: auto; transition: transform .2s ease; }
+        .teacher-live-submenu {
+            display: flex; flex-direction: column; gap: 2px;
+            margin: 3px 0 8px 13px; padding-left: 9px;
+            border-left: 2px solid rgb(103 232 249 / 22%);
+        }
+        .teacher-live-submenu .teacher-nav-link {
+            min-height: 40px; margin: 1px 0; padding: 8px 10px;
+            gap: 10px; border-radius: 10px; font-size: 13px;
+        }
+        .teacher-live-submenu .nav-icon { width: 20px; font-size: 17px; }
+        .teacher-live-submenu .teacher-nav-link.active {
+            background: rgb(103 232 249 / 10%); color: var(--teacher-cyan);
         }
 
         .teacher-nav-link-placeholder:hover {
@@ -784,8 +803,8 @@
             <!-- Brand -->
             <div class="teacher-sidebar-header">
                 <a href="{% url 'teacher_dashboard' %}"
-                   class="teacher-brand"
-                   aria-label="NeoLearn Teacher Dashboard">
+                class="teacher-brand"
+                aria-label="NeoLearn Teacher Dashboard">
                     <span class="teacher-brand-icon">
                         <i class="ri-flashlight-fill"></i>
                     </span>
@@ -807,38 +826,59 @@
                     <p class="teacher-nav-heading">Workspace</p>
 
                     <a href="{% url 'teacher_dashboard' %}"
-                       class="teacher-nav-link {% if request.resolver_match.url_name == 'teacher_dashboard' %}active{% endif %}"
-                       {% if request.resolver_match.url_name == 'teacher_dashboard' %}aria-current="page"{% endif %}>
+                    class="teacher-nav-link {% if request.resolver_match.url_name == 'teacher_dashboard' %}active{% endif %}"
+                    {% if request.resolver_match.url_name == 'teacher_dashboard' %}aria-current="page"{% endif %}>
                         <i class="ri-dashboard-3-line nav-icon"></i>
                         <span class="nav-label">Dashboard</span>
                     </a>
 
                     <a href="{% url 'teacher_batches' %}"
-                       class="teacher-nav-link {% if request.resolver_match.url_name == 'teacher_batches' or request.resolver_match.url_name == 'teacher_subjects' or request.resolver_match.url_name == 'teacher_course_builder_entry' %}active{% endif %}"
-                       {% if request.resolver_match.url_name == 'teacher_batches' or request.resolver_match.url_name == 'teacher_subjects' or request.resolver_match.url_name == 'teacher_course_builder_entry' %}aria-current="page"{% endif %}>
+                    class="teacher-nav-link {% if request.resolver_match.url_name == 'teacher_batches' or request.resolver_match.url_name == 'teacher_subjects' or request.resolver_match.url_name == 'teacher_course_builder_entry' %}active{% endif %}"
+                    {% if request.resolver_match.url_name == 'teacher_batches' or request.resolver_match.url_name == 'teacher_subjects' or request.resolver_match.url_name == 'teacher_course_builder_entry' %}aria-current="page"{% endif %}>
                         <i class="ri-stack-line nav-icon"></i>
                         <span class="nav-label">My Batches</span>
                     </a>
 
-                    <div class="teacher-nav-link teacher-nav-link-placeholder"
-                         aria-disabled="true"
-                         title="This page has not been connected yet">
-                        <i class="ri-live-line nav-icon"></i>
-                        <span class="nav-label">Live Classes</span>
-                        <span class="teacher-coming-soon">Soon</span>
-                    </div>
+<details class="teacher-live-group"
+    {% if request.resolver_match.url_name == 'teacher_live_classes' or request.resolver_match.url_name == 'teacher_reschedule_live_class' or request.resolver_match.url_name == 'teacher_request_cancellation' %}open{% endif %}>
+    <summary class="teacher-nav-link {% if request.resolver_match.url_name == 'teacher_live_classes' or request.resolver_match.url_name == 'teacher_reschedule_live_class' or request.resolver_match.url_name == 'teacher_request_cancellation' %}active{% endif %}"
+        aria-label="Live Classes submenu">
+        <i class="ri-live-line nav-icon"></i>
+        <span class="nav-label">Live Classes</span>
+        <i class="ri-arrow-down-s-line teacher-live-arrow"></i>
+    </summary>
+    <div class="teacher-live-submenu">
+        <a href="{% url 'live_classes:teacher_live_classes' %}"
+            class="teacher-nav-link {% if request.resolver_match.url_name == 'teacher_live_classes' %}active{% endif %}"
+            {% if request.resolver_match.url_name == 'teacher_live_classes' %}aria-current="page"{% endif %}>
+            <i class="ri-calendar-schedule-line nav-icon"></i><span class="nav-label">My Timetable</span>
+        </a>
+        <div class="teacher-nav-link teacher-nav-link-placeholder" aria-disabled="true" title="Connect after the upcoming classes view is implemented">
+            <i class="ri-calendar-event-line nav-icon"></i><span class="nav-label">Upcoming Classes</span>
+        </div>
+        <div class="teacher-nav-link teacher-nav-link-placeholder" aria-disabled="true" title="Connect after the live room view is implemented">
+            <i class="ri-broadcast-line nav-icon"></i><span class="nav-label">Live Now</span>
+        </div>
+        <div class="teacher-nav-link teacher-nav-link-placeholder" aria-disabled="true" title="Connect after the cancellation requests page is implemented">
+            <i class="ri-close-circle-line nav-icon"></i><span class="nav-label">Cancellation Requests</span>
+        </div>
+        <div class="teacher-nav-link teacher-nav-link-placeholder" aria-disabled="true" title="Connect after the class history page is implemented">
+            <i class="ri-history-line nav-icon"></i><span class="nav-label">All Classes &amp; History</span>
+        </div>
+    </div>
+</details>
 
                     <div class="teacher-nav-link teacher-nav-link-placeholder"
-                         aria-disabled="true"
-                         title="This page has not been connected yet">
+                        aria-disabled="true"
+                        title="This page has not been connected yet">
                         <i class="ri-line-chart-line nav-icon"></i>
                         <span class="nav-label">Analytics</span>
                         <span class="teacher-coming-soon">Soon</span>
                     </div>
 
                     <div class="teacher-nav-link teacher-nav-link-placeholder"
-                         aria-disabled="true"
-                         title="This page has not been connected yet">
+                        aria-disabled="true"
+                        title="This page has not been connected yet">
                         <i class="ri-store-2-line nav-icon"></i>
                         <span class="nav-label">Marketplace</span>
                         <span class="teacher-coming-soon">Soon</span>
@@ -847,16 +887,16 @@
                     <p class="teacher-nav-heading">Communication</p>
 
                     <div class="teacher-nav-link teacher-nav-link-placeholder"
-                         aria-disabled="true"
-                         title="This page has not been connected yet">
+                        aria-disabled="true"
+                        title="This page has not been connected yet">
                         <i class="ri-notification-3-line nav-icon"></i>
                         <span class="nav-label">Notifications</span>
                         <span class="teacher-coming-soon">Soon</span>
                     </div>
 
                     <div class="teacher-nav-link teacher-nav-link-placeholder"
-                         aria-disabled="true"
-                         title="This page has not been connected yet">
+                        aria-disabled="true"
+                        title="This page has not been connected yet">
                         <i class="ri-team-line nav-icon"></i>
                         <span class="nav-label">My Colleagues</span>
                         <span class="teacher-coming-soon">Soon</span>
@@ -865,15 +905,15 @@
                     <p class="teacher-nav-heading">Account</p>
 
                     <a href="{% url 'teacher_my_profile' %}"
-                       class="teacher-nav-link {% if request.resolver_match.url_name == 'teacher_my_profile' %}active{% endif %}"
-                       {% if request.resolver_match.url_name == 'teacher_my_profile' %}aria-current="page"{% endif %}>
+                    class="teacher-nav-link {% if request.resolver_match.url_name == 'teacher_my_profile' %}active{% endif %}"
+                    {% if request.resolver_match.url_name == 'teacher_my_profile' %}aria-current="page"{% endif %}>
                         <i class="ri-user-3-line nav-icon"></i>
                         <span class="nav-label">My Profile</span>
                     </a>
 
                     <div class="teacher-nav-link teacher-nav-link-placeholder"
-                         aria-disabled="true"
-                         title="This page has not been connected yet">
+                        aria-disabled="true"
+                        title="This page has not been connected yet">
                         <i class="ri-settings-3-line nav-icon"></i>
                         <span class="nav-label">Settings</span>
                         <span class="teacher-coming-soon">Soon</span>
@@ -882,16 +922,16 @@
                     <p class="teacher-nav-heading">Help &amp; Support</p>
 
                     <div class="teacher-nav-link teacher-nav-link-placeholder"
-                         aria-disabled="true"
-                         title="This page has not been connected yet">
+                        aria-disabled="true"
+                        title="This page has not been connected yet">
                         <i class="ri-question-line nav-icon"></i>
                         <span class="nav-label">FAQ</span>
                         <span class="teacher-coming-soon">Soon</span>
                     </div>
 
                     <div class="teacher-nav-link teacher-nav-link-placeholder"
-                         aria-disabled="true"
-                         title="This page has not been connected yet">
+                        aria-disabled="true"
+                        title="This page has not been connected yet">
                         <i class="ri-customer-service-2-line nav-icon"></i>
                         <span class="nav-label">Contact Admin</span>
                         <span class="teacher-coming-soon">Soon</span>
@@ -902,7 +942,7 @@
             <!-- Logout -->
             <div class="teacher-sidebar-footer">
                 <a href="{% url 'teacher_logout' %}"
-                   class="teacher-nav-link teacher-logout-link">
+                class="teacher-nav-link teacher-logout-link">
                     <i class="ri-logout-box-r-line nav-icon"></i>
                     <span class="nav-label">Logout</span>
                 </a>
@@ -964,13 +1004,13 @@
                                     onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
 
                                 <span class="teacher-profile-fallback"
-                                      style="display:none;"
-                                      aria-label="Teacher initials">
+                                    style="display:none;"
+                                    aria-label="Teacher initials">
                                     {{ request.user.teacher_profile.full_name|default:request.user.username|first|upper }}
                                 </span>
                             {% else %}
                                 <span class="teacher-profile-fallback"
-                                      aria-label="Teacher initials">
+                                    aria-label="Teacher initials">
                                     {{ request.user.teacher_profile.full_name|default:request.user.username|first|upper }}
                                 </span>
                             {% endif %}
@@ -978,7 +1018,7 @@
 
                         <!-- Dropdown -->
                         <div id="profileDropdown"
-                             class="teacher-profile-dropdown hidden">
+                            class="teacher-profile-dropdown hidden">
 
                             <div class="teacher-dropdown-header">
                                 <p class="truncate text-sm font-semibold text-white">
@@ -996,13 +1036,13 @@
                             </div>
 
                             <a href="{% url 'teacher_my_profile' %}"
-                               class="teacher-dropdown-link">
+                            class="teacher-dropdown-link">
                                 <i class="ri-user-settings-line"></i>
                                 <span>My Profile</span>
                             </a>
 
                             <div class="teacher-dropdown-link teacher-dropdown-placeholder"
-                                 aria-disabled="true">
+                                aria-disabled="true">
                                 <i class="ri-settings-3-line"></i>
                                 <span>Settings</span>
                                 <span class="ml-auto text-[9px] text-slate-500">Soon</span>
@@ -1011,7 +1051,7 @@
                             <div class="border-t border-white/5"></div>
 
                             <a href="{% url 'teacher_logout' %}"
-                               class="teacher-dropdown-link text-red-400 hover:bg-red-500/10 hover:text-red-300">
+                            class="teacher-dropdown-link text-red-400 hover:bg-red-500/10 hover:text-red-300">
                                 <i class="ri-logout-box-r-line"></i>
                                 <span>Logout</span>
                             </a>

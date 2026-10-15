@@ -1,0 +1,1045 @@
+{% extends "admins/admin_base.html" %}
+{% load static %}
+
+{% block title %}Live Class Schedule | NeoLearn Admin{% endblock %}
+
+{% block extra_head %}
+<style>
+    .live-page {
+        --live-border: rgba(14, 116, 180, .34);
+        --live-panel: #04182a;
+        color: #e2e8f0;
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+        font-size: 13px;
+        margin-bottom: 0 !important;
+        padding-bottom: 0 !important;
+        overflow-x: clip;
+    }
+
+    .live-page *,
+    .live-page *::before,
+    .live-page *::after {
+        box-sizing: border-box;
+    }
+
+    .live-panel {
+        min-width: 0;
+        background: linear-gradient(145deg, #061c30, #031321);
+        border: 1px solid var(--live-border);
+        border-radius: 11px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, .12);
+    }
+
+    .live-stat {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-width: 0;
+        padding: 12px;
+        border: 1px solid rgba(56, 189, 248, .2);
+        border-radius: 10px;
+        background: linear-gradient(135deg, #062944, #041625);
+    }
+
+    .live-stat-icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 44px;
+        height: 44px;
+        flex: 0 0 44px;
+        border-radius: 9px;
+        font-size: 23px;
+    }
+
+    .live-stat-content {
+        min-width: 0;
+    }
+
+    .live-stat-number {
+        color: #fff;
+        font-size: 25px;
+        font-weight: 800;
+        line-height: 1.15;
+    }
+
+    .live-label {
+        display: block;
+        margin-bottom: 5px;
+        color: #cbd5e1;
+        font-size: 11px;
+        font-weight: 600;
+    }
+
+    .live-page select,
+    .live-page input:not([type="hidden"]),
+    .live-page textarea {
+        display: block;
+        width: 100%;
+        min-width: 0;
+        min-height: 36px;
+        padding: 8px 9px;
+        color: #e2e8f0;
+        background: #071b30;
+        border: 1px solid #164e70;
+        border-radius: 7px;
+        outline: none;
+        font-family: inherit;
+        font-size: 12px;
+    }
+
+    .live-page textarea {
+        min-height: 70px;
+        resize: vertical;
+    }
+
+    .live-page select:focus,
+    .live-page input:focus,
+    .live-page textarea:focus {
+        border-color: #06b6d4;
+        box-shadow: 0 0 0 2px rgba(6, 182, 212, .12);
+    }
+
+    .live-page select option {
+        color: #e2e8f0;
+        background: #071b30;
+    }
+
+    .live-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        min-height: 35px;
+        min-width: 0;
+        padding: 7px 10px;
+        color: #dbeafe;
+        background: #061d31;
+        border: 1px solid #164e70;
+        border-radius: 7px;
+        text-decoration: none;
+        font-size: 11px;
+        font-weight: 700;
+        white-space: nowrap;
+        transition: background .15s, border-color .15s;
+    }
+
+    .live-btn:hover {
+        color: #fff;
+        border-color: #06b6d4;
+        background: #08344a;
+    }
+
+    .live-btn-primary {
+        color: #00131d;
+        background: linear-gradient(90deg, #22d3ee, #00f5d4);
+        border-color: #06b6d4;
+        font-weight: 800;
+    }
+
+    .live-btn-primary:hover {
+        color: #00131d;
+        background: #67e8f9;
+    }
+
+    .live-main-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1.85fr) minmax(300px, .78fr);
+        align-items: stretch;
+        gap: 10px;
+        min-width: 0;
+    }
+
+    /* Fill the left card's available height, including when form errors make
+       the right booking card taller. Only the calendar rows scroll internally. */
+    .live-calendar-wrap {
+        display: block;
+        width: 100%;
+        min-width: 0;
+        height: 0;
+        min-height: 420px;
+        max-height: none;
+        flex: 1 1 auto;
+        overflow-y: auto;
+        overflow-x: hidden;
+        overscroll-behavior: contain;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .live-calendar-wrap::-webkit-scrollbar {
+        width: 0;
+        height: 0;
+        display: none;
+    }
+
+    .live-calendar {
+        display: grid;
+        width: 100%;
+        min-width: 940px;
+        min-height: 100%;
+        grid-template-columns: 62px repeat(7, minmax(125px, 1fr));
+        grid-auto-rows: minmax(65px, 1fr);
+        align-content: stretch;
+        table-layout: fixed;
+    }
+
+    .live-calendar-head:first-child,
+    .live-time-cell {
+        position: sticky;
+        left: 0;
+        z-index: 3;
+    }
+
+    .live-calendar-head:first-child {
+        z-index: 5;
+    }
+
+    .live-calendar-head {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-width: 0;
+        min-height: 49px;
+        padding: 5px 2px;
+        text-align: center;
+        background: #071b30;
+        border-right: 1px solid rgba(14, 116, 180, .25);
+        border-bottom: 1px solid var(--live-border);
+    }
+
+    .live-calendar-head p {
+        margin: 0;
+        line-height: 1.4;
+    }
+
+    .live-time-cell {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 0;
+        min-height: 65px;
+        padding: 4px 2px;
+        color: #dbe4ef;
+        background: rgba(4, 24, 42, .8);
+        border-right: 1px solid rgba(14, 116, 180, .25);
+        border-bottom: 1px solid rgba(14, 116, 180, .25);
+        font-size: 10px;
+        font-weight: 600;
+        text-align: center;
+        white-space: normal;
+    }
+
+    .live-day-cell {
+        min-width: 0;
+        min-height: 65px;
+        padding: 3px;
+        overflow: hidden;
+        background: rgba(2, 14, 27, .35);
+        border-right: 1px solid rgba(14, 116, 180, .22);
+        border-bottom: 1px solid rgba(14, 116, 180, .22);
+    }
+
+    .live-class {
+        display: block;
+        width: 100%;
+        min-width: 0;
+        overflow: hidden;
+        padding: 5px 4px;
+        color: #e2e8f0;
+        background: linear-gradient(145deg, #0b3154, #071c35);
+        border: 1px solid rgba(59, 130, 246, .7);
+        border-left: 2px solid #38bdf8;
+        border-radius: 6px;
+        text-decoration: none;
+        overflow-wrap: anywhere;
+    }
+
+    .live-class.is-live {
+        background: linear-gradient(145deg, #68172b, #30101e);
+        border-color: rgba(251, 113, 133, .7);
+        border-left-color: #fb7185;
+    }
+
+    .live-class.is-completed {
+        background: linear-gradient(145deg, #40116a, #201035);
+        border-color: rgba(168, 85, 247, .65);
+        border-left-color: #a855f7;
+    }
+
+    .live-class.is-cancelled,
+    .live-class.is-no-show {
+        background: linear-gradient(145deg, #59300d, #2a1b0b);
+        border-color: rgba(245, 158, 11, .55);
+        border-left-color: #f59e0b;
+    }
+
+    .live-class-title {
+        margin: 0;
+        font-size: 10px;
+        line-height: 1.35;
+        font-weight: 800;
+        overflow-wrap: anywhere;
+    }
+
+    .live-class-detail {
+        margin-top: 3px;
+        color: #cbd5e1;
+        font-size: 9px;
+        line-height: 1.35;
+        overflow-wrap: anywhere;
+    }
+
+    .live-class-time {
+        color: #bae6fd;
+        font-size: 9px;
+        line-height: 1.35;
+        margin-top: 3px;
+        overflow-wrap: anywhere;
+    }
+
+    .live-free {
+        display: flex;
+        min-height: 100%;
+        align-items: center;
+        justify-content: center;
+        gap: 3px;
+        width: 100%;
+        min-height: 40px;
+        padding: 3px 1px;
+        color: #5eead4;
+        background: rgba(6, 78, 59, .13);
+        border: 1px dashed #059669;
+        border-radius: 5px;
+        text-decoration: none;
+        text-align: center;
+        font-size: 9px;
+        line-height: 1.25;
+        overflow-wrap: anywhere;
+    }
+
+    .live-free:hover {
+        color: #ccfbf1;
+        background: rgba(6, 78, 59, .35);
+        border-color: #2dd4bf;
+    }
+
+    .live-busy {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 40px;
+        padding: 3px 1px;
+        color: #fcd34d;
+        background: rgba(120, 53, 15, .12);
+        border: 1px solid rgba(245, 158, 11, .25);
+        border-radius: 5px;
+        text-align: center;
+        font-size: 9px;
+    }
+
+    .live-form-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+    }
+
+    .live-error {
+        margin-top: 4px;
+        color: #fda4af;
+        font-size: 11px;
+        overflow-wrap: anywhere;
+    }
+
+    .live-muted {
+        color: #94a3b8;
+        font-size: 10px;
+        line-height: 1.5;
+    }
+
+    .live-legend-dot {
+        width: 12px;
+        height: 12px;
+        flex: 0 0 12px;
+        border-radius: 50%;
+    }
+
+    /* Keep the whole weekly calendar visible at normal desktop widths. */
+    @media (max-width: 1350px) {
+        .live-main-grid {
+            grid-template-columns: minmax(0, 1fr);
+        }
+
+        .live-calendar {
+            grid-template-columns: 65px repeat(7, minmax(0, 1fr));
+        }
+
+        .live-calendar-head {
+            min-height: 48px;
+        }
+    }
+
+    @media (max-width: 700px) {
+        .live-main-grid {
+            grid-template-columns: minmax(0, 1fr);
+            gap: 8px;
+        }
+
+        .live-calendar-wrap {
+            height: 55vh;
+            min-height: 300px;
+            max-height: 480px;
+            flex: 0 0 auto;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+        .live-calendar {
+            min-width: 940px;
+            grid-template-columns: 54px repeat(7, minmax(125px, 1fr));
+        }
+
+        .live-stat {
+            padding: 9px;
+            gap: 8px;
+        }
+
+        .live-stat-icon {
+            width: 36px;
+            height: 36px;
+            flex-basis: 36px;
+            font-size: 19px;
+        }
+
+        .live-stat-number {
+            font-size: 21px;
+        }
+
+        .live-calendar-head {
+            min-height: 43px;
+            padding: 4px 1px;
+        }
+
+        .live-calendar-head .text-xs {
+            font-size: 9px;
+        }
+
+        .live-time-cell {
+            min-height: 61px;
+            font-size: 9px;
+            padding: 2px 1px;
+        }
+
+        .live-day-cell {
+            min-height: 61px;
+            padding: 2px;
+        }
+
+        .live-class {
+            padding: 4px 2px;
+            border-radius: 4px;
+        }
+
+        .live-class-title {
+            font-size: 9px;
+        }
+
+        .live-class-detail,
+        .live-class-time {
+            font-size: 8px;
+        }
+
+        .live-free,
+        .live-busy {
+            min-height: 34px;
+            font-size: 8px;
+        }
+    }
+
+    @media (max-width: 440px) {
+        .live-form-grid {
+            grid-template-columns: minmax(0, 1fr);
+        }
+
+        .live-calendar-head {
+            font-size: 9px;
+        }
+
+        .live-time-cell {
+            font-size: 8px;
+        }
+
+        .live-day-cell {
+            padding: 1px;
+        }
+
+        .live-class-title {
+            font-size: 8px;
+        }
+    }
+</style>
+
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const bookingForm = document.querySelector("#booking-panel form[method='post']");
+    if (!bookingForm) return;
+
+    const batch = bookingForm.querySelector('[name="batch"]');
+    const subject = bookingForm.querySelector('[name="subject"]');
+    const chapter = bookingForm.querySelector('[name="chapter"]');
+    const teacher = bookingForm.querySelector('[name="teacher"]');
+
+    function resetSelect(select, placeholder) {
+        if (!select) return;
+        select.innerHTML = "";
+        const option = document.createElement("option");
+        option.value = "";
+        option.textContent = placeholder;
+        select.appendChild(option);
+        select.value = "";
+    }
+
+    async function loadOptions(kind, params, select, placeholder, selectedValue) {
+        resetSelect(select, "Loading...");
+        select.disabled = true;
+        const url = new URL(window.location.href);
+        url.search = "";
+        url.hash = "";
+        url.searchParams.set("ajax", kind);
+        Object.entries(params).forEach(([key, value]) => url.searchParams.set(key, value || ""));
+        try {
+            const response = await fetch(url.toString(), {
+                headers: {"X-Requested-With": "XMLHttpRequest"},
+                credentials: "same-origin"
+            });
+            if (!response.ok) throw new Error("Could not load options");
+            const data = await response.json();
+            resetSelect(select, placeholder);
+            data.results.forEach(item => {
+                const option = document.createElement("option");
+                option.value = item.id;
+                option.textContent = item.text;
+                select.appendChild(option);
+            });
+            if (selectedValue && Array.from(select.options).some(o => o.value === String(selectedValue))) {
+                select.value = String(selectedValue);
+            }
+        } catch (error) {
+            resetSelect(select, placeholder);
+        } finally {
+            select.disabled = false;
+        }
+    }
+
+    async function refreshSubjects(selectedSubject) {
+        resetSelect(subject, "Select subject");
+        resetSelect(chapter, "Select published chapter");
+        resetSelect(teacher, "Select teacher");
+        if (batch.value) {
+            await loadOptions("subjects", {batch_id: batch.value}, subject, "Select subject", selectedSubject || "");
+        }
+    }
+
+    async function refreshChapterAndTeacher(selectedChapter, selectedTeacher) {
+        resetSelect(chapter, "Select published chapter");
+        resetSelect(teacher, "Select teacher");
+        if (!batch.value || !subject.value) return;
+        const params = {batch_id: batch.value, subject_id: subject.value};
+        await Promise.all([
+            loadOptions("chapters", params, chapter, "Select published chapter", selectedChapter || ""),
+            loadOptions("teachers", params, teacher, "Select teacher", selectedTeacher || "")
+        ]);
+    }
+
+    batch.addEventListener("change", function () {
+        refreshSubjects("");
+    });
+    subject.addEventListener("change", function () {
+        refreshChapterAndTeacher("", "");
+    });
+
+    // Restore dependent choices after an invalid POST without allowing stale
+    // subject/chapter/teacher IDs to bypass the server-side queryset checks.
+    if (batch.value) {
+        const oldSubject = subject.value;
+        const oldChapter = chapter.value;
+        const oldTeacher = teacher.value;
+        refreshSubjects(oldSubject).then(function () {
+            if (subject.value) refreshChapterAndTeacher(oldChapter, oldTeacher);
+        });
+    }
+
+    // Field errors from a failed submission disappear after five seconds.
+    document.querySelectorAll("#booking-panel .booking-errors").forEach(function (item) {
+        window.setTimeout(function () {
+            item.style.transition = "opacity .25s ease";
+            item.style.opacity = "0";
+            window.setTimeout(function () { item.remove(); }, 300);
+        }, 5000);
+    });
+});
+</script>
+
+{% endblock %}
+
+{% block admin_content %}
+<div class="live-page space-y-3">
+
+    <!-- Header -->
+    <header class="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+        <div class="flex items-center gap-3 min-w-0">
+            <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-violet-600 to-purple-700 shadow-lg">
+                <i class="ri-calendar-line text-2xl text-white"></i>
+            </div>
+            <div class="min-w-0">
+                <h1 class="text-xl sm:text-2xl font-extrabold tracking-tight text-white">
+                    Live Class Schedule
+
+                </h1>
+                <p class="mt-1 text-xs sm:text-sm text-slate-400">
+                    Seven-day timetable · 5:00 AM to 11:00 PM · select an available slot to prefill date and time.
+                </p>
+            </div>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2">
+            <a class="live-btn" href="?week={{ previous_week|date:'Y-m-d' }}&amp;batch={{ selected_batch }}" aria-label="Previous week">
+                <i class="ri-arrow-left-s-line text-lg"></i>
+            </a>
+            <div class="live-btn">
+                <i class="ri-calendar-line text-cyan-300"></i>
+                <span>{{ week_start|date:"d M Y" }} – {{ week_end|date:"d M Y" }}</span>
+            </div>
+            <a class="live-btn" href="?week={{ next_week|date:'Y-m-d' }}&amp;batch={{ selected_batch }}" aria-label="Next week">
+                <i class="ri-arrow-right-s-line text-lg"></i>
+            </a>
+            <a class="live-btn" href="?week={{ today|date:'Y-m-d' }}&amp;batch={{ selected_batch }}">Today</a>
+        </div>
+    </header>
+
+    <!-- Summary cards -->
+    <section class="grid grid-cols-2 xl:grid-cols-5 gap-2">
+        <div class="live-stat">
+            <div class="live-stat-icon bg-cyan-500/15 text-cyan-300">
+                <i class="ri-calendar-check-line"></i>
+            </div>
+            <div class="live-stat-content">
+                <p class="text-[11px] text-cyan-200">Total Live Classes</p>
+                <p class="live-stat-number">{{ week_classes_count }}</p>
+                <p class="live-muted">Selected week</p>
+            </div>
+        </div>
+
+        <div class="live-stat" style="border-color:rgba(16,185,129,.25);background:linear-gradient(135deg,#063b35,#041625)">
+            <div class="live-stat-icon bg-emerald-500/15 text-emerald-300">
+                <i class="ri-calendar-event-line"></i>
+            </div>
+            <div class="live-stat-content">
+                <p class="text-[11px] text-emerald-200">Upcoming Classes</p>
+                <p class="live-stat-number">{{ upcoming_count }}</p>
+                <p class="live-muted">This week</p>
+            </div>
+        </div>
+
+        <div class="live-stat" style="border-color:rgba(244,63,94,.25);background:linear-gradient(135deg,#451528,#041625)">
+            <div class="live-stat-icon bg-rose-500/15 text-rose-300">
+                <i class="ri-live-line"></i>
+            </div>
+            <div class="live-stat-content">
+                <p class="text-[11px] text-rose-200">Live Now</p>
+                <p class="live-stat-number">{{ live_now_count }}</p>
+                <p class="live-muted">Ongoing classes</p>
+            </div>
+        </div>
+
+        <div class="live-stat" style="border-color:rgba(168,85,247,.25);background:linear-gradient(135deg,#291443,#041625)">
+            <div class="live-stat-icon bg-violet-500/15 text-violet-300">
+                <i class="ri-checkbox-circle-line"></i>
+            </div>
+            <div class="live-stat-content">
+                <p class="text-[11px] text-violet-200">Completed Classes</p>
+                <p class="live-stat-number">{{ completed_count }}</p>
+                <p class="live-muted">This week</p>
+            </div>
+        </div>
+
+        <div class="live-stat col-span-2 xl:col-span-1" style="border-color:rgba(245,158,11,.25);background:linear-gradient(135deg,#38230f,#041625)">
+            <div class="live-stat-icon bg-amber-500/15 text-amber-300">
+                <i class="ri-calendar-close-line"></i>
+            </div>
+            <div class="live-stat-content">
+                <p class="text-[11px] text-amber-200">Cancelled Classes</p>
+                <p class="live-stat-number">{{ cancelled_count }}</p>
+                <p class="live-muted">This week</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Timetable filter: only controls which batch calendar is displayed. -->
+    <section class="live-panel p-3">
+        <form method="get" class="flex flex-wrap items-end gap-3">
+            <input type="hidden" name="week" value="{{ week_start|date:'Y-m-d' }}">
+            <div class="w-full sm:max-w-sm">
+                <label class="live-label" for="filter-batch">View Timetable For Batch</label>
+                <select id="filter-batch" name="batch" onchange="this.form.submit()">
+                    {% for item in batches %}
+                    <option value="{{ item.pk }}" {% if selected_batch == item.pk|stringformat:"s" %}selected{% endif %}>
+                        {{ item.batch_name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <p class="live-muted">Published and archived batches only. Booking selection is independent.</p>
+        </form>
+    </section>
+
+    <!-- Calendar and booking form -->
+    <section class="live-main-grid">
+
+        <!-- Weekly calendar -->
+        <div class="live-panel overflow-hidden flex flex-col min-w-0" style="min-height:0">
+            <div class="flex flex-wrap items-center justify-between gap-2 border-b border-sky-900/50 p-3">
+                <div class="min-w-0">
+                    <h2 class="text-base font-bold text-white">Weekly Calendar</h2>
+                    <p class="live-muted mt-1">Select an available slot to prefill the booking form.</p>
+                </div>
+                <span class="text-[11px] text-cyan-200">
+                    {{ week_start|date:"d M" }} – {{ week_end|date:"d M Y" }}
+                </span>
+            </div>
+
+            <div class="live-calendar-wrap">
+                <div class="live-calendar">
+
+                    <div class="live-calendar-head text-[10px] font-bold text-slate-300">
+                        Time
+                    </div>
+
+                    {% for day in calendar_days %}
+                    <div class="live-calendar-head">
+                        <p class="text-[11px] font-bold text-white">{{ day.weekday }}</p>
+                        <p class="mt-1 text-[10px] text-slate-400">{{ day.date|date:"d M" }}</p>
+                        {% if day.date == today %}
+                        <span class="mt-1 rounded-full bg-cyan-400/15 px-1.5 py-0.5 text-[8px] text-cyan-200">
+                            Today
+                        </span>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+
+                    {% for row in calendar_rows %}
+                    <div class="live-time-cell">{{ row.label }}</div>
+
+                    {% for cell in row.cells %}
+                    <div class="live-day-cell">
+                        {% if cell.classes %}
+                        <div class="space-y-1">
+                            {% for booked in cell.classes %}
+                            <div class="live-class {% if booked.is_live %}is-live{% elif booked.status == 'completed' %}is-completed{% elif booked.status == 'cancelled' %}is-cancelled{% elif booked.status == 'no_show' %}is-no-show{% endif %}">
+                                <div class="flex items-start justify-between gap-1">
+                                    <p class="live-class-title">{{ booked.subject.subject_name }}</p>
+
+                                    {% if booked.is_live %}
+                                    <span class="shrink-0 rounded bg-rose-500 px-1 py-0.5 text-[8px] text-white">LIVE</span>
+                                    {% elif booked.status != 'confirmed' %}
+                                    <span class="shrink-0 rounded bg-slate-700 px-1 py-0.5 text-[8px] text-white">
+                                        {{ booked.get_status_display }}
+                                    </span>
+                                    {% endif %}
+                                </div>
+
+                                <p class="live-class-time">
+                                    {{ booked.start_at|date:"g:i A" }}–{{ booked.end_at|date:"g:i A" }}
+                                </p>
+                                <p class="live-class-detail">{{ booked.teacher.full_name }}</p>
+                                {% if booked.status == "confirmed" and booked.start_at > now %}
+                                <div class="mt-2 flex flex-wrap gap-1">
+                                    <a class="live-btn" style="min-height:24px;padding:3px 5px;font-size:9px" href="{% url 'live_classes:admin_reschedule_live_class' booked.pk %}">Reschedule</a>
+                                </div>
+                                {% endif %}
+                            </div>
+                            {% endfor %}
+                        </div>
+
+                        {% elif cell.past %}
+                        <div class="live-muted text-center py-2" title="No class was scheduled for this past slot">
+                            No Schedule
+                        </div>
+
+                        {% elif cell.available %}
+                        <a class="live-free"
+                           href="?week={{ week_start|date:'Y-m-d' }}&amp;batch={{ selected_batch }}&amp;class_date={{ cell.date|date:'Y-m-d' }}&amp;start_time={{ cell.time|time:'H:i' }}#booking-panel"
+                           title="Select {{ cell.date|date:'D, d M' }} at {{ cell.label }}">
+                            <i class="ri-add-line"></i>
+                            <span>Available</span>
+                        </a>
+
+                        {% else %}
+                        <div class="live-muted text-center py-2">No Schedule</div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                    {% endfor %}
+
+                </div>
+            </div>
+        </div>
+
+        <!-- Booking form -->
+        <aside id="booking-panel" class="live-panel min-w-0 p-4">
+            <div class="mb-4 flex items-center gap-3">
+                <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-cyan-400 text-slate-950">
+                    <i class="ri-add-line text-2xl"></i>
+                </div>
+                <div class="min-w-0">
+                    <h2 class="text-base font-extrabold text-white">Schedule a New Live Class</h2>
+                    <p class="live-muted mt-1">Choose any published or archived batch. Booking is independent of the timetable filter.</p>
+                </div>
+            </div>
+
+            <form method="post" class="space-y-3" novalidate>
+                {% csrf_token %}
+
+                {% if form.is_bound and form.non_field_errors %}
+                <div class="booking-errors rounded-lg border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-200" role="alert">
+                    {% for error in form.non_field_errors %}
+                    <p>{{ error }}</p>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                {% for hidden in form.hidden_fields %}
+                    {{ hidden }}
+                {% endfor %}
+
+                <div class="space-y-3">
+                    {% for field in form.visible_fields %}
+                        {% if field.name == "batch" or field.name == "subject" or field.name == "chapter" or field.name == "teacher" %}
+                        <div class="min-w-0">
+                            <label class="live-label" for="{{ field.id_for_label }}">
+                                {{ field.label }}
+                                {% if field.field.required %}<span class="text-rose-400">*</span>{% endif %}
+                            </label>
+                            {{ field }}
+
+                            {% if field.help_text %}
+                            <p class="live-muted mt-1">{{ field.help_text }}</p>
+                            {% endif %}
+
+                            {% if form.is_bound %}
+                                {% for error in field.errors %}
+                                <p class="live-error booking-errors" role="alert">{{ error }}</p>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    {% for field in form.visible_fields %}
+                        {% if field.name == "class_date" or field.name == "start_time" or field.name == "duration_minutes" %}
+                        <div class="min-w-0">
+                            <label class="live-label" for="{{ field.id_for_label }}">
+                                {{ field.label }}
+                                {% if field.field.required %}<span class="text-rose-400">*</span>{% endif %}
+                            </label>
+                            {{ field }}
+
+                            {% if form.is_bound %}
+                                {% for error in field.errors %}
+                                <p class="live-error booking-errors" role="alert">{{ error }}</p>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+
+
+
+
+                {% for field in form.visible_fields %}
+                    {% if field.name == "class_notes" or field.name == "notes" %}
+                    <div class="min-w-0">
+                        <label class="live-label" for="{{ field.id_for_label }}">{{ field.label }}{% if not field.field.required %} (Optional){% endif %}</label>
+                        {{ field }}
+                        {% if form.is_bound %}{% for error in field.errors %}<p class="live-error booking-errors" role="alert">{{ error }}</p>{% endfor %}{% endif %}
+                    </div>
+                    {% endif %}
+                {% endfor %}
+
+                <div class="rounded-lg border border-cyan-900/60 bg-cyan-950/20 p-3">
+                    <p class="flex items-start gap-2 text-[11px] leading-5 text-slate-300">
+                        <i class="ri-information-line text-cyan-300 text-base"></i>
+                        <span>
+                            Availability is checked again on submit. Batch conflicts and teacher conflicts are validated by the server.
+                        </span>
+                    </p>
+                </div>
+
+                <button type="submit" class="live-btn live-btn-primary w-full">
+                    <i class="ri-calendar-check-line text-base"></i>
+                    Schedule Live Class
+                </button>
+            </form>
+        </aside>
+    </section>
+
+    <!-- Legend -->
+    <section class="live-panel p-3" style="margin-bottom:0">
+        <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3">
+
+            <div class="flex min-w-0 items-start gap-2">
+                <span class="live-legend-dot mt-1 bg-cyan-400"></span>
+                <div class="min-w-0">
+                    <p class="text-xs font-semibold text-white">Scheduled Class</p>
+                    <p class="live-muted mt-1">Confirmed live class</p>
+                </div>
+            </div>
+
+            <div class="flex min-w-0 items-start gap-2">
+                <span class="live-legend-dot mt-1 bg-rose-400"></span>
+                <div class="min-w-0">
+                    <p class="text-xs font-semibold text-white">Live Now</p>
+                    <p class="live-muted mt-1">Currently ongoing</p>
+                </div>
+            </div>
+
+            <div class="flex min-w-0 items-start gap-2">
+                <span class="live-legend-dot mt-1 bg-violet-400"></span>
+                <div class="min-w-0">
+                    <p class="text-xs font-semibold text-white">Completed Class</p>
+                    <p class="live-muted mt-1">Class marked complete</p>
+                </div>
+            </div>
+
+            <div class="flex min-w-0 items-start gap-2">
+                <span class="live-legend-dot mt-1 bg-amber-400"></span>
+                <div class="min-w-0">
+                    <p class="text-xs font-semibold text-white">Cancelled / No Show</p>
+                    <p class="live-muted mt-1">Historical status</p>
+                </div>
+            </div>
+
+            <div class="flex min-w-0 items-start gap-2">
+                <span class="live-legend-dot mt-1 border border-dashed border-emerald-400"></span>
+                <div class="min-w-0">
+                    <p class="text-xs font-semibold text-white">Available Slot</p>
+                    <p class="live-muted mt-1">Availability rechecked on submit</p>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+</div>
+
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const bookingForm = document.querySelector("#booking-panel form[method='post']");
+    if (!bookingForm) return;
+
+    const batch = bookingForm.querySelector('[name="batch"]');
+    const subject = bookingForm.querySelector('[name="subject"]');
+    const chapter = bookingForm.querySelector('[name="chapter"]');
+    const teacher = bookingForm.querySelector('[name="teacher"]');
+
+    function resetSelect(select, placeholder) {
+        if (!select) return;
+        select.innerHTML = "";
+        const option = document.createElement("option");
+        option.value = "";
+        option.textContent = placeholder;
+        select.appendChild(option);
+        select.value = "";
+    }
+
+    async function loadOptions(kind, params, select, placeholder, selectedValue) {
+        resetSelect(select, "Loading...");
+        select.disabled = true;
+        const url = new URL(window.location.href);
+        url.search = "";
+        url.hash = "";
+        url.searchParams.set("ajax", kind);
+        Object.entries(params).forEach(([key, value]) => url.searchParams.set(key, value || ""));
+        try {
+            const response = await fetch(url.toString(), {
+                headers: {"X-Requested-With": "XMLHttpRequest"},
+                credentials: "same-origin"
+            });
+            if (!response.ok) throw new Error("Could not load options");
+            const data = await response.json();
+            resetSelect(select, placeholder);
+            data.results.forEach(item => {
+                const option = document.createElement("option");
+                option.value = item.id;
+                option.textContent = item.text;
+                select.appendChild(option);
+            });
+            if (selectedValue && Array.from(select.options).some(o => o.value === String(selectedValue))) {
+                select.value = String(selectedValue);
+            }
+        } catch (error) {
+            resetSelect(select, placeholder);
+        } finally {
+            select.disabled = false;
+        }
+    }
+
+    async function refreshSubjects(selectedSubject) {
+        resetSelect(subject, "Select subject");
+        resetSelect(chapter, "Select published chapter");
+        resetSelect(teacher, "Select teacher");
+        if (batch.value) {
+            await loadOptions("subjects", {batch_id: batch.value}, subject, "Select subject", selectedSubject || "");
+        }
+    }
+
+    async function refreshChapterAndTeacher(selectedChapter, selectedTeacher) {
+        resetSelect(chapter, "Select published chapter");
+        resetSelect(teacher, "Select teacher");
+        if (!batch.value || !subject.value) return;
+        const params = {batch_id: batch.value, subject_id: subject.value};
+        await Promise.all([
+            loadOptions("chapters", params, chapter, "Select published chapter", selectedChapter || ""),
+            loadOptions("teachers", params, teacher, "Select teacher", selectedTeacher || "")
+        ]);
+    }
+
+    batch.addEventListener("change", function () {
+        refreshSubjects("");
+    });
+    subject.addEventListener("change", function () {
+        refreshChapterAndTeacher("", "");
+    });
+
+    // Restore dependent choices after an invalid POST without allowing stale
+    // subject/chapter/teacher IDs to bypass the server-side queryset checks.
+    if (batch.value) {
+        const oldSubject = subject.value;
+        const oldChapter = chapter.value;
+        const oldTeacher = teacher.value;
+        refreshSubjects(oldSubject).then(function () {
+            if (subject.value) refreshChapterAndTeacher(oldChapter, oldTeacher);
+        });
+    }
+
+    // Field errors from a failed submission disappear after five seconds.
+    document.querySelectorAll("#booking-panel .booking-errors").forEach(function (item) {
+        window.setTimeout(function () {
+            item.style.transition = "opacity .25s ease";
+            item.style.opacity = "0";
+            window.setTimeout(function () { item.remove(); }, 300);
+        }, 5000);
+    });
+});
+</script>
+
+{% endblock %}

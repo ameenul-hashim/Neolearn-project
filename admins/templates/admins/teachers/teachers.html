@@ -1,436 +1,1364 @@
 {% extends "admins/admin_base.html" %}
 
 {% load static %}
-{% block title %}
-Teachers
-{% endblock %}
+
+{% block title %}Teachers{% endblock %}
 
 {% block admin_content %}
 
-<div class="space-y-8">
+<div class="mx-auto -mt-3 w-full max-w-[1800px] space-y-5 pt-0 sm:pt-0">
 
-    <!-- ================= HEADER ================= -->
-    <div class="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-        <!-- TITLE -->
+    <!-- PAGE HEADER -->
+
+    <section class="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+
         <div>
-            <h1 class="text-4xl font-bold text-white">Teachers</h1>
-            <p class="mt-2 text-slate-400">Manage faculty, assignments and performance.</p>
+
+            <h1 class="text-[27px] font-extrabold tracking-tight text-white sm:text-[32px]">Teachers</h1>
+
+            <p class="mt-1 text-[13px] text-[#94A3B8] sm:text-sm">Manage faculty and teacher accounts.</p>
+
         </div>
 
-        <!-- ACTION AREA -->
-        <div class="flex flex-col gap-3 lg:flex-row">
-            <!-- SEARCH -->
-            <form method="GET" class="flex gap-3">
-                <input
-                    type="text"
-                    name="search"
-                    value="{{ request.GET.search }}"
-                    placeholder="Search teachers..."
-                    class="w-64 rounded-lg border border-slate-700 bg-slate-800 px-5 py-3 text-sm text-white placeholder-slate-500 outline-none focus:border-cyan-400">
-                <button type="submit" class="rounded-lg bg-cyan-500 px-6 font-semibold text-slate-900 transition hover:bg-cyan-400">Search</button>
-                
-                <!-- CLEAR BUTTON -->
-                {% if request.GET.search %}
-                <a href="{% url 'admin_teachers' %}" 
-                   class="rounded-lg border border-slate-700 bg-slate-800 px-6 py-3 text-sm font-medium text-slate-400 transition hover:border-red-500 hover:text-red-400">
-                    ✕ Clear
-                </a>
-                {% endif %}
-            </form>
+        <div class="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center">
 
-            <!-- CREATE TEACHER -->
-            <a href="{% url 'create_teacher' %}" class="rounded-lg bg-cyan-500 px-6 py-3 font-semibold text-slate-900 shadow-lg shadow-cyan-500/20 transition hover:bg-cyan-400">+ Create Teacher</a>
-        </div>
-    </div>
+            <form method="get" action="{% url 'admin_teachers' %}" class="flex min-w-0 flex-1 flex-wrap gap-2">
 
-    <!-- ================= TOP STATUS CARDS ================= -->
-    <div class="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4">
-        <!-- TOTAL TEACHERS -->
-        <div class="rounded-xl border border-slate-700 bg-[#111827] p-6">
-            <p class="text-sm text-slate-400">Total Faculty</p>
-            <h2 class="mt-3 text-4xl font-bold text-white">{{ total_teachers }}</h2>
-            <p class="mt-2 text-sm text-cyan-400">Registered Teachers</p>
-        </div>
+                <label class="flex min-w-0 flex-1 items-center gap-3 rounded-xl border border-[#153957] bg-[#071224] px-4 py-3 focus-within:border-cyan-400 sm:w-60 sm:flex-none">
 
-        <!-- ACTIVE -->
-        <div class="rounded-xl border border-slate-700 bg-[#111827] p-6">
-            <p class="text-sm text-slate-400">Active</p>
-            <h2 class="mt-3 text-4xl font-bold text-white">{{ active_teachers }}</h2>
-            <p class="mt-2 text-sm text-green-400">Can Login</p>
-        </div>
+                    <i class="ri-search-line text-lg text-slate-300"></i>
 
-        <!-- RATING -->
-        <div class="rounded-xl border border-slate-700 bg-[#111827] p-6">
-            <p class="text-sm text-slate-400">Avg Rating</p>
-            <h2 class="mt-3 text-4xl font-bold text-white">0.0 ⭐</h2>
-            <p class="mt-2 text-sm text-green-400">Coming from reviews</p>
-        </div>
+                    <input type="search" name="search" value="{{ search|default:'' }}"
 
-        <!-- BLOCKED -->
-        <div class="rounded-xl border border-slate-700 bg-[#111827] p-6">
-            <p class="text-sm text-slate-400">Blocked</p>
-            <h2 class="mt-3 text-4xl font-bold text-white">{{ blocked_teachers }}</h2>
-            <p class="mt-2 text-sm text-red-400">Login Disabled</p>
-        </div>
-    </div>
+                           placeholder="Search teachers..." aria-label="Search teachers"
 
-    <!-- ================= TEACHER GRID ================= -->
-    <div class="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
-        {% for teacher in teachers %}
+                           class="w-full min-w-0 bg-transparent text-[13px] text-white outline-none placeholder:text-slate-500">
 
-        <!-- ================= TEACHER CARD ================= -->
-        <div class="relative rounded-xl border border-slate-800 bg-[#111827] transition hover:-translate-y-1 hover:border-cyan-500 hover:shadow-xl hover:shadow-cyan-500/10">
+                </label>
 
-            <!-- ================= CARD HEADER ================= -->
-            <div class="flex items-start justify-between p-5">
-                <div class="flex items-center gap-3">
-                    <!-- PROFILE IMAGE -->
-                    {% if teacher.profile_image %}
-                    <img src="{{ teacher.profile_image.url }}" class="h-12 w-12 rounded-lg object-cover">
-                    {% else %}
-                    <!-- DEFAULT LETTER AVATAR -->
-                    <div class="flex h-12 w-12 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-400 to-blue-500 text-sm font-bold text-white">
-                        {% if teacher.full_name %}
-                            {{ teacher.initials }}
-                        {% elif teacher.email %}
-                            {{ teacher.email|slice:":2"|upper }}
-                        {% else %}
-                            {{ teacher.user.email|slice:":2"|upper }}
-                        {% endif %}
-                    </div>
-                    {% endif %}
+                <button type="submit" class="rounded-xl bg-cyan-400 px-5 py-3 text-[13px] font-extrabold text-[#02130D] transition hover:bg-cyan-300">
 
-                    <div>
-                        <!-- NAME -->
-                        <h2 class="text-base font-bold text-white">
-                            {% if teacher.full_name %}
-                                {{ teacher.full_name }}
-                            {% else %}
-                                {{ teacher.user.email|cut:"@gmail.com" }}
-                            {% endif %}
-                        </h2>
-                        <p class="mt-1 text-xs text-slate-400">
-                            {% if teacher.email %}
-                                {{ teacher.email }}
-                            {% else %}
-                                {{ teacher.user.email }}
-                            {% endif %}
-                        </p>
-                        <!-- PHONE -->
-                        <p class="mt-1 text-xs text-slate-500">{{ teacher.phone_number }}</p>
+                    Search
 
-                        {% if teacher.is_blocked %}
-                        <span class="mt-2 inline-flex rounded-full bg-red-500/15 px-2 py-1 text-[11px] font-semibold text-red-400">🔴 Blocked</span>
-                        {% else %}
-                        <span class="mt-2 inline-flex rounded-full bg-green-500/15 px-2 py-1 text-[11px] font-semibold text-green-400">🟢 Active</span>
-                        {% endif %}
-                    </div>
-                </div>
-
-                <!-- ================= THREE DOT MENU (INSIDE CARD) ================= -->
-                <div class="relative teacher-menu-wrapper">
-                    <button type="button" class="teacher-menu-btn px-2 text-xl text-slate-400 hover:text-white">⋮</button>
-                    <!-- DROPDOWN -->
-                    <div class="teacher-menu invisible absolute right-0 z-50 mt-2 w-52 rounded-xl border border-slate-700 bg-[#020617] py-2 opacity-0 shadow-2xl transition">
-                        <a href="#" class="block px-4 py-2 text-sm text-slate-300 hover:text-cyan-400">👁 View Profile</a>
-                        <a href="#" class="block px-4 py-2 text-sm text-yellow-400 hover:text-yellow-300">✏️ Edit Teacher</a>
-                        <a href="{% url 'admin_assign_teacher_batch' teacher.id %}" class="block px-4 py-2 text-sm text-slate-300 hover:text-cyan-400">📚 Assign Batch</a>
-                        <a href="{% url 'admin_teacher_assignments' teacher.id %}" class="block px-4 py-2 text-sm text-slate-300 hover:text-cyan-400">🗂 Manage Assignments</a>
-                    </div>
-                </div>
-            </div>
-
-            <!-- ================= FOOTER STATS ================= -->
-            <div class="grid grid-cols-3 border-t border-slate-800 px-5 py-3">
-                <!-- RATING -->
-                <div>
-                    <p class="text-sm font-bold text-yellow-400">⭐ 0.0</p>
-                    <p class="text-[10px] uppercase text-slate-500">Rating</p>
-                </div>
-                <!-- STUDENTS -->
-                <div class="text-center">
-                    <p class="text-sm font-bold text-white">{{ teacher.total_students|default:"0" }}</p>
-                    <p class="text-[10px] uppercase text-slate-500">Students</p>
-                </div>
-                <!-- BATCH COUNT -->
-                <div class="text-right">
-                    <p class="text-sm font-bold text-white">{{ teacher.batch_count|default:"0" }}</p>
-                    <p class="text-[10px] uppercase text-slate-500">Batches</p>
-                </div>
-            </div>
-
-            <!-- ================= BOTTOM ACTION BUTTONS ================= -->
-            <div class="flex items-center justify-between gap-2 border-t border-slate-800 px-5 py-3">
-                <!-- ASSIGNED BUTTON -->
-                <button type="button" 
-                        onclick="openBatchesModal('{{ teacher.id }}', '{{ teacher.full_name|escapejs }}')" 
-                        class="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-indigo-500/20 to-purple-500/20 px-4 py-2 text-sm font-medium text-indigo-300 transition hover:from-indigo-500/30 hover:to-purple-500/30 hover:text-indigo-200 hover:shadow-lg hover:shadow-indigo-500/20 border border-indigo-500/20">
-                    <span class="text-lg">📋</span>
-                    <span>Assigned</span>
-                    <span class="text-xs bg-gradient-to-r from-indigo-500 to-purple-500 px-2 py-0.5 rounded-full text-white">{{ teacher.batches.count }}</span>
                 </button>
 
-                <div class="flex items-center gap-2">
-                    <!-- BLOCK / UNBLOCK BUTTON -->
-                    {% if teacher.is_blocked %}
-                    <button type="button" onclick="openTeacherModal('{{ teacher.id }}', '{{ teacher.full_name|escapejs }}', 'unblock')" class="inline-flex items-center gap-1.5 rounded-lg bg-green-500/20 px-3 py-2 text-xs font-medium text-green-400 transition hover:bg-green-500/30 hover:text-green-300">
-                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
-                        </svg>
-                        Unblock
-                    </button>
-                    {% else %}
-                    <button type="button" onclick="openTeacherModal('{{ teacher.id }}', '{{ teacher.full_name|escapejs }}', 'block')" class="inline-flex items-center gap-1.5 rounded-lg bg-orange-500/20 px-3 py-2 text-xs font-medium text-orange-400 transition hover:bg-orange-500/30 hover:text-orange-300">
-                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
-                        </svg>
-                        Block
-                    </button>
-                    {% endif %}
+                {% if search %}
 
-                    <!-- DELETE BUTTON -->
-                    <button type="button" onclick="openDeleteModal('{{ teacher.id }}', '{{ teacher.full_name|escapejs }}')" class="inline-flex items-center gap-1.5 rounded-lg bg-red-500/20 px-3 py-2 text-xs font-medium text-red-400 transition hover:bg-red-500/30 hover:text-red-300">
-                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                        </svg>
-                        Delete
-                    </button>
+                <a href="{% url 'admin_teachers' %}" class="inline-flex items-center gap-1 rounded-xl border border-red-500/70 px-4 py-3 text-[13px] font-semibold text-white hover:bg-red-500/10">
+
+                    <i class="ri-close-line"></i> Clear
+
+                </a>
+
+                {% endif %}
+
+            </form>
+
+            <a href="{% url 'create_teacher' %}" class="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-cyan-400 px-5 py-3 text-[13px] font-extrabold text-[#02130D] transition hover:bg-cyan-300">
+
+                <i class="ri-add-line text-lg"></i> Create Teacher
+
+            </a>
+
+        </div>
+
+    </section>
+
+    <!-- SUMMARY CARDS -->
+
+    <section class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+
+        <div class="relative overflow-hidden rounded-[16px] border border-blue-800/70 bg-gradient-to-br from-[#071a3b] to-[#08285a] p-4">
+
+            <div class="flex items-center gap-4">
+
+                <div class="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-blue-700/70 text-2xl text-cyan-300">
+
+                    <i class="ri-team-fill"></i>
+
+                </div>
+
+                <div>
+
+                    <p class="text-[12px] text-slate-300">Total Teachers</p>
+
+                    <p class="mt-1 text-[28px] font-extrabold leading-none">{{ total_teachers|default:0 }}</p>
+
+                    <p class="mt-2 text-[12px] font-medium text-cyan-300">Registered Teachers</p>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <div class="relative overflow-hidden rounded-[16px] border border-emerald-800/70 bg-gradient-to-br from-[#052b2b] to-[#064b3c] p-4">
+
+            <div class="flex items-center gap-4">
+
+                <div class="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-emerald-700/60 text-2xl text-teal-300">
+
+                    <i class="ri-user-fill"></i>
+
+                </div>
+
+                <div>
+
+                    <p class="text-[12px] text-slate-300">Active</p>
+
+                    <p class="mt-1 text-[28px] font-extrabold leading-none">{{ active_teachers|default:0 }}</p>
+
+                    <p class="mt-2 text-[12px] font-medium text-cyan-300">Can Login</p>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <div class="relative overflow-hidden rounded-[16px] border border-blue-800/70 bg-gradient-to-br from-[#210653] to-[#062b60] p-4">
+
+            <div class="flex items-center gap-4">
+
+                <div class="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-violet-700/70 text-2xl text-white">
+
+                    <i class="ri-book-open-line"></i>
+
+                </div>
+
+                <div>
+
+                    <p class="text-[12px] text-slate-300">Assigned Batches</p>
+
+                    <p class="mt-1 text-[28px] font-extrabold leading-none">{{ assigned_batches_count|default:0 }}</p>
+
+                    <p class="mt-2 text-[12px] font-medium text-cyan-300">Teachers with batches</p>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <div class="relative overflow-hidden rounded-[16px] border border-rose-900/70 bg-gradient-to-br from-[#330d25] to-[#500d2c] p-4">
+
+            <div class="flex items-center gap-4">
+
+                <div class="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-rose-700/60 text-2xl text-rose-300">
+
+                    <i class="ri-forbid-2-line"></i>
+
+                </div>
+
+                <div>
+
+                    <p class="text-[12px] text-slate-300">Blocked</p>
+
+                    <p class="mt-1 text-[28px] font-extrabold leading-none">{{ blocked_teachers|default:0 }}</p>
+
+                    <p class="mt-2 text-[12px] font-medium text-rose-400">Login Disabled</p>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </section>
+
+    <!-- FILTERS: APPLY BUTTON SUBMITS THE FORM -->
+
+    <section class="rounded-[16px] border border-[#123957] bg-[#061729] p-4">
+
+        <form method="get" action="{% url 'admin_teachers' %}"
+
+              class="grid grid-cols-1 items-end gap-3 sm:grid-cols-2 xl:grid-cols-[1fr_1fr_1fr_1fr_auto_auto]">
+
+            <input type="hidden" name="search" value="{{ search|default:'' }}">
+
+            <div class="min-w-0">
+
+                <label for="teacher-status" class="mb-1.5 block text-[12px] font-medium text-slate-200">Status</label>
+
+                <select id="teacher-status" name="status" class="w-full rounded-lg border border-[#183d5d] bg-[#0a2037] px-3 py-2.5 text-[12px] text-white outline-none focus:border-cyan-400">
+
+                    <option value="" {% if not status %}selected{% endif %}>All Status</option>
+
+                    <option value="active" {% if status == "active" %}selected{% endif %}>Active</option>
+
+                    <option value="blocked" {% if status == "blocked" %}selected{% endif %}>Blocked</option>
+
+                </select>
+
+            </div>
+
+            <!-- SEARCHABLE BATCH PICKER -->
+            <div class="teacher-picker min-w-0" data-picker="batch">
+                <label for="batchPickerSearch" class="mb-1.5 block text-[12px] font-medium text-slate-200">Batch</label>
+                <input type="hidden" id="teacher-batch" name="batch" value="{{ selected_batch|default:'' }}">
+                <button type="button" class="teacher-picker-trigger flex w-full items-center justify-between gap-2 rounded-lg border border-[#183d5d] bg-[#0a2037] px-3 py-2.5 text-left text-[12px] text-white outline-none hover:border-cyan-400 focus:border-cyan-400" aria-expanded="false">
+                    <span class="teacher-picker-value truncate">{% if selected_batch %}{% for batch in batches %}{% if selected_batch|stringformat:"s" == batch.id|stringformat:"s" %}{{ batch.batch_name }}{% endif %}{% endfor %}{% else %}All Batches{% endif %}</span>
+                    <i class="ri-arrow-down-s-line shrink-0 text-base"></i>
+                </button>
+                <div class="teacher-picker-panel" hidden>
+                    <input type="search" id="batchPickerSearch" class="teacher-picker-search" placeholder="Search batches..." autocomplete="off" aria-label="Search batches">
+                    <button type="button" class="teacher-picker-option" data-value="">All Batches</button>
+                    {% for batch in batches %}
+                    <button type="button" class="teacher-picker-option" data-value="{{ batch.id }}">{{ batch.batch_name }}</button>
+                    {% endfor %}
+                    <p class="teacher-picker-empty hidden px-3 py-3 text-[11px] text-slate-400">No matching batches.</p>
                 </div>
             </div>
-        </div>
+
+            <!-- SEARCHABLE SUBJECT PICKER -->
+            <div class="teacher-picker min-w-0" data-picker="subject">
+                <label for="subjectPickerSearch" class="mb-1.5 block text-[12px] font-medium text-slate-200">Subject</label>
+                <input type="hidden" id="teacher-subject" name="subject" value="{{ selected_subject|default:'' }}">
+                <button type="button" class="teacher-picker-trigger flex w-full items-center justify-between gap-2 rounded-lg border border-[#183d5d] bg-[#0a2037] px-3 py-2.5 text-left text-[12px] text-white outline-none hover:border-cyan-400 focus:border-cyan-400" aria-expanded="false">
+                    <span class="teacher-picker-value truncate">{% if selected_subject %}{% for subject in subjects %}{% if selected_subject|stringformat:"s" == subject.id|stringformat:"s" %}{{ subject.subject_name }}{% if subject.batch %} — {{ subject.batch.batch_name }}{% endif %}{% endif %}{% endfor %}{% else %}All Subjects{% endif %}</span>
+                    <i class="ri-arrow-down-s-line shrink-0 text-base"></i>
+                </button>
+                <div class="teacher-picker-panel" hidden>
+                    <input type="search" id="subjectPickerSearch" class="teacher-picker-search" placeholder="Search subjects..." autocomplete="off" aria-label="Search subjects">
+                    <button type="button" class="teacher-picker-option" data-value="">All Subjects</button>
+                    {% for subject in subjects %}
+                    <button type="button" class="teacher-picker-option" data-value="{{ subject.id }}" data-batch-id="{{ subject.batch_id|default:'' }}">{{ subject.subject_name }}{% if subject.batch %} — {{ subject.batch.batch_name }}{% endif %}</button>
+                    {% endfor %}
+                    <p class="teacher-picker-empty hidden px-3 py-3 text-[11px] text-slate-400">No matching subjects.</p>
+                </div>
+            </div>
+
+            <div class="min-w-0">
+
+                <label for="teacher-sort" class="mb-1.5 flex items-center gap-2 text-[12px] font-medium text-slate-200">
+
+                    <i class="ri-bar-chart-grouped-line text-base"></i> Sort by
+
+                </label>
+
+                <select id="teacher-sort" name="sort" class="w-full rounded-lg border border-[#183d5d] bg-[#0a2037] px-3 py-2.5 text-[12px] text-white outline-none focus:border-cyan-400">
+
+                    <option value="latest" {% if sort == "latest" or not sort %}selected{% endif %}>Latest</option>
+
+                    <option value="oldest" {% if sort == "oldest" %}selected{% endif %}>Oldest</option>
+
+                    <option value="a-z" {% if sort == "a-z" %}selected{% endif %}>A–Z</option>
+
+                    <option value="z-a" {% if sort == "z-a" %}selected{% endif %}>Z–A</option>
+
+                </select>
+
+            </div>
+
+            <button type="submit" class="inline-flex items-center justify-center gap-2 rounded-lg bg-cyan-400 px-4 py-3 text-[12px] font-extrabold text-slate-950 transition hover:bg-cyan-300">
+
+                <i class="ri-filter-3-line text-base"></i> Apply Filters
+
+            </button>
+
+            <a href="{% url 'admin_teachers' %}" class="inline-flex items-center justify-center gap-2 rounded-lg border border-[#183d5d] bg-[#071a2c] px-4 py-3 text-[12px] font-semibold text-white transition hover:border-cyan-400">
+
+                <i class="ri-refresh-line text-base"></i> Clear
+
+            </a>
+
+        </form>
+
+    </section>
+
+    <!-- TEACHER CARD GRID -->
+
+    <section class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+
+        {% for teacher in teachers %}
+
+        <article class="group flex min-w-0 flex-col overflow-visible rounded-[16px] border border-white/8 bg-[#071224] transition-all duration-300 hover:-translate-y-0.5 hover:border-cyan-400/30 hover:shadow-[0_18px_35px_rgba(0,0,0,0.22)]">
+
+            <!-- TEACHER DETAILS -->
+
+            <div class="flex min-w-0 items-start gap-3 p-4">
+
+                {% if teacher.profile_image %}
+
+                <img src="{{ teacher.profile_image.url }}"
+
+                     alt="{{ teacher.full_name|default:teacher.user.username }}"
+
+                     loading="lazy"
+
+                     class="h-[62px] w-[62px] shrink-0 rounded-full border border-white/10 object-cover">
+
+                {% else %}
+
+                <div class="flex h-[62px] w-[62px] shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-cyan-500/30 to-blue-600/30 text-xl font-bold text-cyan-300">
+
+                    {% if teacher.full_name %}
+
+                    {{ teacher.full_name|slice:":1"|upper }}
+
+                    {% else %}
+
+                    {{ teacher.user.username|slice:":1"|upper }}
+
+                    {% endif %}
+
+                </div>
+
+                {% endif %}
+
+                <div class="min-w-0 flex-1 pt-1">
+
+                    <h2 class="truncate text-[14px] font-bold leading-5 text-white group-hover:text-cyan-300">
+
+                        {{ teacher.full_name|default:teacher.user.username }}
+
+                    </h2>
+
+                    <p class="mt-2 flex min-w-0 items-center gap-2 text-[11px] text-[#CBD5E1]">
+
+                        <i class="ri-mail-line shrink-0 text-[13px]"></i>
+
+                        <span class="truncate">{{ teacher.email|default:teacher.user.email|default:"No email" }}</span>
+
+                    </p>
+
+                    <p class="mt-1 flex items-center gap-2 text-[11px] text-[#CBD5E1]">
+
+                        <i class="ri-phone-line shrink-0 text-[13px]"></i>
+
+                        <span class="truncate">{{ teacher.phone_number|default:"No phone number" }}</span>
+
+                    </p>
+
+                </div>
+
+                <!-- THREE-DOT MENU -->
+
+                <div class="teacher-menu-wrapper relative -mr-1 -mt-1 shrink-0">
+
+                    <button type="button" class="teacher-menu-btn flex h-8 w-7 items-center justify-center rounded-md bg-[#0b2b43] text-xl text-white hover:bg-cyan-900"
+
+                            aria-label="Teacher actions" aria-haspopup="true" aria-expanded="false">⋮</button>
+
+                    <div class="teacher-menu invisible absolute right-0 top-full z-50 mt-2 w-56 rounded-lg border border-[#24435d] bg-[#061729] py-1 opacity-0 shadow-2xl transition">
+                        <a href="{% url 'admin_teacher_detail' teacher.id %}" class="flex w-full items-center gap-3 px-4 py-2.5 text-left text-[12px] text-white hover:bg-cyan-500/20 hover:text-cyan-100">
+                            <i class="ri-eye-line text-base text-cyan-400"></i> View Details
+                        </a>
+                        <button type="button" class="teacher-edit-trigger flex w-full items-center gap-3 px-4 py-2.5 text-left text-[12px] text-white hover:bg-cyan-500/20 hover:text-cyan-100"
+                                data-edit-url="{% url 'admin_edit_teacher' teacher.id %}"
+                                data-teacher-name="{{ teacher.full_name|default:teacher.user.username|escape }}"
+                                data-username="{{ teacher.user.username|escape }}"
+                                data-email="{{ teacher.email|default:teacher.user.email|escape }}">
+                            <i class="ri-edit-line text-base text-sky-400"></i> Edit Account
+                        </button>
+                        <a href="{% url 'admin_assign_teacher_batch' teacher.id %}" class="flex items-center gap-3 px-4 py-2.5 text-[12px] text-white hover:bg-cyan-500/20 hover:text-cyan-100">
+                            <i class="ri-book-open-line text-base text-violet-400"></i> Assign Batch
+                        </a>
+                        <a href="{% url 'admin_teacher_assignments' teacher.id %}" class="flex items-center gap-3 px-4 py-2.5 text-[12px] text-white hover:bg-cyan-500/20 hover:text-cyan-100">
+                            <i class="ri-folder-settings-line text-base text-teal-300"></i> Manage Assignments
+                        </a>
+                        <button type="button"
+                                onclick="openDeleteModal('{{ teacher.id }}', '{{ teacher.full_name|default:teacher.user.username|escapejs }}')"
+                                class="flex w-full items-center gap-3 px-4 py-2.5 text-left text-[12px] font-medium text-rose-300 transition hover:bg-rose-500/25 hover:text-rose-100 focus:bg-rose-500/25 focus:outline-none">
+                            <i class="ri-delete-bin-line text-base text-rose-400"></i> Delete Teacher
+                        </button>
+                        <div class="my-1 border-t border-white/10"></div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- QUALIFICATION -->
+
+            <div class="flex min-h-[38px] items-center gap-3 px-4 pb-3 text-[12px] text-slate-200">
+
+                <i class="ri-graduation-cap-line shrink-0 text-lg"></i>
+
+                <span class="truncate">{{ teacher.qualification|default:teacher.specialization|default:"Qualification not added" }}</span>
+
+            </div>
+
+            <!-- STATUS AND ACTION ICONS -->
+
+            <div class="mt-auto flex flex-wrap items-center justify-between gap-2 border-t border-white/5 px-3 py-3">
+
+                {% if teacher.is_blocked %}
+
+                <span class="inline-flex h-[34px] shrink-0 items-center gap-2 rounded-full bg-rose-500/15 px-3 text-[11px] font-bold text-rose-400">
+
+                    <span class="h-[7px] w-[7px] rounded-full bg-rose-500"></span> Blocked
+
+                </span>
+
+                {% else %}
+
+                <span class="inline-flex h-[34px] shrink-0 items-center gap-2 rounded-full bg-emerald-500/15 px-3 text-[11px] font-bold text-emerald-300">
+
+                    <span class="h-[7px] w-[7px] rounded-full bg-cyan-400"></span> Active
+
+                </span>
+
+                {% endif %}
+
+                <div class="flex items-center gap-0.5">
+
+                    <button type="button" class="teacher-edit-trigger flex h-8 w-8 items-center justify-center rounded-lg text-lg text-cyan-400 hover:bg-cyan-400/25 hover:text-cyan-200"
+
+                            aria-label="Edit teacher"
+
+                            data-edit-url="{% url 'admin_edit_teacher' teacher.id %}"
+
+                            data-teacher-name="{{ teacher.full_name|default:teacher.user.username|escape }}"
+
+                            data-username="{{ teacher.user.username|escape }}"
+
+                            data-email="{{ teacher.email|default:teacher.user.email|escape }}">
+
+                        <i class="ri-edit-line"></i>
+
+                    </button>
+
+                    {% if teacher.is_blocked %}
+
+                    <button type="button"
+                            class="teacher-action-trigger flex h-8 w-8 items-center justify-center rounded-lg text-lg text-cyan-400 hover:bg-cyan-400/25 hover:text-cyan-200"
+                            data-action="unblock"
+                            data-action-url="{% url 'admin_unblock_teacher' teacher.id %}"
+                            data-teacher-id="{{ teacher.id }}"
+                            data-teacher-name="{{ teacher.full_name|default:teacher.user.username|escape }}"
+                            data-teacher-email="{{ teacher.email|default:teacher.user.email|escape }}"
+                            aria-label="Unblock teacher">
+
+                        <i class="ri-refresh-line"></i>
+
+                    </button>
+
+                    {% else %}
+
+                    <button type="button"
+                            class="teacher-action-trigger flex h-8 w-8 items-center justify-center rounded-lg text-lg text-rose-500 hover:bg-rose-500/25 hover:text-rose-200"
+                            data-action="block"
+                            data-action-url="{% url 'admin_block_teacher' teacher.id %}"
+                            data-teacher-id="{{ teacher.id }}"
+                            data-teacher-name="{{ teacher.full_name|default:teacher.user.username|escape }}"
+                            data-teacher-email="{{ teacher.email|default:teacher.user.email|escape }}"
+                            aria-label="Block teacher">
+
+                        <i class="ri-forbid-2-line"></i>
+
+                    </button>
+
+                    {% endif %}
+
+                    <button type="button"
+                            onclick="openBatchesModal('{{ teacher.id }}', '{{ teacher.full_name|default:teacher.user.username|escapejs }}')"
+                            class="flex h-8 w-8 items-center justify-center rounded-lg border border-violet-400/25 bg-violet-500/10 text-lg text-violet-300 transition hover:border-violet-300 hover:bg-violet-500/30 hover:text-violet-100 focus:outline-none focus:ring-2 focus:ring-violet-400/60"
+                            aria-label="View assigned batch details" title="View assigned batch details">
+                        <i class="ri-eye-line"></i>
+                    </button>
+
+
+
+                </div>
+
+            </div>
+
+        </article>
 
         {% empty %}
 
-        <!-- ================= EMPTY STATE ================= -->
-        <div class="col-span-full">
-            <div class="rounded-2xl border-2 border-dashed border-slate-700 bg-[#111827] px-10 py-20 text-center">
-                <div class="mx-auto flex h-20 w-20 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-400 to-blue-500 text-3xl font-bold text-white">+</div>
-                <h2 class="mt-8 text-3xl font-bold text-white">No Teachers Found</h2>
-                <p class="mx-auto mt-4 max-w-xl text-slate-400">No teacher accounts have been created yet. Create a teacher account and send login credentials to access the NeoLearn Teacher Portal.</p>
-                <div class="mt-8 flex justify-center">
-                    <a href="{% url 'create_teacher' %}" class="rounded-xl bg-cyan-500 px-6 py-3 font-semibold text-slate-900 transition hover:bg-cyan-400">+ Create Teacher</a>
-                </div>
+        <div class="col-span-full flex min-h-[260px] items-center justify-center rounded-[18px] border border-dashed border-white/10 bg-[#071224] px-6 py-12">
+
+            <div class="max-w-[440px] text-center">
+
+                <i class="ri-user-search-line text-4xl text-cyan-400"></i>
+
+                <h2 class="mt-4 text-xl font-extrabold text-white">No Teachers Found</h2>
+
+                <p class="mt-2 text-[13px] leading-6 text-[#94A3B8]">Try changing your search or filters to find teachers.</p>
+
+                <a href="{% url 'admin_teachers' %}" class="mt-5 inline-flex rounded-xl border border-[#183957] px-5 py-3 text-[12px] font-semibold text-white hover:border-cyan-400">Clear Search and Filters</a>
+
             </div>
+
         </div>
 
         {% endfor %}
-    </div>
 
-    <!-- ================= PAGINATION ================= -->
-    {% if teachers %}
-    <div class="flex items-center justify-between rounded-xl border border-slate-800 bg-[#111827] px-6 py-4">
-        <p class="text-sm text-slate-400">
-            Showing <span class="font-semibold text-white">{{ teachers|length }}</span> teacher{{ teachers|length|pluralize }}
+    </section>
+
+    <!-- PAGINATION -->
+
+    {% if page_obj %}
+
+    <nav aria-label="Teacher pagination" class="flex flex-col gap-4 pb-2 pt-2 sm:flex-row sm:items-center sm:justify-between">
+
+        <p class="text-[12px] text-slate-300">
+
+            {% if page_obj.paginator.count %}
+
+            Showing {{ page_obj.start_index }} - {{ page_obj.end_index }} of {{ page_obj.paginator.count }} teachers
+
+            {% else %}
+
+            Showing 0 teachers
+
+            {% endif %}
+
         </p>
-        <div class="flex items-center gap-3">
-            <button disabled class="rounded-lg border border-slate-700 bg-slate-800 px-4 py-2 text-sm text-slate-500">Previous</button>
-            <button disabled class="rounded-lg border border-slate-700 bg-slate-800 px-4 py-2 text-sm text-slate-500">Next</button>
+
+        {% if page_obj.paginator.num_pages > 1 %}
+
+        <div class="flex flex-wrap items-center gap-2">
+
+            {% if page_obj.has_previous %}
+
+            <a href="?search={{ search|urlencode }}&status={{ status|urlencode }}&batch={{ selected_batch|urlencode }}&subject={{ selected_subject|urlencode }}&sort={{ sort|urlencode }}&page={{ page_obj.previous_page_number }}"
+
+               class="flex h-9 w-9 items-center justify-center rounded-lg border border-[#123653] bg-[#071a2e] text-white hover:border-cyan-400" aria-label="Previous page">
+
+                <i class="ri-arrow-left-s-line text-lg"></i>
+
+            </a>
+
+            {% else %}
+
+            <span class="flex h-9 w-9 items-center justify-center rounded-lg border border-[#102b42] bg-[#061729] text-slate-600"><i class="ri-arrow-left-s-line text-lg"></i></span>
+
+            {% endif %}
+
+            {% for number in page_obj.paginator.page_range %}
+
+                {% if number == page_obj.number %}
+
+                <span aria-current="page" class="flex h-9 min-w-9 items-center justify-center rounded-lg bg-cyan-400 px-3 text-[12px] font-extrabold text-slate-950">{{ number }}</span>
+
+                {% elif number >= page_obj.number|add:"-2" and number <= page_obj.number|add:"2" %}
+
+                <a href="?search={{ search|urlencode }}&status={{ status|urlencode }}&batch={{ selected_batch|urlencode }}&subject={{ selected_subject|urlencode }}&sort={{ sort|urlencode }}&page={{ number }}"
+
+                   class="flex h-9 min-w-9 items-center justify-center rounded-lg border border-[#123653] bg-[#071a2e] px-3 text-[12px] text-white hover:border-cyan-400">{{ number }}</a>
+
+                {% endif %}
+
+            {% endfor %}
+
+            {% if page_obj.has_next %}
+
+            <a href="?search={{ search|urlencode }}&status={{ status|urlencode }}&batch={{ selected_batch|urlencode }}&subject={{ selected_subject|urlencode }}&sort={{ sort|urlencode }}&page={{ page_obj.next_page_number }}"
+
+               class="flex h-9 w-9 items-center justify-center rounded-lg border border-[#123653] bg-[#071a2e] text-white hover:border-cyan-400" aria-label="Next page">
+
+                <i class="ri-arrow-right-s-line text-lg"></i>
+
+            </a>
+
+            {% else %}
+
+            <span class="flex h-9 w-9 items-center justify-center rounded-lg border border-[#102b42] bg-[#061729] text-slate-600"><i class="ri-arrow-right-s-line text-lg"></i></span>
+
+            {% endif %}
+
         </div>
-    </div>
+
+        {% endif %}
+
+    </nav>
+
     {% endif %}
 
 </div>
 
-<!-- ===================================================== -->
-<!-- ASSIGNED BATCHES MODAL -->
-<!-- ===================================================== -->
-<div id="batchesModal" class="fixed inset-0 z-50 hidden overflow-y-auto">
+<!-- EDIT TEACHER MODAL: WIDER AND SHORTER -->
+
+<div id="editTeacherModal" class="fixed inset-0 z-[1000] hidden items-center justify-center overflow-y-auto bg-black/80 p-3 backdrop-blur-sm sm:p-5" aria-hidden="true">
+
+    <div class="my-auto w-full max-w-4xl max-h-[88vh] overflow-y-auto rounded-[20px] border border-cyan-400/30 bg-gradient-to-br from-[#071b30] via-[#081629] to-[#10132b] shadow-[0_25px_90px_rgba(0,0,0,.6)]">
+
+        <div class="flex items-center justify-between border-b border-[#123653] px-5 py-4 sm:px-6">
+
+            <div class="min-w-0">
+
+                <h2 class="text-lg font-bold text-white sm:text-xl">Edit Teacher Account</h2>
+
+                <p id="editTeacherSubtitle" class="mt-1 truncate text-[12px] text-slate-400">Update account details.</p>
+
+            </div>
+
+            <button type="button" id="closeEditTeacherModal" class="ml-3 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-xl text-slate-400 hover:bg-slate-800 hover:text-white" aria-label="Close edit form">×</button>
+
+        </div>
+
+        <form id="editTeacherForm" method="post" novalidate class="space-y-4 p-5 sm:p-6">
+
+            {% csrf_token %}
+
+            <input type="hidden" id="editTeacherUrl" value="">
+
+            <div id="editTeacherMessage" class="hidden rounded-lg border px-4 py-3 text-[12px]" role="status"></div>
+
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+
+                <div>
+
+                    <label for="editTeacherUsername" class="mb-2 block text-[12px] font-semibold text-slate-300">Username</label>
+
+                    <input id="editTeacherUsername" name="username" type="text" maxlength="150" autocomplete="username" aria-required="true"
+
+                           class="w-full rounded-lg border border-[#183957] bg-[#041321] px-4 py-3 text-[13px] text-white outline-none focus:border-cyan-400">
+
+                </div>
+
+                <div>
+
+                    <label for="editTeacherEmail" class="mb-2 block text-[12px] font-semibold text-slate-300">Email address</label>
+
+                    <input id="editTeacherEmail" name="email" type="email" autocomplete="email" aria-required="true"
+
+                           class="w-full rounded-lg border border-[#183957] bg-[#041321] px-4 py-3 text-[13px] text-white outline-none focus:border-cyan-400">
+
+                </div>
+
+            </div>
+
+            <div class="rounded-xl border border-violet-400/25 bg-gradient-to-r from-[#111d3b] via-[#10283a] to-[#21183b] p-4 sm:p-5">
+
+                <div class="mb-3">
+
+                    <h3 class="text-[13px] font-bold text-white">Change Password</h3>
+
+                    <p class="mt-1 text-[11px] text-slate-400">Leave both fields empty to keep the current password.</p>
+
+                </div>
+
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+
+                    <div>
+
+                        <label for="editTeacherPassword" class="mb-2 block text-[12px] text-slate-300">New password</label>
+
+                        <div class="relative">
+                            <input id="editTeacherPassword" name="new_password" type="password" autocomplete="new-password" class="w-full rounded-lg border border-[#183957] bg-[#041321] px-4 py-3 pr-12 text-[13px] text-white outline-none focus:border-cyan-400">
+                            <button type="button" class="password-visibility-toggle absolute inset-y-0 right-0 flex w-11 items-center justify-center text-slate-400 hover:text-cyan-300" data-target="editTeacherPassword" aria-label="Show new password" aria-pressed="false"><i class="ri-eye-line"></i></button>
+                        </div>
+
+                    </div>
+
+                    <div>
+
+                        <label for="editTeacherConfirmPassword" class="mb-2 block text-[12px] text-slate-300">Confirm password</label>
+
+                        <div class="relative">
+                            <input id="editTeacherConfirmPassword" name="confirm_password" type="password" autocomplete="new-password" class="w-full rounded-lg border border-[#183957] bg-[#041321] px-4 py-3 pr-12 text-[13px] text-white outline-none focus:border-cyan-400">
+                            <button type="button" class="password-visibility-toggle absolute inset-y-0 right-0 flex w-11 items-center justify-center text-slate-400 hover:text-cyan-300" data-target="editTeacherConfirmPassword" aria-label="Show confirm password" aria-pressed="false"><i class="ri-eye-line"></i></button>
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <div class="flex flex-col-reverse gap-3 border-t border-[#123653] pt-4 sm:flex-row sm:justify-end">
+
+                <button type="button" id="cancelEditTeacherModal" class="rounded-lg border border-[#183957] px-5 py-3 text-[12px] font-semibold text-slate-300 hover:bg-slate-800">Cancel</button>
+
+                <button type="submit" id="saveEditTeacherButton" class="rounded-lg bg-cyan-400 px-5 py-3 text-[12px] font-extrabold text-slate-950 hover:bg-cyan-300 disabled:opacity-50">Save Changes</button>
+
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+
+<!-- ASSIGNED BATCHES MODAL: IDs REQUIRED BY teacher_batches.js -->
+
+<div id="batchesModal" class="fixed inset-0 z-[2000] hidden overflow-y-auto">
+
     <div class="fixed inset-0 bg-black/70 backdrop-blur-sm" onclick="closeBatchesModal()"></div>
-    <div class="relative min-h-screen flex items-center justify-center p-4">
-        <div class="relative w-full max-w-3xl rounded-2xl border border-slate-700 bg-gradient-to-br from-[#0f172a] to-[#1a2332] shadow-2xl">
-            
-            <!-- MODAL HEADER -->
-            <div class="flex items-center justify-between border-b border-slate-700 px-6 py-4 bg-[#0f172a]/50 rounded-t-2xl">
+
+    <div class="relative flex min-h-full items-center justify-center p-3 sm:p-5">
+
+        <div class="relative flex max-h-[76vh] w-full max-w-2xl flex-col overflow-hidden rounded-[20px] border border-cyan-400/25 bg-gradient-to-br from-[#071b30] via-[#081629] to-[#11152d] shadow-[0_25px_90px_rgba(0,0,0,.65)]">
+
+            <div class="flex items-center justify-between border-b border-[#123653] px-5 py-4 sm:px-6">
+
                 <div>
-                    <h3 class="text-2xl font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">📋 Assigned Batches</h3>
-                    <p class="text-sm text-slate-400 mt-1" id="modalTeacherName">
-                        <span class="text-indigo-400 font-semibold">Teacher Name</span>
-                    </p>
+
+                    <h3 class="text-lg font-bold text-white sm:text-xl">Assigned Batches</h3>
+
+                    <p id="modalTeacherName" class="mt-1 text-[12px] text-slate-400">Teacher</p>
+
                 </div>
-                <button type="button" onclick="closeBatchesModal()" class="rounded-lg p-2 text-slate-400 transition hover:bg-slate-700 hover:text-white">
-                    <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                    </svg>
-                </button>
+
+                <button type="button" onclick="closeBatchesModal()" class="rounded-lg px-3 py-2 text-xl text-slate-400 hover:bg-slate-800 hover:text-white" aria-label="Close assigned batches">×</button>
+
             </div>
-            
-            <!-- MODAL BODY - SCROLLABLE -->
-            <div class="px-6 py-4 max-h-[60vh] overflow-y-auto scrollbar-thin scrollbar-thumb-slate-600 scrollbar-track-transparent" id="batchesModalBody">
-                <div id="batchesContent">
-                    <div class="text-center py-8 text-slate-400">
-                        <div class="inline-block animate-spin rounded-full h-10 w-10 border-4 border-indigo-500 border-t-transparent"></div>
-                        <p class="mt-3">Loading assigned batches...</p>
-                    </div>
-                </div>
+
+            <div id="batchesModalBody" class="min-h-0 flex-1 overflow-y-auto p-4 sm:p-5">
+
+                <div id="batchesContent" class="py-8 text-center text-[12px] text-slate-400">Loading assigned batches...</div>
+
             </div>
-            
-            <!-- MODAL FOOTER -->
-            <div class="border-t border-slate-700 px-6 py-4 flex justify-end bg-[#0f172a]/50 rounded-b-2xl">
-                <button type="button" onclick="closeBatchesModal()" class="rounded-lg bg-gradient-to-r from-slate-700 to-slate-600 px-6 py-2 text-sm font-medium text-white transition hover:from-slate-600 hover:to-slate-500">
-                    Close
-                </button>
-            </div>
+
         </div>
+
     </div>
+
 </div>
 
-<!-- ===================================================== -->
-<!-- BLOCK/UNBLOCK TEACHER MODAL - UPDATED MESSAGES -->
-<!-- ===================================================== -->
-<div id="teacherActionModal" class="fixed inset-0 z-[999] hidden items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-    <div class="w-full max-w-2xl lg:max-w-3xl overflow-hidden rounded-3xl border border-slate-700 bg-[#020617] shadow-[0_30px_90px_rgba(0,0,0,0.65)] max-h-[85vh] flex flex-col">
+<!-- BLOCK / UNBLOCK MODAL: KEEP ALL EXISTING JS IDs -->
 
-        <!-- HEADER -->
-        <div class="flex items-center justify-between border-b border-slate-800 px-4 sm:px-6 py-3 sm:py-4 flex-shrink-0">
+<div id="teacherActionModal" class="fixed inset-0 z-[950] hidden items-center justify-center overflow-y-auto bg-black/80 p-3 backdrop-blur-sm sm:p-5">
+
+    <div class="my-auto flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-[18px] border border-[#183957] bg-[#061729] shadow-2xl">
+
+        <div class="flex shrink-0 items-center justify-between border-b border-[#123653] px-5 py-4 sm:px-6">
+
             <div>
-                <h2 id="teacherActionTitle" class="text-lg sm:text-xl font-bold text-orange-400">Block Teacher</h2>
-                <p id="teacherActionSubtitle" class="mt-0.5 text-xs sm:text-sm text-slate-400">Restrict teacher access to the portal</p>
+
+                <h2 id="teacherActionTitle" class="text-lg font-bold text-orange-400 sm:text-xl">Block Teacher</h2>
+
+                <p id="teacherActionSubtitle" class="mt-1 text-[12px] text-slate-400">Manage teacher access.</p>
+
             </div>
-            <button type="button" onclick="closeTeacherModal()" class="rounded-lg p-2 text-slate-400 transition hover:bg-slate-800 hover:text-white">
-                <svg class="h-5 w-5 sm:h-6 sm:w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                </svg>
-            </button>
+
+            <button type="button" onclick="closeTeacherModal()" class="rounded-lg px-3 py-2 text-xl text-slate-400 hover:bg-slate-800 hover:text-white" aria-label="Close block/unblock">×</button>
+
         </div>
 
-        <!-- BODY -->
-        <div class="overflow-y-auto flex-1 p-4 sm:p-6">
-            <div class="grid grid-cols-1 gap-4">
+        <div class="min-h-0 flex-1 space-y-4 overflow-y-auto p-4 sm:p-6">
 
-                <!-- Warning/Notice Box - UPDATED MESSAGES -->
-                <div id="teacherActionNotice" class="rounded-2xl border border-orange-500/30 bg-orange-500/10 p-4">
-                    <div class="flex items-start gap-3">
-                        <div id="teacherActionIcon" class="text-2xl mt-0.5">⚠️</div>
-                        <div>
-                            <h3 id="teacherActionHeading" class="font-semibold text-orange-300 text-sm sm:text-base">Blocking This Teacher Will:</h3>
-                            <ul id="teacherActionList" class="mt-2 space-y-1 text-xs sm:text-sm text-orange-100 list-disc list-inside">
-                                <li>❌ Prevent the teacher from logging in</li>
-                                <li>📚 All uploaded content (videos, PDFs, chapters) will remain</li>
-                                <li>👨‍🎓 Students can still access all content</li>
-                                <li>👨‍🏫 Other teachers can still manage the content</li>
-                                <li>🔒 Teacher cannot upload new content while blocked</li>
-                            </ul>
-                        </div>
+            <div id="teacherActionNotice" class="rounded-xl border border-orange-500/30 bg-orange-500/10 p-4">
+
+                <div class="flex items-start gap-3">
+
+                    <div id="teacherActionIcon" class="mt-0.5 text-xl">⚠️</div>
+
+                    <div>
+
+                        <h3 id="teacherActionHeading" class="text-[13px] font-semibold text-orange-300">Confirm this action</h3>
+
+                        <ul id="teacherActionList" class="mt-2 list-inside list-disc space-y-1 text-[12px] leading-5 text-orange-100">
+
+                            <li>Review this action before confirming.</li>
+
+                        </ul>
+
                     </div>
-                </div>
 
-                <!-- Teacher Info -->
-                <div>
-                    <label class="mb-1 block text-[10px] font-semibold uppercase tracking-widest text-slate-500">Teacher</label>
-                    <div class="flex items-center gap-3 rounded-2xl border border-slate-700 bg-slate-900/70 px-3 py-2.5">
-                        <div id="teacherAvatar" class="flex h-10 w-10 items-center justify-center rounded-full bg-orange-600 font-bold text-white text-sm">T</div>
-                        <div>
-                            <h4 id="teacherNameDisplay" class="font-semibold text-white text-sm">Teacher Name</h4>
-                            <p id="teacherEmailDisplay" class="text-xs text-slate-400">teacher@email.com</p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Confirmation Input -->
-                <div>
-                    <label id="teacherConfirmLabel" class="mb-1 block text-[10px] font-semibold uppercase tracking-widest text-slate-500">Confirm Teacher Name</label>
-                    <input id="teacherConfirmInput" type="text" autocomplete="off" placeholder="Type teacher name to confirm" class="w-full rounded-2xl border border-slate-700 bg-slate-900 px-3 py-2.5 text-white text-sm outline-none transition focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 placeholder:text-slate-600">
-                    <p class="mt-1 text-[10px] text-slate-500">
-                        Type the exact teacher name to enable the <span id="teacherConfirmBtnLabel" class="font-semibold text-orange-400">Block</span> button.
-                    </p>
                 </div>
 
             </div>
+
+            <div>
+
+                <label class="mb-2 block text-[10px] font-semibold uppercase tracking-widest text-slate-500">Teacher</label>
+
+                <div class="flex items-center gap-3 rounded-xl border border-[#183957] bg-[#071a2b] px-4 py-3">
+
+                    <div id="teacherAvatar" class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-orange-600 text-sm font-bold text-white">T</div>
+
+                    <div class="min-w-0">
+
+                        <h4 id="teacherNameDisplay" class="truncate text-[13px] font-semibold text-white">Teacher Name</h4>
+
+                        <p id="teacherEmailDisplay" class="text-[11px] text-slate-400">Teacher account</p>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <div>
+
+                <label id="teacherConfirmLabel" for="teacherConfirmInput" class="mb-2 block text-[10px] font-semibold uppercase tracking-widest text-slate-400">Confirm Teacher Name</label>
+
+                <input id="teacherConfirmInput" type="text" autocomplete="off" placeholder="Type teacher name to confirm"
+
+                       class="w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-[13px] text-white outline-none focus:border-orange-500">
+
+                <p class="mt-2 text-[11px] text-slate-500">Type the exact teacher name to enable confirmation.</p>
+
+            </div>
+
         </div>
 
-        <!-- FOOTER -->
-        <div class="flex flex-col-reverse gap-2 border-t border-slate-800 px-4 sm:px-6 py-3 sm:py-3.5 sm:flex-row sm:items-center sm:justify-end flex-shrink-0">
-            <button type="button" onclick="closeTeacherModal()" class="flex h-10 min-w-[100px] items-center justify-center rounded-xl border border-slate-700 bg-slate-900 px-4 text-sm font-medium text-slate-300 transition hover:border-slate-500 hover:bg-slate-800 hover:text-white">Cancel</button>
-            <form id="teacherActionForm" method="POST">
+        <div class="flex shrink-0 flex-col-reverse gap-3 border-t border-[#123653] px-4 py-4 sm:flex-row sm:items-center sm:justify-end sm:px-6">
+
+            <button type="button" onclick="closeTeacherModal()" class="rounded-lg border border-[#183957] px-5 py-3 text-[12px] font-semibold text-slate-300 hover:bg-slate-800">Cancel</button>
+
+            <form id="teacherActionForm" method="post" class="w-full sm:w-auto">
+
                 {% csrf_token %}
+
                 <input type="hidden" id="teacherActionInput" name="confirm_name" value="">
-                <button id="teacherActionConfirmBtn" type="submit" disabled class="flex h-10 min-w-[140px] items-center justify-center rounded-xl bg-orange-600 px-4 text-sm font-semibold text-white opacity-50 transition hover:bg-orange-700 disabled:cursor-not-allowed disabled:opacity-50">Confirm Block</button>
+
+                <button id="teacherActionConfirmBtn" type="submit" disabled
+
+                        class="flex min-h-10 w-full items-center justify-center gap-1 rounded-lg bg-orange-600 px-5 py-3 text-[12px] font-semibold text-white transition hover:bg-orange-700 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto">
+
+                    <span id="teacherConfirmBtnLabel">Block</span> Teacher
+
+                </button>
+
             </form>
+
         </div>
 
     </div>
+
 </div>
 
-<!-- ===================================================== -->
-<!-- DELETE TEACHER MODAL - UPDATED MESSAGES -->
-<!-- ===================================================== -->
-<div id="deleteTeacherModal" class="fixed inset-0 z-[999] hidden items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-    <div class="w-full max-w-2xl lg:max-w-3xl overflow-hidden rounded-3xl border border-slate-700 bg-[#020617] shadow-[0_30px_90px_rgba(0,0,0,0.65)] max-h-[85vh] flex flex-col">
+<!-- DELETE MODAL: KEEP EXISTING JS IDs -->
 
-        <!-- HEADER -->
-        <div class="flex items-center justify-between border-b border-slate-800 px-4 sm:px-6 py-3 sm:py-4 flex-shrink-0">
+<div id="deleteTeacherModal" class="fixed inset-0 z-[960] hidden items-center justify-center overflow-y-auto bg-black/80 p-3 backdrop-blur-sm sm:p-5">
+
+    <div class="my-auto flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-[18px] border border-rose-900/70 bg-[#061729] shadow-2xl">
+
+        <div class="flex shrink-0 items-center justify-between border-b border-[#123653] px-5 py-4 sm:px-6">
+
             <div>
-                <h2 class="text-lg sm:text-xl font-bold text-red-400">Delete Teacher</h2>
-                <p class="mt-0.5 text-xs sm:text-sm text-slate-400">This action removes the teacher account</p>
+
+                <h2 class="text-lg font-bold text-rose-400 sm:text-xl">Delete Teacher</h2>
+
+                <p class="mt-1 text-[12px] text-slate-400">Review this account before deleting.</p>
+
             </div>
-            <button type="button" onclick="closeDeleteModal()" class="rounded-lg p-2 text-slate-400 transition hover:bg-slate-800 hover:text-white">
-                <svg class="h-5 w-5 sm:h-6 sm:w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                </svg>
-            </button>
+
+            <button type="button" onclick="closeDeleteModal()" class="rounded-lg px-3 py-2 text-xl text-slate-400 hover:bg-slate-800 hover:text-white" aria-label="Close delete modal">×</button>
+
         </div>
 
-        <!-- BODY -->
-        <div class="overflow-y-auto flex-1 p-4 sm:p-6">
-            <div class="grid grid-cols-1 gap-4">
+        <div class="min-h-0 flex-1 space-y-4 overflow-y-auto p-4 sm:p-6">
 
-                <!-- Danger Notice - UPDATED MESSAGES -->
-                <div class="rounded-2xl border border-red-500/30 bg-red-500/10 p-4">
-                    <div class="flex items-start gap-3">
-                        <div class="text-2xl mt-0.5">⚠️</div>
-                        <div>
-                            <h3 class="font-semibold text-red-300 text-sm sm:text-base">Deleting This Teacher Will:</h3>
-                            <ul class="mt-2 space-y-1 text-xs sm:text-sm text-red-100 list-disc list-inside">
-                                <li>🗑️ Permanently remove the teacher's account</li>
-                                <li>📚 All uploaded content (videos, PDFs, chapters) will remain</li>
-                                <li>👨‍🎓 Students can still access all content</li>
-                                <li>👨‍🏫 Other teachers can still manage the content</li>
-                                <li>🔓 Content ownership stays with the platform</li>
-                                <li>⚠️ This action is <strong>irreversible</strong></li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
+            <div class="rounded-xl border border-rose-500/30 bg-rose-500/10 p-4">
 
-                <!-- Teacher Info -->
-                <div>
-                    <label class="mb-1 block text-[10px] font-semibold uppercase tracking-widest text-slate-500">Teacher</label>
-                    <div class="flex items-center gap-3 rounded-2xl border border-slate-700 bg-slate-900/70 px-3 py-2.5">
-                        <div id="deleteTeacherAvatar" class="flex h-10 w-10 items-center justify-center rounded-full bg-red-600 font-bold text-white text-sm">T</div>
-                        <div>
-                            <h4 id="deleteTeacherNameDisplay" class="font-semibold text-white text-sm">Teacher Name</h4>
-                            <p class="text-xs text-slate-400">teacher@email.com</p>
-                        </div>
-                    </div>
-                </div>
+                <h3 class="text-[13px] font-semibold text-rose-300">This action may be irreversible.</h3>
 
-                <!-- Confirmation Input -->
-                <div>
-                    <label class="mb-1 block text-[10px] font-semibold uppercase tracking-widest text-slate-500">Confirm Teacher Name</label>
-                    <input id="deleteConfirmInput" type="text" autocomplete="off" placeholder="Type teacher name to confirm" class="w-full rounded-2xl border border-slate-700 bg-slate-900 px-3 py-2.5 text-white text-sm outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-500/20 placeholder:text-slate-600">
-                    <p class="mt-1 text-[10px] text-slate-500">
-                        Type the exact teacher name to enable the <span class="font-semibold text-red-400">Delete</span> button.
-                    </p>
+                <p class="mt-2 text-[12px] leading-5 text-slate-300">Confirm the correct teacher account before proceeding.</p>
+
+            </div>
+
+            <div>
+
+                <label class="mb-2 block text-[10px] font-semibold uppercase tracking-widest text-slate-500">Teacher</label>
+
+                <div class="flex items-center gap-3 rounded-xl border border-[#183957] bg-[#071a2b] px-4 py-3">
+
+                    <div id="deleteTeacherAvatar" class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-rose-600 text-sm font-bold text-white">T</div>
+
+                    <h4 id="deleteTeacherNameDisplay" class="truncate text-[13px] font-semibold text-white">Teacher Name</h4>
+
                 </div>
 
             </div>
+
+            <div>
+
+                <label for="deleteConfirmInput" class="mb-2 block text-[10px] font-semibold uppercase tracking-widest text-slate-400">Confirm Teacher Name</label>
+
+                <input id="deleteConfirmInput" type="text" autocomplete="off" placeholder="Type teacher name to confirm"
+
+                       class="w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-[13px] text-white outline-none focus:border-rose-500">
+
+            </div>
+
         </div>
 
-        <!-- FOOTER -->
-        <div class="flex flex-col-reverse gap-2 border-t border-slate-800 px-4 sm:px-6 py-3 sm:py-3.5 sm:flex-row sm:items-center sm:justify-end flex-shrink-0">
-            <button type="button" onclick="closeDeleteModal()" class="flex h-10 min-w-[100px] items-center justify-center rounded-xl border border-slate-700 bg-slate-900 px-4 text-sm font-medium text-slate-300 transition hover:border-slate-500 hover:bg-slate-800 hover:text-white">Cancel</button>
-            <form id="deleteTeacherForm" method="POST">
+        <div class="flex shrink-0 flex-col-reverse gap-3 border-t border-[#123653] px-4 py-4 sm:flex-row sm:items-center sm:justify-end sm:px-6">
+
+            <button type="button" onclick="closeDeleteModal()" class="rounded-lg border border-[#183957] px-5 py-3 text-[12px] font-semibold text-slate-300 hover:bg-slate-800">Cancel</button>
+
+            <form id="deleteTeacherForm" method="post" class="w-full sm:w-auto">
+
                 {% csrf_token %}
+
                 <input type="hidden" id="deleteTeacherInput" name="confirm_name" value="">
-                <button id="deleteConfirmBtn" type="submit" disabled class="flex h-10 min-w-[140px] items-center justify-center rounded-xl bg-red-600 px-4 text-sm font-semibold text-white opacity-50 transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50">Confirm Delete</button>
+
+                <button id="deleteConfirmBtn" type="submit" disabled class="w-full rounded-lg bg-rose-600 px-5 py-3 text-[12px] font-bold text-white hover:bg-rose-500 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto">
+
+                    Confirm Delete
+
+                </button>
+
             </form>
+
         </div>
 
     </div>
+
 </div>
+
+<style>
+    .teacher-picker { position: relative; }
+    .teacher-picker-panel {
+        position: absolute; top: calc(100% + 6px); left: 0; right: 0; z-index: 120;
+        max-height: 230px; overflow-y: auto; overscroll-behavior: contain;
+        border: 1px solid #24435d; border-radius: 10px; background: #071729;
+        box-shadow: 0 16px 36px rgb(0 0 0 / 45%); scrollbar-width: thin;
+        scrollbar-color: #31516e #071729;
+    }
+    .teacher-picker-panel[hidden] { display: none !important; }
+    .teacher-picker-search {
+        position: sticky; top: 0; z-index: 2; display: block; width: 100%;
+        border: 0; border-bottom: 1px solid #24435d; outline: none;
+        padding: 10px 12px; color: #fff; background: #071729; font-size: 12px;
+    }
+    .teacher-picker-option {
+        display: block; width: 100%; padding: 10px 12px; text-align: left;
+        color: #e2e8f0; background: transparent; border: 0; font-size: 12px;
+        line-height: 1.4; overflow-wrap: anywhere; cursor: pointer;
+    }
+    .teacher-picker-option:hover, .teacher-picker-option:focus-visible { color: #67e8f9; background: #123653; outline: none; }
+    .teacher-picker-option[hidden] { display: none !important; }
+
+    /* Assigned-batches modal: compact, centered, internally scrollable */
+    #batchesModal .relative.flex.max-h-\[82vh\] { min-height: 0; }
+    #batchesModal #batchesContent { min-width: 0; }
+    #batchesModal #batchesContent > div.rounded-xl {
+        padding: 14px !important;
+        margin-bottom: 10px !important;
+        border-radius: 14px !important;
+        border-color: rgba(34,211,238,.24) !important;
+        background-image: linear-gradient(135deg, rgba(8,47,73,.96), rgba(15,23,42,.98)) !important;
+    }
+    #batchesModal #batchesContent span.rounded-lg {
+        border-color: rgba(45,212,191,.22) !important;
+        background-image: linear-gradient(90deg, rgba(8,145,178,.18), rgba(15,118,110,.18)) !important;
+    }
+    #batchesModal #batchesContent { scrollbar-width: thin; scrollbar-color: #28617a #071729; }
+    #batchesModal #batchesContent::-webkit-scrollbar { width: 7px; }
+    #batchesModal #batchesContent::-webkit-scrollbar-thumb { background: #28617a; border-radius: 999px; }
+
+</style>
+
+<!-- KEEP THE EXISTING ACTION FILES UNCHANGED -->
 
 <script src="{% static 'admins/js/teacher_menu.js' %}"></script>
+
 <script src="{% static 'admins/js/teacher_actions.js' %}"></script>
+
 <script src="{% static 'admins/js/teacher_batches.js' %}"></script>
+
+<!-- SEARCHABLE, INTERNALLY SCROLLING BATCH/SUBJECT PICKERS + PASSWORD VISIBILITY -->
+<script>
+(function () {
+    "use strict";
+    const pickers = Array.from(document.querySelectorAll(".teacher-picker"));
+    const batchPicker = document.querySelector('.teacher-picker[data-picker="batch"]');
+    const subjectPicker = document.querySelector('.teacher-picker[data-picker="subject"]');
+
+    function filterPicker(picker) {
+        const search = picker.querySelector(".teacher-picker-search");
+        const query = (search.value || "").trim().toLocaleLowerCase();
+        let visibleCount = 0;
+        picker.querySelectorAll(".teacher-picker-option").forEach(function (option) {
+            let visible = (option.textContent || "").toLocaleLowerCase().includes(query);
+            if (picker.dataset.picker === "subject" && option.dataset.value) {
+                const selectedBatch = batchPicker.querySelector('input[name="batch"]').value;
+                if (selectedBatch && option.dataset.batchId !== selectedBatch) visible = false;
+            }
+            option.hidden = !visible;
+            if (visible) visibleCount++;
+        });
+        picker.querySelector(".teacher-picker-empty").classList.toggle("hidden", visibleCount > 0);
+    }
+
+    function closePickers(except) {
+        pickers.forEach(function (picker) {
+            if (picker === except) return;
+            picker.querySelector(".teacher-picker-panel").hidden = true;
+            picker.querySelector(".teacher-picker-trigger").setAttribute("aria-expanded", "false");
+        });
+    }
+
+    pickers.forEach(function (picker) {
+        const trigger = picker.querySelector(".teacher-picker-trigger");
+        const panel = picker.querySelector(".teacher-picker-panel");
+        const search = picker.querySelector(".teacher-picker-search");
+        const hiddenInput = picker.querySelector('input[type="hidden"]');
+        const valueLabel = picker.querySelector(".teacher-picker-value");
+        const defaultLabel = picker.dataset.picker === "batch" ? "All Batches" : "All Subjects";
+
+        trigger.addEventListener("click", function () {
+            const opening = panel.hidden;
+            closePickers(picker);
+            panel.hidden = !opening;
+            trigger.setAttribute("aria-expanded", String(opening));
+            if (opening) {
+                search.value = "";
+                filterPicker(picker);
+                search.focus();
+            }
+        });
+        search.addEventListener("input", function () { filterPicker(picker); });
+        picker.querySelectorAll(".teacher-picker-option").forEach(function (option) {
+            option.addEventListener("click", function () {
+                hiddenInput.value = option.dataset.value || "";
+                valueLabel.textContent = option.textContent.trim() || defaultLabel;
+                panel.hidden = true;
+                trigger.setAttribute("aria-expanded", "false");
+                if (picker === batchPicker) {
+                    const subjectInput = subjectPicker.querySelector('input[name="subject"]');
+                    const subjectLabel = subjectPicker.querySelector(".teacher-picker-value");
+                    const selectedSubjectOption = Array.from(subjectPicker.querySelectorAll(".teacher-picker-option")).find(function (item) {
+                        return item.dataset.value === subjectInput.value && item.dataset.value;
+                    });
+                    if (selectedSubjectOption && hiddenInput.value && selectedSubjectOption.dataset.batchId !== hiddenInput.value) {
+                        subjectInput.value = "";
+                        subjectLabel.textContent = "All Subjects";
+                    }
+                    filterPicker(subjectPicker);
+                }
+            });
+        });
+    });
+
+    document.addEventListener("click", function (event) {
+        if (!event.target.closest(".teacher-picker")) closePickers(null);
+    });
+    document.addEventListener("keydown", function (event) {
+        if (event.key === "Escape") closePickers(null);
+    });
+    if (subjectPicker) filterPicker(subjectPicker);
+
+    document.querySelectorAll(".password-visibility-toggle").forEach(function (button) {
+        button.addEventListener("click", function () {
+            const input = document.getElementById(button.dataset.target);
+            if (!input) return;
+            const reveal = input.type === "password";
+            input.type = reveal ? "text" : "password";
+            button.setAttribute("aria-pressed", String(reveal));
+            button.setAttribute("aria-label", reveal ? "Hide password" : "Show password");
+            const icon = button.querySelector("i");
+            if (icon) icon.className = reveal ? "ri-eye-off-line" : "ri-eye-line";
+        });
+    });
+})();
+</script>
+
+<!-- EDIT POPUP ONLY -->
+
+<script>
+
+(function () {
+
+    "use strict";
+
+    const modal = document.getElementById("editTeacherModal");
+
+    const form = document.getElementById("editTeacherForm");
+
+    const urlField = document.getElementById("editTeacherUrl");
+
+    const message = document.getElementById("editTeacherMessage");
+
+    const saveButton = document.getElementById("saveEditTeacherButton");
+    let messageTimer = null;
+
+    function showMessage(text, type) {
+        if (messageTimer) window.clearTimeout(messageTimer);
+        message.textContent = text;
+        message.className = type === "error"
+            ? "rounded-lg border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-[12px] text-rose-200"
+            : "rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-[12px] text-emerald-200";
+        messageTimer = window.setTimeout(function () {
+            message.classList.add("hidden");
+            message.textContent = "";
+        }, 5000);
+    }
+
+    function closeEditModal() {
+
+        modal.classList.add("hidden");
+
+        modal.classList.remove("flex");
+
+        modal.setAttribute("aria-hidden", "true");
+
+        document.body.style.overflow = "";
+
+    }
+
+    function openEditModal(button) {
+
+        form.reset();
+        if (messageTimer) window.clearTimeout(messageTimer);
+        message.textContent = "";
+        message.className = "hidden rounded-lg border px-4 py-3 text-[12px]";
+        document.querySelectorAll(".password-visibility-toggle").forEach(function (button) {
+            button.setAttribute("aria-pressed", "false");
+            button.setAttribute("aria-label", button.dataset.target === "editTeacherPassword" ? "Show new password" : "Show confirm password");
+            const icon = button.querySelector("i");
+            if (icon) icon.className = "ri-eye-line";
+        });
+        document.querySelectorAll("#editTeacherPassword, #editTeacherConfirmPassword").forEach(function (input) { input.type = "password"; });
+
+        urlField.value = button.dataset.editUrl || "";
+
+        document.getElementById("editTeacherUsername").value = button.dataset.username || "";
+
+        document.getElementById("editTeacherEmail").value = button.dataset.email || "";
+
+        document.getElementById("editTeacherSubtitle").textContent =
+
+            "Editing " + (button.dataset.teacherName || "teacher account");
+
+        modal.classList.remove("hidden");
+
+        modal.classList.add("flex");
+
+        modal.setAttribute("aria-hidden", "false");
+
+        document.body.style.overflow = "hidden";
+
+    }
+
+    document.querySelectorAll(".teacher-edit-trigger").forEach(function (button) {
+
+        button.addEventListener("click", function () {
+
+            openEditModal(button);
+
+        });
+
+    });
+
+    document.getElementById("closeEditTeacherModal").addEventListener("click", closeEditModal);
+
+    document.getElementById("cancelEditTeacherModal").addEventListener("click", closeEditModal);
+
+    modal.addEventListener("click", function (event) {
+
+        if (event.target === modal) closeEditModal();
+
+    });
+
+    document.addEventListener("keydown", function (event) {
+
+        if (event.key === "Escape" && !modal.classList.contains("hidden")) {
+
+            closeEditModal();
+
+        }
+
+    });
+
+    form.addEventListener("submit", async function (event) {
+
+        event.preventDefault();
+
+        const csrf = form.querySelector("[name=csrfmiddlewaretoken]");
+
+        const data = new FormData(form);
+
+        data.delete("csrfmiddlewaretoken");
+
+        saveButton.disabled = true;
+
+        saveButton.textContent = "Saving...";
+
+        try {
+
+            const response = await fetch(urlField.value, {
+
+                method: "POST",
+
+                credentials: "same-origin",
+
+                headers: {
+
+                    "X-CSRFToken": csrf ? csrf.value : "",
+
+                    "X-Requested-With": "XMLHttpRequest",
+
+                    "Accept": "application/json"
+
+                },
+
+                body: data
+
+            });
+
+            const result = await response.json();
+
+            if (!response.ok || result.success === false || result.errors) {
+
+                const errors = result.errors || {};
+
+                const detail = Object.values(errors).flat().join(" ");
+
+                throw new Error(detail || result.message || "Unable to update teacher.");
+
+            }
+
+            message.textContent = result.message || "Teacher account updated successfully.";
+
+            message.className = "rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-[12px] text-emerald-200";
+
+            window.setTimeout(function () {
+
+                window.location.reload();
+
+            }, 700);
+
+        } catch (error) {
+
+            message.textContent = error.message || "Unable to update teacher.";
+
+            message.className = "rounded-lg border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-[12px] text-rose-200";
+
+            window.setTimeout(function () {
+                message.classList.add("hidden");
+                message.textContent = "";
+            }, 5000);
+
+        } finally {
+
+            saveButton.disabled = false;
+
+            saveButton.textContent = "Save Changes";
+
+        }
+
+    });
+
+})();
+
+</script>
+
+
+<!-- RELIABLE BLOCK / UNBLOCK CONTROLLER: independent of teacher_actions.js -->
+<script>
+(function () {
+    "use strict";
+
+    const modal = document.getElementById("teacherActionModal");
+    const form = document.getElementById("teacherActionForm");
+    const nameInput = document.getElementById("teacherConfirmInput");
+    const hiddenName = document.getElementById("teacherActionInput");
+    const confirmButton = document.getElementById("teacherActionConfirmBtn");
+    const confirmLabel = document.getElementById("teacherConfirmBtnLabel");
+    const title = document.getElementById("teacherActionTitle");
+    const subtitle = document.getElementById("teacherActionSubtitle");
+    const heading = document.getElementById("teacherActionHeading");
+    const list = document.getElementById("teacherActionList");
+    const notice = document.getElementById("teacherActionNotice");
+    const icon = document.getElementById("teacherActionIcon");
+    const nameDisplay = document.getElementById("teacherNameDisplay");
+    const emailDisplay = document.getElementById("teacherEmailDisplay");
+    const avatar = document.getElementById("teacherAvatar");
+    const label = document.getElementById("teacherConfirmLabel");
+    let expectedName = "";
+    let currentAction = "block";
+
+    if (!modal || !form || !nameInput || !confirmButton) return;
+
+    function updateConfirmState() {
+        const matches = nameInput.value.trim() === expectedName;
+        confirmButton.disabled = !matches;
+        hiddenName.value = matches ? expectedName : "";
+    }
+
+    window.closeTeacherModal = function () {
+        modal.classList.add("hidden");
+        modal.classList.remove("flex");
+        modal.setAttribute("aria-hidden", "true");
+        nameInput.value = "";
+        hiddenName.value = "";
+        confirmButton.disabled = true;
+        document.body.style.overflow = "";
+    };
+
+    window.openTeacherModal = function (teacherId, teacherName, action, actionUrl, teacherEmail) {
+        expectedName = String(teacherName || "").trim();
+        currentAction = action === "unblock" ? "unblock" : "block";
+        form.action = actionUrl || form.action;
+        form.dataset.teacherId = String(teacherId || "");
+        form.dataset.expectedName = expectedName;
+        nameInput.value = "";
+        hiddenName.value = "";
+        confirmButton.disabled = true;
+        nameDisplay.textContent = expectedName || "Teacher";
+        emailDisplay.textContent = teacherEmail || "Teacher account";
+        avatar.textContent = expectedName ? expectedName.charAt(0).toUpperCase() : "T";
+        label.textContent = "Confirm Teacher Name";
+
+        if (currentAction === "unblock") {
+            title.textContent = "Unblock Teacher";
+            title.className = "text-lg font-bold text-emerald-400 sm:text-xl";
+            subtitle.textContent = "Restore this teacher's account access.";
+            heading.textContent = "Confirm unblocking this teacher";
+            list.innerHTML = "<li>The teacher will be able to sign in again.</li><li>Existing profile and assignments will remain unchanged.</li>";
+            icon.textContent = "✓";
+            notice.className = "rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4";
+            heading.className = "text-[13px] font-semibold text-emerald-300";
+            confirmButton.className = "flex min-h-10 w-full items-center justify-center gap-1 rounded-lg bg-emerald-600 px-5 py-3 text-[12px] font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto";
+            confirmLabel.textContent = "Unblock";
+        } else {
+            title.textContent = "Block Teacher";
+            title.className = "text-lg font-bold text-orange-400 sm:text-xl";
+            subtitle.textContent = "Temporarily disable this teacher's account access.";
+            heading.textContent = "Confirm blocking this teacher";
+            list.innerHTML = "<li>The teacher will no longer be able to sign in.</li><li>The teacher profile and assignments will not be deleted.</li>";
+            icon.textContent = "⚠️";
+            notice.className = "rounded-xl border border-orange-500/30 bg-orange-500/10 p-4";
+            heading.className = "text-[13px] font-semibold text-orange-300";
+            confirmButton.className = "flex min-h-10 w-full items-center justify-center gap-1 rounded-lg bg-orange-600 px-5 py-3 text-[12px] font-semibold text-white transition hover:bg-orange-700 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto";
+            confirmLabel.textContent = "Block";
+        }
+
+        modal.classList.remove("hidden");
+        modal.classList.add("flex");
+        modal.setAttribute("aria-hidden", "false");
+        document.body.style.overflow = "hidden";
+        window.setTimeout(function () { nameInput.focus(); }, 30);
+    };
+
+    document.addEventListener("click", function (event) {
+        const trigger = event.target.closest(".teacher-action-trigger");
+        if (!trigger) return;
+        event.preventDefault();
+        window.openTeacherModal(
+            trigger.dataset.teacherId,
+            trigger.dataset.teacherName,
+            trigger.dataset.action,
+            trigger.dataset.actionUrl,
+            trigger.dataset.teacherEmail
+        );
+    });
+
+    nameInput.addEventListener("input", updateConfirmState);
+    nameInput.addEventListener("keydown", function (event) {
+        if (event.key === "Enter" && confirmButton.disabled) event.preventDefault();
+    });
+
+    modal.addEventListener("click", function (event) {
+        if (event.target === modal) window.closeTeacherModal();
+    });
+
+    document.addEventListener("keydown", function (event) {
+        if (event.key === "Escape" && !modal.classList.contains("hidden")) {
+            window.closeTeacherModal();
+        }
+    });
+
+    form.addEventListener("submit", function (event) {
+        updateConfirmState();
+        if (confirmButton.disabled || nameInput.value.trim() !== expectedName || !form.action) {
+            event.preventDefault();
+            return;
+        }
+        confirmButton.disabled = true;
+        confirmLabel.textContent = currentAction === "unblock" ? "Unblocking..." : "Blocking...";
+    });
+})();
+</script>
 
 {% endblock %}

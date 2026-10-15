@@ -1,0 +1,185 @@
+{% extends "admins/admin_base.html" %}
+{% block title %}Edit Teacher | NeoLearn Admin{% endblock %}
+
+{% block extra_head %}
+<style>
+.edit-teacher-page{color:#e2e8f0}
+.edit-panel{min-width:0;border:1px solid rgba(148,163,184,.15);border-radius:18px;background:rgba(15,23,42,.78)}
+.edit-section-title{display:flex;align-items:center;gap:10px;font-size:15px;font-weight:700;color:#f8fafc}
+.edit-section-icon{display:inline-flex;width:35px;height:35px;flex-shrink:0;align-items:center;justify-content:center;border:1px solid rgba(0,245,212,.2);border-radius:10px;background:rgba(0,245,212,.08);color:#00f5d4}
+.edit-label{display:block;margin-bottom:8px;color:#cbd5e1;font-size:12px;font-weight:600}
+.edit-control{display:block;width:100%;min-width:0;border:1px solid #334155;border-radius:10px;background:rgba(2,6,23,.65);padding:11px 12px;color:#f1f5f9;font-size:13px;outline:none}
+.edit-control:focus{border-color:#00f5d4;box-shadow:0 0 0 3px rgba(0,245,212,.08)}
+.edit-control::placeholder{color:#64748b}
+.edit-control option{background:#020617;color:#f1f5f9}
+textarea.edit-control{min-height:110px;resize:vertical;line-height:1.65}
+.edit-error{margin-top:6px;color:#fca5a5;font-size:12px;line-height:1.5}
+.edit-help{margin-top:6px;color:#94a3b8;font-size:11px;line-height:1.5}
+.edit-readonly{display:block;width:100%;min-width:0;border:1px solid #293548;border-radius:10px;background:rgba(30,41,59,.55);padding:11px 12px;color:#94a3b8;font-size:13px;overflow-wrap:anywhere}
+.edit-action{display:inline-flex;min-height:42px;align-items:center;justify-content:center;gap:8px;border-radius:10px;padding:10px 16px;font-size:13px;font-weight:700}
+.edit-action-primary{background:#00f5d4;color:#020617}
+.edit-action-primary:hover{background:#5fffea}
+.edit-action-secondary{border:1px solid #334155;background:rgba(15,23,42,.7);color:#cbd5e1}
+.edit-action-secondary:hover{border-color:#00f5d4;color:#00f5d4}
+.edit-field-error .edit-control{border-color:rgba(248,113,113,.8)}
+.edit-upload{width:100%;min-width:0;border:1px dashed #475569;border-radius:12px;background:rgba(2,6,23,.4);padding:14px;color:#cbd5e1;font-size:12px}
+.edit-upload::file-selector-button{margin-right:12px;border:0;border-radius:8px;background:rgba(0,245,212,.12);padding:8px 10px;color:#00f5d4;font-size:11px;font-weight:700;cursor:pointer}
+@media(max-width:640px){.edit-panel{border-radius:14px}.edit-action{width:100%}}
+</style>
+{% endblock %}
+
+{% block admin_content %}
+<div class="edit-teacher-page space-y-6">
+    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div class="min-w-0">
+            <div class="mb-2 flex flex-wrap items-center gap-2 text-xs text-slate-400">
+                <a href="{% url 'admin_teachers' %}" class="transition hover:text-cyan-400">Teachers</a>
+                <i class="ri-arrow-right-s-line"></i>
+                <a href="{% url 'admin_teacher_detail' teacher.id %}" class="transition hover:text-cyan-400">Teacher Profile</a>
+                <i class="ri-arrow-right-s-line"></i>
+                <span class="text-slate-300">Edit</span>
+            </div>
+            <h1 class="text-2xl font-bold tracking-tight text-white sm:text-3xl">Edit Teacher Details</h1>
+            <p class="mt-2 max-w-2xl text-sm leading-6 text-slate-400">Update account credentials and teacher profile information. Changes are saved after server-side validation.</p>
+        </div>
+        <a href="{% url 'admin_teacher_detail' teacher.id %}" class="edit-action edit-action-secondary"><i class="ri-arrow-left-line"></i>Back to Profile</a>
+    </div>
+
+    <section class="edit-panel flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:p-6">
+        <div class="flex-shrink-0">
+            {% if teacher.profile_image %}
+                <img src="{{ teacher.profile_image.url }}" alt="{{ teacher.full_name|default:'Teacher' }}" class="h-16 w-16 rounded-xl border border-slate-700 object-cover">
+            {% else %}
+                <div class="flex h-16 w-16 items-center justify-center rounded-xl border border-cyan-400/20 bg-slate-950 text-2xl font-bold text-cyan-400">
+                    {% if teacher.full_name %}{{ teacher.full_name|first|upper }}{% else %}<i class="ri-user-line"></i>{% endif %}
+                </div>
+            {% endif %}
+        </div>
+        <div class="min-w-0 flex-1">
+            <h2 class="break-words text-lg font-bold text-white">{{ teacher.full_name|default:"Teacher profile" }}</h2>
+            <p class="mt-1 break-all text-sm text-slate-400">{{ teacher.user.email|default:teacher.email|default:"Email not available" }}</p>
+            <p class="mt-1 text-xs text-slate-500">Teacher ID: {% if teacher.teacher_id %}{{ teacher.teacher_id }}{% else %}#{{ teacher.pk }}{% endif %}</p>
+        </div>
+        <div>
+            {% if teacher.is_blocked %}
+                <span class="inline-flex items-center gap-2 rounded-full border border-red-400/20 bg-red-400/10 px-3 py-1.5 text-xs font-semibold text-red-300"><i class="ri-forbid-line"></i>Blocked</span>
+            {% else %}
+                <span class="inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1.5 text-xs font-semibold text-emerald-300"><i class="ri-check-line"></i>Active</span>
+            {% endif %}
+        </div>
+    </section>
+
+    {% if errors.general %}
+    <div role="alert" class="rounded-xl border border-red-400/25 bg-red-400/10 p-4 text-sm text-red-200">
+        <div class="flex items-start gap-3"><i class="ri-error-warning-line mt-0.5 text-lg"></i><div><p class="font-semibold">Unable to save the profile</p><p class="mt-1">{{ errors.general }}</p></div></div>
+    </div>
+    {% endif %}
+
+    <form method="post" action="{% url 'admin_edit_teacher' teacher.id %}" enctype="multipart/form-data" novalidate class="space-y-6">
+        {% csrf_token %}
+
+        <section class="edit-panel p-5 sm:p-6">
+            <div class="edit-section-title mb-6"><span class="edit-section-icon"><i class="ri-shield-user-line"></i></span>Account Information</div>
+            <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                <div class="{% if errors.username %}edit-field-error{% endif %}">
+                    <label class="edit-label" for="username">Username <span class="text-red-400">*</span></label>
+                    <input id="username" name="username" type="text" value="{{ account_values.username }}" maxlength="150" autocomplete="username" class="edit-control" required>
+                    {% if errors.username %}<p class="edit-error">{{ errors.username }}</p>{% endif %}
+                    <p class="edit-help">The username must be unique.</p>
+                </div>
+                <div>
+                    <label class="edit-label" for="email">Registered Email</label>
+                    <input id="email" type="email" value="{{ teacher.user.email|default:teacher.email }}" class="edit-readonly" readonly aria-readonly="true">
+                    <p class="edit-help">Email remains unchanged on this page.</p>
+                </div>
+                <div class="{% if errors.new_password %}edit-field-error{% endif %} sm:col-span-2">
+                    <label class="edit-label" for="new_password">New Password (optional)</label>
+                    <input id="new_password" name="new_password" type="password" autocomplete="new-password" class="edit-control" placeholder="Leave blank to keep the current password">
+                    {% if errors.new_password %}<p class="edit-error">{{ errors.new_password }}</p>{% endif %}
+                    <p class="edit-help">Leave blank to keep the current password. If entered, Django password validation will be applied.</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="edit-panel p-5 sm:p-6">
+            <div class="edit-section-title mb-6"><span class="edit-section-icon"><i class="ri-user-line"></i></span>Personal Information</div>
+            <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                <div class="{% if errors.full_name %}edit-field-error{% endif %}"><label class="edit-label" for="full_name">Full Name *</label><input id="full_name" name="full_name" value="{{ form_values.full_name }}" class="edit-control" required>{% if errors.full_name %}<p class="edit-error">{{ errors.full_name }}</p>{% endif %}</div>
+                <div class="{% if errors.phone_number %}edit-field-error{% endif %}"><label class="edit-label" for="phone_number">Primary Mobile Number *</label><input id="phone_number" name="phone_number" type="tel" value="{{ form_values.phone_number }}" maxlength="10" inputmode="numeric" class="edit-control" required>{% if errors.phone_number %}<p class="edit-error">{{ errors.phone_number }}</p>{% endif %}</div>
+                <div class="{% if errors.date_of_birth %}edit-field-error{% endif %}"><label class="edit-label" for="date_of_birth">Date of Birth</label><input id="date_of_birth" name="date_of_birth" type="date" value="{{ form_values.date_of_birth }}" class="edit-control">{% if errors.date_of_birth %}<p class="edit-error">{{ errors.date_of_birth }}</p>{% endif %}</div>
+                <div class="{% if errors.gender %}edit-field-error{% endif %}"><label class="edit-label" for="gender">Gender</label><select id="gender" name="gender" class="edit-control"><option value="">Select gender</option>{% for value,label in gender_choices.items %}<option value="{{ value }}" {% if form_values.gender == value|stringformat:"s" %}selected{% endif %}>{{ label }}</option>{% endfor %}</select>{% if errors.gender %}<p class="edit-error">{{ errors.gender }}</p>{% endif %}</div>
+                <div class="{% if errors.alternate_phone %}edit-field-error{% endif %}"><label class="edit-label" for="alternate_phone">Alternate Mobile Number</label><input id="alternate_phone" name="alternate_phone" type="tel" value="{{ form_values.alternate_phone }}" maxlength="10" inputmode="numeric" class="edit-control">{% if errors.alternate_phone %}<p class="edit-error">{{ errors.alternate_phone }}</p>{% endif %}</div>
+                <div><label class="edit-label" for="country">Country</label><input id="country" name="country" value="{{ form_values.country }}" class="edit-control" placeholder="India"></div>
+                <div class="{% if errors.gender %}edit-field-error{% endif %}">
+                    <label class="edit-label" for="gender">Gender</label>
+                    <select id="gender" name="gender" class="edit-control">
+                        <option value="">Select gender</option>
+                        {% for value,label in gender_choices.items %}
+                        <option value="{{ value }}" {% if form_values.gender == value|stringformat:"s" %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                    {% if errors.gender %}<p class="edit-error">{{ errors.gender }}</p>{% endif %}
+                </div>
+                <div><label class="edit-label" for="country">Country</label><input id="country" name="country" value="{{ form_values.country }}" class="edit-control" placeholder="India"></div>
+            </div>
+        </section>
+
+        <section class="edit-panel p-5 sm:p-6">
+            <div class="edit-section-title mb-6"><span class="edit-section-icon"><i class="ri-first-aid-kit-line"></i></span>Emergency Contact</div>
+            <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                <div class="{% if errors.emergency_contact_name %}edit-field-error{% endif %}"><label class="edit-label" for="emergency_contact_name">Contact Name</label><input id="emergency_contact_name" name="emergency_contact_name" value="{{ form_values.emergency_contact_name }}" class="edit-control">{% if errors.emergency_contact_name %}<p class="edit-error">{{ errors.emergency_contact_name }}</p>{% endif %}</div>
+                <div class="{% if errors.emergency_contact_relationship %}edit-field-error{% endif %}"><label class="edit-label" for="emergency_contact_relationship">Relationship</label><input id="emergency_contact_relationship" name="emergency_contact_relationship" value="{{ form_values.emergency_contact_relationship }}" class="edit-control">{% if errors.emergency_contact_relationship %}<p class="edit-error">{{ errors.emergency_contact_relationship }}</p>{% endif %}</div>
+                <div class="{% if errors.emergency_contact_phone %}edit-field-error{% endif %}"><label class="edit-label" for="emergency_contact_phone">Emergency Mobile Number</label><input id="emergency_contact_phone" name="emergency_contact_phone" type="tel" value="{{ form_values.emergency_contact_phone }}" maxlength="10" inputmode="numeric" class="edit-control">{% if errors.emergency_contact_phone %}<p class="edit-error">{{ errors.emergency_contact_phone }}</p>{% endif %}</div>
+            </div>
+        </section>
+
+        <section class="edit-panel p-5 sm:p-6">
+            <div class="edit-section-title mb-6"><span class="edit-section-icon"><i class="ri-map-pin-line"></i></span>Address Information</div>
+            <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                <div class="sm:col-span-2"><label class="edit-label" for="address_line_1">Address Line 1</label><input id="address_line_1" name="address_line_1" value="{{ form_values.address_line_1 }}" class="edit-control"></div>
+                <div><label class="edit-label" for="address_line_2">Address Line 2</label><input id="address_line_2" name="address_line_2" value="{{ form_values.address_line_2 }}" class="edit-control"></div>
+                <div><label class="edit-label" for="city">City</label><input id="city" name="city" value="{{ form_values.city }}" class="edit-control"></div>
+                <div><label class="edit-label" for="state">State</label><input id="state" name="state" value="{{ form_values.state }}" class="edit-control"></div>
+                <div><label class="edit-label" for="postal_code">Postal Code</label><input id="postal_code" name="postal_code" value="{{ form_values.postal_code }}" class="edit-control"></div>
+            </div>
+        </section>
+
+        <section class="edit-panel p-5 sm:p-6">
+            <div class="edit-section-title mb-6"><span class="edit-section-icon"><i class="ri-graduation-cap-line"></i></span>Education & Qualifications</div>
+            <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                <div><label class="edit-label" for="qualification">Highest Qualification</label><input id="qualification" name="qualification" value="{{ form_values.qualification }}" class="edit-control"></div>
+                <div><label class="edit-label" for="institution_name">Institution Name</label><input id="institution_name" name="institution_name" value="{{ form_values.institution_name }}" class="edit-control"></div>
+                <div class="{% if errors.graduation_year %}edit-field-error{% endif %}"><label class="edit-label" for="graduation_year">Graduation Year</label><input id="graduation_year" name="graduation_year" type="number" min="1900" max="{{ current_year }}" step="1" value="{{ form_values.graduation_year }}" class="edit-control">{% if errors.graduation_year %}<p class="edit-error">{{ errors.graduation_year }}</p>{% endif %}</div>
+                <div class="sm:col-span-2 lg:col-span-3"><label class="edit-label" for="additional_qualifications">Additional Qualifications</label><textarea id="additional_qualifications" name="additional_qualifications" class="edit-control">{{ form_values.additional_qualifications }}</textarea></div>
+            </div>
+        </section>
+
+        <section class="edit-panel p-5 sm:p-6">
+            <div class="edit-section-title mb-6"><span class="edit-section-icon"><i class="ri-briefcase-line"></i></span>Professional Information</div>
+            <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                <div><label class="edit-label" for="specialization">Specialization</label><input id="specialization" name="specialization" value="{{ form_values.specialization }}" class="edit-control"></div>
+                <div class="sm:col-span-2 lg:col-span-3"><label class="edit-label" for="qualified_subjects">Qualified Subjects</label><textarea id="qualified_subjects" name="qualified_subjects" class="edit-control">{{ form_values.qualified_subjects }}</textarea></div>
+                <div class="{% if errors.experience %}edit-field-error{% endif %}"><label class="edit-label" for="experience">Experience (years)</label><input id="experience" name="experience" type="number" min="0" max="80" step="1" value="{{ form_values.experience }}" class="edit-control">{% if errors.experience %}<p class="edit-error">{{ errors.experience }}</p>{% endif %}</div>
+                <div><label class="edit-label" for="previous_institution">Previous Institution</label><input id="previous_institution" name="previous_institution" value="{{ form_values.previous_institution }}" class="edit-control"></div>
+                <div class="sm:col-span-2 lg:col-span-3"><label class="edit-label" for="bio">About the Teacher</label><textarea id="bio" name="bio" class="edit-control">{{ form_values.bio }}</textarea></div>
+                <div><label class="edit-label" for="language">Languages</label><input id="language" name="language" value="{{ form_values.language }}" class="edit-control"></div>
+                <div><label class="edit-label" for="linkedin">LinkedIn URL</label><input id="linkedin" name="linkedin" type="url" value="{{ form_values.linkedin }}" class="edit-control"></div>
+                <div><label class="edit-label" for="website">Website</label><input id="website" name="website" type="url" value="{{ form_values.website }}" class="edit-control"></div>
+            </div>
+        </section>
+
+        <section class="edit-panel p-5 sm:p-6">
+            <div class="edit-section-title mb-6"><span class="edit-section-icon"><i class="ri-image-line"></i></span>Profile Image</div>
+            {% if teacher.profile_image %}<p class="mb-3 text-sm text-slate-400">Current profile image is saved. Upload a new image only if you want to replace it.</p>{% endif %}
+            <input id="profile_image" name="profile_image" type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" class="edit-upload">
+            {% if errors.profile_image %}<p class="edit-error">{{ errors.profile_image }}</p>{% endif %}
+            <p class="edit-help">JPG, JPEG, PNG or WEBP. Maximum size: 5 MB.</p>
+        </section>
+
+        <div class="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+            <a href="{% url 'admin_teacher_detail' teacher.id %}" class="edit-action edit-action-secondary">Cancel</a>
+            <button type="submit" class="edit-action edit-action-primary"><i class="ri-save-line"></i>Save Teacher Changes</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

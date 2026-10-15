@@ -54,6 +54,8 @@ from .views import (
     admin_unblock_teacher,
     admin_delete_teacher,
     get_teacher_batches_data,
+    admin_teacher_detail_view,
+    admin_edit_teacher_view,
 
 
     # ==========================================================
@@ -92,7 +94,7 @@ from .views import (
     # ADMIN COURSE BUILDER
     # ==========================================================
     admin_course_builder_entry_view,
-    
+
 )
 
 
@@ -121,7 +123,7 @@ urlpatterns = [
     ),
 
 
-    
+
     # ==========================================================
     # STUDENTS
     # ==========================================================
@@ -289,6 +291,18 @@ urlpatterns = [
         "teachers/<int:teacher_id>/batches-data/",
         get_teacher_batches_data,
         name="get_teacher_batches_data",
+    ),
+
+    path(
+        "teachers/<int:teacher_id>/details/",
+        admin_teacher_detail_view,
+        name="admin_teacher_detail",
+    ),
+
+    path(
+        "teachers/<int:teacher_id>/edit/",
+        admin_edit_teacher_view,
+        name="admin_edit_teacher",
     ),
 
 
@@ -480,5 +494,5 @@ urlpatterns = [
         admin_course_builder_entry_view,
         name="admin_course_builder_entry",
     ),
-    
+
 ]
