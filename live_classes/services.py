@@ -1,4 +1,3 @@
-
 from datetime import datetime, time, timedelta
 
 from django.core.exceptions import ValidationError
@@ -13,12 +12,13 @@ from admins.models import (
     TeacherSubject,
 )
 from courses.models import CourseChapter
+
 from .models import (
     CancellationRequest,
     CancellationStatus,
     LiveClass,
-    LiveClassStatus)
-
+    LiveClassStatus,
+)
 
 
 # ============================================================
@@ -29,8 +29,11 @@ BOOKING_WINDOW_DAYS = 7
 
 EARLIEST_START_TIME = time(5, 0)
 LATEST_START_TIME = time(23, 0)
+MIDNIGHT = time(0, 0)
 
 ALLOWED_DURATION_MINUTES = {60, 120, 180}
+
+ALLOWED_BATCH_STATUSES = {"published", "archived"}
 
 
 # ============================================================
@@ -45,72 +48,55 @@ def _raise_error(message):
 def _get_booking_dates():
     """Return today and the following six calendar dates."""
     today = timezone.localdate()
-
-    return (
-        today,
-        today + timedelta(days=BOOKING_WINDOW_DAYS - 1),
-    )
+    return today, today + timedelta(days=BOOKING_WINDOW_DAYS - 1)
 
 
 def _validate_datetime(start_at, end_at):
     """
-    Validate class start and end datetimes.
+    Validate all class timing rules.
 
-    Start:
-    - Must be timezone-aware and in the future.
-    - Must be within the seven-calendar-date booking window.
-    - Must start on an exact hour from 5 AM through 11 PM.
-
-    Duration:
-    - Must be exactly 1, 2 or 3 hours.
-
-    A class may finish at midnight or on the following date.
+    - Datetimes must be timezone-aware.
+    - The start must be in the future.
+    - Booking is allowed for today and the next six dates.
+    - Start times must be hourly, from 5 AM through 11 PM.
+    - Duration must be exactly 1, 2 or 3 hours.
+    - A class may finish exactly at midnight.
+    - A class may not extend into the following day.
     """
 
     if start_at is None or end_at is None:
-        _raise_error(
-            "Class start time and end time are required."
-        )
+        _raise_error("Class start time and end time are required.")
 
     if not isinstance(start_at, datetime) or not isinstance(
         end_at, datetime
     ):
-        _raise_error(
-            "Valid class start and end datetimes are required."
-        )
+        _raise_error("Valid class start and end datetimes are required.")
 
-    if not timezone.is_aware(start_at) or not timezone.is_aware(
-        end_at
-    ):
+    if not timezone.is_aware(start_at) or not timezone.is_aware(end_at):
         _raise_error(
             "Class start and end times must be timezone-aware."
         )
 
     if end_at <= start_at:
-        _raise_error(
-            "Class end time must be after its start time."
-        )
+        _raise_error("Class end time must be after its start time.")
 
     duration = end_at - start_at
-
     allowed_durations = {
         timedelta(minutes=minutes)
         for minutes in ALLOWED_DURATION_MINUTES
     }
 
     if duration not in allowed_durations:
-        _raise_error(
-            "Class duration must be exactly 1, 2 or 3 hours."
-        )
+        _raise_error("Class duration must be exactly 1, 2 or 3 hours.")
 
     now = timezone.now()
 
     if start_at <= now:
-        _raise_error(
-            "You can only book a class in the future."
-        )
+        _raise_error("You can only book a class in the future.")
 
     local_start = timezone.localtime(start_at)
+    local_end = timezone.localtime(end_at)
+
     first_date, last_date = _get_booking_dates()
 
     if not first_date <= local_start.date() <= last_date:
@@ -119,26 +105,53 @@ def _validate_datetime(start_at, end_at):
             "the following six calendar dates."
         )
 
-    local_start_time = local_start.time().replace(tzinfo=None)
+    start_time = local_start.time().replace(tzinfo=None)
+    end_time = local_end.time().replace(tzinfo=None)
 
-    if local_start_time < EARLIEST_START_TIME:
-        _raise_error(
-            "Classes cannot start before 5:00 AM."
-        )
+    if start_time < EARLIEST_START_TIME:
+        _raise_error("Classes cannot start before 5:00 AM.")
 
-    if local_start_time > LATEST_START_TIME:
-        _raise_error(
-            "Classes cannot start after 11:00 PM."
-        )
+    if start_time > LATEST_START_TIME:
+        _raise_error("Classes cannot start after 11:00 PM.")
 
     if (
-        local_start_time.minute != 0
-        or local_start_time.second != 0
-        or local_start_time.microsecond != 0
+        start_time.minute != 0
+        or start_time.second != 0
+        or start_time.microsecond != 0
     ):
         _raise_error(
             "Classes must start on the hour, "
             "for example 5:00 AM or 6:00 AM."
+        )
+
+    # The timetable ends at midnight on the selected date.
+    # The only permitted next-date end timestamp is exactly 00:00.
+    ends_at_midnight = (
+        local_end.date() == local_start.date() + timedelta(days=1)
+        and end_time == MIDNIGHT
+    )
+
+    if local_end.date() == local_start.date():
+        if end_time == MIDNIGHT:
+            _raise_error(
+                "Please select a valid end time for this class."
+            )
+    elif not ends_at_midnight:
+        _raise_error(
+            "Classes must finish by midnight and cannot "
+            "continue into the following day."
+        )
+
+    if local_end.date() not in {
+        local_start.date(),
+        local_start.date() + timedelta(days=1),
+    }:
+        _raise_error("A live class cannot extend beyond midnight.")
+
+    if local_end.date() != local_start.date() and not ends_at_midnight:
+        _raise_error(
+            "A live class must finish on the selected date "
+            "or exactly at midnight."
         )
 
 
@@ -148,7 +161,7 @@ def _validate_datetime(start_at, end_at):
 
 def validate_teacher_assignment(teacher, batch, subject):
     """
-    Require an active teacher account and active assignments
+    Require an existing, active teacher with active assignments
     to the selected batch and subject.
     """
 
@@ -163,11 +176,9 @@ def validate_teacher_assignment(teacher, batch, subject):
     )
 
     if teacher is None:
-        _raise_error(
-            "The selected teacher does not exist."
-        )
+        _raise_error("The selected teacher does not exist.")
 
-    if teacher.is_blocked:
+    if getattr(teacher, "is_blocked", False):
         _raise_error(
             "This teacher is blocked and cannot teach live classes."
         )
@@ -176,8 +187,7 @@ def validate_teacher_assignment(teacher, batch, subject):
 
     if linked_user is not None and not linked_user.is_active:
         _raise_error(
-            "This teacher's account is inactive "
-            "and cannot be scheduled."
+            "This teacher's account is inactive and cannot be scheduled."
         )
 
     batch_assignment = TeacherBatch.objects.filter(
@@ -188,8 +198,7 @@ def validate_teacher_assignment(teacher, batch, subject):
 
     if not batch_assignment:
         _raise_error(
-            "This teacher is not actively assigned "
-            "to the selected batch."
+            "This teacher is not actively assigned to the selected batch."
         )
 
     subject_assignment = TeacherSubject.objects.filter(
@@ -214,10 +223,10 @@ def validate_teacher_assignment(teacher, batch, subject):
 
 def validate_class_content(batch, subject, chapter):
     """
-    Verify that the selected batch, subject and chapter belong
-    together and that the subject and chapter are published.
+    Verify that the batch, subject and chapter belong together.
 
-    Published and archived batches are both permitted.
+    Published and archived batches may be scheduled.
+    Subjects and chapters must be published.
     """
 
     if not (
@@ -225,9 +234,7 @@ def validate_class_content(batch, subject, chapter):
         and getattr(subject, "pk", None)
         and getattr(chapter, "pk", None)
     ):
-        _raise_error(
-            "A batch, subject and chapter are required."
-        )
+        _raise_error("A batch, subject and chapter are required.")
 
     if subject.batch_id != batch.pk:
         _raise_error(
@@ -244,10 +251,7 @@ def validate_class_content(batch, subject, chapter):
             "The selected chapter does not belong to this subject."
         )
 
-    if getattr(batch, "batch_status", None) not in {
-        "published",
-        "archived",
-    }:
+    if getattr(batch, "batch_status", None) not in ALLOWED_BATCH_STATUSES:
         _raise_error(
             "Only published or archived batches can be scheduled."
         )
@@ -276,25 +280,17 @@ def validate_class_conflicts(
     exclude_class_id=None,
 ):
     """
-    Reject overlapping confirmed classes for:
+    Prevent overlapping confirmed classes in the same batch
+    and overlapping confirmed classes for the same teacher.
 
-    1. The same batch, across every subject and teacher.
-    2. The same teacher, across every batch.
-
-    Different batches may overlap if their teachers differ
-    and neither batch has a conflicting class.
-
-    Back-to-back classes are allowed when buffer_minutes is 0.
+    Different batches may overlap when their teachers differ.
     Cancelled, completed and no-show classes do not block booking.
     """
 
     if buffer_minutes < 0:
-        _raise_error(
-            "The class buffer cannot be negative."
-        )
+        _raise_error("The class buffer cannot be negative.")
 
     buffer = timedelta(minutes=buffer_minutes)
-
     protected_start = start_at - buffer
     protected_end = end_at + buffer
 
@@ -307,12 +303,14 @@ def validate_class_conflicts(
     if exclude_class_id is not None:
         conflicts = conflicts.exclude(pk=exclude_class_id)
 
+    # Batch availability is independent of subject and teacher.
     if conflicts.filter(batch_id=batch.pk).exists():
         _raise_error(
             "This batch already has a confirmed class "
             "during the requested time."
         )
 
+    # A teacher cannot teach two batches simultaneously.
     if conflicts.filter(teacher_id=teacher.pk).exists():
         _raise_error(
             "This teacher already has a confirmed class "
@@ -336,20 +334,10 @@ def create_live_class(
     created_by,
 ):
     """
-    Create a confirmed live class after checking:
+    Create a confirmed class after validating the complete booking.
 
-    - Authenticated creator.
-    - Seven-day booking window.
-    - Hourly start times from 5 AM through 11 PM.
-    - Duration of exactly 1, 2 or 3 hours.
-    - Published or archived batch.
-    - Published subject and chapter.
-    - Active teacher account and assignments.
-    - Batch-wise and teacher-wise scheduling conflicts.
-
-    Both Admin and Teacher booking views must use this service.
-
-    BatchScheduleRule is intentionally not enforced here.
+    Both Admin and Teacher views must use this service.
+    BatchScheduleRule is intentionally not enforced.
     """
 
     if not getattr(created_by, "is_authenticated", False):
@@ -369,10 +357,10 @@ def create_live_class(
     if not getattr(chapter, "pk", None):
         _raise_error("Select a valid chapter.")
 
-    # Validate submitted times before acquiring database locks.
     _validate_datetime(start_at, end_at)
 
-    # Lock the batch to serialize bookings for that batch.
+    # Consistent lock order: batch first, then teacher.
+    # Booking paths must use this service to share these locks.
     locked_batch = (
         Batch.objects
         .select_for_update()
@@ -381,11 +369,8 @@ def create_live_class(
     )
 
     if locked_batch is None:
-        _raise_error(
-            "The selected batch no longer exists."
-        )
+        _raise_error("The selected batch no longer exists.")
 
-    # Lock the teacher to serialize bookings across batches.
     locked_teacher = (
         Teacher.objects
         .select_for_update()
@@ -394,18 +379,10 @@ def create_live_class(
     )
 
     if locked_teacher is None:
-        _raise_error(
-            "The selected teacher no longer exists."
-        )
+        _raise_error("The selected teacher no longer exists.")
 
-    # Reload objects after acquiring the locks.
-    batch = Batch.objects.filter(
-        pk=locked_batch.pk
-    ).first()
-
-    teacher = Teacher.objects.filter(
-        pk=locked_teacher.pk
-    ).first()
+    batch = Batch.objects.filter(pk=locked_batch.pk).first()
+    teacher = Teacher.objects.filter(pk=locked_teacher.pk).first()
 
     if batch is None or teacher is None:
         _raise_error(
@@ -419,8 +396,7 @@ def create_live_class(
 
     if subject is None:
         _raise_error(
-            "The selected subject does not belong "
-            "to the selected batch."
+            "The selected subject does not belong to the selected batch."
         )
 
     chapter = CourseChapter.objects.filter(
@@ -435,7 +411,6 @@ def create_live_class(
             "to the selected batch and subject."
         )
 
-    # Recheck teacher eligibility inside the transaction.
     teacher = validate_teacher_assignment(
         teacher=teacher,
         batch=batch,
@@ -448,8 +423,7 @@ def create_live_class(
         chapter=chapter,
     )
 
-    # Recheck the complete booking interval immediately
-    # before checking conflicts and saving.
+    # Revalidate the time immediately before checking conflicts.
     _validate_datetime(start_at, end_at)
 
     validate_class_conflicts(
@@ -457,7 +431,6 @@ def create_live_class(
         batch=batch,
         start_at=start_at,
         end_at=end_at,
-        buffer_minutes=0,
     )
 
     live_class = LiveClass(
@@ -471,11 +444,11 @@ def create_live_class(
         created_by=created_by,
     )
 
-    # Run the model's existing validation as an extra safeguard.
     live_class.full_clean()
     live_class.save()
 
     return live_class
+
 
 # ============================================================
 # RESCHEDULE A LIVE CLASS
@@ -491,7 +464,7 @@ def reschedule_live_class(
     teacher=None,
 ):
     """
-    Reschedule an existing confirmed class.
+    Reschedule a confirmed class.
 
     Admin callers may omit teacher.
     Teacher callers must supply their own Teacher profile.
@@ -517,7 +490,9 @@ def reschedule_live_class(
         _raise_error("Only confirmed classes can be rescheduled.")
 
     if live_class.start_at <= timezone.now():
-        _raise_error("A class that has already started cannot be rescheduled.")
+        _raise_error(
+            "A class that has already started cannot be rescheduled."
+        )
 
     pending_request = CancellationRequest.objects.filter(
         live_class=live_class,
@@ -532,9 +507,68 @@ def reschedule_live_class(
 
     _validate_datetime(start_at, end_at)
 
+    # Use the same lock order as the creation service.
+    locked_batch = (
+        Batch.objects
+        .select_for_update()
+        .filter(pk=live_class.batch_id)
+        .first()
+    )
+
+    if locked_batch is None:
+        _raise_error("The class's batch no longer exists.")
+
+    locked_teacher = (
+        Teacher.objects
+        .select_for_update()
+        .filter(pk=live_class.teacher_id)
+        .first()
+    )
+
+    if locked_teacher is None:
+        _raise_error("The class's teacher no longer exists.")
+
+    # Refresh the class after locks and recheck its state.
+    live_class.refresh_from_db()
+
+    if live_class.status != LiveClassStatus.CONFIRMED:
+        _raise_error(
+            "This class is no longer confirmed and cannot be rescheduled."
+        )
+
+    if live_class.start_at <= timezone.now():
+        _raise_error(
+            "A class that has already started cannot be rescheduled."
+        )
+
+    pending_request = CancellationRequest.objects.filter(
+        live_class=live_class,
+        status=CancellationStatus.PENDING,
+    ).exists()
+
+    if pending_request:
+        _raise_error(
+            "This class has a pending cancellation request. "
+            "Wait for the Admin's decision before rescheduling."
+        )
+
+    validate_teacher_assignment(
+        teacher=locked_teacher,
+        batch=locked_batch,
+        subject=live_class.subject,
+    )
+
+    validate_class_content(
+        batch=locked_batch,
+        subject=live_class.subject,
+        chapter=live_class.chapter,
+    )
+
+    _validate_datetime(start_at, end_at)
+
     validate_class_conflicts(
-        teacher=live_class.teacher,
-        batch=live_class.batch,
+        teacher=locked_teacher,
+        batch=locked_batch,
         start_at=start_at,
         end_at=end_at,
         exclude_class_id=live_class.pk,
@@ -563,8 +597,12 @@ def request_live_class_cancellation(
     """
     Submit a cancellation request for the assigned teacher.
 
-    A request does not cancel the class.
+    Submitting the request does not cancel the class.
+    Admin review is required.
     """
+
+    if not getattr(teacher, "pk", None):
+        _raise_error("A valid teacher account is required.")
 
     if not reason or not reason.strip():
         _raise_error("Please provide a cancellation reason.")
@@ -580,7 +618,9 @@ def request_live_class_cancellation(
         _raise_error("The requested live class was not found.")
 
     if live_class.teacher_id != teacher.pk:
-        _raise_error("You can only request cancellation of your own class.")
+        _raise_error(
+            "You can only request cancellation of your own class."
+        )
 
     if live_class.status != LiveClassStatus.CONFIRMED:
         _raise_error("Only confirmed classes can be cancelled.")
@@ -627,9 +667,10 @@ def review_live_class_cancellation(
     review_note="",
 ):
     """
-    Admin-only callers may approve or reject a request.
+    Review a teacher cancellation request.
 
     The calling view must enforce Admin authorization.
+    Approval cancels the class; rejection leaves it confirmed.
     """
 
     if not getattr(reviewed_by, "is_authenticated", False):
@@ -647,7 +688,9 @@ def review_live_class_cancellation(
         _raise_error("The cancellation request was not found.")
 
     if request_record.status != CancellationStatus.PENDING:
-        _raise_error("This cancellation request has already been reviewed.")
+        _raise_error(
+            "This cancellation request has already been reviewed."
+        )
 
     live_class = (
         LiveClass.objects
@@ -668,7 +711,6 @@ def review_live_class_cancellation(
     if approve:
         live_class.status = LiveClassStatus.CANCELLED
         live_class.save(update_fields=["status", "updated_at"])
-
         request_record.status = CancellationStatus.APPROVED
     else:
         request_record.status = CancellationStatus.REJECTED

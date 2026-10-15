@@ -317,6 +317,25 @@
             opacity: .8;
         }
 
+        .teacher-live-group { margin: 3px 0; }
+        .teacher-live-group > summary { list-style: none; cursor: pointer; }
+        .teacher-live-group > summary::-webkit-details-marker { display: none; }
+        .teacher-live-group[open] .teacher-live-arrow { transform: rotate(180deg); }
+        .teacher-live-arrow { margin-left: auto; transition: transform .2s ease; }
+        .teacher-live-submenu {
+            display: flex; flex-direction: column; gap: 2px;
+            margin: 3px 0 8px 13px; padding-left: 9px;
+            border-left: 2px solid rgb(103 232 249 / 22%);
+        }
+        .teacher-live-submenu .teacher-nav-link {
+            min-height: 40px; margin: 1px 0; padding: 8px 10px;
+            gap: 10px; border-radius: 10px; font-size: 13px;
+        }
+        .teacher-live-submenu .nav-icon { width: 20px; font-size: 17px; }
+        .teacher-live-submenu .teacher-nav-link.active {
+            background: rgb(103 232 249 / 10%); color: var(--teacher-cyan);
+        }
+
         .teacher-nav-link-placeholder:hover {
             transform: none;
             border-color: transparent;
@@ -820,14 +839,34 @@
                         <span class="nav-label">My Batches</span>
                     </a>
 
-<a href="{% url 'live_classes:teacher_live_classes' %}"
-class="teacher-nav-link {% if request.resolver_match.url_name == 'teacher_live_classes' %}active{% endif %}"
-{% if request.resolver_match.url_name == 'teacher_live_classes' %}aria-current="page"{% endif %}>
-    <i class="ri-live-line nav-icon"></i>
-    <span class="nav-label">Live Classes</span>
-</a>
-
-
+<details class="teacher-live-group"
+    {% if request.resolver_match.url_name == 'teacher_live_classes' or request.resolver_match.url_name == 'teacher_reschedule_live_class' or request.resolver_match.url_name == 'teacher_request_cancellation' %}open{% endif %}>
+    <summary class="teacher-nav-link {% if request.resolver_match.url_name == 'teacher_live_classes' or request.resolver_match.url_name == 'teacher_reschedule_live_class' or request.resolver_match.url_name == 'teacher_request_cancellation' %}active{% endif %}"
+        aria-label="Live Classes submenu">
+        <i class="ri-live-line nav-icon"></i>
+        <span class="nav-label">Live Classes</span>
+        <i class="ri-arrow-down-s-line teacher-live-arrow"></i>
+    </summary>
+    <div class="teacher-live-submenu">
+        <a href="{% url 'live_classes:teacher_live_classes' %}"
+            class="teacher-nav-link {% if request.resolver_match.url_name == 'teacher_live_classes' %}active{% endif %}"
+            {% if request.resolver_match.url_name == 'teacher_live_classes' %}aria-current="page"{% endif %}>
+            <i class="ri-calendar-schedule-line nav-icon"></i><span class="nav-label">My Timetable</span>
+        </a>
+        <div class="teacher-nav-link teacher-nav-link-placeholder" aria-disabled="true" title="Connect after the upcoming classes view is implemented">
+            <i class="ri-calendar-event-line nav-icon"></i><span class="nav-label">Upcoming Classes</span>
+        </div>
+        <div class="teacher-nav-link teacher-nav-link-placeholder" aria-disabled="true" title="Connect after the live room view is implemented">
+            <i class="ri-broadcast-line nav-icon"></i><span class="nav-label">Live Now</span>
+        </div>
+        <div class="teacher-nav-link teacher-nav-link-placeholder" aria-disabled="true" title="Connect after the cancellation requests page is implemented">
+            <i class="ri-close-circle-line nav-icon"></i><span class="nav-label">Cancellation Requests</span>
+        </div>
+        <div class="teacher-nav-link teacher-nav-link-placeholder" aria-disabled="true" title="Connect after the class history page is implemented">
+            <i class="ri-history-line nav-icon"></i><span class="nav-label">All Classes &amp; History</span>
+        </div>
+    </div>
+</details>
 
                     <div class="teacher-nav-link teacher-nav-link-placeholder"
                         aria-disabled="true"

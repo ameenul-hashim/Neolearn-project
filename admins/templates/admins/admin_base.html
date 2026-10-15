@@ -1,20 +1,14 @@
 {% load static %}
 
-
-
 <!DOCTYPE html>
 
 <html lang="en">
-
-
 
 <head>
 
     <meta charset="UTF-8">
 
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-
 
     <title>
 
@@ -26,13 +20,9 @@
 
     </title>
 
-
-
     <!-- TAILWIND -->
 
     <script src="https://cdn.tailwindcss.com"></script>
-
-
 
     <!-- REMIX ICON -->
 
@@ -44,13 +34,9 @@
 
     >
 
-
-
     <!-- TOAST MESSAGES CSS -->
 
     <link rel="stylesheet" href="{% static 'toast-messages.css' %}">
-
-
 
     <style>
 
@@ -62,8 +48,6 @@
 
         }
 
-
-
         *::-webkit-scrollbar {
 
             width: 0;
@@ -72,15 +56,11 @@
 
         }
 
-
-
         html {
 
             scroll-behavior: smooth;
 
         }
-
-
 
         body {
 
@@ -89,8 +69,6 @@
             min-height: 100vh;
 
         }
-
-
 
         /* Fixed toast messages */
 
@@ -115,8 +93,6 @@
             max-width: 400px;
 
         }
-
-
 
         /* Sidebar navigation */
 
@@ -152,8 +128,6 @@
 
         }
 
-
-
         .admin-nav-link:hover {
 
             background-color: rgba(255, 255, 255, 0.05);
@@ -161,8 +135,6 @@
             color: #FFFFFF;
 
         }
-
-
 
         .admin-nav-link.active {
 
@@ -173,8 +145,6 @@
             color: #FFFFFF;
 
         }
-
-
 
         .admin-nav-link.active::before {
 
@@ -200,15 +170,11 @@
 
         }
 
-
-
         .admin-nav-link.active .nav-icon {
 
             color: #00F5D4;
 
         }
-
-
 
         /* LIVE CLASSES DROPDOWN */
         .admin-live-classes-dropdown > summary {
@@ -282,8 +248,6 @@
 
         }
 
-
-
         /* Responsive toast position */
 
         @media (max-width: 640px) {
@@ -302,8 +266,6 @@
 
         }
 
-
-
         /* Mobile sidebar */
 
         @media (max-width: 1023px) {
@@ -320,23 +282,17 @@
 
             }
 
-
-
             .admin-sidebar.sidebar-open {
 
                 transform: translateX(0);
 
             }
 
-
-
             .sidebar-backdrop.backdrop-open {
 
                 display: block;
 
             }
-
-
 
             .admin-navbar {
 
@@ -348,15 +304,11 @@
 
             }
 
-
-
             .admin-main {
 
                 margin-left: 0 !important;
 
             }
-
-
 
             body.sidebar-is-open {
 
@@ -366,8 +318,6 @@
 
         }
 
-
-
         @media (min-width: 1024px) {
 
             .admin-sidebar {
@@ -376,15 +326,11 @@
 
             }
 
-
-
             .sidebar-backdrop {
 
                 display: none !important;
 
             }
-
-
 
             .mobile-menu-button {
 
@@ -396,23 +342,15 @@
 
     </style>
 
-
-
     {% block extra_head %}{% endblock %}
 
 </head>
 
-
-
 <body class="bg-[#020617] overflow-hidden font-sans text-white">
-
-
 
     <!-- BACKGROUND -->
 
     <div class="fixed inset-0 bg-[#030712] z-0 pointer-events-none"></div>
-
-
 
     <!-- CYAN GLOW -->
 
@@ -424,8 +362,6 @@
 
     </div>
 
-
-
     <!-- PURPLE GLOW -->
 
     <div
@@ -435,8 +371,6 @@
                rounded-full bg-violet-500/10 blur-3xl z-0 pointer-events-none">
 
     </div>
-
-
 
     <!-- GRID -->
 
@@ -458,8 +392,6 @@
 
     </div>
 
-
-
     <!-- MOBILE SIDEBAR BACKDROP -->
 
     <div
@@ -471,8 +403,6 @@
         aria-hidden="true">
 
     </div>
-
-
 
     <!-- SIDEBAR -->
 
@@ -488,8 +418,6 @@
 
         aria-label="Admin navigation">
 
-
-
         <!-- LOGO -->
 
         <div
@@ -498,17 +426,11 @@
 
                    flex items-center justify-between px-7">
 
-
-
             <a href="{% url 'admin_dashboard' %}"
 
                class="flex items-center gap-3 no-underline">
 
-
-
                 <i class="ri-flashlight-fill text-[#00F5D4] text-[24px]"></i>
-
-
 
                 <h1 class="text-[22px] font-extrabold tracking-wide text-white">
 
@@ -517,8 +439,6 @@
                 </h1>
 
             </a>
-
-
 
             <!-- MOBILE CLOSE BUTTON -->
 
@@ -536,21 +456,15 @@
 
                 aria-label="Close navigation menu">
 
-
-
                 <i class="ri-close-line text-[22px]"></i>
 
             </button>
 
         </div>
 
-
-
         <!-- NAVIGATION -->
 
         <div class="flex-1 min-h-0 overflow-y-auto px-4 py-6">
-
-
 
             <p class="text-[#64748B] text-[11px] uppercase tracking-[2px]
 
@@ -560,11 +474,7 @@
 
             </p>
 
-
-
             <nav class="space-y-2">
-
-
 
                 <!-- DASHBOARD -->
 
@@ -576,15 +486,11 @@
 
                     {% if request.resolver_match.url_name == 'admin_dashboard' %}aria-current="page"{% endif %}>
 
-
-
                     <i class="nav-icon ri-layout-grid-fill text-[18px]"></i>
 
                     <span class="text-[15px] font-semibold">Dashboard</span>
 
                 </a>
-
-
 
                 <!-- STUDENTS -->
 
@@ -596,15 +502,11 @@
 
                     {% if request.resolver_match.url_name == 'admin_students' %}aria-current="page"{% endif %}>
 
-
-
                     <i class="nav-icon ri-team-line text-[18px]"></i>
 
                     <span class="text-[15px] font-medium">Students</span>
 
                 </a>
-
-
 
                 <!-- TEACHERS -->
 
@@ -616,15 +518,11 @@
 
                     {% if request.resolver_match.url_name == 'admin_teachers' %}aria-current="page"{% endif %}>
 
-
-
                     <i class="nav-icon ri-team-line text-[18px]"></i>
 
                     <span class="text-[15px] font-medium">Teachers</span>
 
                 </a>
-
-
 
                 <!-- BATCHES -->
 
@@ -636,15 +534,11 @@
 
                     {% if 'batch' in request.resolver_match.url_name %}aria-current="page"{% endif %}>
 
-
-
                     <i class="nav-icon ri-book-open-line text-[18px]"></i>
 
                     <span class="text-[15px] font-medium">Batches</span>
 
                 </a>
-
-
 
                 <!-- SUBJECTS -->
 
@@ -656,15 +550,11 @@
 
                     {% if 'subject' in request.resolver_match.url_name %}aria-current="page"{% endif %}>
 
-
-
                     <i class="nav-icon ri-stack-line text-[18px]"></i>
 
                     <span class="text-[15px] font-medium">Subjects</span>
 
                 </a>
-
-
 
                 <!-- LIVE CLASSES: EXPANDABLE SUBMENU -->
                 <details
@@ -693,14 +583,14 @@
                             <span>Upcoming Classes</span>
                         </div>
 
-                        <div class="admin-nav-link admin-live-sub-link live-sub-disabled" aria-disabled="true" title="This page will be connected after the Live Schedule page.">
-                            <i class="nav-icon ri-calendar-close-line text-[16px]"></i>
-                            <span>Cancellation Requests</span>
+                        <div class="admin-nav-link admin-live-sub-link live-sub-disabled" aria-disabled="true" title="Connect after the Admin live-monitoring view and URL are implemented.">
+                            <i class="nav-icon ri-broadcast-line text-[16px]"></i>
+                            <span>Live Now</span>
                         </div>
 
                         <div class="admin-nav-link admin-live-sub-link live-sub-disabled" aria-disabled="true" title="This page will be connected after the Live Schedule page.">
-                            <i class="nav-icon ri-video-line text-[16px]"></i>
-                            <span>Recorded Classes</span>
+                            <i class="nav-icon ri-calendar-close-line text-[16px]"></i>
+                            <span>Cancellation Requests</span>
                         </div>
 
                         <div class="admin-nav-link admin-live-sub-link live-sub-disabled" aria-disabled="true" title="This page will be connected after the Live Schedule page.">
@@ -709,8 +599,6 @@
                         </div>
                     </div>
                 </details>
-
-
 
                 <!-- ORDER MANAGEMENT -->
 
@@ -722,15 +610,11 @@
 
                     {% if 'order' in request.resolver_match.url_name %}aria-current="page"{% endif %}>
 
-
-
                     <i class="nav-icon ri-bank-card-line text-[18px]"></i>
 
                     <span class="text-[15px] font-medium">Order Management</span>
 
                 </a>
-
-
 
                 <!-- REFUND MANAGEMENT -->
 
@@ -742,15 +626,11 @@
 
                     {% if 'refund' in request.resolver_match.url_name %}aria-current="page"{% endif %}>
 
-
-
                     <i class="nav-icon ri-refund-2-line text-[18px]"></i>
 
                     <span class="text-[15px] font-medium">Refund Management</span>
 
                 </a>
-
-
 
                 <!-- COUPONS -->
 
@@ -762,15 +642,11 @@
 
                     {% if 'coupon' in request.resolver_match.url_name %}aria-current="page"{% endif %}>
 
-
-
                     <i class="nav-icon ri-coupon-3-line text-[18px]"></i>
 
                     <span class="text-[15px] font-medium">Coupons</span>
 
                 </a>
-
-
 
                 <!-- ANALYTICS -->
 
@@ -780,27 +656,19 @@
 
                     class="admin-nav-link">
 
-
-
                     <i class="nav-icon ri-line-chart-line text-[18px]"></i>
 
                     <span class="text-[15px] font-medium">Analytics</span>
 
                 </a>
 
-
-
             </nav>
 
         </div>
 
-
-
         <!-- LOGOUT -->
 
         <div class="shrink-0 p-4 border-t border-white/5">
-
-
 
             <a
 
@@ -814,8 +682,6 @@
 
                        transition duration-300 font-semibold text-[14px]">
 
-
-
                 <i class="ri-logout-box-r-line text-[18px]"></i>
 
                 <span>Logout</span>
@@ -824,11 +690,7 @@
 
         </div>
 
-
-
     </aside>
-
-
 
     <!-- NAVBAR -->
 
@@ -842,13 +704,9 @@
 
                flex items-center justify-between gap-4 px-7">
 
-
-
         <!-- LEFT: MOBILE MENU + SEARCH -->
 
         <div class="flex items-center gap-3 min-w-0 flex-1">
-
-
 
             <!-- MOBILE MENU BUTTON -->
 
@@ -874,19 +732,13 @@
 
                 aria-expanded="false">
 
-
-
                 <i class="ri-menu-line text-[22px]"></i>
 
             </button>
 
-
-
             <!-- SEARCH -->
 
             <div class="relative w-full max-w-[360px] min-w-0">
-
-
 
                 <input
 
@@ -906,8 +758,6 @@
 
                            focus:border-[#00F5D4] transition">
 
-
-
                 <i
 
                     class="ri-search-line absolute left-4 top-1/2
@@ -920,13 +770,9 @@
 
         </div>
 
-
-
         <!-- RIGHT: NOTIFICATION + PROFILE -->
 
         <div class="flex items-center gap-3 sm:gap-5 shrink-0">
-
-
 
             <!-- NOTIFICATION -->
 
@@ -944,11 +790,7 @@
 
                 aria-label="Notifications">
 
-
-
                 <i class="ri-notification-3-line text-[18px]"></i>
-
-
 
                 <span
 
@@ -962,13 +804,9 @@
 
             </button>
 
-
-
             <!-- PROFILE -->
 
             <div class="flex items-center gap-3 min-w-0">
-
-
 
                 <img
 
@@ -982,8 +820,6 @@
 
                            object-cover">
 
-
-
                 <div class="hidden sm:block min-w-0">
 
                     <h3 class="text-white text-[14px] font-semibold leading-tight">
@@ -991,8 +827,6 @@
                         Admin User
 
                     </h3>
-
-
 
                     <p class="text-[#94A3B8] text-[12px]">
 
@@ -1006,11 +840,7 @@
 
         </div>
 
-
-
     </header>
-
-
 
     <!-- FIXED TOAST MESSAGES -->
 
@@ -1018,29 +848,19 @@
 
         <div class="message-container" id="messageContainer">
 
-
-
             {% for message in messages %}
 
                 <div class="message-item {{ message.tags }}">
 
-
-
                     <div class="message-header">
 
-
-
                         <div class="message-left">
-
-
 
                             <div class="message-icon">
 
                                 <i class="ri-{% if message.tags == 'success' %}check-line{% elif message.tags == 'error' %}close-circle-line{% elif message.tags == 'warning' %}alert-line{% else %}information-line{% endif %}"></i>
 
                             </div>
-
-
 
                             <div class="message-title">
 
@@ -1066,8 +886,6 @@
 
                         </div>
 
-
-
                         <button
 
                             class="message-close"
@@ -1076,15 +894,11 @@
 
                             aria-label="Close message">
 
-
-
                             <i class="ri-close-line"></i>
 
                         </button>
 
                     </div>
-
-
 
                     <div class="message-text">{{ message }}</div>
 
@@ -1092,13 +906,9 @@
 
             {% endfor %}
 
-
-
         </div>
 
     {% endif %}
-
-
 
     <!-- MAIN CONTENT -->
 
@@ -1108,29 +918,19 @@
 
                overflow-y-auto relative z-10">
 
-
-
-        <div class="px-4 sm:px-6 pt-4 sm:pt-6 pb-12 sm:pb-24 min-w-0">
-
-
+        <div class="px-4 sm:px-6 pt-4 sm:pt-6 pb-3 sm:pb-4 min-w-0">
 
             {% block admin_content %}
 
             {% endblock %}
 
-
-
         </div>
 
     </main>
 
-
-
     <!-- TOAST MESSAGES JS -->
 
     <script src="{% static 'toast-messages.js' %}"></script>
-
-
 
     <!-- MOBILE SIDEBAR INTERACTION -->
 
@@ -1146,23 +946,17 @@
 
             const closeButton = document.getElementById("closeSidebarButton");
 
-
-
             if (!sidebar || !backdrop || !openButton || !closeButton) {
 
                 return;
 
             }
 
-
-
             function isMobileLayout() {
 
                 return window.innerWidth < 1024;
 
             }
-
-
 
             function openSidebar() {
 
@@ -1171,8 +965,6 @@
                     return;
 
                 }
-
-
 
                 sidebar.classList.add("sidebar-open");
 
@@ -1185,8 +977,6 @@
                 backdrop.setAttribute("aria-hidden", "false");
 
             }
-
-
 
             function closeSidebar() {
 
@@ -1202,15 +992,11 @@
 
             }
 
-
-
             openButton.addEventListener("click", openSidebar);
 
             closeButton.addEventListener("click", closeSidebar);
 
             backdrop.addEventListener("click", closeSidebar);
-
-
 
             document.addEventListener("keydown", function (event) {
 
@@ -1221,8 +1007,6 @@
                 }
 
             });
-
-
 
             sidebar.querySelectorAll("nav a").forEach(function (link) {
 
@@ -1238,8 +1022,6 @@
 
             });
 
-
-
             window.addEventListener("resize", function () {
 
                 if (!isMobileLayout()) {
@@ -1254,11 +1036,7 @@
 
     </script>
 
-
-
     {% block extra_js %}{% endblock %}
-
-
 
 </body>
 

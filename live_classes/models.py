@@ -1,4 +1,3 @@
-
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
@@ -8,10 +7,6 @@ from django.utils import timezone
 from admins.models import Batch, Subject, Teacher
 from courses.models import CourseChapter
 
-
-# ============================================================
-# COMMON CHOICES
-# ============================================================
 
 class LiveClassStatus(models.TextChoices):
     CONFIRMED = "confirmed", "Confirmed"
@@ -44,26 +39,12 @@ class ChatMessageType(models.TextChoices):
     SYSTEM = "system", "System Message"
 
 
-# ============================================================
-# 1. BATCH SCHEDULE RULE
-# ============================================================
-
 class BatchScheduleRule(models.Model):
-    """
-    Defines the permitted scheduling window for one batch
-    on one day of the week.
-
-    Python weekday numbering:
-        Monday = 0
-        Sunday = 6
-    """
-
     batch = models.ForeignKey(
         Batch,
         on_delete=models.CASCADE,
         related_name="live_schedule_rules",
     )
-
     weekday = models.PositiveSmallIntegerField(
         choices=[
             (0, "Monday"),
@@ -75,42 +56,19 @@ class BatchScheduleRule(models.Model):
             (6, "Sunday"),
         ],
     )
-
-    start_time = models.TimeField(
-        help_text="Earliest permitted class start time.",
-    )
-
-    end_time = models.TimeField(
-        help_text="Latest permitted timetable boundary.",
-    )
-
-    default_duration_minutes = models.PositiveSmallIntegerField(
-        default=60,
-    )
-
-    max_advance_days = models.PositiveSmallIntegerField(
-        default=30,
-    )
-
-    minimum_notice_minutes = models.PositiveSmallIntegerField(
-        default=0,
-    )
-
-    buffer_minutes = models.PositiveSmallIntegerField(
-        default=0,
-        help_text="Optional gap required between classes.",
-    )
-
+    start_time = models.TimeField()
+    end_time = models.TimeField()
+    default_duration_minutes = models.PositiveSmallIntegerField(default=60)
+    max_advance_days = models.PositiveSmallIntegerField(default=30)
+    minimum_notice_minutes = models.PositiveSmallIntegerField(default=0)
+    buffer_minutes = models.PositiveSmallIntegerField(default=0)
     is_active = models.BooleanField(default=True)
-
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.PROTECT,
         related_name="live_schedule_rules_created",
     )
-
     updated_at = models.DateTimeField(auto_now=True)
-
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -136,94 +94,74 @@ class BatchScheduleRule(models.Model):
 
     def clean(self):
         super().clean()
+        errors = {}
 
-        if self.end_time <= self.start_time:
-            raise ValidationError({
-                "end_time": "End time must be later than start time."
-            })
+        if self.weekday is not None and not 0 <= self.weekday <= 6:
+            errors["weekday"] = "Choose a valid weekday."
+
+        if (
+            self.start_time is not None
+            and self.end_time is not None
+            and self.end_time <= self.start_time
+        ):
+            errors["end_time"] = "End time must be later than start time."
 
         if self.default_duration_minutes <= 0:
-            raise ValidationError({
-                "default_duration_minutes": (
-                    "Class duration must be greater than zero."
-                )
-            })
+            errors["default_duration_minutes"] = (
+                "Class duration must be greater than zero."
+            )
+
+        if errors:
+            raise ValidationError(errors)
 
     def __str__(self):
         return (
-            f"{self.batch} - "
-            f"{self.get_weekday_display()} "
+            f"{self.batch} - {self.get_weekday_display()} "
             f"({self.start_time}–{self.end_time})"
         )
 
 
-# ============================================================
-# 2. LIVE CLASS
-# ============================================================
-
 class LiveClass(models.Model):
-    """
-    The shared class record used by Admin, Teacher and
-    authorized Student workflows.
-
-    Times are stored as timezone-aware datetimes because
-    USE_TZ is enabled in the project.
-    """
-
     batch = models.ForeignKey(
         Batch,
         on_delete=models.PROTECT,
         related_name="live_classes",
     )
-
     subject = models.ForeignKey(
         Subject,
         on_delete=models.PROTECT,
         related_name="live_classes",
     )
-
     chapter = models.ForeignKey(
         CourseChapter,
         on_delete=models.PROTECT,
         related_name="live_classes",
     )
-
     teacher = models.ForeignKey(
         Teacher,
         on_delete=models.PROTECT,
         related_name="live_classes",
     )
-
     start_at = models.DateTimeField(db_index=True)
-
     end_at = models.DateTimeField(db_index=True)
-
     status = models.CharField(
         max_length=15,
         choices=LiveClassStatus.choices,
         default=LiveClassStatus.CONFIRMED,
         db_index=True,
     )
-
     meeting_provider = models.CharField(
         max_length=50,
         blank=True,
-        help_text="Meeting provider identifier, configured later.",
+        help_text="Configured meeting provider identifier.",
     )
-
-    provider_room_id = models.CharField(
-        max_length=255,
-        blank=True,
-    )
-
+    provider_room_id = models.CharField(max_length=255, blank=True)
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.PROTECT,
         related_name="live_classes_created",
     )
-
     created_at = models.DateTimeField(auto_now_add=True)
-
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
@@ -253,11 +191,8 @@ class LiveClass(models.Model):
         super().clean()
         errors = {}
 
-        if self.start_at and self.end_at:
-            if self.end_at <= self.start_at:
-                errors["end_at"] = (
-                    "Class end time must be later than start time."
-                )
+        if self.start_at and self.end_at and self.end_at <= self.start_at:
+            errors["end_at"] = "Class end time must be later than start time."
 
         if self.batch_id and self.subject_id:
             if self.subject.batch_id != self.batch_id:
@@ -277,11 +212,14 @@ class LiveClass(models.Model):
                     "The selected chapter does not belong to this subject."
                 )
 
-        if self.teacher_id:
-            if self.teacher.is_blocked:
-                errors["teacher"] = (
-                    "A blocked teacher cannot be assigned to a live class."
-                )
+        if self.teacher_id and self.teacher.is_blocked:
+            errors["teacher"] = (
+                "A blocked teacher cannot be assigned to a live class."
+            )
+
+        if self.teacher_id and self.teacher.user_id:
+            if not self.teacher.user.is_active:
+                errors["teacher"] = "An inactive teacher cannot teach a live class."
 
         if errors:
             raise ValidationError(errors)
@@ -293,39 +231,24 @@ class LiveClass(models.Model):
         )
 
 
-# ============================================================
-# 3. EMERGENCY CANCELLATION REQUEST
-# ============================================================
-
 class CancellationRequest(models.Model):
-    """
-    Teacher-submitted cancellation request.
-
-    A pending request does not cancel the class.
-    Only an authorized Admin workflow may approve it.
-    """
-
     live_class = models.ForeignKey(
         LiveClass,
         on_delete=models.PROTECT,
         related_name="cancellation_requests",
     )
-
     requested_by = models.ForeignKey(
         Teacher,
         on_delete=models.PROTECT,
         related_name="live_cancellation_requests",
     )
-
     reason = models.TextField()
-
     status = models.CharField(
         max_length=12,
         choices=CancellationStatus.choices,
         default=CancellationStatus.PENDING,
         db_index=True,
     )
-
     reviewed_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.PROTECT,
@@ -333,11 +256,8 @@ class CancellationRequest(models.Model):
         blank=True,
         related_name="live_cancellation_reviews",
     )
-
     review_note = models.TextField(blank=True)
-
     requested_at = models.DateTimeField(auto_now_add=True)
-
     reviewed_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
@@ -354,65 +274,56 @@ class CancellationRequest(models.Model):
         errors = {}
 
         if not self.reason or not self.reason.strip():
-            errors["reason"] = (
-                "A cancellation reason is required."
-            )
+            errors["reason"] = "A cancellation reason is required."
 
         if self.live_class_id and self.requested_by_id:
             if self.live_class.teacher_id != self.requested_by_id:
                 errors["requested_by"] = (
-                    "Only the currently assigned teacher can "
-                    "request cancellation."
+                    "Only the currently assigned teacher can request cancellation."
+                )
+
+        if self.status in (
+            CancellationStatus.APPROVED,
+            CancellationStatus.REJECTED,
+        ):
+            if not self.reviewed_by_id:
+                errors["reviewed_by"] = (
+                    "A reviewer is required for a completed decision."
+                )
+            if not self.reviewed_at:
+                errors["reviewed_at"] = (
+                    "The review timestamp is required for a completed decision."
                 )
 
         if errors:
             raise ValidationError(errors)
 
     def __str__(self):
-        return (
-            f"Cancellation request #{self.pk} - "
-            f"{self.get_status_display()}"
-        )
+        return f"Cancellation request #{self.pk} - {self.get_status_display()}"
 
-
-# ============================================================
-# 4. TEACHER REASSIGNMENT HISTORY
-# ============================================================
 
 class TeacherReassignmentHistory(models.Model):
-    """
-    Immutable audit entry for an Admin-approved reassignment.
-
-    LiveClass.teacher represents the current assigned teacher.
-    This model preserves the previous assignment.
-    """
-
     live_class = models.ForeignKey(
         LiveClass,
         on_delete=models.PROTECT,
         related_name="reassignment_history",
     )
-
     previous_teacher = models.ForeignKey(
         Teacher,
         on_delete=models.PROTECT,
         related_name="live_classes_reassigned_from",
     )
-
     new_teacher = models.ForeignKey(
         Teacher,
         on_delete=models.PROTECT,
         related_name="live_classes_reassigned_to",
     )
-
     reassigned_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.PROTECT,
         related_name="live_class_reassignments",
     )
-
     reason = models.TextField()
-
     reassigned_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -428,9 +339,7 @@ class TeacherReassignmentHistory(models.Model):
             )
 
         if not self.reason or not self.reason.strip():
-            errors["reason"] = (
-                "A reassignment reason is required."
-            )
+            errors["reason"] = "A reassignment reason is required."
 
         if errors:
             raise ValidationError(errors)
@@ -442,64 +351,27 @@ class TeacherReassignmentHistory(models.Model):
         )
 
 
-# ============================================================
-# 5. LIVE RECORDING METADATA
-# ============================================================
-
 class LiveRecording(models.Model):
-    """
-    Stores recording metadata, not the actual recorded video.
-
-    Actual capture and secure media storage will be integrated
-    through a supported meeting/recording provider.
-    """
-
     live_class = models.ForeignKey(
         LiveClass,
         on_delete=models.PROTECT,
         related_name="recordings",
     )
-
     status = models.CharField(
         max_length=15,
         choices=RecordingStatus.choices,
         default=RecordingStatus.NOT_STARTED,
         db_index=True,
     )
-
-    storage_provider = models.CharField(
-        max_length=50,
-        blank=True,
-    )
-
-    provider_recording_id = models.CharField(
-        max_length=255,
-        blank=True,
-    )
-
-    private_storage_key = models.CharField(
-        max_length=500,
-        blank=True,
-    )
-
-    duration_seconds = models.PositiveIntegerField(
-        null=True,
-        blank=True,
-    )
-
-    file_size_bytes = models.PositiveBigIntegerField(
-        null=True,
-        blank=True,
-    )
-
+    storage_provider = models.CharField(max_length=50, blank=True)
+    provider_recording_id = models.CharField(max_length=255, blank=True)
+    private_storage_key = models.CharField(max_length=500, blank=True)
+    duration_seconds = models.PositiveIntegerField(null=True, blank=True)
+    file_size_bytes = models.PositiveBigIntegerField(null=True, blank=True)
     failure_reason = models.TextField(blank=True)
-
     started_at = models.DateTimeField(null=True, blank=True)
-
     finished_at = models.DateTimeField(null=True, blank=True)
-
     created_at = models.DateTimeField(auto_now_add=True)
-
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
@@ -511,6 +383,32 @@ class LiveRecording(models.Model):
             ),
         ]
 
+    def clean(self):
+        super().clean()
+        errors = {}
+
+        if self.duration_seconds is not None and self.duration_seconds < 0:
+            errors["duration_seconds"] = "Duration cannot be negative."
+
+        if self.file_size_bytes is not None and self.file_size_bytes < 0:
+            errors["file_size_bytes"] = "File size cannot be negative."
+
+        if self.started_at and self.finished_at:
+            if self.finished_at < self.started_at:
+                errors["finished_at"] = (
+                    "Recording finish time cannot precede its start time."
+                )
+
+        if self.status == RecordingStatus.READY and not (
+            self.private_storage_key or self.provider_recording_id
+        ):
+            errors["private_storage_key"] = (
+                "A ready recording must have a storage key or provider recording ID."
+            )
+
+        if errors:
+            raise ValidationError(errors)
+
     def __str__(self):
         return (
             f"Recording for class #{self.live_class_id} "
@@ -518,37 +416,22 @@ class LiveRecording(models.Model):
         )
 
 
-# ============================================================
-# 6. LIVE ATTENDANCE
-# ============================================================
-
 class LiveAttendance(models.Model):
-    """
-    One attendance record per authenticated student and class.
-    """
-
     live_class = models.ForeignKey(
         LiveClass,
         on_delete=models.PROTECT,
         related_name="attendance_records",
     )
-
     student = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.PROTECT,
         related_name="live_class_attendance",
     )
-
     joined_at = models.DateTimeField(null=True, blank=True)
-
     left_at = models.DateTimeField(null=True, blank=True)
-
     duration_seconds = models.PositiveIntegerField(default=0)
-
     attended = models.BooleanField(default=False)
-
     created_at = models.DateTimeField(auto_now_add=True)
-
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
@@ -562,14 +445,16 @@ class LiveAttendance(models.Model):
 
     def clean(self):
         super().clean()
+        errors = {}
 
-        if self.joined_at and self.left_at:
-            if self.left_at < self.joined_at:
-                raise ValidationError({
-                    "left_at": (
-                        "Leave time cannot precede join time."
-                    )
-                })
+        if self.joined_at and self.left_at and self.left_at < self.joined_at:
+            errors["left_at"] = "Leave time cannot precede join time."
+
+        if self.duration_seconds < 0:
+            errors["duration_seconds"] = "Attendance duration cannot be negative."
+
+        if errors:
+            raise ValidationError(errors)
 
     def __str__(self):
         return (
@@ -578,41 +463,27 @@ class LiveAttendance(models.Model):
         )
 
 
-# ============================================================
-# 7. SESSION PARTICIPANT MODERATION AUDIT
-# ============================================================
-
 class LiveParticipantAction(models.Model):
-    """
-    Records suspension and restoration actions for one user
-    within one live class.
-    """
-
     live_class = models.ForeignKey(
         LiveClass,
         on_delete=models.PROTECT,
         related_name="participant_actions",
     )
-
     participant = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.PROTECT,
         related_name="live_participant_actions",
     )
-
     action = models.CharField(
         max_length=12,
         choices=ParticipantActionType.choices,
     )
-
     performed_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.PROTECT,
         related_name="live_moderation_actions",
     )
-
     reason = models.TextField(blank=True)
-
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -626,49 +497,29 @@ class LiveParticipantAction(models.Model):
 
     def __str__(self):
         return (
-            f"{self.get_action_display()} - "
-            f"user #{self.participant_id}, "
+            f"{self.get_action_display()} - user #{self.participant_id}, "
             f"class #{self.live_class_id}"
         )
 
 
-# ============================================================
-# 8. LIVE SESSION CHAT
-# ============================================================
-
 class LiveChatMessage(models.Model):
-    """
-    Persistent session chat.
-
-    Access and moderation checks will be enforced in the
-    chat endpoint/service, not by this model alone.
-    """
-
     live_class = models.ForeignKey(
         LiveClass,
         on_delete=models.PROTECT,
         related_name="chat_messages",
     )
-
     sender = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.PROTECT,
         related_name="live_chat_messages",
     )
-
     message_type = models.CharField(
         max_length=10,
         choices=ChatMessageType.choices,
         default=ChatMessageType.MESSAGE,
     )
-
     message = models.TextField(max_length=2000)
-
-    created_at = models.DateTimeField(
-        default=timezone.now,
-        db_index=True,
-    )
-
+    created_at = models.DateTimeField(default=timezone.now, db_index=True)
     is_deleted = models.BooleanField(default=False)
 
     class Meta:
@@ -682,14 +533,10 @@ class LiveChatMessage(models.Model):
 
     def clean(self):
         super().clean()
-
         if not self.message or not self.message.strip():
             raise ValidationError({
                 "message": "A chat message cannot be empty."
             })
 
     def __str__(self):
-        return (
-            f"Chat message #{self.pk} "
-            f"for class #{self.live_class_id}"
-        )
+        return f"Chat message #{self.pk} for class #{self.live_class_id}"

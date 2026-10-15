@@ -13,6 +13,9 @@
         max-width: 100%;
         min-width: 0;
         font-size: 13px;
+        margin-bottom: 0 !important;
+        padding-bottom: 0 !important;
+        overflow-x: clip;
     }
 
     .live-page *,
@@ -144,24 +147,55 @@
     .live-main-grid {
         display: grid;
         grid-template-columns: minmax(0, 1.85fr) minmax(300px, .78fr);
-        align-items: start;
-        gap: 12px;
+        align-items: stretch;
+        gap: 10px;
         min-width: 0;
     }
 
-    /* The calendar must fit its container: no horizontal scrollbar. */
+    /* Fill the left card's available height, including when form errors make
+       the right booking card taller. Only the calendar rows scroll internally. */
     .live-calendar-wrap {
+        display: block;
         width: 100%;
         min-width: 0;
-        overflow: hidden;
+        height: 0;
+        min-height: 420px;
+        max-height: none;
+        flex: 1 1 auto;
+        overflow-y: auto;
+        overflow-x: hidden;
+        overscroll-behavior: contain;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .live-calendar-wrap::-webkit-scrollbar {
+        width: 0;
+        height: 0;
+        display: none;
     }
 
     .live-calendar {
         display: grid;
         width: 100%;
-        min-width: 0;
-        grid-template-columns: 65px repeat(7, minmax(0, 1fr));
+        min-width: 940px;
+        min-height: 100%;
+        grid-template-columns: 62px repeat(7, minmax(125px, 1fr));
+        grid-auto-rows: minmax(65px, 1fr);
+        align-content: stretch;
         table-layout: fixed;
+    }
+
+    .live-calendar-head:first-child,
+    .live-time-cell {
+        position: sticky;
+        left: 0;
+        z-index: 3;
+    }
+
+    .live-calendar-head:first-child {
+        z-index: 5;
     }
 
     .live-calendar-head {
@@ -270,6 +304,7 @@
 
     .live-free {
         display: flex;
+        min-height: 100%;
         align-items: center;
         justify-content: center;
         gap: 3px;
@@ -349,6 +384,25 @@
     }
 
     @media (max-width: 700px) {
+        .live-main-grid {
+            grid-template-columns: minmax(0, 1fr);
+            gap: 8px;
+        }
+
+        .live-calendar-wrap {
+            height: 55vh;
+            min-height: 300px;
+            max-height: 480px;
+            flex: 0 0 auto;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+        .live-calendar {
+            min-width: 940px;
+            grid-template-columns: 54px repeat(7, minmax(125px, 1fr));
+        }
+
         .live-stat {
             padding: 9px;
             gap: 8px;
@@ -363,10 +417,6 @@
 
         .live-stat-number {
             font-size: 21px;
-        }
-
-        .live-calendar {
-            grid-template-columns: 48px repeat(7, minmax(0, 1fr));
         }
 
         .live-calendar-head {
@@ -415,10 +465,6 @@
             grid-template-columns: minmax(0, 1fr);
         }
 
-        .live-calendar {
-            grid-template-columns: 42px repeat(7, minmax(0, 1fr));
-        }
-
         .live-calendar-head {
             font-size: 9px;
         }
@@ -436,6 +482,109 @@
         }
     }
 </style>
+
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const bookingForm = document.querySelector("#booking-panel form[method='post']");
+    if (!bookingForm) return;
+
+    const batch = bookingForm.querySelector('[name="batch"]');
+    const subject = bookingForm.querySelector('[name="subject"]');
+    const chapter = bookingForm.querySelector('[name="chapter"]');
+    const teacher = bookingForm.querySelector('[name="teacher"]');
+
+    function resetSelect(select, placeholder) {
+        if (!select) return;
+        select.innerHTML = "";
+        const option = document.createElement("option");
+        option.value = "";
+        option.textContent = placeholder;
+        select.appendChild(option);
+        select.value = "";
+    }
+
+    async function loadOptions(kind, params, select, placeholder, selectedValue) {
+        resetSelect(select, "Loading...");
+        select.disabled = true;
+        const url = new URL(window.location.href);
+        url.search = "";
+        url.hash = "";
+        url.searchParams.set("ajax", kind);
+        Object.entries(params).forEach(([key, value]) => url.searchParams.set(key, value || ""));
+        try {
+            const response = await fetch(url.toString(), {
+                headers: {"X-Requested-With": "XMLHttpRequest"},
+                credentials: "same-origin"
+            });
+            if (!response.ok) throw new Error("Could not load options");
+            const data = await response.json();
+            resetSelect(select, placeholder);
+            data.results.forEach(item => {
+                const option = document.createElement("option");
+                option.value = item.id;
+                option.textContent = item.text;
+                select.appendChild(option);
+            });
+            if (selectedValue && Array.from(select.options).some(o => o.value === String(selectedValue))) {
+                select.value = String(selectedValue);
+            }
+        } catch (error) {
+            resetSelect(select, placeholder);
+        } finally {
+            select.disabled = false;
+        }
+    }
+
+    async function refreshSubjects(selectedSubject) {
+        resetSelect(subject, "Select subject");
+        resetSelect(chapter, "Select published chapter");
+        resetSelect(teacher, "Select teacher");
+        if (batch.value) {
+            await loadOptions("subjects", {batch_id: batch.value}, subject, "Select subject", selectedSubject || "");
+        }
+    }
+
+    async function refreshChapterAndTeacher(selectedChapter, selectedTeacher) {
+        resetSelect(chapter, "Select published chapter");
+        resetSelect(teacher, "Select teacher");
+        if (!batch.value || !subject.value) return;
+        const params = {batch_id: batch.value, subject_id: subject.value};
+        await Promise.all([
+            loadOptions("chapters", params, chapter, "Select published chapter", selectedChapter || ""),
+            loadOptions("teachers", params, teacher, "Select teacher", selectedTeacher || "")
+        ]);
+    }
+
+    batch.addEventListener("change", function () {
+        refreshSubjects("");
+    });
+    subject.addEventListener("change", function () {
+        refreshChapterAndTeacher("", "");
+    });
+
+    // Restore dependent choices after an invalid POST without allowing stale
+    // subject/chapter/teacher IDs to bypass the server-side queryset checks.
+    if (batch.value) {
+        const oldSubject = subject.value;
+        const oldChapter = chapter.value;
+        const oldTeacher = teacher.value;
+        refreshSubjects(oldSubject).then(function () {
+            if (subject.value) refreshChapterAndTeacher(oldChapter, oldTeacher);
+        });
+    }
+
+    // Field errors from a failed submission disappear after five seconds.
+    document.querySelectorAll("#booking-panel .booking-errors").forEach(function (item) {
+        window.setTimeout(function () {
+            item.style.transition = "opacity .25s ease";
+            item.style.opacity = "0";
+            window.setTimeout(function () { item.remove(); }, 300);
+        }, 5000);
+    });
+});
+</script>
+
 {% endblock %}
 
 {% block admin_content %}
@@ -450,26 +599,26 @@
             <div class="min-w-0">
                 <h1 class="text-xl sm:text-2xl font-extrabold tracking-tight text-white">
                     Live Class Schedule
-                    <span class="text-cyan-300">(Global)</span>
+
                 </h1>
                 <p class="mt-1 text-xs sm:text-sm text-slate-400">
-                    View availability and schedule classes across all batches.
+                    Seven-day timetable · 5:00 AM to 11:00 PM · select an available slot to prefill date and time.
                 </p>
             </div>
         </div>
 
         <div class="flex flex-wrap items-center gap-2">
-            <a class="live-btn" href="?week={{ previous_week|date:'Y-m-d' }}" aria-label="Previous week">
+            <a class="live-btn" href="?week={{ previous_week|date:'Y-m-d' }}&amp;batch={{ selected_batch }}" aria-label="Previous week">
                 <i class="ri-arrow-left-s-line text-lg"></i>
             </a>
             <div class="live-btn">
                 <i class="ri-calendar-line text-cyan-300"></i>
                 <span>{{ week_start|date:"d M Y" }} – {{ week_end|date:"d M Y" }}</span>
             </div>
-            <a class="live-btn" href="?week={{ next_week|date:'Y-m-d' }}" aria-label="Next week">
+            <a class="live-btn" href="?week={{ next_week|date:'Y-m-d' }}&amp;batch={{ selected_batch }}" aria-label="Next week">
                 <i class="ri-arrow-right-s-line text-lg"></i>
             </a>
-            <a class="live-btn" href="?week={{ today|date:'Y-m-d' }}">Today</a>
+            <a class="live-btn" href="?week={{ today|date:'Y-m-d' }}&amp;batch={{ selected_batch }}">Today</a>
         </div>
     </header>
 
@@ -531,15 +680,13 @@
         </div>
     </section>
 
-    <!-- Filters -->
+    <!-- Timetable filter: only controls which batch calendar is displayed. -->
     <section class="live-panel p-3">
-        <form method="get" class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-2 items-end">
-            <input type="hidden" name="week" value="{{ selected_date|date:'Y-m-d' }}">
-
-            <div>
-                <label class="live-label" for="filter-batch">Batch</label>
-                <select id="filter-batch" name="batch">
-                    <option value="">All Batches</option>
+        <form method="get" class="flex flex-wrap items-end gap-3">
+            <input type="hidden" name="week" value="{{ week_start|date:'Y-m-d' }}">
+            <div class="w-full sm:max-w-sm">
+                <label class="live-label" for="filter-batch">View Timetable For Batch</label>
+                <select id="filter-batch" name="batch" onchange="this.form.submit()">
                     {% for item in batches %}
                     <option value="{{ item.pk }}" {% if selected_batch == item.pk|stringformat:"s" %}selected{% endif %}>
                         {{ item.batch_name }}
@@ -547,50 +694,7 @@
                     {% endfor %}
                 </select>
             </div>
-
-            <div>
-                <label class="live-label" for="filter-subject">Subject</label>
-                <select id="filter-subject" name="subject">
-                    <option value="">All Subjects</option>
-                    {% for item in subjects %}
-                    <option value="{{ item.pk }}" {% if selected_subject == item.pk|stringformat:"s" %}selected{% endif %}>
-                        {{ item.subject_name }}
-                    </option>
-                    {% endfor %}
-                </select>
-            </div>
-
-            <div>
-                <label class="live-label" for="filter-teacher">Teacher</label>
-                <select id="filter-teacher" name="teacher">
-                    <option value="">All Teachers</option>
-                    {% for item in teachers %}
-                    <option value="{{ item.pk }}" {% if selected_teacher == item.pk|stringformat:"s" %}selected{% endif %}>
-                        {{ item.full_name }}
-                    </option>
-                    {% endfor %}
-                </select>
-            </div>
-
-            <div>
-                <label class="live-label" for="filter-status">Status</label>
-                <select id="filter-status" name="status">
-                    <option value="">All Statuses</option>
-                    <option value="confirmed" {% if selected_status == "confirmed" %}selected{% endif %}>Confirmed</option>
-                    <option value="completed" {% if selected_status == "completed" %}selected{% endif %}>Completed</option>
-                    <option value="cancelled" {% if selected_status == "cancelled" %}selected{% endif %}>Cancelled</option>
-                    <option value="no_show" {% if selected_status == "no_show" %}selected{% endif %}>No Show</option>
-                </select>
-            </div>
-
-            <div class="flex gap-2">
-                <button class="live-btn live-btn-primary flex-1" type="submit">
-                    <i class="ri-filter-3-line"></i> Apply
-                </button>
-                <a class="live-btn" href="?week={{ selected_date|date:'Y-m-d' }}" title="Clear filters">
-                    <i class="ri-refresh-line"></i>
-                </a>
-            </div>
+            <p class="live-muted">Published and archived batches only. Booking selection is independent.</p>
         </form>
     </section>
 
@@ -598,7 +702,7 @@
     <section class="live-main-grid">
 
         <!-- Weekly calendar -->
-        <div class="live-panel overflow-hidden">
+        <div class="live-panel overflow-hidden flex flex-col min-w-0" style="min-height:0">
             <div class="flex flex-wrap items-center justify-between gap-2 border-b border-sky-900/50 p-3">
                 <div class="min-w-0">
                     <h2 class="text-base font-bold text-white">Weekly Calendar</h2>
@@ -649,27 +753,34 @@
                                     {% endif %}
                                 </div>
 
-                                <p class="live-class-detail">{{ booked.batch.batch_name }}</p>
                                 <p class="live-class-time">
                                     {{ booked.start_at|date:"g:i A" }}–{{ booked.end_at|date:"g:i A" }}
                                 </p>
                                 <p class="live-class-detail">{{ booked.teacher.full_name }}</p>
+                                {% if booked.status == "confirmed" and booked.start_at > now %}
+                                <div class="mt-2 flex flex-wrap gap-1">
+                                    <a class="live-btn" style="min-height:24px;padding:3px 5px;font-size:9px" href="{% url 'live_classes:admin_reschedule_live_class' booked.pk %}">Reschedule</a>
+                                </div>
+                                {% endif %}
                             </div>
                             {% endfor %}
                         </div>
 
+                        {% elif cell.past %}
+                        <div class="live-muted text-center py-2" title="No class was scheduled for this past slot">
+                            No Schedule
+                        </div>
+
                         {% elif cell.available %}
                         <a class="live-free"
-                           href="?week={{ selected_date|date:'Y-m-d' }}&amp;class_date={{ cell.date|date:'Y-m-d' }}&amp;start_time={{ cell.time|time:'H:i' }}#booking-panel"
+                           href="?week={{ week_start|date:'Y-m-d' }}&amp;batch={{ selected_batch }}&amp;class_date={{ cell.date|date:'Y-m-d' }}&amp;start_time={{ cell.time|time:'H:i' }}#booking-panel"
                            title="Select {{ cell.date|date:'D, d M' }} at {{ cell.label }}">
                             <i class="ri-add-line"></i>
                             <span>Available</span>
                         </a>
 
                         {% else %}
-                        <div class="live-busy">
-                            <span>Busy</span>
-                        </div>
+                        <div class="live-muted text-center py-2">No Schedule</div>
                         {% endif %}
                     </div>
                     {% endfor %}
@@ -687,15 +798,15 @@
                 </div>
                 <div class="min-w-0">
                     <h2 class="text-base font-extrabold text-white">Schedule a New Live Class</h2>
-                    <p class="live-muted mt-1">Select the class details below.</p>
+                    <p class="live-muted mt-1">Choose any published or archived batch. Booking is independent of the timetable filter.</p>
                 </div>
             </div>
 
-            <form method="post" class="space-y-3">
+            <form method="post" class="space-y-3" novalidate>
                 {% csrf_token %}
 
-                {% if form.non_field_errors %}
-                <div class="rounded-lg border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-200">
+                {% if form.is_bound and form.non_field_errors %}
+                <div class="booking-errors rounded-lg border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-200" role="alert">
                     {% for error in form.non_field_errors %}
                     <p>{{ error }}</p>
                     {% endfor %}
@@ -706,7 +817,7 @@
                     {{ hidden }}
                 {% endfor %}
 
-                <div class="live-form-grid">
+                <div class="space-y-3">
                     {% for field in form.visible_fields %}
                         {% if field.name == "batch" or field.name == "subject" or field.name == "chapter" or field.name == "teacher" %}
                         <div class="min-w-0">
@@ -720,9 +831,11 @@
                             <p class="live-muted mt-1">{{ field.help_text }}</p>
                             {% endif %}
 
-                            {% for error in field.errors %}
-                            <p class="live-error">{{ error }}</p>
-                            {% endfor %}
+                            {% if form.is_bound %}
+                                {% for error in field.errors %}
+                                <p class="live-error booking-errors" role="alert">{{ error }}</p>
+                                {% endfor %}
+                            {% endif %}
                         </div>
                         {% endif %}
                     {% endfor %}
@@ -738,27 +851,25 @@
                             </label>
                             {{ field }}
 
-                            {% for error in field.errors %}
-                            <p class="live-error">{{ error }}</p>
-                            {% endfor %}
+                            {% if form.is_bound %}
+                                {% for error in field.errors %}
+                                <p class="live-error booking-errors" role="alert">{{ error }}</p>
+                                {% endfor %}
+                            {% endif %}
                         </div>
                         {% endif %}
                     {% endfor %}
                 </div>
 
+
+
+
                 {% for field in form.visible_fields %}
-                    {% if field.name == "class_notes" %}
-                    <div>
-                        <label class="live-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                    {% if field.name == "class_notes" or field.name == "notes" %}
+                    <div class="min-w-0">
+                        <label class="live-label" for="{{ field.id_for_label }}">{{ field.label }}{% if not field.field.required %} (Optional){% endif %}</label>
                         {{ field }}
-
-                        {% for error in field.errors %}
-                        <p class="live-error">{{ error }}</p>
-                        {% endfor %}
-
-                        <p class="live-muted mt-1">
-                            Optional notes are not saved until a notes field is added to the model.
-                        </p>
+                        {% if form.is_bound %}{% for error in field.errors %}<p class="live-error booking-errors" role="alert">{{ error }}</p>{% endfor %}{% endif %}
                     </div>
                     {% endif %}
                 {% endfor %}
@@ -767,21 +878,21 @@
                     <p class="flex items-start gap-2 text-[11px] leading-5 text-slate-300">
                         <i class="ri-information-line text-cyan-300 text-base"></i>
                         <span>
-                            Availability is checked again when you submit. A slot may be unavailable if a conflict exists.
+                            Availability is checked again on submit. Batch conflicts and teacher conflicts are validated by the server.
                         </span>
                     </p>
                 </div>
 
                 <button type="submit" class="live-btn live-btn-primary w-full">
                     <i class="ri-calendar-check-line text-base"></i>
-                    Check Availability &amp; Schedule
+                    Schedule Live Class
                 </button>
             </form>
         </aside>
     </section>
 
     <!-- Legend -->
-    <section class="live-panel p-3">
+    <section class="live-panel p-3" style="margin-bottom:0">
         <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3">
 
             <div class="flex min-w-0 items-start gap-2">
@@ -828,4 +939,107 @@
     </section>
 
 </div>
+
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const bookingForm = document.querySelector("#booking-panel form[method='post']");
+    if (!bookingForm) return;
+
+    const batch = bookingForm.querySelector('[name="batch"]');
+    const subject = bookingForm.querySelector('[name="subject"]');
+    const chapter = bookingForm.querySelector('[name="chapter"]');
+    const teacher = bookingForm.querySelector('[name="teacher"]');
+
+    function resetSelect(select, placeholder) {
+        if (!select) return;
+        select.innerHTML = "";
+        const option = document.createElement("option");
+        option.value = "";
+        option.textContent = placeholder;
+        select.appendChild(option);
+        select.value = "";
+    }
+
+    async function loadOptions(kind, params, select, placeholder, selectedValue) {
+        resetSelect(select, "Loading...");
+        select.disabled = true;
+        const url = new URL(window.location.href);
+        url.search = "";
+        url.hash = "";
+        url.searchParams.set("ajax", kind);
+        Object.entries(params).forEach(([key, value]) => url.searchParams.set(key, value || ""));
+        try {
+            const response = await fetch(url.toString(), {
+                headers: {"X-Requested-With": "XMLHttpRequest"},
+                credentials: "same-origin"
+            });
+            if (!response.ok) throw new Error("Could not load options");
+            const data = await response.json();
+            resetSelect(select, placeholder);
+            data.results.forEach(item => {
+                const option = document.createElement("option");
+                option.value = item.id;
+                option.textContent = item.text;
+                select.appendChild(option);
+            });
+            if (selectedValue && Array.from(select.options).some(o => o.value === String(selectedValue))) {
+                select.value = String(selectedValue);
+            }
+        } catch (error) {
+            resetSelect(select, placeholder);
+        } finally {
+            select.disabled = false;
+        }
+    }
+
+    async function refreshSubjects(selectedSubject) {
+        resetSelect(subject, "Select subject");
+        resetSelect(chapter, "Select published chapter");
+        resetSelect(teacher, "Select teacher");
+        if (batch.value) {
+            await loadOptions("subjects", {batch_id: batch.value}, subject, "Select subject", selectedSubject || "");
+        }
+    }
+
+    async function refreshChapterAndTeacher(selectedChapter, selectedTeacher) {
+        resetSelect(chapter, "Select published chapter");
+        resetSelect(teacher, "Select teacher");
+        if (!batch.value || !subject.value) return;
+        const params = {batch_id: batch.value, subject_id: subject.value};
+        await Promise.all([
+            loadOptions("chapters", params, chapter, "Select published chapter", selectedChapter || ""),
+            loadOptions("teachers", params, teacher, "Select teacher", selectedTeacher || "")
+        ]);
+    }
+
+    batch.addEventListener("change", function () {
+        refreshSubjects("");
+    });
+    subject.addEventListener("change", function () {
+        refreshChapterAndTeacher("", "");
+    });
+
+    // Restore dependent choices after an invalid POST without allowing stale
+    // subject/chapter/teacher IDs to bypass the server-side queryset checks.
+    if (batch.value) {
+        const oldSubject = subject.value;
+        const oldChapter = chapter.value;
+        const oldTeacher = teacher.value;
+        refreshSubjects(oldSubject).then(function () {
+            if (subject.value) refreshChapterAndTeacher(oldChapter, oldTeacher);
+        });
+    }
+
+    // Field errors from a failed submission disappear after five seconds.
+    document.querySelectorAll("#booking-panel .booking-errors").forEach(function (item) {
+        window.setTimeout(function () {
+            item.style.transition = "opacity .25s ease";
+            item.style.opacity = "0";
+            window.setTimeout(function () { item.remove(); }, 300);
+        }, 5000);
+    });
+});
+</script>
+
 {% endblock %}

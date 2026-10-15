@@ -1,7 +1,7 @@
-
 from datetime import datetime, time, timedelta
 
 from django import forms
+from django.core.exceptions import ValidationError
 from django.utils import timezone
 
 from admins.models import (
@@ -32,6 +32,10 @@ ALLOWED_DURATIONS = {
 ALLOWED_BATCH_STATUSES = ("published", "archived")
 
 
+# ============================================================
+# SHARED HELPERS
+# ============================================================
+
 def get_booking_date_range():
     """Return today and the next six calendar dates."""
     today = timezone.localdate()
@@ -40,7 +44,10 @@ def get_booking_date_range():
 
 def _submitted_pk(form, field_name):
     """Safely read a submitted primary key."""
-    value = form.data.get(field_name) if form.is_bound else None
+    if not form.is_bound:
+        return None
+
+    value = form.data.get(field_name)
 
     if value in (None, ""):
         return None
@@ -51,27 +58,90 @@ def _submitted_pk(form, field_name):
         return None
 
 
+def _initial_pk(form, field_name):
+    """Resolve an initial model instance or primary key."""
+    value = form.initial.get(field_name)
+
+    if value in (None, ""):
+        value = form.fields[field_name].initial
+
+    return getattr(value, "pk", value)
+
+
 def get_hourly_start_choices():
-    """Return hourly start choices in 12-hour AM/PM format."""
+    """Return hourly start times in 12-hour AM/PM format."""
     choices = [("", "Select start time")]
 
     current = datetime.combine(
         timezone.localdate(),
         EARLIEST_START_TIME,
     )
-
     last = datetime.combine(
         timezone.localdate(),
         LATEST_START_TIME,
     )
 
     while current <= last:
-        value = current.strftime("%H:%M")
-        label = current.strftime("%I:%M %p").lstrip("0")
-        choices.append((value, label))
+        choices.append((
+            current.strftime("%H:%M"),
+            current.strftime("%I:%M %p").lstrip("0"),
+        ))
         current += timedelta(hours=1)
 
     return choices
+
+
+def get_active_teacher_batch_ids(teacher):
+    return TeacherBatch.objects.filter(
+        teacher=teacher,
+        is_active=True,
+    ).values_list("batch_id", flat=True)
+
+
+def get_active_teacher_subject_ids(teacher):
+    return TeacherSubject.objects.filter(
+        teacher=teacher,
+        is_active=True,
+    ).values_list("subject_id", flat=True)
+
+
+def get_eligible_teachers(batch_id=None, subject_id=None):
+    """
+    Return active, unblocked teachers who have an active batch
+    assignment and, when supplied, an active subject assignment.
+    """
+    teachers = Teacher.objects.filter(
+        is_blocked=False,
+        user__is_active=True,
+    )
+
+    if batch_id:
+        batch_teacher_ids = TeacherBatch.objects.filter(
+            batch_id=batch_id,
+            is_active=True,
+        ).values_list("teacher_id", flat=True)
+
+        teachers = teachers.filter(pk__in=batch_teacher_ids)
+
+    if subject_id:
+        subject_assignments = TeacherSubject.objects.filter(
+            subject_id=subject_id,
+            is_active=True,
+        )
+
+        if batch_id:
+            subject_assignments = subject_assignments.filter(
+                batch_id=batch_id,
+            )
+
+        teachers = teachers.filter(
+            pk__in=subject_assignments.values_list(
+                "teacher_id",
+                flat=True,
+            ),
+        )
+
+    return teachers.order_by("full_name", "pk").distinct()
 
 
 # ============================================================
@@ -91,9 +161,9 @@ class LiveClassBookingForm(forms.Form):
                 "Select a valid published or archived batch."
             ),
         },
-        widget=forms.Select(
-            attrs={"class": "booking-input"}
-        ),
+        widget=forms.Select(attrs={
+            "class": "booking-input",
+        }),
     )
 
     subject = forms.ModelChoiceField(
@@ -103,13 +173,12 @@ class LiveClassBookingForm(forms.Form):
         error_messages={
             "required": "Please select a subject.",
             "invalid_choice": (
-                "Select a published subject belonging "
-                "to the selected batch."
+                "Select a published subject belonging to the selected batch."
             ),
         },
-        widget=forms.Select(
-            attrs={"class": "booking-input"}
-        ),
+        widget=forms.Select(attrs={
+            "class": "booking-input",
+        }),
     )
 
     chapter = forms.ModelChoiceField(
@@ -119,13 +188,12 @@ class LiveClassBookingForm(forms.Form):
         error_messages={
             "required": "Please select a chapter.",
             "invalid_choice": (
-                "Select a published chapter belonging "
-                "to the selected subject."
+                "Select a published chapter belonging to the selected subject."
             ),
         },
-        widget=forms.Select(
-            attrs={"class": "booking-input"}
-        ),
+        widget=forms.Select(attrs={
+            "class": "booking-input",
+        }),
     )
 
     teacher = forms.ModelChoiceField(
@@ -135,13 +203,12 @@ class LiveClassBookingForm(forms.Form):
         error_messages={
             "required": "Please select a teacher.",
             "invalid_choice": (
-                "The selected teacher is not eligible "
-                "for this booking."
+                "The selected teacher is not eligible for this booking."
             ),
         },
-        widget=forms.Select(
-            attrs={"class": "booking-input"}
-        ),
+        widget=forms.Select(attrs={
+            "class": "booking-input",
+        }),
     )
 
     class_date = forms.DateField(
@@ -151,12 +218,10 @@ class LiveClassBookingForm(forms.Form):
             "required": "Please select a class date.",
             "invalid": "Enter a valid class date.",
         },
-        widget=forms.DateInput(
-            attrs={
-                "type": "date",
-                "class": "booking-input",
-            }
-        ),
+        widget=forms.DateInput(attrs={
+            "type": "date",
+            "class": "booking-input",
+        }),
     )
 
     start_time = forms.TimeField(
@@ -184,13 +249,11 @@ class LiveClassBookingForm(forms.Form):
         empty_value=None,
         error_messages={
             "required": "Please select a class duration.",
-            "invalid_choice": (
-                "Choose a duration of 1, 2 or 3 hours."
-            ),
+            "invalid_choice": "Choose a duration of 1, 2 or 3 hours.",
         },
-        widget=forms.Select(
-            attrs={"class": "booking-input"}
-        ),
+        widget=forms.Select(attrs={
+            "class": "booking-input",
+        }),
     )
 
     def __init__(
@@ -216,7 +279,7 @@ class LiveClassBookingForm(forms.Form):
             )
 
         # ----------------------------------------------------
-        # BOOKING DATE LIMITS: KEEP SEVEN DAYS
+        # DATE INPUT LIMITS
         # ----------------------------------------------------
 
         first_date, last_date = get_booking_date_range()
@@ -227,171 +290,124 @@ class LiveClassBookingForm(forms.Form):
         })
 
         # ----------------------------------------------------
-        # BATCH CHOICES
+        # IDENTIFY SELECTED BATCH AND SUBJECT
         # ----------------------------------------------------
 
-        batch_queryset = Batch.objects.filter(
+        if self.is_bound:
+            selected_batch_id = _submitted_pk(self, "batch")
+            selected_subject_id = _submitted_pk(self, "subject")
+        else:
+            selected_batch_id = _initial_pk(self, "batch")
+            selected_subject_id = _initial_pk(self, "subject")
+
+        # ----------------------------------------------------
+        # BATCH QUERYSET
+        # ----------------------------------------------------
+
+        batches = Batch.objects.filter(
             batch_status__in=ALLOWED_BATCH_STATUSES,
         )
 
         if not admin_mode:
-            assigned_batch_ids = TeacherBatch.objects.filter(
-                teacher=teacher,
-                is_active=True,
-            ).values_list("batch_id", flat=True)
-
-            batch_queryset = batch_queryset.filter(
-                pk__in=assigned_batch_ids,
+            batches = batches.filter(
+                pk__in=get_active_teacher_batch_ids(teacher),
             )
 
-        self.fields["batch"].queryset = batch_queryset.order_by(
-            "batch_name"
+        self.fields["batch"].queryset = batches.order_by(
+            "batch_name",
+            "pk",
         )
 
-        # ----------------------------------------------------
-        # SELECTED BATCH AND SUBJECT
-        # ----------------------------------------------------
-
-        selected_batch_id = _submitted_pk(self, "batch")
-        selected_subject_id = _submitted_pk(self, "subject")
-
-        if not self.is_bound:
-            selected_batch_id = (
-                self.initial.get("batch")
-                or self.fields["batch"].initial
-            )
-
-            selected_subject_id = (
-                self.initial.get("subject")
-                or self.fields["subject"].initial
-            )
-
-            selected_batch_id = getattr(
-                selected_batch_id, "pk", selected_batch_id
-            )
-
-            selected_subject_id = getattr(
-                selected_subject_id, "pk", selected_subject_id
-            )
+        # Admin booking batch remains visible and independent from the
+        # timetable batch filter.
 
         # ----------------------------------------------------
-        # SUBJECT CHOICES
+        # SUBJECT QUERYSET
         # ----------------------------------------------------
 
-        subject_queryset = Subject.objects.filter(
+        subjects = Subject.objects.filter(
             batch__batch_status__in=ALLOWED_BATCH_STATUSES,
             subject_status="published",
         )
 
         if selected_batch_id:
-            subject_queryset = subject_queryset.filter(
+            subjects = subjects.filter(
                 batch_id=selected_batch_id,
             )
+        else:
+            subjects = subjects.none()
 
         if not admin_mode:
-            assigned_subject_ids = TeacherSubject.objects.filter(
-                teacher=teacher,
-                is_active=True,
-            ).values_list("subject_id", flat=True)
-
-            assigned_batch_ids = TeacherBatch.objects.filter(
-                teacher=teacher,
-                is_active=True,
-            ).values_list("batch_id", flat=True)
-
-            subject_queryset = subject_queryset.filter(
-                pk__in=assigned_subject_ids,
-                batch_id__in=assigned_batch_ids,
+            subjects = subjects.filter(
+                pk__in=get_active_teacher_subject_ids(teacher),
+                batch_id__in=get_active_teacher_batch_ids(teacher),
             )
 
         self.fields["subject"].queryset = (
-            subject_queryset
+            subjects
             .select_related("batch")
-            .order_by("batch__batch_name", "subject_name")
+            .order_by("batch__batch_name", "subject_name", "pk")
         )
 
         # ----------------------------------------------------
-        # CHAPTER CHOICES
+        # CHAPTER QUERYSET
         # ----------------------------------------------------
 
-        chapter_queryset = CourseChapter.objects.filter(
+        chapters = CourseChapter.objects.filter(
             batch__batch_status__in=ALLOWED_BATCH_STATUSES,
             subject__subject_status="published",
             status="published",
         )
 
         if selected_batch_id:
-            chapter_queryset = chapter_queryset.filter(
+            chapters = chapters.filter(
                 batch_id=selected_batch_id,
             )
+        else:
+            chapters = chapters.none()
 
         if selected_subject_id:
-            chapter_queryset = chapter_queryset.filter(
+            chapters = chapters.filter(
                 subject_id=selected_subject_id,
             )
+        else:
+            chapters = chapters.none()
 
         if not admin_mode:
-            chapter_queryset = chapter_queryset.filter(
-                batch_id__in=assigned_batch_ids,
-                subject_id__in=assigned_subject_ids,
+            chapters = chapters.filter(
+                batch_id__in=get_active_teacher_batch_ids(teacher),
+                subject_id__in=get_active_teacher_subject_ids(teacher),
             )
 
         self.fields["chapter"].queryset = (
-            chapter_queryset
+            chapters
             .select_related("batch", "subject")
             .order_by(
                 "batch__batch_name",
                 "subject__subject_name",
                 "chapter_order",
+                "pk",
             )
         )
 
         # ----------------------------------------------------
-        # TEACHER CHOICES
+        # TEACHER QUERYSET
         # ----------------------------------------------------
 
-        eligible_teachers = Teacher.objects.filter(
-            is_blocked=False,
-            user__is_active=True,
+        eligible_teachers = get_eligible_teachers(
+            batch_id=selected_batch_id,
+            subject_id=selected_subject_id,
         )
 
-        if admin_mode:
-            if selected_batch_id:
-                eligible_batch_teacher_ids = (
-                    TeacherBatch.objects.filter(
-                        batch_id=selected_batch_id,
-                        is_active=True,
-                    ).values_list("teacher_id", flat=True)
-                )
-
-                eligible_teachers = eligible_teachers.filter(
-                    pk__in=eligible_batch_teacher_ids,
-                )
-
-            if selected_subject_id:
-                eligible_subject_teacher_ids = (
-                    TeacherSubject.objects.filter(
-                        subject_id=selected_subject_id,
-                        batch_id=selected_batch_id,
-                        is_active=True,
-                    ).values_list("teacher_id", flat=True)
-                )
-
-                eligible_teachers = eligible_teachers.filter(
-                    pk__in=eligible_subject_teacher_ids,
-                )
-
-            self.fields["teacher"].queryset = (
-                eligible_teachers.order_by("pk")
-            )
-
-        else:
-            self.fields["teacher"].queryset = (
-                eligible_teachers.filter(pk=teacher.pk)
+        if not admin_mode:
+            eligible_teachers = eligible_teachers.filter(
+                pk=teacher.pk,
             )
 
             self.fields["teacher"].initial = teacher.pk
             self.fields["teacher"].widget = forms.HiddenInput()
+
+        self.fields["teacher"].queryset = eligible_teachers
 
     # ========================================================
     # DATE VALIDATION
@@ -430,10 +446,7 @@ class LiveClassBookingForm(forms.Form):
                 "Choose an hourly start time no later than 11:00 PM."
             )
 
-        if (
-            start_time.minute != 0
-            or start_time.second != 0
-        ):
+        if start_time.minute != 0 or start_time.second != 0:
             raise forms.ValidationError(
                 "Classes must start on the hour."
             )
@@ -486,49 +499,44 @@ class LiveClassBookingForm(forms.Form):
             )
 
         # ----------------------------------------------------
-        # TEACHER ELIGIBILITY
+        # VERIFY THE TEACHER'S CURRENT ASSIGNMENTS
         # ----------------------------------------------------
 
-        if selected_teacher and batch and subject:
-            if (
-                selected_teacher.is_blocked
-                or not selected_teacher.user.is_active
-            ):
+        if batch and subject and selected_teacher:
+            if selected_teacher.is_blocked:
                 self.add_error(
                     "teacher",
-                    "An inactive or blocked teacher cannot be assigned "
-                    "to a live class.",
+                    "A blocked teacher cannot teach a live class.",
+                )
+            elif not selected_teacher.user.is_active:
+                self.add_error(
+                    "teacher",
+                    "An inactive teacher cannot teach a live class.",
                 )
             else:
-                has_batch_assignment = TeacherBatch.objects.filter(
+                if not TeacherBatch.objects.filter(
                     teacher=selected_teacher,
                     batch=batch,
                     is_active=True,
-                ).exists()
+                ).exists():
+                    self.add_error(
+                        "teacher",
+                        "This teacher is not actively assigned to the batch.",
+                    )
 
-                has_subject_assignment = TeacherSubject.objects.filter(
+                if not TeacherSubject.objects.filter(
                     teacher=selected_teacher,
                     batch=batch,
                     subject=subject,
                     is_active=True,
-                ).exists()
-
-                if not has_batch_assignment:
+                ).exists():
                     self.add_error(
                         "teacher",
-                        "This teacher is not actively assigned "
-                        "to the selected batch.",
-                    )
-
-                if not has_subject_assignment:
-                    self.add_error(
-                        "teacher",
-                        "This teacher is not actively assigned "
-                        "to the selected subject.",
+                        "This teacher is not actively assigned to the subject.",
                     )
 
         # ----------------------------------------------------
-        # TEACHER MODE PERMISSION
+        # TEACHER BOOKING PERMISSION
         # ----------------------------------------------------
 
         if not self.admin_mode and self.teacher_profile:
@@ -542,7 +550,7 @@ class LiveClassBookingForm(forms.Form):
                 )
 
         # ----------------------------------------------------
-        # FUTURE START AND DURATION VALIDATION
+        # FUTURE START AND DURATION
         # ----------------------------------------------------
 
         if class_date and start_time:
@@ -565,7 +573,7 @@ class LiveClassBookingForm(forms.Form):
                     )
                 else:
                     end_datetime = start_datetime + timedelta(
-                        minutes=duration_minutes
+                        minutes=duration_minutes,
                     )
 
                     if end_datetime <= start_datetime:
