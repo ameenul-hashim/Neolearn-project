@@ -1459,3 +1459,239 @@ def teacher_help_videos_view(request):
     response["Expires"] = "0"
 
     return response
+
+@login_required(login_url="teacher_login")
+@cache_control(no_cache=True, must_revalidate=True, no_store=True)
+def teacher_analytics_view(request):
+    from datetime import date, timedelta
+    from django.utils.dateparse import parse_date
+    from django.db.models import Count
+    from admins.models import Teacher, TeacherBatch, TeacherSubject
+    from courses.models import CourseChapter, ChapterVideo, ChapterPDF, ChapterQuiz
+    from students.models import QuizAttempt
+    from orders.models import StudentBatchPurchase
+
+    if not hasattr(request.user, "teacher_profile"):
+        logout(request)
+        messages.error(request, "Teacher profile was not found.")
+        return redirect("teacher_login")
+
+    teacher = request.user.teacher_profile
+
+    if teacher.is_blocked:
+        logout(request)
+        messages.error(request, "Your teacher account is currently blocked.")
+        return redirect("teacher_login")
+
+    if teacher.is_first_login:
+        return redirect("teacher_change_password")
+
+    # Only active batch and subject assignments are eligible for analytics.
+    batch_ids = list(
+        TeacherBatch.objects.filter(
+            teacher=teacher, is_active=True
+        ).values_list("batch_id", flat=True).distinct()
+    )
+    subject_assignments = TeacherSubject.objects.filter(
+        teacher=teacher, is_active=True, batch_id__in=batch_ids
+    ).select_related("batch", "subject")
+
+    assigned_subject_ids = list(
+        subject_assignments.values_list("subject_id", flat=True).distinct()
+    )
+
+    batches = list(
+        __import__("admins.models", fromlist=["Batch"]).Batch.objects.filter(
+            id__in=batch_ids
+        ).order_by("batch_name")
+    )
+
+    selected_batch_id = request.GET.get("batch", "").strip()
+    selected_subject_id = request.GET.get("subject", "").strip()
+    start_raw = request.GET.get("start", "").strip()
+    end_raw = request.GET.get("end", "").strip()
+
+    selected_batch = None
+    if selected_batch_id.isdigit() and int(selected_batch_id) in batch_ids:
+        selected_batch = next(
+            (batch for batch in batches if batch.id == int(selected_batch_id)),
+            None,
+        )
+    else:
+        selected_batch_id = ""
+
+    available_subject_assignments = subject_assignments
+    if selected_batch:
+        available_subject_assignments = available_subject_assignments.filter(
+            batch_id=selected_batch.id
+        )
+
+    available_subjects = list(
+        {row.subject_id: row.subject for row in available_subject_assignments}.values()
+    )
+    available_subjects.sort(key=lambda item: item.subject_name.lower())
+
+    selected_subject = None
+    available_subject_ids = [item.id for item in available_subjects]
+    if selected_subject_id.isdigit() and int(selected_subject_id) in available_subject_ids:
+        selected_subject = next(
+            (item for item in available_subjects if item.id == int(selected_subject_id)),
+            None,
+        )
+    else:
+        selected_subject_id = ""
+
+    filtered_batch_ids = [selected_batch.id] if selected_batch else batch_ids
+    filtered_subject_ids = (
+        [selected_subject.id] if selected_subject else
+        list(
+            subject_assignments.filter(batch_id__in=filtered_batch_ids)
+            .values_list("subject_id", flat=True).distinct()
+        )
+    )
+
+    # Optional date range. Dates are validated and used only for dated quiz attempts.
+    start_date = parse_date(start_raw) if start_raw else None
+    end_date = parse_date(end_raw) if end_raw else None
+    if start_date and end_date and start_date > end_date:
+        start_date, end_date = end_date, start_date
+        start_raw, end_raw = end_raw, start_raw
+
+    chapters_qs = CourseChapter.objects.filter(
+        batch_id__in=filtered_batch_ids,
+        subject_id__in=filtered_subject_ids,
+    )
+    videos_qs = ChapterVideo.objects.filter(
+        chapter__batch_id__in=filtered_batch_ids,
+        chapter__subject_id__in=filtered_subject_ids,
+    )
+    pdfs_qs = ChapterPDF.objects.filter(
+        chapter__batch_id__in=filtered_batch_ids,
+        chapter__subject_id__in=filtered_subject_ids,
+    )
+    quizzes_qs = ChapterQuiz.objects.filter(
+        chapter__batch_id__in=filtered_batch_ids,
+        chapter__subject_id__in=filtered_subject_ids,
+    )
+
+    active_purchases = StudentBatchPurchase.objects.filter(
+        batch_id__in=filtered_batch_ids,
+        status="active",
+    )
+    overall_students = active_purchases.values("student_id").distinct().count()
+
+    submitted_attempts = QuizAttempt.objects.filter(
+        quiz__chapter__batch_id__in=filtered_batch_ids,
+        quiz__chapter__subject_id__in=filtered_subject_ids,
+        status="submitted",
+    )
+    if start_date:
+        submitted_attempts = submitted_attempts.filter(
+            submitted_at__date__gte=start_date
+        )
+    if end_date:
+        submitted_attempts = submitted_attempts.filter(
+            submitted_at__date__lte=end_date
+        )
+
+    score_rows = list(
+        submitted_attempts.filter(maximum_marks__gt=0)
+        .values_list("score", "maximum_marks")
+    )
+    average_score = (
+        round(sum((score / maximum) * 100 for score, maximum in score_rows) / len(score_rows), 1)
+        if score_rows else None
+    )
+
+    batch_rows = []
+    student_chart = []
+    content_chart = []
+    quiz_chart = []
+    for batch in batches:
+        if batch.id not in filtered_batch_ids:
+            continue
+        batch_subject_ids = list(
+            subject_assignments.filter(batch_id=batch.id)
+            .values_list("subject_id", flat=True).distinct()
+        )
+        if selected_subject:
+            batch_subject_ids = [sid for sid in batch_subject_ids if sid == selected_subject.id]
+        if not batch_subject_ids:
+            # Show assigned batch even if it currently has no active subject assignment.
+            batch_subject_ids = []
+
+        batch_chapters = CourseChapter.objects.filter(
+            batch_id=batch.id, subject_id__in=batch_subject_ids
+        )
+        chapter_ids = batch_chapters.values_list("id", flat=True)
+        batch_videos = ChapterVideo.objects.filter(chapter_id__in=chapter_ids).count()
+        batch_pdfs = ChapterPDF.objects.filter(chapter_id__in=chapter_ids).count()
+        batch_quizzes = ChapterQuiz.objects.filter(chapter_id__in=chapter_ids).count()
+        batch_students = StudentBatchPurchase.objects.filter(
+            batch_id=batch.id, status="active"
+        ).values("student_id").distinct().count()
+
+        batch_attempts = QuizAttempt.objects.filter(
+            quiz__chapter__batch_id=batch.id,
+            quiz__chapter__subject_id__in=batch_subject_ids,
+            status="submitted",
+        )
+        if start_date:
+            batch_attempts = batch_attempts.filter(submitted_at__date__gte=start_date)
+        if end_date:
+            batch_attempts = batch_attempts.filter(submitted_at__date__lte=end_date)
+        batch_scores = list(
+            batch_attempts.filter(maximum_marks__gt=0).values_list("score", "maximum_marks")
+        )
+        batch_average = (
+            round(sum((score / maximum) * 100 for score, maximum in batch_scores) / len(batch_scores), 1)
+            if batch_scores else None
+        )
+
+        batch_rows.append({
+            "batch": batch,
+            "subject_count": len(batch_subject_ids),
+            "student_count": batch_students,
+            "chapter_count": batch_chapters.count(),
+            "video_count": batch_videos,
+            "pdf_count": batch_pdfs,
+            "quiz_count": batch_quizzes,
+            "quiz_attempt_count": batch_attempts.count(),
+            "quiz_average": batch_average,
+        })
+        student_chart.append({"label": batch.batch_name, "value": batch_students})
+
+    content_chart = [
+        {"label": "Chapters", "value": chapters_qs.count()},
+        {"label": "Videos", "value": videos_qs.count()},
+        {"label": "PDFs", "value": pdfs_qs.count()},
+        {"label": "Quizzes", "value": quizzes_qs.count()},
+    ]
+    quiz_chart = [
+        {"label": row["batch"].batch_name, "value": row["quiz_average"] or 0}
+        for row in batch_rows
+    ]
+
+    context = {
+        "teacher": teacher,
+        "batches": batches,
+        "available_subjects": available_subjects,
+        "selected_batch_id": selected_batch_id,
+        "selected_subject_id": selected_subject_id,
+        "start_date": start_raw,
+        "end_date": end_raw,
+        "assigned_batch_count": len(batch_ids),
+        "assigned_subject_count": len(assigned_subject_ids),
+        "student_count": overall_students,
+        "chapter_count": chapters_qs.count(),
+        "video_count": videos_qs.count(),
+        "pdf_count": pdfs_qs.count(),
+        "quiz_count": quizzes_qs.count(),
+        "submitted_attempt_count": submitted_attempts.count(),
+        "average_score": average_score,
+        "batch_rows": batch_rows,
+        "student_chart_json": __import__("json").dumps(student_chart),
+        "content_chart_json": __import__("json").dumps(content_chart),
+        "quiz_chart_json": __import__("json").dumps(quiz_chart),
+    }
+    return render(request, "teachers/analytics/analytics.html", context)

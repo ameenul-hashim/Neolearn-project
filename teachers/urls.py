@@ -15,6 +15,7 @@ from .views import (
     teacher_colleagues_view,
     teacher_colleague_detail_view,
     teacher_help_videos_view,
+    teacher_analytics_view,
 )
 
 urlpatterns = [
@@ -81,4 +82,10 @@ urlpatterns = [
     teacher_help_videos_view,
     name="teacher_help_videos",
     ),
+    
+    path(
+    "analytics/",
+    teacher_analytics_view,
+    name="teacher_analytics",
+),
 ]

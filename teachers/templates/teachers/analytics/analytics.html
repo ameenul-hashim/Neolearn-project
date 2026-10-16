@@ -1,0 +1,517 @@
+{% extends "teachers/dashboard/teacher_base.html" %}
+{% load static %}
+
+{% block extra_head %}
+<style>
+  /* Analytics page only: match the Teacher Panel navy / aqua theme. */
+  .analytics-page {
+    --aqua: #67e8f9;
+    --cyan: #22d3ee;
+    --panel: #0b1120;
+    --panel-soft: #0e1728;
+    --line: rgba(148, 163, 184, .16);
+    --muted: #94a3b8;
+    color: #e2e8f0;
+    min-height: 100%;
+    background:
+      radial-gradient(ellipse at 8% 0%, rgba(8, 145, 178, .09), transparent 34%),
+      radial-gradient(ellipse at 100% 85%, rgba(14, 165, 233, .06), transparent 32%),
+      #030712;
+  }
+  .analytics-page * { box-sizing: border-box; }
+  .analytics-page .a-card {
+    background: rgba(11, 17, 32, .96);
+    border: 1px solid var(--line);
+    border-radius: 17px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.12);
+    min-width: 0;
+  }
+  .analytics-page .a-heading { color: #f8fafc; }
+  .analytics-page .a-muted { color: #94a3b8; }
+  .analytics-page .a-eyebrow {
+    color: var(--aqua);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: .19em;
+    text-transform: uppercase;
+  }
+  .analytics-page .a-filter-label {
+    display: block;
+    color: #cbd5e1;
+    font-size: 11px;
+    font-weight: 750;
+  }
+  .analytics-page .a-control {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    min-height: 42px;
+    margin-top: 7px;
+    border: 1px solid rgba(148,163,184,.2);
+    border-radius: 11px;
+    background: #080f1e;
+    color: #e2e8f0;
+    padding: 9px 11px;
+    font-size: 12px;
+    outline: none;
+    color-scheme: dark;
+    transition: border-color .18s, box-shadow .18s;
+  }
+  .analytics-page .a-control:focus {
+    border-color: rgba(103,232,249,.75);
+    box-shadow: 0 0 0 3px rgba(103,232,249,.1);
+  }
+  .analytics-page .a-control option { background: #0b1120; color: #e2e8f0; }
+  .analytics-page .a-button {
+    display: inline-flex;
+    min-height: 42px;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border-radius: 11px;
+    background: #0891b2;
+    color: #fff;
+    padding: 9px 15px;
+    font-size: 12px;
+    font-weight: 800;
+    text-decoration: none;
+    transition: background .18s, transform .18s;
+  }
+  .analytics-page .a-button:hover { background: #0e7490; }
+  .analytics-page .a-button:active { transform: scale(.985); }
+  .analytics-page .a-reset {
+    display: inline-flex;
+    width: 42px;
+    min-width: 42px;
+    min-height: 42px;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--line);
+    border-radius: 11px;
+    color: #cbd5e1;
+    text-decoration: none;
+  }
+  .analytics-page .a-reset:hover { background: rgba(255,255,255,.05); color: var(--aqua); }
+  .analytics-page .a-stat {
+    min-width: 0;
+    padding: 18px;
+    border-radius: 17px;
+    background: rgba(11,17,32,.96);
+    border: 1px solid var(--line);
+  }
+  .analytics-page .a-stat-label {
+    color: #94a3b8;
+    font-size: 10px;
+    line-height: 1.5;
+    font-weight: 800;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+  }
+  .analytics-page .a-stat-number {
+    margin-top: 18px;
+    color: #f8fafc;
+    font-size: clamp(25px, 3vw, 34px);
+    font-weight: 850;
+    line-height: 1;
+  }
+  .analytics-page .a-stat-note { margin-top: 8px; color: #64748b; font-size: 11px; line-height: 1.5; }
+  .analytics-page .a-mini-stat {
+    padding: 15px 16px;
+    border-radius: 13px;
+    border: 1px solid var(--line);
+    background: rgba(11,17,32,.9);
+  }
+  .analytics-page .a-mini-label { color: #94a3b8; font-size: 11px; font-weight: 650; }
+  .analytics-page .a-mini-number { margin-top: 8px; color: #f1f5f9; font-size: 24px; font-weight: 850; }
+  .analytics-page .a-icon {
+    display: grid;
+    width: 38px;
+    height: 38px;
+    flex: 0 0 38px;
+    place-items: center;
+    border-radius: 12px;
+    font-size: 19px;
+  }
+  .analytics-page .a-chart-card { padding: 18px; }
+  .analytics-page .a-chart-wrap { position: relative; width: 100%; height: 260px; }
+  .analytics-page .a-chart-wrap canvas { display: block; width: 100% !important; height: 100% !important; }
+  .analytics-page .a-table-scroll { width: 100%; overflow-x: auto; }
+  .analytics-page .a-table { width: 100%; min-width: 780px; border-collapse: collapse; text-align: left; font-size: 12px; }
+  .analytics-page .a-table thead { background: rgba(255,255,255,.025); color: #94a3b8; }
+  .analytics-page .a-table th {
+    padding: 12px 14px;
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .analytics-page .a-table td {
+    padding: 12px 14px;
+    border-top: 1px solid rgba(148,163,184,.1);
+    color: #cbd5e1;
+    white-space: nowrap;
+  }
+  .analytics-page .a-table tbody tr:hover { background: rgba(34,211,238,.045); }
+  .analytics-page .a-table .a-batch-name { color: #f1f5f9; font-weight: 750; }
+  .analytics-page .a-status {
+    display: inline-flex;
+    padding: 4px 8px;
+    border-radius: 999px;
+    background: rgba(148,163,184,.1);
+    color: #cbd5e1;
+    font-size: 10px;
+    font-weight: 750;
+  }
+  .analytics-page .a-empty {
+    display: flex;
+    min-height: 200px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    color: #64748b;
+    text-align: center;
+    font-size: 12px;
+  }
+  @media (max-width: 639px) {
+    .analytics-page .a-stat { padding: 14px; }
+    .analytics-page .a-chart-card { padding: 14px; }
+    .analytics-page .a-chart-wrap { height: 230px; }
+  }
+</style>
+{% endblock %}
+
+{% block page_heading %}Analytics{% endblock %}
+
+{% block teacher_content %}
+<div class="analytics-page -m-3 min-h-full px-3 py-5 sm:-m-5 sm:px-5 lg:-m-7 lg:px-7">
+  <div class="mx-auto w-full max-w-[1600px] space-y-4 sm:space-y-5">
+
+    <!-- Page heading -->
+    <header class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+      <div class="min-w-0">
+        <p class="a-eyebrow">Teacher workspace</p>
+        <h2 class="a-heading mt-1 text-2xl font-extrabold tracking-tight sm:text-3xl">Analytics</h2>
+        <p class="a-muted mt-1 text-sm">A clear overview of your assigned teaching work and learning activity.</p>
+      </div>
+      <div class="a-card inline-flex w-fit items-center gap-3 px-4 py-3">
+        <span class="grid h-9 w-9 place-items-center rounded-xl bg-cyan-400/10 text-cyan-300">
+          <i class="ri-user-3-line text-lg"></i>
+        </span>
+        <div>
+          <p class="a-muted text-[10px] font-semibold">Signed in as</p>
+          <p class="a-heading mt-0.5 text-sm font-extrabold">{{ teacher.full_name|default:request.user.get_username }}</p>
+        </div>
+      </div>
+    </header>
+
+    <!-- Filters -->
+    <form method="get" class="a-card grid grid-cols-1 gap-3 p-3 sm:grid-cols-2 sm:p-4 xl:grid-cols-5">
+      <label class="a-filter-label">
+        Batch
+        <select name="batch" onchange="this.form.submit()" class="a-control">
+          <option value="">All assigned batches</option>
+          {% for batch in batches %}
+            <option value="{{ batch.id }}" {% if selected_batch_id == batch.id|stringformat:"s" %}selected{% endif %}>{{ batch.batch_name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label class="a-filter-label">
+        Assigned subject
+        <select name="subject" class="a-control">
+          <option value="">All assigned subjects</option>
+          {% for subject in available_subjects %}
+            <option value="{{ subject.id }}" {% if selected_subject_id == subject.id|stringformat:"s" %}selected{% endif %}>{{ subject.subject_name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label class="a-filter-label">
+        Submitted from
+        <input type="date" name="start" value="{{ start_date }}" class="a-control">
+      </label>
+      <label class="a-filter-label">
+        Submitted to
+        <input type="date" name="end" value="{{ end_date }}" class="a-control">
+      </label>
+      <div class="flex items-end gap-2">
+        <button type="submit" class="a-button flex-1"><i class="ri-filter-3-line"></i> Apply</button>
+        <a href="{% url 'teacher_analytics' %}" class="a-reset" title="Clear filters" aria-label="Clear filters"><i class="ri-refresh-line"></i></a>
+      </div>
+    </form>
+
+    <!-- Main metric cards -->
+    <section class="grid grid-cols-1 gap-3 sm:grid-cols-2 2xl:grid-cols-4">
+      <article class="a-stat" style="border-color:rgba(34,211,238,.2)">
+        <div class="flex items-center justify-between gap-3">
+          <span class="a-stat-label">Assigned batches</span>
+          <span class="a-icon bg-cyan-400/10 text-cyan-300"><i class="ri-stack-line"></i></span>
+        </div>
+        <p class="a-stat-number">{{ assigned_batch_count }}</p>
+        <p class="a-stat-note">Active batch assignments</p>
+      </article>
+      <article class="a-stat" style="border-color:rgba(96,165,250,.2)">
+        <div class="flex items-center justify-between gap-3">
+          <span class="a-stat-label">Assigned subjects</span>
+          <span class="a-icon bg-blue-400/10 text-blue-300"><i class="ri-book-open-line"></i></span>
+        </div>
+        <p class="a-stat-number">{{ assigned_subject_count }}</p>
+        <p class="a-stat-note">Active subject assignments</p>
+      </article>
+      <article class="a-stat" style="border-color:rgba(52,211,153,.2)">
+        <div class="flex items-center justify-between gap-3">
+          <span class="a-stat-label">Active students</span>
+          <span class="a-icon bg-emerald-400/10 text-emerald-300"><i class="ri-user-follow-line"></i></span>
+        </div>
+        <p class="a-stat-number">{{ student_count }}</p>
+        <p class="a-stat-note">Unique active purchases in selected scope</p>
+      </article>
+      <article class="a-stat" style="border-color:rgba(167,139,250,.2)">
+        <div class="flex items-center justify-between gap-3">
+          <span class="a-stat-label">Submitted quiz attempts</span>
+          <span class="a-icon bg-violet-400/10 text-violet-300"><i class="ri-file-list-3-line"></i></span>
+        </div>
+        <p class="a-stat-number">{{ submitted_attempt_count }}</p>
+        <p class="a-stat-note">Within selected date range</p>
+      </article>
+    </section>
+
+    <!-- Content counts -->
+    <section class="grid grid-cols-2 gap-3 md:grid-cols-4">
+      <article class="a-mini-stat"><p class="a-mini-label">Chapters</p><p class="a-mini-number">{{ chapter_count }}</p></article>
+      <article class="a-mini-stat"><p class="a-mini-label">Videos</p><p class="a-mini-number">{{ video_count }}</p></article>
+      <article class="a-mini-stat"><p class="a-mini-label">PDFs</p><p class="a-mini-number">{{ pdf_count }}</p></article>
+      <article class="a-mini-stat"><p class="a-mini-label">Quizzes</p><p class="a-mini-number">{{ quiz_count }}</p></article>
+    </section>
+
+    <!-- Charts -->
+    <section class="grid grid-cols-1 gap-3 xl:grid-cols-2">
+      <article class="a-card a-chart-card">
+        <div class="mb-4">
+          <h3 class="a-heading text-sm font-extrabold">Active students by batch</h3>
+          <p class="a-muted mt-1 text-xs">Counts are based on active student-batch purchases.</p>
+        </div>
+        <div class="a-chart-wrap" id="studentsChartWrap"><canvas id="studentsChart" role="img" aria-label="Active students by batch chart"></canvas></div>
+        <div id="studentsChartEmpty" class="a-empty hidden"><i class="ri-bar-chart-box-line text-3xl text-cyan-300"></i><p>No batch student data to chart yet.</p></div>
+      </article>
+
+      <article class="a-card a-chart-card">
+        <div class="mb-4">
+          <h3 class="a-heading text-sm font-extrabold">Course content distribution</h3>
+          <p class="a-muted mt-1 text-xs">Content belongs only to your assigned subjects.</p>
+        </div>
+        <div class="a-chart-wrap" id="contentChartWrap"><canvas id="contentChart" role="img" aria-label="Course content distribution chart"></canvas></div>
+        <div id="contentChartEmpty" class="a-empty hidden"><i class="ri-pie-chart-line text-3xl text-blue-300"></i><p>No course content data to chart yet.</p></div>
+      </article>
+
+      <article class="a-card a-chart-card xl:col-span-2">
+        <div class="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h3 class="a-heading text-sm font-extrabold">Average submitted quiz score</h3>
+            <p class="a-muted mt-1 text-xs">Average percentage uses submitted attempts with maximum marks greater than zero.</p>
+          </div>
+          <p class="text-sm font-extrabold text-cyan-300">{% if average_score != None %}Overall: {{ average_score }}%{% else %}No scored submissions yet{% endif %}</p>
+        </div>
+        <div class="a-chart-wrap" id="quizChartWrap"><canvas id="quizChart" role="img" aria-label="Average quiz score by batch chart"></canvas></div>
+        <div id="quizChartEmpty" class="a-empty hidden"><i class="ri-line-chart-line text-3xl text-violet-300"></i><p>No scored quiz submissions to chart yet.</p></div>
+      </article>
+    </section>
+
+    <!-- Batch breakdown -->
+    <section class="a-card overflow-hidden">
+      <div class="border-b border-slate-700/40 px-4 py-4 sm:px-5">
+        <h3 class="a-heading text-sm font-extrabold">Batch breakdown</h3>
+        <p class="a-muted mt-1 text-xs">Only batches and subjects assigned to your teacher account are included.</p>
+      </div>
+      <div class="a-table-scroll">
+        <table class="a-table">
+          <thead><tr>
+            <th>Batch</th><th>Status</th><th>Subjects</th><th>Students</th><th>Chapters</th><th>Videos</th><th>PDFs</th><th>Quizzes</th><th>Quiz avg.</th>
+          </tr></thead>
+          <tbody>
+            {% for row in batch_rows %}
+              <tr>
+                <td class="a-batch-name">{{ row.batch.batch_name }}</td>
+                <td><span class="a-status capitalize">{{ row.batch.batch_status }}</span></td>
+                <td>{{ row.subject_count }}</td>
+                <td class="font-bold text-slate-100">{{ row.student_count }}</td>
+                <td>{{ row.chapter_count }}</td>
+                <td>{{ row.video_count }}</td>
+                <td>{{ row.pdf_count }}</td>
+                <td>{{ row.quiz_count }}</td>
+                <td class="font-bold text-slate-100">{% if row.quiz_average != None %}<span class="text-cyan-300">{{ row.quiz_average }}%</span>{% else %}<span class="text-slate-500">No data</span>{% endif %}</td>
+              </tr>
+            {% empty %}
+              <tr><td colspan="9">
+                <div class="a-empty py-8">
+                  <i class="ri-bar-chart-box-line text-3xl text-cyan-300"></i>
+                  <p class="font-bold text-slate-300">No assigned batch data</p>
+                  <p>Once active batch and subject assignments exist, analytics will appear here.</p>
+                </div>
+              </td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <p class="pb-2 text-center text-[10px] leading-5 text-slate-600">Analytics are calculated from current NeoLearn records. Empty results are shown as zero or “No data”; no sample figures are inserted.</p>
+  </div>
+</div>
+
+{{ student_chart_json|json_script:"teacher-student-chart-data" }}
+{{ content_chart_json|json_script:"teacher-content-chart-data" }}
+{{ quiz_chart_json|json_script:"teacher-quiz-chart-data" }}
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  function readData(id) {
+    const node = document.getElementById(id);
+    if (!node) return [];
+
+    try {
+      let value = JSON.parse(node.textContent || "null");
+
+      // The view currently passes json.dumps(...) strings and the template
+      // applies json_script, so the first parse may return a JSON string.
+      // Parse that string again to get the actual array.
+      if (typeof value === "string") {
+        value = JSON.parse(value);
+      }
+
+      return Array.isArray(value) ? value : [];
+    } catch (error) {
+      console.error("Unable to read analytics chart data:", id, error);
+      return [];
+    }
+  }
+
+  function showEmpty(canvasId, emptyId) {
+    const canvas = document.getElementById(canvasId);
+    const empty = document.getElementById(emptyId);
+    if (canvas) canvas.style.display = "none";
+    if (empty) empty.classList.remove("hidden");
+  }
+
+  function createBarChart(canvasId, emptyId, rows, label, color, percent) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) return;
+
+    if (!window.Chart) {
+      showEmpty(canvasId, emptyId);
+      console.error("Chart.js did not load. Check the CDN/network connection.");
+      return;
+    }
+
+    if (!rows.length) {
+      showEmpty(canvasId, emptyId);
+      return;
+    }
+
+    const labels = rows.map(row => String(row.label ?? ""));
+    const values = rows.map(row => {
+      const number = Number(row.value);
+      return Number.isFinite(number) ? number : 0;
+    });
+
+    new Chart(canvas, {
+      type: "bar",
+      data: {
+        labels: labels,
+        datasets: [{
+          label: label,
+          data: values,
+          backgroundColor: color,
+          borderColor: color,
+          borderWidth: 1,
+          borderRadius: 7,
+          maxBarThickness: 44,
+          hoverBackgroundColor: "#67e8f9"
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: { duration: 350 },
+        interaction: { intersect: false, mode: "index" },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: "#020617",
+            titleColor: "#f8fafc",
+            bodyColor: "#cbd5e1",
+            borderColor: "rgba(103,232,249,.25)",
+            borderWidth: 1,
+            padding: 10,
+            displayColors: false,
+            callbacks: {
+              label: function (context) {
+                return label + ": " + context.parsed.y + (percent ? "%" : "");
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            grid: { display: false },
+            border: { display: false },
+            ticks: {
+              color: "#94a3b8",
+              maxRotation: 35,
+              minRotation: 0,
+              autoSkip: true,
+              maxTicksLimit: 10,
+              font: { size: 10 }
+            }
+          },
+          y: {
+            beginAtZero: true,
+            suggestedMax: percent ? 100 : undefined,
+            max: percent ? 100 : undefined,
+            border: { display: false },
+            ticks: {
+              precision: percent ? 0 : 0,
+              color: "#94a3b8",
+              font: { size: 10 },
+              callback: function (value) { return percent ? value + "%" : value; }
+            },
+            grid: { color: "rgba(148,163,184,.12)", drawTicks: false }
+          }
+        }
+      }
+    });
+  }
+
+  function initAnalyticsCharts() {
+    createBarChart(
+      "studentsChart", "studentsChartEmpty",
+      readData("teacher-student-chart-data"),
+      "Active students", "rgba(34,211,238,.78)", false
+    );
+
+    createBarChart(
+      "contentChart", "contentChartEmpty",
+      readData("teacher-content-chart-data"),
+      "Content items", "rgba(59,130,246,.8)", false
+    );
+
+    createBarChart(
+      "quizChart", "quizChartEmpty",
+      readData("teacher-quiz-chart-data"),
+      "Average score", "rgba(139,92,246,.82)", true
+    );
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initAnalyticsCharts, { once: true });
+  } else {
+    initAnalyticsCharts();
+  }
+})();
+</script>
+{% endblock %}

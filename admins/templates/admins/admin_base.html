@@ -176,6 +176,12 @@
 
         }
 
+        /* Keep sidebar scroll position stable between page navigations */
+        #adminSidebarScroll {
+            overscroll-behavior: contain;
+            scroll-behavior: auto;
+        }
+
         /* LIVE CLASSES DROPDOWN */
         .admin-live-classes-dropdown > summary {
             list-style: none;
@@ -464,7 +470,7 @@
 
         <!-- NAVIGATION -->
 
-        <div class="flex-1 min-h-0 overflow-y-auto px-4 py-6">
+        <div id="adminSidebarScroll" class="flex-1 min-h-0 overflow-y-auto px-4 py-6">
 
             <p class="text-[#64748B] text-[11px] uppercase tracking-[2px]
 
@@ -663,17 +669,22 @@
                 </a>
 
                 <!-- ANALYTICS -->
-
                 <a
+            href="{% url 'admin_analytics' %}"
+                class="admin-nav-link {% if request.resolver_match.url_name == 'admin_analytics' %}active{% endif %}"
+                {% if request.resolver_match.url_name == 'admin_analytics' %}aria-current="page"{% endif %}>
+            <i class="nav-icon ri-line-chart-line text-[18px]"></i>
+    <span class="text-[15px] font-medium">Analytics</span>
+</a>
 
+                <!-- SETTINGS -->
+                <a
                     href="#"
-
-                    class="admin-nav-link">
-
-                    <i class="nav-icon ri-line-chart-line text-[18px]"></i>
-
-                    <span class="text-[15px] font-medium">Analytics</span>
-
+                    class="admin-nav-link {% if request.resolver_match.url_name == 'admin_settings' %}active{% endif %}"
+                    {% if request.resolver_match.url_name == 'admin_settings' %}aria-current="page"{% endif %}
+                    aria-label="Settings (page connection pending)">
+                    <i class="nav-icon ri-settings-3-line text-[18px]"></i>
+                    <span class="text-[15px] font-medium">Settings</span>
                 </a>
 
             </nav>
@@ -959,6 +970,35 @@
             const openButton = document.getElementById("openSidebarButton");
 
             const closeButton = document.getElementById("closeSidebarButton");
+            const sidebarScroll = document.getElementById("adminSidebarScroll");
+            const sidebarScrollStorageKey = "neolearn_admin_sidebar_scroll_top";
+
+            // Restore the previous sidebar position after a page navigation.
+            if (sidebarScroll) {
+                try {
+                    const savedScrollTop = sessionStorage.getItem(sidebarScrollStorageKey);
+                    if (savedScrollTop !== null) {
+                        sidebarScroll.scrollTop = Number(savedScrollTop) || 0;
+                    }
+                } catch (error) {
+                    // Continue normally if browser storage is unavailable.
+                }
+
+                const saveSidebarScroll = function () {
+                    try {
+                        sessionStorage.setItem(sidebarScrollStorageKey, String(sidebarScroll.scrollTop));
+                    } catch (error) {
+                        // Ignore storage restrictions.
+                    }
+                };
+
+                sidebarScroll.addEventListener("scroll", saveSidebarScroll, { passive: true });
+                window.addEventListener("pagehide", saveSidebarScroll);
+                sidebarScroll.querySelectorAll("a[href]").forEach(function (link) {
+                    link.addEventListener("click", saveSidebarScroll);
+                });
+            }
+
 
             if (!sidebar || !backdrop || !openButton || !closeButton) {
 

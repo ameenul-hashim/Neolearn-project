@@ -104,6 +104,11 @@ from .views import (
     admin_faq_video_edit_view,
     admin_faq_video_toggle_view,
     admin_faq_video_delete_view,
+    
+    #---------------------------------------------------------
+    # ANALYTICS 
+    #---------------------------------------------------------
+    admin_analytics_view,
 
 )
 
@@ -539,6 +544,12 @@ urlpatterns = [
         admin_faq_video_delete_view,
         name="admin_faq_video_delete",
     ),
-
+    
+    path(
+        "analytics/",
+        admin_analytics_view,
+        name="admin_analytics",
+    ),
+    
 
 ]
