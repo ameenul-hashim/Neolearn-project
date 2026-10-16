@@ -1,0 +1,341 @@
+{% extends "teachers/dashboard/teacher_base.html" %}
+{% load static %}
+
+{% block title %}Help Videos | NeoLearn Teacher{% endblock %}
+
+{% block extra_head %}
+<style>
+    .hv-page{width:100%;min-width:0;color:#e5edf8}
+    .hv-panel{border:1px solid rgba(148,163,184,.15);background:linear-gradient(145deg,#0e1728,#080f1d);border-radius:15px}
+    .hv-field{width:100%;min-width:0;height:42px;padding:0 12px;border:1px solid rgba(148,163,184,.2);border-radius:10px;background:#080f1d;color:#f1f5f9;outline:none;font-size:13px}
+    .hv-field:focus{border-color:#67e8f9;box-shadow:0 0 0 3px rgba(103,232,249,.08)}
+    .hv-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+    .hv-card{min-width:0;overflow:hidden;border:1px solid rgba(148,163,184,.16);border-radius:13px;background:#0d1729;transition:border-color .18s,transform .18s}
+    .hv-card:hover{border-color:rgba(103,232,249,.42);transform:translateY(-2px)}
+    .hv-media{position:relative;width:100%;aspect-ratio:16/9;background:#02060c;overflow:hidden}
+    .hv-media video,.hv-media iframe{display:block;width:100%;height:100%;aspect-ratio:16/9;border:0;background:#02060c;object-fit:contain}
+    .hv-video{cursor:pointer}
+    .hv-thumb-placeholder{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 40%,rgba(34,211,238,.18),transparent 58%),#071426;color:#67e8f9;pointer-events:none}
+    .hv-thumb-placeholder i{font-size:42px}
+    .hv-title{padding:10px 12px 4px;color:#f8fafc;font-size:13px;font-weight:750;line-height:1.45;overflow-wrap:anywhere}
+    .hv-description{padding:0 12px 12px;color:#94a3b8;font-size:11px;line-height:1.6;white-space:pre-line;overflow-wrap:anywhere}
+    .hv-description:empty{display:none}
+    .hv-tag{position:absolute;left:8px;top:8px;z-index:2;border:1px solid rgba(103,232,249,.2);border-radius:6px;background:rgba(2,6,23,.84);padding:4px 7px;color:#a5f3fc;font-size:9px;font-weight:800;letter-spacing:.04em;pointer-events:none}
+    .hv-empty{border:1px solid rgba(148,163,184,.15);border-radius:15px;background:#0d1729}
+    .hv-pagination a{display:inline-flex;min-height:36px;align-items:center;justify-content:center;padding:8px 12px;border:1px solid rgba(148,163,184,.2);border-radius:9px;color:#cbd5e1;font-size:12px}
+    .hv-pagination a:hover{border-color:#67e8f9;color:#67e8f9}
+    @media(max-width:1199px){.hv-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+    @media(max-width:800px){.hv-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media(max-width:480px){.hv-grid{grid-template-columns:minmax(0,1fr);gap:10px}.hv-title{font-size:13px}.hv-media{aspect-ratio:16/9}}
+</style>
+{% endblock %}
+
+{% block teacher_content %}
+<div class="hv-page mx-auto max-w-[1600px] space-y-4">
+
+    <header class="flex flex-wrap items-center justify-between gap-3">
+        <div class="min-w-0">
+            <p class="mb-1 text-[10px] font-bold uppercase tracking-[.2em] text-cyan-300">Teacher Support Centre</p>
+            <h1 class="text-xl font-bold tracking-tight text-white sm:text-2xl">Help Videos</h1>
+            <p class="mt-1 text-xs text-slate-400">Watch a guide and read its description in the same card.</p>
+        </div>
+        <div class="hv-panel flex items-center gap-2 px-3 py-2">
+            <i class="ri-video-line text-xl text-cyan-300"></i>
+            <span class="text-xs text-slate-400">Videos</span>
+            <span class="text-lg font-bold text-white">{{ result_count }}</span>
+        </div>
+    </header>
+
+    <section class="hv-panel p-3 sm:p-4">
+        <form method="get" action="{% url 'teacher_help_videos' %}"
+              class="grid grid-cols-1 items-end gap-3 md:grid-cols-[minmax(0,1fr)_210px_auto_auto]">
+            <div class="min-w-0">
+                <label for="hv-search" class="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-400">Search videos</label>
+                <div class="relative">
+                    <i class="ri-search-line pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"></i>
+                    <input id="hv-search" class="hv-field pl-9" type="search" name="q" value="{{ search }}" placeholder="Search title or description...">
+                </div>
+            </div>
+            <div>
+                <label for="hv-category" class="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-400">Category</label>
+                <select id="hv-category" name="category" class="hv-field">
+                    <option value="">All categories</option>
+                    {% for value, label in video_categories %}
+                    <option value="{{ value }}" {% if selected_category == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button type="submit" class="inline-flex h-[42px] items-center justify-center gap-2 rounded-xl bg-cyan-300 px-5 text-sm font-bold text-slate-950 transition hover:bg-cyan-200">
+                <i class="ri-search-line"></i> Search
+            </button>
+            {% if search or selected_category %}
+            <a href="{% url 'teacher_help_videos' %}" class="inline-flex h-[42px] items-center justify-center gap-2 rounded-xl border border-slate-600 px-4 text-sm font-semibold text-slate-300 hover:border-cyan-300/50 hover:text-white">
+                <i class="ri-refresh-line"></i> Clear
+            </a>
+            {% endif %}
+        </form>
+        <div class="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-white/5 pt-3 text-[11px] text-slate-500">
+            <span>{% if search or selected_category %}{{ result_count }} matching video{{ result_count|pluralize }}{% else %}Published videos available to teachers{% endif %}</span>
+            <span><i class="ri-shield-check-line text-cyan-300"></i> Published content only</span>
+        </div>
+    </section>
+
+    {% if videos %}
+    <section class="hv-grid" aria-label="Help videos">
+        {% for video in videos %}
+        <article class="hv-card">
+            <div class="hv-media">
+                <span class="hv-tag">{{ video.get_category_display }}</span>
+
+                {% if video.video_file %}
+                    <video class="hv-video" controls preload="metadata" playsinline
+                           aria-label="{{ video.title }}"
+                           {% if video.video_file.url %}src="{{ video.video_file.url }}"{% endif %}>
+                        Your browser does not support HTML video.
+                    </video>
+                {% elif video.video_url %}
+                    <div class="hv-external-video relative flex h-full w-full flex-col items-center justify-center overflow-hidden bg-slate-950 text-center"
+                         data-external-preview
+                         data-video-src="{{ video.video_url }}"
+                         data-video-title="{{ video.title }}">
+                        <img data-video-thumbnail alt=""
+                             class="absolute inset-0 h-full w-full object-cover"
+                             loading="lazy" hidden>
+                        <div class="absolute inset-0 bg-gradient-to-t from-slate-950/95 via-slate-950/30 to-slate-950/20"></div>
+                        <div class="relative z-10 flex max-w-full flex-col items-center gap-2 p-3">
+                            <div class="flex h-11 w-11 items-center justify-center rounded-full border border-white/30 bg-cyan-400/95 text-white shadow-lg">
+                                <i class="ri-play-fill text-2xl"></i>
+                            </div>
+                            <p class="line-clamp-2 text-xs font-bold text-white drop-shadow">{{ video.title }}</p>
+                            <button type="button" data-inline-play
+                                    class="inline-flex items-center gap-1.5 rounded-lg border border-white/20 bg-slate-950/80 px-3 py-1.5 text-[11px] font-bold text-white transition hover:bg-cyan-400 hover:text-slate-950">
+                                <i class="ri-play-fill"></i> Play video
+                            </button>
+                        </div>
+                    </div>
+                {% else %}
+                    <div class="hv-thumb-placeholder"><i class="ri-video-line"></i></div>
+                {% endif %}
+            </div>
+
+            <h2 class="hv-title">{{ video.title }}</h2>
+            {% if video.description %}
+            <p class="hv-description">{{ video.description }}</p>
+            {% else %}
+            <p class="hv-description">No description provided.</p>
+            {% endif %}
+        </article>
+        {% endfor %}
+    </section>
+
+    {% if page_obj.paginator.num_pages > 1 %}
+    <nav class="hv-pagination flex flex-wrap items-center justify-center gap-2 pt-1" aria-label="Video pages">
+        {% if page_obj.has_previous %}
+        <a href="?q={{ search|urlencode }}&category={{ selected_category|urlencode }}&page={{ page_obj.previous_page_number }}"><i class="ri-arrow-left-line mr-1"></i> Previous</a>
+        {% endif %}
+        <span class="px-2 text-xs text-slate-400">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+        {% if page_obj.has_next %}
+        <a href="?q={{ search|urlencode }}&category={{ selected_category|urlencode }}&page={{ page_obj.next_page_number }}">Next <i class="ri-arrow-right-line ml-1"></i></a>
+        {% endif %}
+    </nav>
+    {% endif %}
+
+    {% else %}
+    <section class="hv-empty flex min-h-[220px] flex-col items-center justify-center px-5 py-10 text-center">
+        <i class="ri-video-line mb-3 text-4xl text-cyan-300"></i>
+        <h2 class="text-base font-bold text-white">No help videos found</h2>
+        <p class="mt-2 max-w-md text-xs leading-5 text-slate-400">
+            {% if search or selected_category %}Try another search term or clear the selected category.{% else %}No published help videos are available for teachers yet.{% endif %}
+        </p>
+        {% if search or selected_category %}
+        <a href="{% url 'teacher_help_videos' %}" class="mt-4 rounded-lg bg-cyan-300 px-4 py-2 text-xs font-bold text-slate-950 hover:bg-cyan-200">Clear filters</a>
+        {% endif %}
+    </section>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    "use strict";
+
+    // Match the working Admin Help Video Library's URL handling.
+    function parseVideoUrl(rawUrl) {
+        let parsed;
+
+        try {
+            parsed = new URL(rawUrl, window.location.origin);
+        } catch (error) {
+            return null;
+        }
+
+        if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
+            return null;
+        }
+
+        const host = parsed.hostname.toLowerCase().replace(/^www\./, "");
+
+        if (host === "youtu.be") {
+            const id = parsed.pathname.split("/").filter(Boolean)[0];
+            return id ? { type: "youtube", id: id } : null;
+        }
+
+        if (
+            host === "youtube.com" ||
+            host === "m.youtube.com" ||
+            host === "music.youtube.com" ||
+            host === "youtube-nocookie.com"
+        ) {
+            let id = null;
+
+            if (parsed.pathname === "/watch") {
+                id = parsed.searchParams.get("v");
+            } else {
+                const match = parsed.pathname.match(/^\/(?:embed|shorts|live)\/([^/]+)/);
+                if (match) id = match[1];
+            }
+
+            return id ? { type: "youtube", id: id } : null;
+        }
+
+        if (host === "vimeo.com") {
+            const match = parsed.pathname.match(/^\/(\d+)/);
+            return match ? { type: "vimeo", id: match[1] } : null;
+        }
+
+        if (host === "player.vimeo.com") {
+            const match = parsed.pathname.match(/\/video\/(\d+)/);
+            return match ? { type: "vimeo", id: match[1], embedUrl: parsed.href } : null;
+        }
+
+        if (/\.(mp4|webm|mov|m4v|ogv|ogg)(?:$|[?#])/i.test(parsed.href)) {
+            return { type: "direct", url: parsed.href };
+        }
+
+        return { type: "other", url: parsed.href };
+    }
+
+    function makeInlinePlayer(rawUrl, title) {
+        const info = parseVideoUrl(rawUrl);
+        if (!info) return null;
+
+        if (info.type === "youtube") {
+            const iframe = document.createElement("iframe");
+            iframe.src =
+                "https://www.youtube-nocookie.com/embed/" +
+                encodeURIComponent(info.id) +
+                "?autoplay=1&rel=0&playsinline=1";
+            iframe.title = title || "Help video";
+            iframe.className = "h-full w-full border-0 bg-black";
+            iframe.allow = "autoplay; encrypted-media; picture-in-picture; fullscreen";
+            iframe.allowFullscreen = true;
+            iframe.referrerPolicy = "strict-origin-when-cross-origin";
+            return iframe;
+        }
+
+        if (info.type === "vimeo") {
+            const iframe = document.createElement("iframe");
+            iframe.src = (info.embedUrl || "https://player.vimeo.com/video/" + info.id) +
+                (info.embedUrl ? "" : "?autoplay=1");
+            iframe.title = title || "Help video";
+            iframe.className = "h-full w-full border-0 bg-black";
+            iframe.allow = "autoplay; encrypted-media; picture-in-picture; fullscreen";
+            iframe.allowFullscreen = true;
+            iframe.referrerPolicy = "strict-origin-when-cross-origin";
+            return iframe;
+        }
+
+        if (info.type === "direct") {
+            const player = document.createElement("video");
+            player.src = info.url;
+            player.controls = true;
+            player.autoplay = true;
+            player.playsInline = true;
+            player.preload = "metadata";
+            player.controlsList = "nodownload";
+            player.className = "h-full w-full bg-black object-contain";
+            player.setAttribute("aria-label", "Play " + (title || "help video"));
+            return player;
+        }
+
+        // Keep other valid URLs usable where the provider permits iframe embedding.
+        const iframe = document.createElement("iframe");
+        iframe.src = info.url;
+        iframe.title = title || "Help video";
+        iframe.className = "h-full w-full border-0 bg-black";
+        iframe.allow = "autoplay; encrypted-media; picture-in-picture; fullscreen";
+        iframe.allowFullscreen = true;
+        iframe.referrerPolicy = "strict-origin-when-cross-origin";
+        return iframe;
+    }
+
+    // Show real YouTube thumbnails and keep the fallback for unsupported providers.
+    document.querySelectorAll("[data-external-preview]").forEach(function (placeholder) {
+        const rawUrl = placeholder.dataset.videoSrc || "";
+        const info = parseVideoUrl(rawUrl);
+        const thumbnail = placeholder.querySelector("[data-video-thumbnail]");
+        const playButton = placeholder.querySelector("[data-inline-play]");
+
+        if (info && info.type === "youtube" && thumbnail) {
+            thumbnail.hidden = false;
+            thumbnail.src = "https://img.youtube.com/vi/" +
+                encodeURIComponent(info.id) + "/hqdefault.jpg";
+            thumbnail.addEventListener("error", function () {
+                thumbnail.hidden = true;
+            }, { once: true });
+        }
+
+        if (!playButton) return;
+
+        playButton.addEventListener("click", function () {
+            const title = placeholder.dataset.videoTitle || "Help video";
+            const player = makeInlinePlayer(rawUrl, title);
+
+            if (!player) {
+                const message = document.createElement("p");
+                message.className = "px-3 text-center text-xs text-rose-300";
+                message.textContent = "This video URL is invalid. Please check the saved link.";
+                placeholder.replaceChildren(message);
+                return;
+            }
+
+            // Stop other cards before switching this preview into a player.
+            document.querySelectorAll(".hv-video").forEach(function (video) {
+                video.pause();
+            });
+            document.querySelectorAll(".hv-external-video iframe").forEach(function (frame) {
+                frame.src = "about:blank";
+                frame.remove();
+            });
+            document.querySelectorAll("[data-external-preview]").forEach(function (other) {
+                if (other !== placeholder) {
+                    const otherButton = other.querySelector("[data-inline-play]");
+                    if (otherButton) otherButton.disabled = false;
+                }
+            });
+
+            placeholder.replaceWith(player);
+
+            if (player.tagName === "VIDEO") {
+                const playPromise = player.play();
+                if (playPromise && typeof playPromise.catch === "function") {
+                    playPromise.catch(function () {
+                        // Native controls remain available if browser autoplay is blocked.
+                    });
+                }
+            }
+        });
+    });
+
+    // Stop other uploaded videos when one starts playing.
+    document.querySelectorAll(".hv-video").forEach(function (video) {
+        video.addEventListener("play", function () {
+            document.querySelectorAll(".hv-video").forEach(function (other) {
+                if (other !== video) other.pause();
+            });
+        });
+    });
+})();
+</script>
+{% endblock %}

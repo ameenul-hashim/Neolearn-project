@@ -81,17 +81,17 @@ class Batch(models.Model):
         blank=True,
         null=True,
     )
-    
+
     marketplace_visible = models.BooleanField(default=True)
-    
+
     featured = models.BooleanField(default=False)
-    
+
     final_price = models.DecimalField(
         max_digits=10,
         decimal_places=2,
         default=0,
     )
-    
+
     # --------------------------------------------------
     # Publishing
     # --------------------------------------------------
@@ -345,7 +345,7 @@ class Batch(models.Model):
             self.marketplace_visible = True
 
         super().save(*args, **kwargs)
-    
+
 
 
 class Subject(models.Model):
@@ -739,8 +739,8 @@ class Teacher(models.Model):
 
     def __str__(self):
         return self.full_name
-    
-    
+
+
 class TeacherBatch(models.Model):
 
     teacher = models.ForeignKey(Teacher,on_delete=models.CASCADE,related_name="assigned_batches")
@@ -752,7 +752,7 @@ class TeacherBatch(models.Model):
         unique_together = ("teacher", "batch")
     def __str__(self):
         return f"{self.teacher.full_name} → {self.batch.batch_name}"
-    
+
 class TeacherSubject(models.Model):
 
     teacher = models.ForeignKey(Teacher,on_delete=models.CASCADE,related_name="assigned_subjects")
@@ -770,7 +770,7 @@ class TeacherSubject(models.Model):
 
     def __str__(self):
         return (f"{self.teacher.full_name} → " f"{self.subject.subject_name}")
-    
+
 # =========================================================
 # COUPON MANAGEMENT
 # =========================================================
@@ -1504,7 +1504,7 @@ class CouponBatchRule(models.Model):
     def save(self, *args, **kwargs):
         self.full_clean()
         super().save(*args, **kwargs)
-        
+
 class AdminOrderSelection(models.Model):
     admin = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -1543,3 +1543,140 @@ class AdminOrderSelection(models.Model):
             f"{self.admin.username} → "
             f"{self.order.order_number}"
         )
+
+
+# ============================================================
+# FAQ / HELP VIDEOS
+# ============================================================
+
+class FAQVideo(models.Model):
+
+    CATEGORY_CHOICES = [
+        ("payments", "Payments"),
+        ("requests", "Requests"),
+        ("exams", "Exams"),
+        ("tests", "Tests"),
+        ("profile", "Profile & Account"),
+        ("general", "General Support"),
+    ]
+
+    AUDIENCE_CHOICES = [
+        ("students", "Students"),
+        ("teachers", "Teachers"),
+        ("both", "Students & Teachers"),
+    ]
+
+    STATUS_CHOICES = [
+        ("draft", "Draft"),
+        ("published", "Published"),
+    ]
+
+    # --------------------------------------------------------
+    # VIDEO INFORMATION
+    # --------------------------------------------------------
+
+    title = models.CharField(
+        max_length=200,
+    )
+
+    description = models.TextField(
+        blank=True,
+    )
+
+    category = models.CharField(
+        max_length=20,
+        choices=CATEGORY_CHOICES,
+        default="general",
+        db_index=True,
+    )
+
+    audience = models.CharField(
+        max_length=20,
+        choices=AUDIENCE_CHOICES,
+        default="both",
+        db_index=True,
+    )
+
+    # Upload a video to Cloudinary, or provide an external URL.
+    video_file = CloudinaryField(
+        "video",
+        resource_type="video",
+        folder="neolearn/faq-videos",
+        blank=True,
+        null=True,
+    )
+
+    video_url = models.URLField(
+        max_length=1000,
+        blank=True,
+    )
+
+    # --------------------------------------------------------
+    # PUBLICATION AND DISPLAY ORDER
+    # --------------------------------------------------------
+
+    status = models.CharField(
+        max_length=15,
+        choices=STATUS_CHOICES,
+        default="draft",
+        db_index=True,
+    )
+
+    display_order = models.PositiveIntegerField(
+        default=1,
+    )
+
+    # --------------------------------------------------------
+    # ADMIN AUDIT INFORMATION
+    # --------------------------------------------------------
+
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="faq_videos_created",
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+    )
+
+    class Meta:
+        ordering = [
+            "display_order",
+            "-created_at",
+            "-pk",
+        ]
+
+        indexes = [
+            models.Index(
+                fields=["audience", "status"],
+                name="faq_video_audience_status_idx",
+            ),
+            models.Index(
+                fields=["category", "status"],
+                name="faq_video_category_status_idx",
+            ),
+        ]
+
+    def clean(self):
+        super().clean()
+
+        has_uploaded_video = bool(self.video_file)
+        has_external_url = bool(self.video_url and self.video_url.strip())
+
+        if has_uploaded_video and has_external_url:
+            raise ValidationError(
+                "Provide either an uploaded video or an external video URL, not both."
+            )
+
+        if not has_uploaded_video and not has_external_url:
+            raise ValidationError(
+                "Upload a video or provide an external video URL."
+            )
+
+    def __str__(self):
+        return self.title

@@ -3,7 +3,7 @@ from django.shortcuts import (
     redirect,
     get_object_or_404,
 )
-
+from django.core.paginator import Paginator
 from django.contrib import messages
 from django.contrib.auth import (
     authenticate,
@@ -22,6 +22,7 @@ import re
 from admins.models import (
     Batch,
     Subject,
+    FAQVideo,
 )
 
 from teachers.models import (
@@ -1102,6 +1103,353 @@ def teacher_edit_profile_view(request):
         request,
         "teachers/profile/edit_profile.html",
         context,
+    )
+
+    response["Cache-Control"] = (
+        "no-cache, no-store, must-revalidate"
+    )
+    response["Pragma"] = "no-cache"
+    response["Expires"] = "0"
+
+    return response
+
+# ============================================================
+# MY COLLEAGUES
+# ============================================================
+
+@login_required(login_url="teacher_login")
+@cache_control(
+    no_cache=True,
+    must_revalidate=True,
+    no_store=True,
+)
+def teacher_colleagues_view(request):
+    # --------------------------------------------------------
+    # 1. VALIDATE THE CURRENT TEACHER
+    # --------------------------------------------------------
+    try:
+        teacher = request.user.teacher_profile
+    except Teacher.DoesNotExist:
+        messages.error(request, "Access denied.")
+        return redirect("teacher_login")
+
+    if teacher.is_blocked:
+        logout(request)
+        messages.error(
+            request,
+            "Your teacher account has been blocked.",
+        )
+        return redirect("teacher_login")
+
+    if teacher.is_first_login:
+        return redirect("teacher_change_password")
+
+    # --------------------------------------------------------
+    # 2. ELIGIBLE COLLEAGUES
+    # --------------------------------------------------------
+    colleagues = Teacher.objects.filter(
+        is_first_login=False,
+        profile_completed=True,
+        is_blocked=False,
+    ).exclude(
+        pk=teacher.pk,
+    )
+
+    # --------------------------------------------------------
+    # 3. SEARCH BY FULL NAME
+    # --------------------------------------------------------
+    search = request.GET.get("q", "").strip()
+
+    if search:
+        colleagues = colleagues.filter(
+            full_name__icontains=search,
+        )
+
+    # --------------------------------------------------------
+    # 4. SORTING
+    # --------------------------------------------------------
+    sort = request.GET.get("sort", "name_asc")
+
+    if sort == "name_desc":
+        colleagues = colleagues.order_by(
+            "-full_name",
+            "pk",
+        )
+    else:
+        sort = "name_asc"
+        colleagues = colleagues.order_by(
+            "full_name",
+            "pk",
+        )
+
+    # --------------------------------------------------------
+    # 5. COUNT MATCHING RESULTS BEFORE PAGINATION
+    # --------------------------------------------------------
+    colleague_count = colleagues.count()
+
+    # --------------------------------------------------------
+    # 6. PAGINATION — 20 COLLEAGUES PER PAGE
+    # get_page() handles invalid and out-of-range page values.
+    # --------------------------------------------------------
+    paginator = Paginator(colleagues, 20)
+    page_obj = paginator.get_page(
+        request.GET.get("page", 1)
+    )
+
+    # Only the current page's colleagues reach the template.
+    page_colleagues = page_obj.object_list
+
+    # --------------------------------------------------------
+    # 7. RENDER DIRECTORY
+    # Preserve search, sort and pagination context.
+    # --------------------------------------------------------
+    context = {
+        "teacher": teacher,
+        "colleagues": page_colleagues,
+        "search": search,
+        "sort": sort,
+        "colleague_count": colleague_count,
+        "page_obj": page_obj,
+        "paginator": paginator,
+    }
+
+    response = render(
+        request,
+        "teachers/colleagues/colleagues.html",
+        context,
+    )
+
+    response["Cache-Control"] = (
+        "no-cache, no-store, must-revalidate"
+    )
+    response["Pragma"] = "no-cache"
+    response["Expires"] = "0"
+
+    return response
+
+
+# ============================================================
+# COLLEAGUE PROFESSIONAL PROFILE
+# ============================================================
+
+@login_required(login_url="teacher_login")
+@cache_control(
+    no_cache=True,
+    must_revalidate=True,
+    no_store=True,
+)
+def teacher_colleague_detail_view(request, teacher_id):
+    # --------------------------------------------------------
+    # 1. VALIDATE THE CURRENT TEACHER
+    # --------------------------------------------------------
+    try:
+        current_teacher = request.user.teacher_profile
+    except Teacher.DoesNotExist:
+        messages.error(request, "Access denied.")
+        return redirect("teacher_login")
+
+    if current_teacher.is_blocked:
+        logout(request)
+        messages.error(
+            request,
+            "Your teacher account has been blocked.",
+        )
+        return redirect("teacher_login")
+
+    if current_teacher.is_first_login:
+        return redirect("teacher_change_password")
+
+    # --------------------------------------------------------
+    # 2. FETCH AN ELIGIBLE COLLEAGUE
+    # --------------------------------------------------------
+    colleague = get_object_or_404(
+        Teacher.objects.filter(
+            is_blocked=False,
+            is_first_login=False,
+            profile_completed=True,
+        ),
+        pk=teacher_id,
+    )
+
+    # A teacher must use their own profile page.
+    if colleague.pk == current_teacher.pk:
+        return redirect("teacher_my_profile")
+
+    # --------------------------------------------------------
+    # 3. GET ACTIVE BATCH ASSIGNMENTS
+    # --------------------------------------------------------
+    batch_assignments_qs = (
+        TeacherBatch.objects.filter(
+            teacher=colleague,
+            is_active=True,
+        )
+        .select_related("batch")
+        .order_by("batch__batch_name")
+    )
+
+    batch_assignments_list = list(
+        batch_assignments_qs
+    )
+
+    # --------------------------------------------------------
+    # 4. GET ACTIVE SUBJECT ASSIGNMENTS
+    # --------------------------------------------------------
+    subject_assignments = (
+        TeacherSubject.objects.filter(
+            teacher=colleague,
+            is_active=True,
+        )
+        .select_related("batch", "subject")
+        .order_by(
+            "batch__batch_name",
+            "subject__subject_name",
+        )
+    )
+
+    # --------------------------------------------------------
+    # 5. GROUP SUBJECTS BY BATCH ID
+    # --------------------------------------------------------
+    subjects_by_batch = {}
+
+    for assignment in subject_assignments:
+        batch_id = assignment.batch_id
+
+        if batch_id not in subjects_by_batch:
+            subjects_by_batch[batch_id] = []
+
+        subjects_by_batch[batch_id].append(
+            assignment.subject
+        )
+
+    # --------------------------------------------------------
+    # 6. BUILD BATCH-WISE TEMPLATE DATA
+    # Keep batches visible even when they have no subjects.
+    # --------------------------------------------------------
+    batch_assignments = []
+
+    for batch_assignment in batch_assignments_list:
+        batch = batch_assignment.batch
+
+        batch_assignments.append({
+            "batch": batch,
+            "subjects": subjects_by_batch.get(
+                batch.pk,
+                [],
+            ),
+        })
+
+    # --------------------------------------------------------
+    # 7. RENDER THE COLLEAGUE PROFILE
+    # --------------------------------------------------------
+    context = {
+        "teacher": current_teacher,
+        "current_teacher": current_teacher,
+        "colleague": colleague,
+        "batch_assignments": batch_assignments,
+    }
+
+    response = render(
+        request,
+        "teachers/colleagues/colleague_detail.html",
+        context,
+    )
+
+    response["Cache-Control"] = (
+        "no-cache, no-store, must-revalidate"
+    )
+    response["Pragma"] = "no-cache"
+    response["Expires"] = "0"
+
+    return response
+
+
+# ============================================================
+# TEACHER HELP VIDEOS
+# ============================================================
+
+@login_required(login_url="teacher_login")
+@cache_control(
+    no_cache=True,
+    must_revalidate=True,
+    no_store=True,
+)
+def teacher_help_videos_view(request):
+    """Display published help videos available to teachers."""
+
+    try:
+        teacher = request.user.teacher_profile
+    except Teacher.DoesNotExist:
+        messages.error(request, "Access denied.")
+        return redirect("teacher_login")
+
+    if teacher.is_blocked:
+        logout(request)
+        messages.error(
+            request,
+            "Your teacher account has been blocked.",
+        )
+        return redirect("teacher_login")
+
+    if teacher.is_first_login:
+        return redirect("teacher_change_password")
+
+    from django.db.models import Q
+
+    videos = FAQVideo.objects.filter(
+        status="published",
+        audience__in=("teachers", "both"),
+    )
+
+    # Search by video title or description.
+    search = request.GET.get("q", "").strip()
+
+    if search:
+        videos = videos.filter(
+            Q(title__icontains=search)
+            | Q(description__icontains=search)
+        )
+
+    # Filter by a valid video category.
+    selected_category = request.GET.get(
+        "category", ""
+    ).strip()
+
+    valid_categories = {
+        value
+        for value, label in FAQVideo.CATEGORY_CHOICES
+    }
+
+    if selected_category in valid_categories:
+        videos = videos.filter(
+            category=selected_category
+        )
+    else:
+        selected_category = ""
+
+    videos = videos.order_by(
+        "display_order",
+        "-created_at",
+        "-pk",
+    )
+
+    # Nine cards per page.
+    paginator = Paginator(videos, 9)
+    page_obj = paginator.get_page(
+        request.GET.get("page", 1)
+    )
+
+    response = render(
+        request,
+        "teachers/help_videos.html",
+        {
+            "teacher": teacher,
+            "videos": page_obj.object_list,
+            "page_obj": page_obj,
+            "search": search,
+            "selected_category": selected_category,
+            "video_categories": FAQVideo.CATEGORY_CHOICES,
+            "result_count": paginator.count,
+        },
     )
 
     response["Cache-Control"] = (

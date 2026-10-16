@@ -1,0 +1,1073 @@
+{% extends "teachers/dashboard/teacher_base.html" %}
+
+{% block title %}{{ colleague.full_name }} | My Colleagues{% endblock %}
+{% block page_heading %}Colleague Profile{% endblock %}
+
+{% block extra_head %}
+<style>
+/* =====================================================
+   NEolearn — COLLEAGUE PROFILE
+   Responsive two-column layout, balanced card heights
+===================================================== */
+
+.colleague-detail-page {
+    width: 100%;
+    max-width: 1450px;
+    min-width: 0;
+    margin: 0 auto;
+    color: #e2e8f0;
+}
+
+.detail-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    margin-bottom: 10px;
+    color: #a5f3fc;
+    font-size: 12px;
+    font-weight: 750;
+    text-decoration: none;
+}
+
+.detail-back:hover { color: #fff; }
+
+/* Profile header */
+
+.detail-hero {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    min-width: 0;
+    padding: 18px 20px;
+    border: 1px solid rgba(103,232,249,.18);
+    border-radius: 17px;
+    background: linear-gradient(120deg,rgba(8,47,73,.72),#0b1120 72%);
+    box-shadow: 0 8px 24px rgba(0,0,0,.10);
+}
+
+.detail-avatar,
+.detail-avatar-fallback {
+    display: flex;
+    width: 94px;
+    height: 94px;
+    flex: 0 0 94px;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    border: 2px solid rgba(103,232,249,.45);
+    border-radius: 16px;
+    background: linear-gradient(135deg,#164e63,#172554);
+    color: #a5f3fc;
+    font-size: 32px;
+    font-weight: 800;
+}
+
+.detail-avatar { object-fit: cover; }
+
+.detail-hero-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.detail-eyebrow {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin-bottom: 5px;
+    color: #67e8f9;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+}
+
+.detail-name {
+    margin: 0;
+    color: #f8fafc;
+    font-size: clamp(22px,2.5vw,31px);
+    font-weight: 850;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+}
+
+.detail-specialization {
+    margin: 5px 0 0;
+    color: #a5f3fc;
+    font-size: 12px;
+    font-weight: 650;
+    line-height: 1.6;
+    overflow-wrap: anywhere;
+}
+
+.detail-qualification {
+    margin: 4px 0 0;
+    color: #94a3b8;
+    font-size: 11px;
+    line-height: 1.6;
+    overflow-wrap: anywhere;
+}
+
+.detail-hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    margin-top: 10px;
+}
+
+.detail-action {
+    display: inline-flex;
+    min-height: 33px;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 6px 10px;
+    border: 1px solid rgba(103,232,249,.2);
+    border-radius: 9px;
+    background: rgba(103,232,249,.07);
+    color: #a5f3fc;
+    font-size: 10px;
+    font-weight: 750;
+    text-decoration: none;
+    overflow-wrap: anywhere;
+    transition: background .18s ease, transform .18s ease;
+}
+
+.detail-action:hover {
+    background: rgba(103,232,249,.15);
+    transform: translateY(-1px);
+}
+
+.detail-action-primary {
+    background: linear-gradient(135deg,#a5f3fc,#67e8f9);
+    color: #082f49;
+    border-color: transparent;
+}
+
+/* =====================================================
+   MAIN COLUMNS
+   Both columns stretch to the same bottom line.
+===================================================== */
+
+.detail-layout {
+    display: grid;
+    grid-template-columns: minmax(0,1.12fr) minmax(0,.88fr);
+    align-items: stretch;
+    gap: 12px;
+    margin-top: 12px;
+    min-width: 0;
+}
+
+.detail-column {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    align-self: stretch;
+    min-width: 0;
+    min-height: 0;
+}
+
+/* The final card in each column fills the remaining height. */
+.detail-column > .detail-panel:last-child {
+    flex: 1 0 auto;
+}
+
+/* About card grows to remove the empty area below it. */
+.detail-layout > .detail-column:first-child
+> .detail-panel:last-child {
+    flex: 1 0 auto;
+}
+
+/* Right-hand assignments card stretches to match the left. */
+.detail-layout > .detail-column:last-child
+> .detail-panel:last-child {
+    flex: 1 0 auto;
+}
+
+/* Panels */
+
+.detail-panel {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,.075);
+    border-radius: 14px;
+    background: rgba(11,17,32,.96);
+    box-shadow: 0 5px 18px rgba(0,0,0,.08);
+}
+
+.detail-panel-header {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 11px 13px;
+    border-bottom: 1px solid rgba(255,255,255,.065);
+}
+
+.detail-panel-icon {
+    display: flex;
+    width: 34px;
+    height: 34px;
+    flex: 0 0 34px;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(103,232,249,.14);
+    border-radius: 9px;
+    background: rgba(103,232,249,.07);
+    color: #67e8f9;
+    font-size: 17px;
+}
+
+.detail-panel-heading { min-width: 0; }
+
+.detail-panel-heading h2 {
+    margin: 0;
+    color: #f1f5f9;
+    font-size: 12px;
+    font-weight: 800;
+    line-height: 1.5;
+}
+
+.detail-panel-heading p {
+    margin: 2px 0 0;
+    color: #71839e;
+    font-size: 10px;
+    line-height: 1.5;
+}
+
+.detail-panel-body {
+    padding: 13px;
+    min-width: 0;
+}
+
+/* Professional and contact information */
+
+.detail-info-grid {
+    display: grid;
+    grid-template-columns: repeat(2,minmax(0,1fr));
+    gap: 13px 12px;
+}
+
+.detail-info-item { min-width: 0; }
+
+.detail-info-item.full-width { grid-column: 1 / -1; }
+
+.detail-info-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 4px;
+    color: #8292aa;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 1.5;
+}
+
+.detail-info-label i {
+    color: #67e8f9;
+    font-size: 13px;
+}
+
+.detail-info-value {
+    color: #dbeafe;
+    font-size: 12px;
+    line-height: 1.7;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+.detail-info-value a {
+    color: #a5f3fc;
+    text-decoration: none;
+}
+
+.detail-info-value a:hover { text-decoration: underline; }
+
+.detail-empty {
+    padding: 15px 12px;
+    border: 1px dashed rgba(255,255,255,.12);
+    border-radius: 10px;
+    color: #94a3b8;
+    font-size: 12px;
+    line-height: 1.8;
+    text-align: center;
+}
+
+.detail-empty i {
+    display: block;
+    margin-bottom: 6px;
+    color: #67e8f9;
+    font-size: 21px;
+}
+
+/* =====================================================
+   TEACHING ASSIGNMENTS
+===================================================== */
+
+.assignment-summary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 9px;
+}
+
+.assignment-stat {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 9px;
+    border: 1px solid rgba(103,232,249,.13);
+    border-radius: 8px;
+    background: rgba(103,232,249,.045);
+    color: #a5f3fc;
+    font-size: 10px;
+    font-weight: 750;
+}
+
+/* Invisible scrollbar; scrolling remains enabled. */
+
+.assignment-batch-list {
+    display: grid;
+    align-content: start;
+    gap: 8px;
+    max-height: 340px;
+    min-width: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 0;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    overscroll-behavior: contain;
+}
+
+.assignment-batch-list::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
+}
+
+/* Batch cards */
+
+.assignment-batch {
+    min-width: 0;
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,.08);
+    border-radius: 11px;
+    background: linear-gradient(145deg,rgba(15,23,42,.98),rgba(7,13,25,.98));
+    transition: border-color .18s ease;
+}
+
+.assignment-batch:hover {
+    border-color: rgba(103,232,249,.24);
+}
+
+.assignment-batch-header {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 9px;
+    border-bottom: 1px solid rgba(255,255,255,.055);
+}
+
+.assignment-batch-thumb,
+.assignment-batch-thumb-fallback {
+    display: flex;
+    width: 46px;
+    height: 46px;
+    flex: 0 0 46px;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    border: 1px solid rgba(103,232,249,.2);
+    border-radius: 9px;
+    background: linear-gradient(135deg,#164e63,#172554);
+    color: #67e8f9;
+    font-size: 19px;
+}
+
+.assignment-batch-thumb { object-fit: cover; }
+
+.assignment-batch-title {
+    flex: 1;
+    min-width: 0;
+}
+
+.assignment-batch-title h3 {
+    margin: 0;
+    color: #f1f5f9;
+    font-size: 11px;
+    font-weight: 800;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+}
+
+.assignment-batch-title p {
+    margin: 3px 0 0;
+    color: #94a3b8;
+    font-size: 10px;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+}
+
+.assignment-count {
+    flex-shrink: 0;
+    padding: 4px 6px;
+    border: 1px solid rgba(103,232,249,.13);
+    border-radius: 7px;
+    background: rgba(103,232,249,.05);
+    color: #a5f3fc;
+    font-size: 9px;
+    font-weight: 750;
+    white-space: nowrap;
+}
+
+/* Subject cards */
+
+.assignment-subject-area { padding: 8px 9px 10px; }
+
+.assignment-subject-heading {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 7px;
+    color: #94a3b8;
+    font-size: 9px;
+    font-weight: 750;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+}
+
+.assignment-subject-heading i {
+    color: #67e8f9;
+    font-size: 13px;
+}
+
+.assignment-subject-list {
+    display: grid;
+    grid-template-columns: repeat(2,minmax(0,1fr));
+    gap: 6px;
+}
+
+.assignment-subject {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    min-width: 0;
+    padding: 7px;
+    border: 1px solid rgba(255,255,255,.065);
+    border-radius: 8px;
+    background: rgba(255,255,255,.025);
+    transition: border-color .18s ease, background .18s ease;
+}
+
+.assignment-subject:hover {
+    border-color: rgba(103,232,249,.18);
+    background: rgba(103,232,249,.035);
+}
+
+.assignment-subject-thumb,
+.assignment-subject-thumb-fallback {
+    display: flex;
+    width: 36px;
+    height: 36px;
+    flex: 0 0 36px;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    border: 1px solid rgba(103,232,249,.14);
+    border-radius: 7px;
+    background: rgba(103,232,249,.07);
+    color: #67e8f9;
+    font-size: 15px;
+}
+
+.assignment-subject-thumb { object-fit: cover; }
+
+.assignment-subject-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.assignment-subject-name {
+    color: #dbeafe;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+}
+
+.assignment-subject-caption {
+    margin-top: 2px;
+    color: #71839e;
+    font-size: 9px;
+    line-height: 1.4;
+}
+
+.assignment-no-subjects {
+    padding: 8px;
+    border: 1px dashed rgba(255,255,255,.1);
+    border-radius: 8px;
+    color: #71839e;
+    font-size: 10px;
+    line-height: 1.7;
+}
+
+.assignment-no-subjects i {
+    margin-right: 5px;
+    color: #67e8f9;
+}
+
+/* =====================================================
+   TABLET
+===================================================== */
+
+@media (max-width: 1000px) {
+    .detail-layout {
+        grid-template-columns: minmax(0,1fr);
+        align-items: start;
+    }
+
+    .detail-column { align-self: auto; }
+
+    .detail-layout > .detail-column:first-child
+    > .detail-panel:last-child,
+    .detail-layout > .detail-column:last-child
+    > .detail-panel:last-child {
+        flex: 0 0 auto;
+    }
+
+    .assignment-batch-list { max-height: 380px; }
+}
+
+/* =====================================================
+   MOBILE
+===================================================== */
+
+@media (max-width: 600px) {
+    .detail-back { margin-bottom: 9px; }
+
+    .detail-hero {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 12px;
+        padding: 14px;
+    }
+
+    .detail-avatar,
+    .detail-avatar-fallback {
+        width: 78px;
+        height: 78px;
+        flex-basis: 78px;
+        border-radius: 13px;
+        font-size: 28px;
+    }
+
+    .detail-name { font-size: 23px; }
+
+    .detail-hero-actions { gap: 6px; }
+
+    .detail-layout,
+    .detail-column {
+        gap: 10px;
+        margin-top: 10px;
+    }
+
+    .detail-panel-header { padding: 10px; }
+    .detail-panel-body { padding: 11px; }
+
+    .detail-info-grid { gap: 12px 9px; }
+
+    .assignment-batch-list { max-height: 320px; }
+
+    .assignment-subject-list {
+        grid-template-columns: minmax(0,1fr);
+    }
+
+    .assignment-batch-header {
+        gap: 8px;
+        padding: 8px;
+    }
+
+    .assignment-batch-thumb,
+    .assignment-batch-thumb-fallback {
+        width: 42px;
+        height: 42px;
+        flex-basis: 42px;
+    }
+}
+
+@media (max-width: 360px) {
+    .detail-info-grid { grid-template-columns: minmax(0,1fr); }
+
+    .detail-info-item.full-width { grid-column: auto; }
+
+    .detail-hero { padding: 12px; }
+
+    .assignment-count {
+        padding: 4px;
+        font-size: 8px;
+        white-space: normal;
+        text-align: center;
+    }
+
+    .assignment-subject-thumb,
+    .assignment-subject-thumb-fallback {
+        width: 34px;
+        height: 34px;
+        flex-basis: 34px;
+    }
+}
+</style>
+{% endblock %}
+
+{% block teacher_content %}
+<div class="colleague-detail-page">
+
+    <a href="{% url 'teacher_colleagues' %}" class="detail-back">
+        <i class="ri-arrow-left-line"></i>
+        Back to My Colleagues
+    </a>
+
+    <!-- TEACHER PROFILE HEADER -->
+    <section class="detail-hero">
+        {% if colleague.profile_image %}
+            <img
+                src="{{ colleague.profile_image.url }}"
+                alt="{{ colleague.full_name }}"
+                class="detail-avatar"
+                onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"
+            >
+            <div class="detail-avatar-fallback" style="display:none;">
+                {{ colleague.full_name|default:"T"|first|upper }}
+            </div>
+        {% else %}
+            <div class="detail-avatar-fallback">
+                {{ colleague.full_name|default:"T"|first|upper }}
+            </div>
+        {% endif %}
+
+        <div class="detail-hero-content">
+            <div class="detail-eyebrow">
+                <i class="ri-shield-user-line"></i>
+                Teacher Profile
+            </div>
+
+            <h2 class="detail-name">
+                {{ colleague.full_name|default:"Teacher" }}
+            </h2>
+
+            <p class="detail-specialization">
+                {{ colleague.specialization|default:"Educator" }}
+            </p>
+
+            <p class="detail-qualification">
+                <i class="ri-graduation-cap-line"></i>
+                {{ colleague.qualification|default:"Qualification not provided" }}
+            </p>
+
+            <div class="detail-hero-actions">
+                {% if colleague.email %}
+                    <a href="mailto:{{ colleague.email }}"
+                       class="detail-action detail-action-primary">
+                        <i class="ri-mail-line"></i> Email
+                    </a>
+                {% endif %}
+
+                {% if colleague.phone_number %}
+                    <a href="tel:{{ colleague.phone_number }}"
+                       class="detail-action">
+                        <i class="ri-phone-line"></i> Call
+                    </a>
+                {% endif %}
+
+                {% if colleague.linkedin %}
+                    <a href="{{ colleague.linkedin }}"
+                       target="_blank"
+                       rel="noopener noreferrer"
+                       class="detail-action">
+                        <i class="ri-linkedin-box-line"></i>
+                        LinkedIn
+                        <i class="ri-external-link-line"></i>
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+    </section>
+
+    <!-- TWO-COLUMN PROFILE LAYOUT -->
+    <div class="detail-layout">
+
+        <!-- LEFT COLUMN -->
+        <div class="detail-column">
+
+            <!-- PROFESSIONAL OVERVIEW -->
+            <section class="detail-panel">
+                <div class="detail-panel-header">
+                    <div class="detail-panel-icon">
+                        <i class="ri-user-star-line"></i>
+                    </div>
+                    <div class="detail-panel-heading">
+                        <h2>Professional Overview</h2>
+                        <p>Education, experience and teaching background</p>
+                    </div>
+                </div>
+
+                <div class="detail-panel-body">
+                    <div class="detail-info-grid">
+
+                        <div class="detail-info-item">
+                            <div class="detail-info-label">
+                                <i class="ri-graduation-cap-line"></i>
+                                Highest Qualification
+                            </div>
+                            <div class="detail-info-value">
+                                {{ colleague.qualification|default:"Not provided" }}
+                            </div>
+                        </div>
+
+                        <div class="detail-info-item">
+                            <div class="detail-info-label">
+                                <i class="ri-book-open-line"></i>
+                                Specialization
+                            </div>
+                            <div class="detail-info-value">
+                                {{ colleague.specialization|default:"Not provided" }}
+                            </div>
+                        </div>
+
+                        <div class="detail-info-item">
+                            <div class="detail-info-label">
+                                <i class="ri-time-line"></i>
+                                Experience
+                            </div>
+                            <div class="detail-info-value">
+                                {{ colleague.experience|default:"Not provided" }}
+                            </div>
+                        </div>
+
+                        <div class="detail-info-item">
+                            <div class="detail-info-label">
+                                <i class="ri-calendar-check-line"></i>
+                                Graduation Year
+                            </div>
+                            <div class="detail-info-value">
+                                {{ colleague.graduation_year|default:"Not provided" }}
+                            </div>
+                        </div>
+
+                        <div class="detail-info-item full-width">
+                            <div class="detail-info-label">
+                                <i class="ri-school-line"></i>
+                                Institution
+                            </div>
+                            <div class="detail-info-value">
+                                {{ colleague.institution_name|default:"Not provided" }}
+                            </div>
+                        </div>
+
+                        <div class="detail-info-item full-width">
+                            <div class="detail-info-label">
+                                <i class="ri-medal-line"></i>
+                                Additional Qualifications
+                            </div>
+                            <div class="detail-info-value">
+                                {{ colleague.additional_qualifications|default:"Not provided"|linebreaksbr }}
+                            </div>
+                        </div>
+
+                        <div class="detail-info-item full-width">
+                            <div class="detail-info-label">
+                                <i class="ri-bookmark-line"></i>
+                                Qualified Subjects
+                            </div>
+                            <div class="detail-info-value">
+                                {{ colleague.qualified_subjects|default:"Not provided"|linebreaksbr }}
+                            </div>
+                        </div>
+
+                        <div class="detail-info-item full-width">
+                            <div class="detail-info-label">
+                                <i class="ri-building-line"></i>
+                                Previous Institution
+                            </div>
+                            <div class="detail-info-value">
+                                {{ colleague.previous_institution|default:"Not provided" }}
+                            </div>
+                        </div>
+
+                        <div class="detail-info-item full-width">
+                            <div class="detail-info-label">
+                                <i class="ri-chat-3-line"></i>
+                                Languages
+                            </div>
+                            <div class="detail-info-value">
+                                {{ colleague.language|default:"Not provided" }}
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </section>
+
+            <!-- ABOUT THE TEACHER -->
+            <section class="detail-panel">
+                <div class="detail-panel-header">
+                    <div class="detail-panel-icon">
+                        <i class="ri-user-voice-line"></i>
+                    </div>
+                    <div class="detail-panel-heading">
+                        <h2>About the Teacher</h2>
+                        <p>Professional introduction and teaching approach</p>
+                    </div>
+                </div>
+
+                <div class="detail-panel-body">
+                    {% if colleague.bio %}
+                        <div class="detail-info-value">
+                            {{ colleague.bio|linebreaksbr }}
+                        </div>
+                    {% else %}
+                        <div class="detail-empty">
+                            <i class="ri-file-user-line"></i>
+                            No professional introduction has been added yet.
+                        </div>
+                    {% endif %}
+                </div>
+            </section>
+
+        </div>
+
+        <!-- RIGHT COLUMN -->
+        <div class="detail-column">
+
+            <!-- CONTACT INFORMATION -->
+            <section class="detail-panel">
+                <div class="detail-panel-header">
+                    <div class="detail-panel-icon">
+                        <i class="ri-contacts-line"></i>
+                    </div>
+                    <div class="detail-panel-heading">
+                        <h2>Contact Information</h2>
+                        <p>Professional contact details</p>
+                    </div>
+                </div>
+
+                <div class="detail-panel-body">
+                    <div class="detail-info-grid">
+
+                        <div class="detail-info-item full-width">
+                            <div class="detail-info-label">
+                                <i class="ri-user-line"></i>
+                                Full Name
+                            </div>
+                            <div class="detail-info-value">
+                                {{ colleague.full_name|default:"Not provided" }}
+                            </div>
+                        </div>
+
+                        <div class="detail-info-item full-width">
+                            <div class="detail-info-label">
+                                <i class="ri-mail-line"></i>
+                                Email Address
+                            </div>
+                            <div class="detail-info-value">
+                                {% if colleague.email %}
+                                    <a href="mailto:{{ colleague.email }}">
+                                        {{ colleague.email }}
+                                    </a>
+                                {% else %}
+                                    Not provided
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="detail-info-item full-width">
+                            <div class="detail-info-label">
+                                <i class="ri-phone-line"></i>
+                                Phone Number
+                            </div>
+                            <div class="detail-info-value">
+                                {% if colleague.phone_number %}
+                                    <a href="tel:{{ colleague.phone_number }}">
+                                        {{ colleague.phone_number }}
+                                    </a>
+                                {% else %}
+                                    Not provided
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="detail-info-item full-width">
+                            <div class="detail-info-label">
+                                <i class="ri-linkedin-box-line"></i>
+                                LinkedIn
+                            </div>
+                            <div class="detail-info-value">
+                                {% if colleague.linkedin %}
+                                    <a href="{{ colleague.linkedin }}"
+                                       target="_blank"
+                                       rel="noopener noreferrer">
+                                        Open professional profile
+                                        <i class="ri-external-link-line"></i>
+                                    </a>
+                                {% else %}
+                                    Not provided
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="detail-info-item full-width">
+                            <div class="detail-info-label">
+                                <i class="ri-global-line"></i>
+                                Website
+                            </div>
+                            <div class="detail-info-value">
+                                {% if colleague.website %}
+                                    <a href="{{ colleague.website }}"
+                                       target="_blank"
+                                       rel="noopener noreferrer">
+                                        {{ colleague.website }}
+                                    </a>
+                                {% else %}
+                                    Not provided
+                                {% endif %}
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </section>
+
+            <!-- TEACHING ASSIGNMENTS -->
+            <section class="detail-panel">
+                <div class="detail-panel-header">
+                    <div class="detail-panel-icon">
+                        <i class="ri-stack-line"></i>
+                    </div>
+                    <div class="detail-panel-heading">
+                        <h2>Teaching Assignments</h2>
+                        <p>Assigned batches and their subjects</p>
+                    </div>
+                </div>
+
+                <div class="detail-panel-body">
+                    {% if batch_assignments %}
+
+                        <div class="assignment-summary">
+                            <span class="assignment-stat">
+                                <i class="ri-folder-open-line"></i>
+                                {{ batch_assignments|length }}
+                                batch{{ batch_assignments|length|pluralize }}
+                            </span>
+                        </div>
+
+                        <div class="assignment-batch-list">
+
+                            {% for item in batch_assignments %}
+                                <article class="assignment-batch">
+
+                                    <div class="assignment-batch-header">
+
+                                        {% if item.batch.batch_thumbnail %}
+                                            <img
+                                                src="{{ item.batch.batch_thumbnail.url }}"
+                                                alt="{{ item.batch.batch_name }}"
+                                                class="assignment-batch-thumb"
+                                                loading="lazy"
+                                                onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"
+                                            >
+                                            <div class="assignment-batch-thumb-fallback"
+                                                 style="display:none;">
+                                                <i class="ri-folder-5-line"></i>
+                                            </div>
+                                        {% else %}
+                                            <div class="assignment-batch-thumb-fallback">
+                                                <i class="ri-folder-5-line"></i>
+                                            </div>
+                                        {% endif %}
+
+                                        <div class="assignment-batch-title">
+                                            <h3>{{ item.batch.batch_name }}</h3>
+
+                                            {% if item.batch.batch_description %}
+                                                <p>{{ item.batch.batch_description }}</p>
+                                            {% endif %}
+                                        </div>
+
+                                        <span class="assignment-count">
+                                            {{ item.subjects|length }}
+                                            subject{{ item.subjects|length|pluralize }}
+                                        </span>
+
+                                    </div>
+
+                                    <div class="assignment-subject-area">
+                                        <div class="assignment-subject-heading">
+                                            <i class="ri-book-open-line"></i>
+                                            Subjects in this batch
+                                        </div>
+
+                                        {% if item.subjects %}
+                                            <div class="assignment-subject-list">
+
+                                                {% for subject in item.subjects %}
+                                                    <div class="assignment-subject">
+
+                                                        {% if subject.subject_thumbnail %}
+                                                            <img
+                                                                src="{{ subject.subject_thumbnail.url }}"
+                                                                alt="{{ subject.subject_name }}"
+                                                                class="assignment-subject-thumb"
+                                                                loading="lazy"
+                                                                onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"
+                                                            >
+                                                            <div class="assignment-subject-thumb-fallback"
+                                                                 style="display:none;">
+                                                                <i class="ri-book-2-line"></i>
+                                                            </div>
+                                                        {% else %}
+                                                            <div class="assignment-subject-thumb-fallback">
+                                                                <i class="ri-book-2-line"></i>
+                                                            </div>
+                                                        {% endif %}
+
+                                                        <div class="assignment-subject-info">
+                                                            <div class="assignment-subject-name">
+                                                                {{ subject.subject_name }}
+                                                            </div>
+                                                            <div class="assignment-subject-caption">
+                                                                Assigned subject
+                                                            </div>
+                                                        </div>
+
+                                                    </div>
+                                                {% endfor %}
+
+                                            </div>
+                                        {% else %}
+                                            <div class="assignment-no-subjects">
+                                                <i class="ri-information-line"></i>
+                                                No active subjects assigned in this batch.
+                                            </div>
+                                        {% endif %}
+
+                                    </div>
+                                </article>
+                            {% endfor %}
+
+                        </div>
+
+                    {% else %}
+                        <div class="detail-empty">
+                            <i class="ri-folder-open-line"></i>
+                            No active batch assignments are available for this teacher.
+                        </div>
+                    {% endif %}
+                </div>
+            </section>
+
+        </div>
+    </div>
+</div>
+{% endblock %}

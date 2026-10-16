@@ -8,6 +8,8 @@ from django.utils import timezone
 from django.db import transaction
 from datetime import datetime, timedelta
 from django.urls import reverse
+from django.core.paginator import Paginator
+from admins.models import FAQVideo
 from admins.models import (
     Batch,
     Subject,
@@ -3645,4 +3647,107 @@ def student_quiz_result_view(request, attempt_id):
     )
     return redirect(
         f"{chapter_url}?attempt={attempt.pk}&tab=quizzes"
+    )
+
+# ============================================================
+# STUDENT FAQ & HELP VIDEOS
+# ============================================================
+
+@login_required(login_url="signin")
+@cache_control(
+    no_cache=True,
+    must_revalidate=True,
+    no_store=True,
+)
+def student_help_videos_view(request):
+
+    # --------------------------------------------------------
+    # STUDENT ACCESS VALIDATION
+    # --------------------------------------------------------
+
+    if not is_student_user(request.user):
+        messages.error(
+            request,
+            "Student access required.",
+        )
+        return redirect("signin")
+
+    # --------------------------------------------------------
+    # PUBLISHED VIDEOS FOR STUDENTS
+    # --------------------------------------------------------
+
+    videos = FAQVideo.objects.filter(
+        status="published",
+        audience__in=("students", "both"),
+    ).order_by(
+        "display_order",
+        "-created_at",
+        "-pk",
+    )
+
+    # --------------------------------------------------------
+    # SEARCH
+    # --------------------------------------------------------
+
+    search_query = request.GET.get(
+        "q",
+        "",
+    ).strip()
+
+    if search_query:
+        videos = videos.filter(
+            Q(title__icontains=search_query)
+            | Q(description__icontains=search_query)
+        )
+
+    # --------------------------------------------------------
+    # CATEGORY FILTER
+    # --------------------------------------------------------
+
+    selected_category = request.GET.get(
+        "category",
+        "",
+    ).strip()
+
+    category_choices = FAQVideo.CATEGORY_CHOICES
+
+    allowed_categories = {
+        value
+        for value, label in category_choices
+    }
+
+    if selected_category in allowed_categories:
+        videos = videos.filter(
+            category=selected_category,
+        )
+    else:
+        selected_category = ""
+
+    # --------------------------------------------------------
+    # PAGINATION
+    # --------------------------------------------------------
+
+    paginator = Paginator(
+        videos,
+        12,
+    )
+
+    page_obj = paginator.get_page(
+        request.GET.get("page"),
+    )
+
+    # --------------------------------------------------------
+    # RENDER PAGE
+    # --------------------------------------------------------
+
+    return render(
+        request,
+        "students/support/help_videos.html",
+        {
+            "videos": page_obj.object_list,
+            "page_obj": page_obj,
+            "search_query": search_query,
+            "selected_category": selected_category,
+            "category_choices": category_choices,
+        },
     )

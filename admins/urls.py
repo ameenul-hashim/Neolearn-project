@@ -95,6 +95,16 @@ from .views import (
     # ==========================================================
     admin_course_builder_entry_view,
 
+    #---------------------------------------------------------
+    # FAQ / HELP VIDEOS
+    #---------------------------------------------------------
+
+    admin_faq_videos_view,
+    admin_faq_video_create_view,
+    admin_faq_video_edit_view,
+    admin_faq_video_toggle_view,
+    admin_faq_video_delete_view,
+
 )
 
 
@@ -494,5 +504,41 @@ urlpatterns = [
         admin_course_builder_entry_view,
         name="admin_course_builder_entry",
     ),
+
+
+    # ==========================================================
+    # FAQ / HELP VIDEOS
+    # ==========================================================
+
+    path(
+        "faq-videos/",
+        admin_faq_videos_view,
+        name="admin_faq_videos",
+    ),
+
+    path(
+        "faq-videos/create/",
+        admin_faq_video_create_view,
+        name="admin_faq_video_create",
+    ),
+
+    path(
+        "faq-videos/<int:video_id>/edit/",
+        admin_faq_video_edit_view,
+        name="admin_faq_video_edit",
+    ),
+
+    path(
+        "faq-videos/<int:video_id>/toggle/",
+        admin_faq_video_toggle_view,
+        name="admin_faq_video_toggle",
+    ),
+
+    path(
+        "faq-videos/<int:video_id>/delete/",
+        admin_faq_video_delete_view,
+        name="admin_faq_video_delete",
+    ),
+
 
 ]

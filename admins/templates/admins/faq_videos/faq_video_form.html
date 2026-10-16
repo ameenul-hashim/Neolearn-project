@@ -1,0 +1,432 @@
+{% extends "admins/admin_base.html" %}
+{% load static %}
+
+{% block title %}{{ page_heading }} | NeoLearn Admin{% endblock %}
+
+{% block admin_content %}
+<div class="mx-auto box-border flex h-[calc(100dvh-7rem)] min-h-0 w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-slate-700/80 bg-slate-950/35 p-3 sm:p-4 lg:p-5">
+
+    <!-- PAGE HEADER -->
+    <header class="mb-3 shrink-0">
+        <h1 class="text-xl font-bold tracking-tight text-white sm:text-2xl">
+            {{ page_heading }}
+        </h1>
+        <p class="mt-1 text-sm text-slate-400">
+            Manage help videos for students and teachers.
+        </p>
+    </header>
+
+    <!-- FORM -->
+    <form method="post"
+          enctype="multipart/form-data"
+          novalidate
+          class="mx-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col overflow-hidden rounded-xl border border-slate-600/80 bg-slate-900 shadow-2xl">
+
+        {% csrf_token %}
+
+        <!-- SCROLLABLE FORM CONTENT -->
+        <div class="min-h-0 flex-1 overflow-y-auto overscroll-contain p-3 sm:p-4">
+
+            <!-- BACKEND VALIDATION ERRORS -->
+            {% if form_errors %}
+            <div class="mb-3 space-y-2" aria-live="polite">
+                {% for error in form_errors %}
+                <div class="message-item flex items-start justify-between gap-3 rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2.5 text-sm text-rose-200"
+                     role="alert">
+
+                    <div class="flex min-w-0 items-start gap-2">
+                        <i class="ri-error-warning-line mt-0.5 shrink-0 text-rose-300"></i>
+                        <span class="break-words">{{ error }}</span>
+                    </div>
+
+                    <button type="button"
+                            class="message-close shrink-0 rounded px-1 text-rose-300 hover:bg-rose-500/20 hover:text-white"
+                            aria-label="Dismiss error">
+                        <i class="ri-close-line"></i>
+                    </button>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- DJANGO MESSAGES -->
+            {% if messages %}
+            <div class="mb-3 space-y-2" aria-live="polite">
+                {% for message in messages %}
+                <div class="message-item flex items-start justify-between gap-3 rounded-lg border px-3 py-2.5 text-sm
+                    {% if 'error' in message.tags %}
+                        border-rose-500/30 bg-rose-500/10 text-rose-200
+                    {% elif 'success' in message.tags %}
+                        border-emerald-500/30 bg-emerald-500/10 text-emerald-200
+                    {% else %}
+                        border-slate-600 bg-slate-800 text-slate-200
+                    {% endif %}"
+                     role="alert">
+
+                    <span class="min-w-0 break-words">{{ message }}</span>
+
+                    <button type="button"
+                            class="message-close shrink-0 rounded px-1 hover:bg-white/10"
+                            aria-label="Dismiss message">
+                        <i class="ri-close-line"></i>
+                    </button>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- VIDEO TITLE -->
+            <div class="mb-3">
+                <label for="title"
+                       class="mb-1.5 block text-sm font-semibold text-slate-200">
+                    Video title <span class="text-rose-400">*</span>
+                </label>
+
+                <input id="title"
+                       name="title"
+                       type="text"
+                       maxlength="200"
+                       value="{% if form_data %}{{ form_data.title|default:'' }}{% elif video %}{{ video.title|default:'' }}{% endif %}"
+                       placeholder="Example: How to request a refund"
+                       class="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2.5 text-sm text-white placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-400/20">
+            </div>
+
+            <!-- DESCRIPTION -->
+            <div class="mb-3">
+                <div class="mb-1.5 flex items-center justify-between gap-2">
+                    <label for="description"
+                           class="text-sm font-semibold text-slate-200">
+                        Description
+                    </label>
+
+                    <span id="descriptionCounter"
+                          class="shrink-0 text-xs text-slate-500"
+                          aria-live="polite">
+                        0/250
+                    </span>
+                </div>
+
+                <textarea id="description"
+                          name="description"
+                          maxlength="250"
+                          rows="2"
+                          placeholder="Briefly explain what this video covers."
+                          class="w-full resize-y rounded-lg border border-slate-700 bg-slate-800 px-3 py-2.5 text-sm text-white placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-400/20">{% if form_data %}{{ form_data.description|default:'' }}{% elif video %}{{ video.description|default:'' }}{% endif %}</textarea>
+
+                <p class="mt-1 text-xs text-slate-500">
+                    Maximum 250 characters.
+                </p>
+            </div>
+
+            <!-- CATEGORY AND AUDIENCE -->
+            <div class="mb-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+
+                <div class="min-w-0">
+                    <label for="category"
+                           class="mb-1.5 block text-sm font-semibold text-slate-200">
+                        Category <span class="text-rose-400">*</span>
+                    </label>
+
+                    <select id="category"
+                            name="category"
+                            class="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2.5 text-sm text-white focus:border-emerald-400 focus:outline-none focus:ring-1 focus:ring-emerald-400/30">
+
+                        <option value=""
+                            {% if form_data %}
+                                {% if not form_data.category %}selected{% endif %}
+                            {% elif not video %}
+                                selected
+                            {% endif %}>
+                            Select category
+                        </option>
+
+                        {% for value, label in category_choices %}
+                        <option value="{{ value }}"
+                            {% if form_data %}
+                                {% if form_data.category == value %}selected{% endif %}
+                            {% elif video %}
+                                {% if video.category == value %}selected{% endif %}
+                            {% endif %}>
+                            {{ label }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="min-w-0">
+                    <label for="audience"
+                           class="mb-1.5 block text-sm font-semibold text-slate-200">
+                        Audience <span class="text-rose-400">*</span>
+                    </label>
+
+                    <select id="audience"
+                            name="audience"
+                            class="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2.5 text-sm text-white focus:border-emerald-400 focus:outline-none focus:ring-1 focus:ring-emerald-400/30">
+
+                        <option value=""
+                            {% if form_data %}
+                                {% if not form_data.audience %}selected{% endif %}
+                            {% elif not video %}
+                                selected
+                            {% endif %}>
+                            Select audience
+                        </option>
+
+                        {% for value, label in audience_choices %}
+                        <option value="{{ value }}"
+                            {% if form_data %}
+                                {% if form_data.audience == value %}selected{% endif %}
+                            {% elif video %}
+                                {% if video.audience == value %}selected{% endif %}
+                            {% endif %}>
+                            {{ label }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+            </div>
+
+            <!-- STATUS -->
+            <div class="mb-3">
+                <label for="status"
+                       class="mb-1.5 block text-sm font-semibold text-slate-200">
+                    Status <span class="text-rose-400">*</span>
+                </label>
+
+                <select id="status"
+                        name="status"
+                        class="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2.5 text-sm text-white focus:border-emerald-400 focus:outline-none focus:ring-1 focus:ring-emerald-400/30">
+
+                    <option value=""
+                        {% if form_data %}
+                            {% if not form_data.status %}selected{% endif %}
+                        {% elif not video %}
+                            selected
+                        {% endif %}>
+                        Select status
+                    </option>
+
+                    {% for value, label in status_choices %}
+                    <option value="{{ value }}"
+                        {% if form_data %}
+                            {% if form_data.status == value %}selected{% endif %}
+                        {% elif video %}
+                            {% if video.status == value %}selected{% endif %}
+                        {% endif %}>
+                        {{ label }}
+                    </option>
+                    {% endfor %}
+                </select>
+
+                <p class="mt-1.5 text-xs text-slate-400">
+                    Draft videos are hidden from students and teachers.
+                </p>
+            </div>
+
+            <!-- VIDEO SOURCE -->
+            <section class="rounded-xl border border-slate-700 bg-slate-950/60 p-3 sm:p-4">
+
+                <div class="mb-3 flex items-center gap-3">
+                    <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-300">
+                        <i class="ri-video-line text-lg"></i>
+                    </div>
+
+                    <div class="min-w-0">
+                        <h2 class="text-sm font-bold text-white">
+                            Video source
+                        </h2>
+                        <p class="mt-0.5 text-xs text-slate-400">
+                            Choose one source for this help video.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- CURRENT SOURCE -->
+                {% if video %}
+                    {% if video.video_file %}
+                    <div class="mb-3 flex items-start gap-2 rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-3 py-2">
+                        <i class="ri-checkbox-circle-line mt-0.5 text-emerald-300"></i>
+                        <span class="text-xs text-emerald-200">
+                            An uploaded video is currently saved. Leave the replacement fields empty to keep it.
+                        </span>
+                    </div>
+                    {% elif video.video_url %}
+                    <div class="mb-3 rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-3">
+                        <p class="text-xs font-semibold text-emerald-300">
+                            Current external URL
+                        </p>
+                        <p class="mt-1 break-all text-xs text-slate-300">
+                            {{ video.video_url }}
+                        </p>
+                    </div>
+                    {% endif %}
+                {% endif %}
+
+                <!-- FILE AND URL INPUTS -->
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+
+                    <!-- VIDEO FILE -->
+                    <div class="min-w-0">
+                        <label for="video_file"
+                               class="mb-1.5 block text-xs font-semibold text-slate-200">
+                            Upload video
+                            {% if not video %}
+                                <span class="text-rose-400">*</span>
+                            {% else %}
+                                <span class="font-normal text-slate-500">(optional replacement)</span>
+                            {% endif %}
+                        </label>
+
+                        <input id="video_file"
+                               name="video_file"
+                               type="file"
+                               accept=".mp4,.mov,.m4v,.webm,video/mp4,video/quicktime,video/x-m4v,video/webm"
+                               class="block w-full min-w-0 text-xs text-slate-300 file:mr-2 file:rounded-md file:border-0 file:bg-slate-700 file:px-3 file:py-2 file:text-xs file:font-semibold file:text-white hover:file:bg-slate-600">
+
+                        <p class="mt-1.5 text-[11px] leading-4 text-slate-500">
+                            MP4, MOV, M4V or WEBM. Maximum 500 MB.
+                        </p>
+                    </div>
+
+                    <!-- EXTERNAL URL -->
+                    <div class="min-w-0">
+                        <label for="video_url"
+                               class="mb-1.5 block text-xs font-semibold text-slate-200">
+                            External video URL
+                            {% if not video %}
+                                <span class="text-rose-400">*</span>
+                            {% else %}
+                                <span class="font-normal text-slate-500">(optional replacement)</span>
+                            {% endif %}
+                        </label>
+
+                        <input id="video_url"
+                               name="video_url"
+                               type="url"
+                               value="{% if form_data %}{{ form_data.video_url|default:'' }}{% elif video %}{{ video.video_url|default:'' }}{% endif %}"
+                               placeholder="https://example.com/video"
+                               class="w-full min-w-0 rounded-lg border border-slate-700 bg-slate-800 px-3 py-2.5 text-sm text-white placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-400/20">
+
+                        <p class="mt-1.5 text-[11px] leading-4 text-slate-500">
+                            Enter a complete HTTP or HTTPS video URL.
+                        </p>
+                    </div>
+
+                </div>
+
+                <!-- SOURCE INSTRUCTIONS -->
+                <div class="mt-3 flex items-start gap-2 rounded-lg border border-slate-700/70 bg-slate-800/70 px-3 py-2">
+                    <i class="ri-information-line mt-0.5 shrink-0 text-slate-400"></i>
+                    <p class="text-xs leading-5 text-slate-400">
+                        {% if video %}
+                            Keep the current source unchanged, or provide one replacement. Do not provide both a new file and a new URL.
+                        {% else %}
+                            Upload a video or provide an external URL. Do not provide both.
+                        {% endif %}
+                    </p>
+                </div>
+
+            </section>
+        </div>
+
+        <!-- FIXED FORM FOOTER -->
+        <footer class="flex shrink-0 items-center justify-end gap-2 border-t border-slate-700 bg-slate-950/90 px-3 py-3 sm:px-4">
+
+            <a href="{% url 'admin_faq_videos' %}"
+               class="inline-flex min-h-10 items-center justify-center rounded-lg border border-slate-600 px-4 py-2 text-sm font-semibold text-slate-300 transition hover:border-slate-500 hover:bg-slate-800 hover:text-white">
+                <i class="ri-close-line mr-1"></i>
+                Cancel
+            </a>
+
+            <button type="submit"
+                    class="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-white shadow-lg transition hover:bg-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-300 focus:ring-offset-2 focus:ring-offset-slate-900">
+                <i class="{% if video %}ri-save-line{% else %}ri-add-line{% endif %}"></i>
+                {% if video %}Save Changes{% else %}Create Help Video{% endif %}
+            </button>
+
+        </footer>
+    </form>
+</div>
+
+<!-- DESCRIPTION CHARACTER COUNTER -->
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const description = document.getElementById("description");
+    const counter = document.getElementById("descriptionCounter");
+
+    if (!description || !counter) {
+        return;
+    }
+
+    function updateDescriptionCounter() {
+        counter.textContent = description.value.length + "/250";
+    }
+
+    updateDescriptionCounter();
+    description.addEventListener("input", updateDescriptionCounter);
+});
+</script>
+
+
+<!-- FAQ FORM TOAST DISMISSAL: handles validation errors and Django messages -->
+<script>
+(function () {
+    "use strict";
+
+    function initializeToastMessages() {
+        document.querySelectorAll(".message-item").forEach(function (message) {
+            if (message.dataset.toastInitialized === "true") return;
+            message.dataset.toastInitialized = "true";
+
+            const closeButton = message.querySelector(".message-close");
+            let removed = false;
+
+            message.style.overflow = "hidden";
+            message.style.transition =
+                "opacity 350ms ease, transform 350ms ease, max-height 350ms ease, margin 350ms ease, padding 350ms ease";
+
+            function dismissMessage() {
+                if (removed) return;
+                removed = true;
+
+                message.style.maxHeight = message.getBoundingClientRect().height + "px";
+
+                requestAnimationFrame(function () {
+                    message.style.opacity = "0";
+                    message.style.transform = "translateY(-5px)";
+                    message.style.maxHeight = "0";
+                    message.style.marginTop = "0";
+                    message.style.marginBottom = "0";
+                    message.style.paddingTop = "0";
+                    message.style.paddingBottom = "0";
+                    message.style.borderWidth = "0";
+                });
+
+                window.setTimeout(function () {
+                    message.remove();
+                }, 380);
+            }
+
+            const timer = window.setTimeout(dismissMessage, 5000);
+
+            if (closeButton) {
+                closeButton.addEventListener("click", function (event) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    window.clearTimeout(timer);
+                    dismissMessage();
+                });
+            }
+        });
+    }
+
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", initializeToastMessages, { once: true });
+    } else {
+        initializeToastMessages();
+    }
+})();
+</script>
+
+{% endblock %}

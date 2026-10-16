@@ -1,0 +1,765 @@
+
+{% extends "teachers/dashboard/teacher_base.html" %}
+
+{% block title %}My Colleagues | NeoLearn{% endblock %}
+{% block page_heading %}My Colleagues{% endblock %}
+
+{% block extra_head %}
+<style>
+/* ===== PAGE ===== */
+.colleague-page {
+    width: 100%;
+    max-width: 1450px;
+    min-width: 0;
+    margin: 0 auto;
+    color: #e2e8f0;
+}
+
+.colleague-hero {
+    position: relative;
+    overflow: hidden;
+    padding: 19px 21px;
+    border: 1px solid rgba(103,232,249,.15);
+    border-radius: 17px;
+    background: linear-gradient(120deg,rgba(8,47,73,.62),#0b1120 75%);
+}
+
+.colleague-eyebrow {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin-bottom: 6px;
+    color: #67e8f9;
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: .13em;
+}
+
+.colleague-title {
+    margin: 0;
+    color: #f8fafc;
+    font-size: clamp(21px,2.2vw,29px);
+    font-weight: 850;
+    line-height: 1.3;
+}
+
+.colleague-subtitle {
+    margin: 5px 0 0;
+    color: #94a3b8;
+    font-size: 11px;
+    line-height: 1.65;
+}
+
+.colleague-count {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 10px;
+    padding: 5px 9px;
+    border: 1px solid rgba(103,232,249,.15);
+    border-radius: 8px;
+    background: rgba(103,232,249,.05);
+    color: #a5f3fc;
+    font-size: 10px;
+    font-weight: 750;
+}
+
+/* ===== SEARCH AND SORT ===== */
+.colleague-toolbar {
+    display: grid;
+    grid-template-columns: minmax(0,1fr) 175px auto;
+    gap: 8px;
+    margin: 12px 0;
+    padding: 10px;
+    border: 1px solid rgba(255,255,255,.07);
+    border-radius: 13px;
+    background: rgba(11,17,32,.9);
+}
+
+.colleague-search-wrap {
+    position: relative;
+    min-width: 0;
+}
+
+.colleague-search-icon {
+    position: absolute;
+    top: 50%;
+    left: 11px;
+    color: #71839e;
+    font-size: 15px;
+    transform: translateY(-50%);
+    pointer-events: none;
+}
+
+.colleague-input,
+.colleague-select {
+    width: 100%;
+    min-width: 0;
+    height: 38px;
+    padding: 0 10px;
+    border: 1px solid rgba(255,255,255,.09);
+    border-radius: 9px;
+    outline: none;
+    background: #080e1a;
+    color: #e2e8f0;
+    font-size: 11px;
+}
+
+.colleague-input { padding-left: 34px; }
+
+.colleague-input:focus,
+.colleague-select:focus {
+    border-color: rgba(103,232,249,.55);
+    box-shadow: 0 0 0 3px rgba(103,232,249,.06);
+}
+
+.colleague-input::placeholder { color: #64748b; }
+
+.colleague-select { cursor: pointer; }
+
+.colleague-select option {
+    background: #0b1120;
+    color: #e2e8f0;
+}
+
+.colleague-button {
+    display: inline-flex;
+    min-height: 38px;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 0 12px;
+    border: 1px solid rgba(103,232,249,.2);
+    border-radius: 9px;
+    background: linear-gradient(135deg,#a5f3fc,#67e8f9);
+    color: #082f49;
+    font-size: 10px;
+    font-weight: 800;
+    text-decoration: none;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: transform .18s, background .18s;
+}
+
+.colleague-button:hover {
+    transform: translateY(-1px);
+}
+
+.colleague-button-secondary {
+    border-color: rgba(255,255,255,.1);
+    background: rgba(255,255,255,.04);
+    color: #cbd5e1;
+}
+
+/* ===== RESULTS HEADER ===== */
+.colleague-results-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin: 16px 1px 10px;
+}
+
+.colleague-results-heading h2 {
+    margin: 0;
+    color: #f1f5f9;
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.colleague-results-heading p {
+    margin: 3px 0 0;
+    color: #71839e;
+    font-size: 10px;
+}
+
+/* ===== COMPACT RESPONSIVE CARDS ===== */
+.colleague-grid {
+    display: grid;
+    grid-template-columns: repeat(3,minmax(0,1fr));
+    align-items: stretch;
+    gap: 11px;
+}
+
+.colleague-card {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    padding: 13px;
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,.075);
+    border-radius: 13px;
+    background: linear-gradient(150deg,#0f172a,#080e1a);
+    transition: border-color .18s, transform .18s, box-shadow .18s;
+}
+
+.colleague-card:hover {
+    transform: translateY(-2px);
+    border-color: rgba(103,232,249,.3);
+    box-shadow: 0 8px 22px rgba(0,0,0,.15);
+}
+
+.colleague-card-top {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+}
+
+.colleague-avatar,
+.colleague-avatar-fallback {
+    display: flex;
+    width: 53px;
+    height: 53px;
+    flex: 0 0 53px;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    border: 1px solid rgba(103,232,249,.27);
+    border-radius: 13px;
+    background: linear-gradient(135deg,#164e63,#172554);
+    color: #a5f3fc;
+    font-size: 20px;
+    font-weight: 800;
+}
+
+.colleague-avatar { object-fit: cover; }
+
+.colleague-identity {
+    flex: 1;
+    min-width: 0;
+}
+
+.colleague-name {
+    margin: 0;
+    color: #f8fafc;
+    font-size: 12px;
+    font-weight: 800;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+}
+
+.colleague-specialization {
+    margin: 3px 0 0;
+    color: #67e8f9;
+    font-size: 10px;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+}
+
+.colleague-divider {
+    height: 1px;
+    flex-shrink: 0;
+    margin: 11px 0;
+    background: rgba(255,255,255,.07);
+}
+
+.colleague-info-list {
+    display: grid;
+    gap: 9px;
+}
+
+.colleague-info-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    min-width: 0;
+}
+
+.colleague-info-icon {
+    display: flex;
+    width: 27px;
+    height: 27px;
+    flex: 0 0 27px;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(255,255,255,.06);
+    border-radius: 8px;
+    background: rgba(103,232,249,.045);
+    color: #7dd3fc;
+    font-size: 13px;
+}
+
+.colleague-info-content {
+    flex: 1;
+    min-width: 0;
+    padding-top: 1px;
+}
+
+.colleague-info-label {
+    margin-bottom: 2px;
+    color: #71839e;
+    font-size: 9px;
+    font-weight: 700;
+}
+
+.colleague-info-value {
+    color: #cbd5e1;
+    font-size: 10px;
+    line-height: 1.55;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+.colleague-info-value a {
+    color: #a5f3fc;
+    text-decoration: none;
+}
+
+.colleague-info-value a:hover { text-decoration: underline; }
+
+.colleague-card-footer {
+    margin-top: auto;
+    padding-top: 12px;
+}
+
+.colleague-card-footer .colleague-button { width: 100%; }
+
+/* ===== PAGINATION ===== */
+.colleague-pagination {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 14px;
+    padding: 11px;
+    border: 1px solid rgba(255,255,255,.07);
+    border-radius: 12px;
+    background: rgba(11,17,32,.82);
+}
+
+.pagination-info {
+    color: #94a3b8;
+    font-size: 10px;
+    line-height: 1.6;
+}
+
+.pagination-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 5px;
+}
+
+.pagination-link,
+.pagination-current,
+.pagination-ellipsis {
+    display: inline-flex;
+    min-width: 30px;
+    height: 30px;
+    align-items: center;
+    justify-content: center;
+    padding: 0 8px;
+    border: 1px solid rgba(255,255,255,.09);
+    border-radius: 8px;
+    background: rgba(255,255,255,.035);
+    color: #cbd5e1;
+    font-size: 10px;
+    font-weight: 750;
+    text-decoration: none;
+}
+
+.pagination-link:hover {
+    border-color: rgba(103,232,249,.3);
+    color: #a5f3fc;
+}
+
+.pagination-current {
+    border-color: transparent;
+    background: linear-gradient(135deg,#a5f3fc,#67e8f9);
+    color: #082f49;
+}
+
+.pagination-ellipsis {
+    min-width: 20px;
+    padding: 0 2px;
+    border-color: transparent;
+    background: transparent;
+}
+
+/* ===== EMPTY STATE ===== */
+.colleague-empty {
+    padding: 35px 15px;
+    border: 1px dashed rgba(103,232,249,.19);
+    border-radius: 14px;
+    background: rgba(11,17,32,.65);
+    text-align: center;
+}
+
+.colleague-empty-icon {
+    display: flex;
+    width: 49px;
+    height: 49px;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 11px;
+    border: 1px solid rgba(103,232,249,.15);
+    border-radius: 14px;
+    background: rgba(103,232,249,.06);
+    color: #67e8f9;
+    font-size: 22px;
+}
+
+.colleague-empty h3 {
+    margin: 0;
+    color: #f1f5f9;
+    font-size: 14px;
+    font-weight: 800;
+}
+
+.colleague-empty p {
+    max-width: 390px;
+    margin: 7px auto 14px;
+    color: #94a3b8;
+    font-size: 11px;
+    line-height: 1.7;
+}
+
+/* ===== TABLET ===== */
+@media (max-width: 1100px) {
+    .colleague-grid {
+        grid-template-columns: repeat(2,minmax(0,1fr));
+    }
+}
+
+/* ===== MOBILE ===== */
+@media (max-width: 680px) {
+    .colleague-hero {
+        padding: 15px;
+        border-radius: 13px;
+    }
+
+    .colleague-toolbar {
+        grid-template-columns: minmax(0,1fr) minmax(0,1fr);
+        gap: 7px;
+        padding: 8px;
+    }
+
+    .colleague-search-wrap { grid-column: 1 / -1; }
+    .colleague-toolbar .colleague-button { width: 100%; }
+
+    .colleague-grid {
+        grid-template-columns: minmax(0,1fr);
+        gap: 9px;
+    }
+
+    .colleague-card { padding: 12px; }
+
+    .colleague-results-heading {
+        align-items: flex-start;
+    }
+
+    .colleague-pagination {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .pagination-controls { justify-content: flex-start; }
+}
+
+@media (max-width: 360px) {
+    .colleague-title { font-size: 21px; }
+
+    .colleague-card-top { gap: 8px; }
+
+    .colleague-avatar,
+    .colleague-avatar-fallback {
+        width: 47px;
+        height: 47px;
+        flex-basis: 47px;
+        border-radius: 11px;
+        font-size: 18px;
+    }
+
+    .colleague-name { font-size: 11px; }
+
+    .pagination-link,
+    .pagination-current {
+        min-width: 27px;
+        height: 28px;
+        padding: 0 6px;
+    }
+}
+</style>
+{% endblock %}
+
+{% block teacher_content %}
+<div class="colleague-page">
+
+    <section class="colleague-hero">
+        <div class="colleague-eyebrow">
+            <i class="ri-team-line"></i>
+            TEACHER COMMUNITY
+        </div>
+
+        <h2 class="colleague-title">Meet your colleagues</h2>
+
+        <p class="colleague-subtitle">
+            Discover fellow educators, explore their professional backgrounds,
+            and find their assigned teaching areas.
+        </p>
+
+        <div class="colleague-count">
+            <i class="ri-user-community-line"></i>
+            {{ colleague_count }} colleague{{ colleague_count|pluralize }}
+        </div>
+    </section>
+
+    <form method="get" action="{% url 'teacher_colleagues' %}"
+          class="colleague-toolbar">
+
+        <div class="colleague-search-wrap">
+            <i class="ri-search-line colleague-search-icon"></i>
+            <input
+                type="search"
+                name="q"
+                value="{{ search }}"
+                class="colleague-input"
+                placeholder="Search colleagues by name..."
+                aria-label="Search colleagues by name">
+        </div>
+
+        <select name="sort" class="colleague-select"
+                aria-label="Sort colleagues">
+            <option value="name_asc"
+                {% if sort != "name_desc" %}selected{% endif %}>
+                Name: A to Z
+            </option>
+            <option value="name_desc"
+                {% if sort == "name_desc" %}selected{% endif %}>
+                Name: Z to A
+            </option>
+        </select>
+
+        <button type="submit" class="colleague-button">
+            <i class="ri-search-line"></i> Search
+        </button>
+    </form>
+
+    <div class="colleague-results-heading">
+        <div>
+            <h2>Educator directory</h2>
+            <p>
+                {% if page_obj %}
+                    Showing {{ page_obj.start_index }}–{{ page_obj.end_index }}
+                    of {{ colleague_count }} colleagues
+                {% else %}
+                    Browse available teacher profiles.
+                {% endif %}
+            </p>
+        </div>
+
+        {% if search %}
+            <a href="{% url 'teacher_colleagues' %}"
+               class="colleague-button colleague-button-secondary">
+                <i class="ri-refresh-line"></i> Clear
+            </a>
+        {% endif %}
+    </div>
+
+    {% if colleagues %}
+        <div class="colleague-grid">
+            {% for colleague in colleagues %}
+                <article class="colleague-card">
+
+                    <div class="colleague-card-top">
+                        {% if colleague.profile_image %}
+                            <img
+                                src="{{ colleague.profile_image.url }}"
+                                alt="{{ colleague.full_name }}"
+                                class="colleague-avatar"
+                                loading="lazy"
+                                onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+
+                            <div class="colleague-avatar-fallback"
+                                 style="display:none;"
+                                 aria-hidden="true">
+                                {{ colleague.full_name|default:"T"|first|upper }}
+                            </div>
+                        {% else %}
+                            <div class="colleague-avatar-fallback">
+                                {{ colleague.full_name|default:"T"|first|upper }}
+                            </div>
+                        {% endif %}
+
+                        <div class="colleague-identity">
+                            <h3 class="colleague-name">
+                                {{ colleague.full_name|default:"Teacher" }}
+                            </h3>
+                            <p class="colleague-specialization">
+                                {{ colleague.specialization|default:"Educator" }}
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="colleague-divider"></div>
+
+                    <div class="colleague-info-list">
+
+                        <div class="colleague-info-row">
+                            <span class="colleague-info-icon">
+                                <i class="ri-graduation-cap-line"></i>
+                            </span>
+                            <div class="colleague-info-content">
+                                <div class="colleague-info-label">Qualification</div>
+                                <div class="colleague-info-value">
+                                    {{ colleague.qualification|default:"Not provided" }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="colleague-info-row">
+                            <span class="colleague-info-icon">
+                                <i class="ri-mail-line"></i>
+                            </span>
+                            <div class="colleague-info-content">
+                                <div class="colleague-info-label">Email</div>
+                                <div class="colleague-info-value">
+                                    {% if colleague.email %}
+                                        <a href="mailto:{{ colleague.email }}">
+                                            {{ colleague.email }}
+                                        </a>
+                                    {% else %}
+                                        Not provided
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="colleague-info-row">
+                            <span class="colleague-info-icon">
+                                <i class="ri-phone-line"></i>
+                            </span>
+                            <div class="colleague-info-content">
+                                <div class="colleague-info-label">Phone</div>
+                                <div class="colleague-info-value">
+                                    {% if colleague.phone_number %}
+                                        <a href="tel:{{ colleague.phone_number }}">
+                                            {{ colleague.phone_number }}
+                                        </a>
+                                    {% else %}
+                                        Not provided
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        {% if colleague.linkedin %}
+                            <div class="colleague-info-row">
+                                <span class="colleague-info-icon">
+                                    <i class="ri-linkedin-box-line"></i>
+                                </span>
+                                <div class="colleague-info-content">
+                                    <div class="colleague-info-label">
+                                        Professional profile
+                                    </div>
+                                    <div class="colleague-info-value">
+                                        <a href="{{ colleague.linkedin }}"
+                                           target="_blank"
+                                           rel="noopener noreferrer">
+                                            View LinkedIn
+                                            <i class="ri-external-link-line"></i>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endif %}
+
+                    </div>
+
+                    <div class="colleague-card-footer">
+                        <a href="{% url 'teacher_colleague_detail' colleague.pk %}"
+                           class="colleague-button">
+                            View Profile
+                            <i class="ri-arrow-right-line"></i>
+                        </a>
+                    </div>
+
+                </article>
+            {% endfor %}
+        </div>
+
+        {% if page_obj and page_obj.paginator.num_pages > 1 %}
+            <nav class="colleague-pagination"
+                 aria-label="Colleague directory pagination">
+
+                <div class="pagination-info">
+                    Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+                    · {{ colleague_count }} colleagues
+                </div>
+
+                <div class="pagination-controls">
+                    {% if page_obj.has_previous %}
+                        <a class="pagination-link"
+                           href="?{% if search %}q={{ search|urlencode }}&amp;{% endif %}sort={{ sort|urlencode }}&amp;page={{ page_obj.previous_page_number }}"
+                           aria-label="Previous page">
+                            <i class="ri-arrow-left-s-line"></i>
+                        </a>
+                    {% endif %}
+
+                    {% for number in page_obj.paginator.page_range %}
+                        {% if number == page_obj.number %}
+                            <span class="pagination-current"
+                                  aria-current="page">{{ number }}</span>
+                        {% elif number == 1 or number == page_obj.paginator.num_pages %}
+                            <a class="pagination-link"
+                               href="?{% if search %}q={{ search|urlencode }}&amp;{% endif %}sort={{ sort|urlencode }}&amp;page={{ number }}">
+                                {{ number }}
+                            </a>
+                        {% elif number >= page_obj.number|add:"-2" and number <= page_obj.number|add:"2" %}
+                            <a class="pagination-link"
+                               href="?{% if search %}q={{ search|urlencode }}&amp;{% endif %}sort={{ sort|urlencode }}&amp;page={{ number }}">
+                                {{ number }}
+                            </a>
+                        {% elif number == page_obj.number|add:"-3" or number == page_obj.number|add:"3" %}
+                            <span class="pagination-ellipsis">…</span>
+                        {% endif %}
+                    {% endfor %}
+
+                    {% if page_obj.has_next %}
+                        <a class="pagination-link"
+                           href="?{% if search %}q={{ search|urlencode }}&amp;{% endif %}sort={{ sort|urlencode }}&amp;page={{ page_obj.next_page_number }}"
+                           aria-label="Next page">
+                            <i class="ri-arrow-right-s-line"></i>
+                        </a>
+                    {% endif %}
+                </div>
+            </nav>
+        {% endif %}
+
+    {% else %}
+        <div class="colleague-empty">
+            <div class="colleague-empty-icon">
+                <i class="ri-user-search-line"></i>
+            </div>
+
+            <h3>
+                {% if search %}
+                    No colleagues found
+                {% else %}
+                    No colleagues available yet
+                {% endif %}
+            </h3>
+
+            <p>
+                {% if search %}
+                    Try another name or clear your search to see the full directory.
+                {% else %}
+                    Eligible teacher profiles will appear here when available.
+                {% endif %}
+            </p>
+
+            {% if search %}
+                <a href="{% url 'teacher_colleagues' %}"
+                   class="colleague-button">
+                    <i class="ri-refresh-line"></i>
+                    Show all colleagues
+                </a>
+            {% endif %}
+        </div>
+    {% endif %}
+
+</div>
+{% endblock %}

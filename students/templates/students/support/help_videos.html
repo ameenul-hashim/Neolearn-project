@@ -1,0 +1,556 @@
+{% extends 'students/base_student.html' %}
+{% load static %}
+
+{% block title %}FAQ & Support | NeoLearn{% endblock %}
+
+{% block student_content %}
+<style>
+    .support-page {
+        --support-accent: #22d3ee;
+        --support-accent-soft: rgba(34, 211, 238, .10);
+        --support-border: rgba(148, 163, 184, .14);
+        color: #e5eefb;
+    }
+
+    .support-page-head h1 {
+        letter-spacing: -.035em;
+        text-wrap: balance;
+    }
+
+    .support-count {
+        border: 1px solid rgba(34, 211, 238, .18);
+        background: linear-gradient(135deg, rgba(15, 35, 55, .92), rgba(9, 18, 34, .94));
+        box-shadow: inset 0 1px 0 rgba(255,255,255,.025);
+    }
+
+    .support-panel {
+        background: linear-gradient(145deg, rgba(15, 25, 45, .97), rgba(8, 16, 32, .97));
+        border: 1px solid var(--support-border);
+        border-radius: 18px;
+        box-shadow: 0 12px 34px rgba(0,0,0,.12), inset 0 1px 0 rgba(255,255,255,.025);
+        transition: border-color .2s ease, box-shadow .2s ease;
+    }
+
+    .support-panel:focus-within {
+        border-color: rgba(34, 211, 238, .28);
+        box-shadow: 0 12px 34px rgba(0,0,0,.14), 0 0 0 3px rgba(34,211,238,.035);
+    }
+
+    .support-input {
+        width: 100%;
+        min-width: 0;
+        height: 42px;
+        border: 1px solid rgba(148, 163, 184, .18);
+        background: rgba(4, 12, 25, .82);
+        border-radius: 11px;
+        color: #f8fafc;
+        padding: 0 12px;
+        outline: none;
+        font-size: 12px;
+        transition: border-color .18s ease, box-shadow .18s ease, background .18s ease;
+    }
+
+    .support-input::placeholder { color: #73839a; opacity: 1; }
+
+    /* Keep the placeholder text clear of the custom search icon. */
+    #support-search {
+        box-sizing: border-box;
+        padding-left: 42px !important;
+        padding-right: 12px !important;
+        line-height: normal;
+        -webkit-appearance: none;
+        appearance: none;
+    }
+    #support-search::-webkit-search-decoration,
+    #support-search::-webkit-search-cancel-button,
+    #support-search::-webkit-search-results-button,
+    #support-search::-webkit-search-results-decoration {
+        -webkit-appearance: none;
+    }
+    #support-search::placeholder {
+        transform: none;
+        line-height: normal;
+    }
+
+    .support-input:hover { border-color: rgba(148, 163, 184, .34); }
+
+    .support-input:focus {
+        border-color: rgba(34, 211, 238, .7);
+        background: #081426;
+        box-shadow: 0 0 0 3px rgba(34, 211, 238, .09);
+    }
+
+    .support-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 7px;
+        min-height: 42px;
+        padding: 0 15px;
+        border: 1px solid rgba(34, 211, 238, .55);
+        border-radius: 11px;
+        background: linear-gradient(135deg, #35d9ee, #22c8e5);
+        color: #04111c;
+        font-size: 12px;
+        font-weight: 800;
+        white-space: nowrap;
+        box-shadow: 0 5px 16px rgba(34, 211, 238, .10);
+        transition: transform .18s ease, box-shadow .18s ease, filter .18s ease;
+    }
+
+    .support-btn:hover {
+        transform: translateY(-1px);
+        filter: brightness(1.06);
+        box-shadow: 0 8px 22px rgba(34, 211, 238, .18);
+    }
+
+    .support-btn:active { transform: translateY(0); }
+
+    .support-clear {
+        transition: border-color .18s ease, color .18s ease, background .18s ease;
+    }
+
+    .support-clear:hover {
+        border-color: rgba(34, 211, 238, .35);
+        color: #a5f3fc;
+        background: rgba(34, 211, 238, .06);
+    }
+
+    .support-card {
+        min-width: 0;
+        overflow: hidden;
+        border-radius: 16px;
+        border: 1px solid rgba(148, 163, 184, .15);
+        background: linear-gradient(155deg, rgba(13, 25, 45, .98), rgba(9, 19, 35, .98));
+        box-shadow: 0 7px 20px rgba(0,0,0,.10);
+        transform: translateY(0);
+        transition: transform .22s ease, border-color .22s ease, box-shadow .22s ease;
+    }
+
+    .support-card:hover {
+        transform: translateY(-3px);
+        border-color: rgba(34, 211, 238, .42);
+        box-shadow: 0 14px 30px rgba(0,0,0,.22), 0 0 0 1px rgba(34,211,238,.045);
+    }
+
+    .support-player {
+        position: relative;
+        aspect-ratio: 16 / 9;
+        width: 100%;
+        overflow: hidden;
+        background: radial-gradient(ellipse at 50% 40%, #12374a 0%, #09182b 58%, #050d1b 100%);
+        isolation: isolate;
+    }
+
+    .support-player::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        z-index: 0;
+        pointer-events: none;
+        border-bottom: 1px solid rgba(255,255,255,.06);
+        background: linear-gradient(180deg, rgba(3,8,18,.02), rgba(3,8,18,.12));
+    }
+
+    .support-player video,
+    .support-player iframe {
+        position: absolute;
+        inset: 0;
+        z-index: 2;
+        display: block;
+        width: 100%;
+        height: 100%;
+        border: 0;
+        object-fit: contain;
+        background: #02060d;
+    }
+
+    .support-category-overlay {
+        position: absolute;
+        top: 9px;
+        left: 9px;
+        z-index: 4;
+        max-width: calc(100% - 18px);
+        pointer-events: none;
+    }
+
+    .support-category-overlay .support-tag {
+        background: rgba(3, 12, 25, .88);
+        border-color: rgba(34, 211, 238, .42);
+        box-shadow: 0 3px 12px rgba(0, 0, 0, .28);
+        backdrop-filter: blur(7px);
+    }
+
+    .support-cover {
+        position: absolute;
+        inset: 0;
+        z-index: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        background-position: center;
+        background-size: cover;
+        background-color: transparent;
+        transition: filter .2s ease;
+    }
+
+    .support-cover::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(0deg, rgba(2,6,15,.45), rgba(2,6,15,.04) 65%);
+        transition: background .2s ease;
+    }
+
+    .support-cover:hover::before {
+        background: linear-gradient(0deg, rgba(2,6,15,.30), rgba(2,6,15,.02) 65%);
+    }
+
+    .support-play {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 48px;
+        height: 48px;
+        border: 1px solid rgba(255,255,255,.62);
+        border-radius: 50%;
+        color: #fff;
+        background: rgba(3, 12, 25, .78);
+        box-shadow: 0 5px 24px rgba(0,0,0,.34), inset 0 1px 0 rgba(255,255,255,.12);
+        font-size: 22px;
+        backdrop-filter: blur(8px);
+        transition: transform .2s ease, background .2s ease, border-color .2s ease;
+    }
+
+    .support-cover:hover .support-play {
+        transform: scale(1.08);
+        border-color: rgba(34,211,238,.9);
+        background: rgba(34,211,238,.92);
+        color: #04111c;
+    }
+
+    .support-card-body { padding: 12px 13px 14px; }
+
+    .support-description {
+        color: #9eb0c8;
+        font-size: 11.5px;
+        line-height: 1.65;
+        overflow-wrap: anywhere;
+    }
+
+    .support-tag {
+        display: inline-flex;
+        align-items: center;
+        max-width: 100%;
+        border: 1px solid rgba(34,211,238,.2);
+        background: rgba(34,211,238,.075);
+        color: #8be9f7;
+        padding: 4px 8px;
+        border-radius: 999px;
+        font-size: 9px;
+        line-height: 1.3;
+        font-weight: 800;
+    }
+
+    .support-empty {
+        border: 1px dashed rgba(148,163,184,.24);
+        border-radius: 18px;
+        background: rgba(15,23,42,.45);
+    }
+
+    .support-pagination-link {
+        border: 1px solid rgba(148,163,184,.18);
+        transition: border-color .18s ease, background .18s ease, color .18s ease;
+    }
+
+    .support-pagination-link:hover {
+        border-color: rgba(34,211,238,.35);
+        background: rgba(34,211,238,.07);
+        color: #a5f3fc;
+    }
+
+    @media (min-width: 1280px) {
+        .support-video-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    }
+
+    @media (min-width: 700px) and (max-width: 1279px) {
+        .support-video-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    }
+
+    @media (min-width: 480px) and (max-width: 699px) {
+        .support-video-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+
+    @media (max-width: 479px) {
+        .support-video-grid { grid-template-columns: minmax(0, 1fr); }
+        .support-page-head { align-items: flex-start; flex-direction: column; }
+        .support-card-body { padding: 11px 12px 13px; }
+        .support-play { width: 44px; height: 44px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .support-card, .support-btn, .support-play, .support-input,
+        .support-panel, .support-clear, .support-pagination-link {
+            transition: none !important;
+        }
+    }
+</style>
+
+<div class="support-page mx-auto w-full max-w-[1600px] space-y-5">
+    <section class="support-page-head flex items-center justify-between gap-4">
+        <div class="min-w-0">
+            <div class="mb-2 flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-[.16em] text-cyan-300">
+                <i class="ri-customer-service-2-line text-base"></i>
+                Student Support Centre
+            </div>
+            <h1 class="text-2xl font-extrabold tracking-tight text-white sm:text-3xl">FAQ &amp; Help Videos</h1>
+            <p class="mt-1 text-sm text-slate-400">Find answers and watch a guide whenever you need help.</p>
+        </div>
+        <div class="support-count flex shrink-0 items-center gap-2 rounded-2xl px-3.5 py-2.5">
+            <i class="ri-play-circle-line text-xl text-cyan-300"></i>
+            <span class="text-xs text-slate-400">Videos</span>
+            <strong class="text-lg text-white">{{ page_obj.paginator.count }}</strong>
+        </div>
+    </section>
+
+    <form method="get" class="support-panel grid grid-cols-1 gap-3 p-4 md:grid-cols-[minmax(0,1fr)_220px_auto] md:items-end">
+        <div class="min-w-0">
+            <label for="support-search" class="mb-2 block text-[10px] font-extrabold uppercase tracking-wide text-slate-400">Search support videos</label>
+            <div class="relative">
+                <i class="ri-search-line absolute left-3.5 top-1/2 -translate-y-1/2 text-lg text-slate-500"></i>
+                <input id="support-search" class="support-input pl-11" type="search" name="q" value="{{ search_query }}" placeholder="Search title or description...">
+            </div>
+        </div>
+        <div class="min-w-0">
+            <label for="support-category" class="mb-2 block text-[10px] font-extrabold uppercase tracking-wide text-slate-400">Category</label>
+            <select id="support-category" class="support-input" name="category">
+                <option value="">All categories</option>
+                {% for value,label in category_choices %}
+                    <option value="{{ value }}" {% if selected_category == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="flex gap-2">
+            <button class="support-btn flex-1 md:flex-none" type="submit"><i class="ri-search-line"></i> Search</button>
+            <a class="support-clear inline-flex min-h-[42px] items-center justify-center rounded-xl border border-white/10 px-4 text-[11px] font-bold text-slate-300" href="{% url 'student_help_videos' %}">Clear</a>
+        </div>
+        <div class="col-span-full flex flex-wrap items-center justify-between gap-2 border-t border-white/[.06] pt-3 text-[11px] text-slate-500">
+            <span>Published videos available to students</span>
+            <span class="inline-flex items-center gap-1.5"><i class="ri-shield-check-line text-cyan-300"></i> Published content only</span>
+        </div>
+    </form>
+
+    {% if videos %}
+        <div class="support-video-grid grid grid-cols-1 gap-3 sm:gap-4">
+            {% for video in videos %}
+                <article class="support-card">
+                    <div class="support-player"
+                         data-video-id="{{ video.pk }}"
+                         data-video-url="{% if video.video_file %}{{ video.video_file.url }}{% else %}{{ video.video_url|default:'' }}{% endif %}"
+                         data-video-title="{{ video.title|escape }}"
+                         data-cloudinary="{% if video.video_file %}1{% else %}0{% endif %}">
+                        <div class="support-category-overlay">
+                            <span class="support-tag">{{ video.get_category_display }}</span>
+                        </div>
+                        <div class="support-cover" role="button" tabindex="0" aria-label="Play {{ video.title|escape }}">
+                            <span class="support-play"><i class="ri-play-fill"></i></span>
+                        </div>
+                    </div>
+                    <div class="support-card-body">
+                        <div class="mb-2 flex items-center justify-end">
+                            <span class="inline-flex items-center gap-1 text-[10px] text-slate-500"><i class="ri-play-circle-line text-cyan-300"></i> Help video</span>
+                        </div>
+                        <h2 class="break-words text-[14px] font-extrabold leading-snug text-white">{{ video.title }}</h2>
+                        {% if video.description %}
+                            <p class="support-description mt-2">{{ video.description }}</p>
+                        {% else %}
+                            <p class="support-description mt-2">Watch this guide for help with {{ video.get_category_display|lower }}.</p>
+                        {% endif %}
+                    </div>
+                </article>
+            {% endfor %}
+        </div>
+
+        {% if page_obj.paginator.num_pages > 1 %}
+            <nav class="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-3" aria-label="Video pagination">
+                <p class="text-xs text-slate-400">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</p>
+                <div class="flex items-center gap-2">
+                    {% if page_obj.has_previous %}
+                        <a class="support-pagination-link rounded-xl px-3 py-2 text-[11px] font-bold text-slate-200" href="?q={{ search_query|urlencode }}&category={{ selected_category|urlencode }}&page={{ page_obj.previous_page_number }}">Previous</a>
+                    {% endif %}
+                    {% if page_obj.has_next %}
+                        <a class="support-pagination-link rounded-xl bg-cyan-300/10 px-3 py-2 text-[11px] font-bold text-cyan-200" href="?q={{ search_query|urlencode }}&category={{ selected_category|urlencode }}&page={{ page_obj.next_page_number }}">Next</a>
+                    {% endif %}
+                </div>
+            </nav>
+        {% endif %}
+    {% else %}
+        <div class="support-empty px-5 py-14 text-center">
+            <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-cyan-300/15 bg-cyan-300/10 text-2xl text-cyan-300"><i class="ri-question-answer-line"></i></div>
+            <h2 class="mt-4 text-lg font-extrabold text-white">No help videos found</h2>
+            <p class="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-400">Try another search term or choose a different category.</p>
+            <a href="{% url 'student_help_videos' %}" class="support-btn mt-5">Show all videos</a>
+        </div>
+    {% endif %}
+</div>
+
+<script>
+(function () {
+    "use strict";
+
+    function youtubeId(url) {
+        try {
+            const u = new URL(url, window.location.href);
+            const host = u.hostname.replace(/^www\./, "").toLowerCase();
+            if (host === "youtu.be") return u.pathname.split("/").filter(Boolean)[0] || "";
+            if (host.endsWith("youtube.com") || host === "youtube-nocookie.com" || host.endsWith("youtube-nocookie.com")) {
+                if (u.searchParams.get("v")) return u.searchParams.get("v");
+                const parts = u.pathname.split("/").filter(Boolean);
+                const marker = parts.findIndex(p => ["embed", "shorts", "live", "v"].includes(p));
+                if (marker >= 0) return parts[marker + 1] || "";
+            }
+        } catch (e) {}
+        return "";
+    }
+
+    function vimeoId(url) {
+        try {
+            const u = new URL(url, window.location.href);
+            if (!/(^|\.)vimeo\.com$/i.test(u.hostname)) return "";
+            const parts = u.pathname.split("/").filter(Boolean);
+            for (let i = parts.length - 1; i >= 0; i--) {
+                if (/^\d+$/.test(parts[i])) return parts[i];
+            }
+        } catch (e) {}
+        return "";
+    }
+
+    function cloudinaryPreview(url) {
+        if (!url || !/res\.cloudinary\.com/i.test(url) || !/\/video\/upload\//i.test(url)) return "";
+        return url.replace("/video/upload/", "/video/upload/so_0/").replace(/\.(mp4|mov|webm|m4v)(\?.*)?$/i, ".jpg$2");
+    }
+
+    function makeFrame(src, title) {
+        const frame = document.createElement("iframe");
+        frame.src = src;
+        frame.title = title || "Help video";
+        frame.loading = "lazy";
+        frame.allow = "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen";
+        frame.allowFullscreen = true;
+        frame.referrerPolicy = "strict-origin-when-cross-origin";
+        return frame;
+    }
+
+    function stopOtherPlayers(current) {
+        document.querySelectorAll(".support-player").forEach(function (box) {
+            if (box === current) return;
+            const video = box.querySelector("video");
+            if (video) { video.pause(); }
+            const frame = box.querySelector("iframe");
+            if (frame) frame.src = "about:blank";
+            if (video || frame) restoreCover(box);
+        });
+    }
+
+    function restoreCover(box) {
+        const oldVideo = box.querySelector("video");
+        if (oldVideo) oldVideo.remove();
+        const oldFrame = box.querySelector("iframe");
+        if (oldFrame) oldFrame.remove();
+        let cover = box.querySelector(".support-cover");
+        if (!cover) {
+            cover = document.createElement("div");
+            cover.className = "support-cover";
+            cover.setAttribute("role", "button");
+            cover.setAttribute("tabindex", "0");
+            cover.setAttribute("aria-label", "Play video");
+            cover.innerHTML = '<span class="support-play"><i class="ri-play-fill"></i></span>';
+            box.appendChild(cover);
+            bindCover(box, cover);
+        }
+        cover.style.display = "flex";
+    }
+
+    function bindCover(box, cover) {
+        const activate = function () { playVideo(box); };
+        cover.addEventListener("click", activate);
+        cover.addEventListener("keydown", function (event) {
+            if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                activate();
+            }
+        });
+    }
+
+    function playVideo(box) {
+        const url = (box.dataset.videoUrl || "").trim();
+        if (!url) return;
+        stopOtherPlayers(box);
+        const yt = youtubeId(url);
+        const vm = vimeoId(url);
+        const cover = box.querySelector(".support-cover");
+        if (cover) cover.style.display = "none";
+
+        if (yt) {
+            box.appendChild(makeFrame("https://www.youtube-nocookie.com/embed/" + encodeURIComponent(yt) + "?autoplay=1&rel=0&playsinline=1", box.dataset.videoTitle));
+            return;
+        }
+        if (vm) {
+            box.appendChild(makeFrame("https://player.vimeo.com/video/" + encodeURIComponent(vm) + "?autoplay=1&title=0&byline=0", box.dataset.videoTitle));
+            return;
+        }
+
+        const video = document.createElement("video");
+        video.controls = true;
+        video.autoplay = true;
+        video.playsInline = true;
+        video.preload = "metadata";
+        video.setAttribute("controlsList", "nodownload");
+        video.src = url;
+        video.addEventListener("error", function () {
+            video.remove();
+            if (cover) cover.style.display = "flex";
+        }, { once: true });
+        box.appendChild(video);
+        const playPromise = video.play();
+        if (playPromise && typeof playPromise.catch === "function") {
+            playPromise.catch(function () { video.controls = true; });
+        }
+    }
+
+    document.querySelectorAll(".support-player").forEach(function (box) {
+        const url = (box.dataset.videoUrl || "").trim();
+        const cover = box.querySelector(".support-cover");
+        const yt = youtubeId(url);
+        const vm = vimeoId(url);
+        let preview = "";
+
+        if (yt) {
+            preview = "https://i.ytimg.com/vi/" + encodeURIComponent(yt) + "/hqdefault.jpg";
+            const image = new Image();
+            image.onload = function () { cover.style.backgroundImage = 'url("' + preview + '")'; };
+            image.onerror = function () {
+                cover.style.backgroundImage = 'url("https://i.ytimg.com/vi/' + encodeURIComponent(yt) + '/mqdefault.jpg")';
+            };
+            image.src = preview;
+        } else if (vm) {
+            /* Vimeo thumbnails require their oEmbed endpoint; keep the branded player cover if not available. */
+            cover.style.backgroundImage = "radial-gradient(ellipse at center,#10384b 0%,#071426 72%)";
+        } else {
+            const cloudPreview = cloudinaryPreview(url);
+            if (cloudPreview) {
+                const image = new Image();
+                image.onload = function () { cover.style.backgroundImage = 'url("' + cloudPreview + '")'; };
+                image.onerror = function () {};
+                image.src = cloudPreview;
+            }
+        }
+
+        bindCover(box, cover);
+    });
+})();
+</script>
+{% endblock %}
