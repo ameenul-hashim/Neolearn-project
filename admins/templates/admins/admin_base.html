@@ -648,6 +648,20 @@
 
                 </a>
 
+
+                <!-- FAQ / HELP VIDEOS -->
+
+                <a
+                    href="{% url 'admin_faq_videos' %}"
+                    class="admin-nav-link {% if 'faq_video' in request.resolver_match.url_name %}active{% endif %}"
+                    {% if 'faq_video' in request.resolver_match.url_name %}aria-current="page"{% endif %}>
+
+                    <i class="nav-icon ri-video-line text-[18px]"></i>
+
+                    <span class="text-[15px] font-medium">Faq &amp; Help Videos</span>
+
+                </a>
+
                 <!-- ANALYTICS -->
 
                 <a

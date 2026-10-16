@@ -33,6 +33,9 @@ from .views import (
     student_quiz_take_view,
     student_quiz_result_view,
     student_quiz_answer_save_view,
+
+    #student faq view
+    student_help_videos_view,
 )
 
 
@@ -232,5 +235,15 @@ urlpatterns = [
         "orders/<str:order_number>/",
         order_details_view,
         name="order_details",
+    ),
+
+    # ============================================================
+    # STUDENT FAQ & HELP VIDEOS
+    # ============================================================
+
+    path(
+        "help-videos/",
+        student_help_videos_view,
+        name="student_help_videos",
     ),
 ]

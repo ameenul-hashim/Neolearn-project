@@ -62,7 +62,7 @@ from .helpers import (
 
 from django.shortcuts import get_object_or_404
 from django.core.mail import send_mail
-from admins.models import (Batch,Subject,Coupon)
+from admins.models import (Batch,Subject,Coupon,FAQVideo)
 from django.db import models,transaction
 from teachers.models import (Teacher,TeacherBatch,TeacherSubject,)
 from decimal import Decimal
@@ -161,7 +161,7 @@ def admin_logout_view(request):
 
     messages.success(request,'Logged out successfully.')
 
-    return response      
+    return response
 
 
 # ==========================================================
@@ -563,7 +563,7 @@ def create_batch_view(request):
             return redirect(
                 "admin_batches"
             )
-        
+
         except ValidationError as e:
 
             messages.error(
@@ -2162,7 +2162,7 @@ def admin_teacher_assignments(request, teacher_id):
         "admins/teachers/manage_assignments.html",
         context,
     )
-    
+
 
 @login_required(login_url="admin_signin")
 @admin_required
@@ -2248,8 +2248,8 @@ def admin_remove_teacher_subject(request, assignment_id):
         teacher_id=teacher_id,
         batch_id=batch_id,
     )
-    
-    
+
+
 @login_required(login_url="admin_signin")
 @admin_required
 @require_POST
@@ -2280,7 +2280,7 @@ def admin_remove_teacher_batch(request, assignment_id):
         "admin_teacher_assignments",
         teacher_id=teacher_id,
     )
-    
+
 # ======================================================
 # BLOCK TEACHER
 # ======================================================
@@ -2365,23 +2365,23 @@ def admin_delete_teacher(request, teacher_id):
 def get_teacher_batches_data(request, teacher_id):
     """Get teacher's assigned batches and subjects"""
     teacher = get_object_or_404(Teacher, id=teacher_id)
-    
+
     teacher_batches = TeacherBatch.objects.filter(
         teacher=teacher,
         is_active=True
     ).select_related('batch')
-    
+
     data = {
         'batches': []
     }
-    
+
     for tb in teacher_batches:
         subjects = TeacherSubject.objects.filter(
             teacher=teacher,
             batch=tb.batch,
             is_active=True
         ).select_related('subject')
-        
+
         batch_data = {
             'batch_name': tb.batch.batch_name,
             'subject_count': subjects.count(),
@@ -2389,7 +2389,7 @@ def get_teacher_batches_data(request, teacher_id):
             'subjects': [s.subject.subject_name for s in subjects]
         }
         data['batches'].append(batch_data)
-    
+
     return JsonResponse(data)
 
 # ==========================================================
@@ -2924,7 +2924,7 @@ def delete_coupon_view(
     return redirect(
         "admin_coupons"
     )
-    
+
 # ==========================================================
 # ORDER MANAGEMENT
 # ==========================================================
@@ -4211,7 +4211,7 @@ def admin_invoice_detail_view(
             "invoice": invoice,
         },
     )
-    
+
 # ==========================================================
 # REFUND MANAGEMENT
 # ==========================================================
@@ -4910,3 +4910,577 @@ def admin_course_builder_entry_view(request, batch_id, subject_id):
         batch_id=batch.id,
         subject_id=subject.id,
     )
+
+
+
+
+# ============================================================
+# ADMIN FAQ / HELP VIDEO MANAGEMENT
+# ============================================================
+
+import logging
+from pathlib import Path
+
+from cloudinary.exceptions import Error as CloudinaryError
+
+from django.contrib import messages
+from django.core.exceptions import ValidationError
+from django.core.validators import URLValidator
+from django.db.models import Q
+from django.shortcuts import get_object_or_404, redirect, render
+from django.views.decorators.cache import cache_control
+from django.views.decorators.http import require_POST
+
+
+FAQ_VIDEO_MAX_TITLE_LENGTH = 200
+FAQ_VIDEO_MAX_DESCRIPTION_LENGTH = 250
+FAQ_VIDEO_MAX_FILE_SIZE = 500 * 1024 * 1024
+
+FAQ_VIDEO_ALLOWED_EXTENSIONS = {
+    ".mp4",
+    ".mov",
+    ".m4v",
+    ".webm",
+}
+
+FAQ_VIDEO_ALLOWED_MIME_TYPES = {
+    "video/mp4",
+    "video/quicktime",
+    "video/x-m4v",
+    "video/webm",
+    "application/octet-stream",
+}
+
+
+# ============================================================
+# FORM HELPERS
+# ============================================================
+
+def _faq_video_form_context(
+    video=None,
+    form_data=None,
+    page_heading="Add Help Video",
+    form_errors=None,
+):
+    return {
+        "video": video,
+        "form_data": form_data or {},
+        "form_errors": form_errors or [],
+        "category_choices": FAQVideo.CATEGORY_CHOICES,
+        "audience_choices": FAQVideo.AUDIENCE_CHOICES,
+        "status_choices": FAQVideo.STATUS_CHOICES,
+        "page_heading": page_heading,
+        "max_description_length": FAQ_VIDEO_MAX_DESCRIPTION_LENGTH,
+        "max_video_size_mb": 500,
+    }
+
+
+def _faq_video_render_form(
+    request,
+    video=None,
+    page_heading="Add Help Video",
+    form_data=None,
+    form_errors=None,
+):
+    return render(
+        request,
+        "admins/faq_videos/faq_video_form.html",
+        _faq_video_form_context(
+            video=video,
+            form_data=form_data,
+            page_heading=page_heading,
+            form_errors=form_errors,
+        ),
+    )
+
+
+def _faq_video_file_error(uploaded_file):
+    """Validate an uploaded file before sending it to Cloudinary."""
+
+    if not uploaded_file:
+        return None
+
+    extension = Path(uploaded_file.name).suffix.lower()
+
+    if extension not in FAQ_VIDEO_ALLOWED_EXTENSIONS:
+        return (
+            "Unsupported video format. Only MP4, MOV, M4V "
+            "and WEBM files are allowed."
+        )
+
+    if uploaded_file.size == 0:
+        return "The uploaded video file is empty."
+
+    if uploaded_file.size > FAQ_VIDEO_MAX_FILE_SIZE:
+        return "Video size cannot exceed 500 MB."
+
+    content_type = (
+        getattr(uploaded_file, "content_type", "") or ""
+    ).lower().strip()
+
+    if (
+        content_type
+        and content_type not in FAQ_VIDEO_ALLOWED_MIME_TYPES
+    ):
+        return (
+            "Invalid video content type. Please upload an MP4, "
+            "MOV, M4V or WEBM video."
+        )
+
+    return None
+
+
+def _faq_video_validate_fields(
+    title,
+    description,
+    category,
+    audience,
+    status,
+    uploaded_file=None,
+    video_url="",
+    editing=False,
+    existing_video=None,
+):
+    """Validate every submitted field before saving or uploading."""
+
+    errors = []
+
+    # Title
+    if not title:
+        errors.append("Video title is required.")
+    elif len(title) > FAQ_VIDEO_MAX_TITLE_LENGTH:
+        errors.append("Video title cannot exceed 200 characters.")
+
+    # Description
+    if len(description) > FAQ_VIDEO_MAX_DESCRIPTION_LENGTH:
+        errors.append("Description cannot exceed 250 characters.")
+
+    # Category
+    valid_categories = dict(FAQVideo.CATEGORY_CHOICES)
+
+    if not category:
+        errors.append("Please select a category.")
+    elif category not in valid_categories:
+        errors.append("Select a valid category.")
+
+    # Audience
+    valid_audiences = dict(FAQVideo.AUDIENCE_CHOICES)
+
+    if not audience:
+        errors.append("Please select an audience.")
+    elif audience not in valid_audiences:
+        errors.append("Select a valid audience.")
+
+    # Status
+    valid_statuses = dict(FAQVideo.STATUS_CHOICES)
+
+    if not status:
+        errors.append("Please select a status.")
+    elif status not in valid_statuses:
+        errors.append("Select a valid status.")
+
+    # When editing an existing external URL, distinguish an unchanged
+    # URL from a newly submitted replacement URL.
+    effective_url = video_url
+
+    if (
+        editing
+        and existing_video
+        and uploaded_file
+        and video_url == (existing_video.video_url or "")
+    ):
+        effective_url = ""
+
+    # Uploaded file
+    if uploaded_file:
+        file_error = _faq_video_file_error(uploaded_file)
+
+        if file_error:
+            errors.append(file_error)
+
+    # Source conflict
+    if uploaded_file and effective_url:
+        errors.append(
+            "Provide either an uploaded video or a video URL, not both."
+        )
+
+    # URL
+    if effective_url:
+        try:
+            URLValidator(schemes=["http", "https"])(effective_url)
+        except ValidationError:
+            errors.append(
+                "Enter a valid HTTP or HTTPS video URL."
+            )
+
+    # Require a source when creating a new record.
+    if not editing and not uploaded_file and not effective_url:
+        errors.append(
+            "Please upload a video or enter an external video URL."
+        )
+
+    # If editing a record that has no existing source, require a new one.
+    if (
+        editing
+        and existing_video
+        and not uploaded_file
+        and not effective_url
+        and not existing_video.video_file
+        and not existing_video.video_url
+    ):
+        errors.append(
+            "Please upload a video or enter an external video URL."
+        )
+
+    return errors, effective_url
+
+
+def _faq_video_save(video):
+    """
+    Validate and save the FAQ video.
+
+    Return an empty list on success or user-displayable errors
+    on validation or Cloudinary upload failure.
+    """
+
+    try:
+        video.full_clean()
+        video.save()
+        return []
+
+    except ValidationError as exc:
+        return list(exc.messages)
+
+    except CloudinaryError:
+        logging.getLogger(__name__).exception(
+            "Cloudinary upload failed for FAQVideo %s",
+            video.pk or "new",
+        )
+        return [
+            "The video could not be uploaded to Cloudinary. "
+            "Check the video format and file size, then try again."
+        ]
+
+
+# ============================================================
+# LIST / FILTER FAQ VIDEOS
+# ============================================================
+
+@cache_control(
+    no_cache=True,
+    must_revalidate=True,
+    no_store=True,
+)
+@admin_required
+def admin_faq_videos_view(request):
+    """List and filter FAQ/help videos."""
+
+    videos = FAQVideo.objects.select_related("created_by").all()
+
+    search = request.GET.get("search", "").strip()
+    category = request.GET.get("category", "").strip()
+    audience = request.GET.get("audience", "").strip()
+    status = request.GET.get("status", "").strip()
+
+    if search:
+        videos = videos.filter(
+            Q(title__icontains=search)
+            | Q(description__icontains=search)
+        )
+
+    valid_categories = {
+        value for value, label in FAQVideo.CATEGORY_CHOICES
+    }
+    valid_audiences = {
+        value for value, label in FAQVideo.AUDIENCE_CHOICES
+    }
+    valid_statuses = {
+        value for value, label in FAQVideo.STATUS_CHOICES
+    }
+
+    if category in valid_categories:
+        videos = videos.filter(category=category)
+    else:
+        category = ""
+
+    if audience in valid_audiences:
+        videos = videos.filter(audience=audience)
+    else:
+        audience = ""
+
+    if status in valid_statuses:
+        videos = videos.filter(status=status)
+    else:
+        status = ""
+
+    return render(
+        request,
+        "admins/faq_videos/faq_video_list.html",
+        {
+            "videos": videos,
+            "search": search,
+            "selected_category": category,
+            "selected_audience": audience,
+            "selected_status": status,
+            "category_choices": FAQVideo.CATEGORY_CHOICES,
+            "audience_choices": FAQVideo.AUDIENCE_CHOICES,
+            "status_choices": FAQVideo.STATUS_CHOICES,
+        },
+    )
+
+
+# ============================================================
+# CREATE FAQ VIDEO
+# ============================================================
+
+@cache_control(
+    no_cache=True,
+    must_revalidate=True,
+    no_store=True,
+)
+@admin_required
+def admin_faq_video_create_view(request):
+    """Create a help video with server-side validation."""
+
+    if request.method != "POST":
+        return _faq_video_render_form(
+            request,
+            page_heading="Add Help Video",
+        )
+
+    title = request.POST.get("title", "").strip()
+    description = request.POST.get("description", "").strip()
+    category = request.POST.get("category", "").strip()
+    audience = request.POST.get("audience", "").strip()
+    status = request.POST.get("status", "").strip()
+
+    video_file = request.FILES.get("video_file")
+    video_url = request.POST.get("video_url", "").strip()
+
+    errors, effective_url = _faq_video_validate_fields(
+        title=title,
+        description=description,
+        category=category,
+        audience=audience,
+        status=status,
+        uploaded_file=video_file,
+        video_url=video_url,
+    )
+
+    if errors:
+        return _faq_video_render_form(
+            request,
+            form_data=request.POST,
+            form_errors=errors,
+            page_heading="Add Help Video",
+        )
+
+    video = FAQVideo(
+        title=title,
+        description=description,
+        category=category,
+        audience=audience,
+        status=status,
+        video_file=video_file,
+        video_url=effective_url,
+        created_by=request.user,
+    )
+
+    errors = _faq_video_save(video)
+
+    if errors:
+        return _faq_video_render_form(
+            request,
+            form_data=request.POST,
+            form_errors=errors,
+            page_heading="Add Help Video",
+        )
+
+    messages.success(
+        request,
+        "Help video created successfully.",
+    )
+
+    return redirect("admin_faq_videos")
+
+
+# ============================================================
+# EDIT FAQ VIDEO
+# ============================================================
+
+@cache_control(
+    no_cache=True,
+    must_revalidate=True,
+    no_store=True,
+)
+@admin_required
+def admin_faq_video_edit_view(request, video_id):
+    """Edit an existing FAQ/help video."""
+
+    video = get_object_or_404(FAQVideo, pk=video_id)
+
+    if request.method != "POST":
+        return _faq_video_render_form(
+            request,
+            video=video,
+            page_heading="Edit Help Video",
+        )
+
+    title = request.POST.get("title", "").strip()
+    description = request.POST.get("description", "").strip()
+    category = request.POST.get("category", "").strip()
+    audience = request.POST.get("audience", "").strip()
+    status = request.POST.get("status", "").strip()
+
+    new_video_file = request.FILES.get("video_file")
+    submitted_url = request.POST.get("video_url", "").strip()
+
+    errors, effective_url = _faq_video_validate_fields(
+        title=title,
+        description=description,
+        category=category,
+        audience=audience,
+        status=status,
+        uploaded_file=new_video_file,
+        video_url=submitted_url,
+        editing=True,
+        existing_video=video,
+    )
+
+    if errors:
+        return _faq_video_render_form(
+            request,
+            video=video,
+            form_data=request.POST,
+            form_errors=errors,
+            page_heading="Edit Help Video",
+        )
+
+    # Replace the source only when a new source is supplied.
+    if new_video_file:
+        video.video_file = new_video_file
+        video.video_url = ""
+
+    elif effective_url and effective_url != (video.video_url or ""):
+        video.video_file = None
+        video.video_url = effective_url
+
+    video.title = title
+    video.description = description
+    video.category = category
+    video.audience = audience
+    video.status = status
+
+    errors = _faq_video_save(video)
+
+    if errors:
+        # Restore the persisted record if replacement upload fails.
+        video.refresh_from_db()
+
+        return _faq_video_render_form(
+            request,
+            video=video,
+            form_data=request.POST,
+            form_errors=errors,
+            page_heading="Edit Help Video",
+        )
+
+    messages.success(
+        request,
+        "Help video updated successfully.",
+    )
+
+    return redirect("admin_faq_videos")
+
+
+# ============================================================
+# PUBLISH / MOVE TO DRAFT
+# ============================================================
+
+@cache_control(
+    no_cache=True,
+    must_revalidate=True,
+    no_store=True,
+)
+@admin_required
+@require_POST
+def admin_faq_video_toggle_view(request, video_id):
+    """Publish a video or move it back to draft."""
+
+    video = get_object_or_404(FAQVideo, pk=video_id)
+
+    if video.status == "published":
+        video.status = "draft"
+        video.save(update_fields=["status", "updated_at"])
+
+        messages.success(
+            request,
+            "Help video moved to Draft.",
+        )
+
+        return redirect("admin_faq_videos")
+
+    video.status = "published"
+
+    try:
+        video.full_clean()
+        video.save(update_fields=["status", "updated_at"])
+
+    except ValidationError as exc:
+        for error in exc.messages:
+            messages.error(request, error)
+
+        return redirect("admin_faq_videos")
+
+    messages.success(
+        request,
+        "Help video published successfully.",
+    )
+
+    return redirect("admin_faq_videos")
+
+
+# ============================================================
+# DELETE FAQ VIDEO
+# ============================================================
+
+@cache_control(
+    no_cache=True,
+    must_revalidate=True,
+    no_store=True,
+)
+@admin_required
+@require_POST
+def admin_faq_video_delete_view(request, video_id):
+    """Delete the FAQ video and attempt Cloudinary cleanup."""
+
+    video = get_object_or_404(FAQVideo, pk=video_id)
+    title = video.title
+
+    if video.video_file:
+        public_id = getattr(video.video_file, "public_id", None)
+
+        if public_id:
+            try:
+                from cloudinary.uploader import destroy
+
+                destroy(
+                    public_id,
+                    resource_type="video",
+                    invalidate=True,
+                )
+
+            except Exception:
+                logging.getLogger(__name__).exception(
+                    "Cloudinary cleanup failed for FAQVideo %s",
+                    video.pk,
+                )
+
+    video.delete()
+
+    messages.success(
+        request,
+        f"Help video '{title}' deleted successfully.",
+    )
+
+    return redirect("admin_faq_videos")

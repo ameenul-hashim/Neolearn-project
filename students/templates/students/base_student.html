@@ -816,10 +816,10 @@
 
 
 
-                <!-- SUPPORT -->
+                <!-- SUPPORT / FAQ & HELP VIDEOS -->
 
                 <a
-                    href="#"
+                    href="{% url 'student_help_videos' %}"
                     class="
                         flex
                         h-[48px]
@@ -832,7 +832,7 @@
                         font-semibold
                         transition-all
 
-                        {% if request.resolver_match.url_name == 'support' %}
+                        {% if request.resolver_match.url_name == 'student_help_videos' %}
 
                             active-menu
 
@@ -849,7 +849,7 @@
                     <i class="ri-question-line shrink-0 text-[18px]"></i>
 
                     <span class="truncate text-[14px] font-medium">
-                        Support
+                        FAQ &amp; Support
                     </span>
 
                 </a>

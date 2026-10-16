@@ -894,13 +894,13 @@
                         <span class="teacher-coming-soon">Soon</span>
                     </div>
 
-                    <div class="teacher-nav-link teacher-nav-link-placeholder"
-                        aria-disabled="true"
-                        title="This page has not been connected yet">
-                        <i class="ri-team-line nav-icon"></i>
-                        <span class="nav-label">My Colleagues</span>
-                        <span class="teacher-coming-soon">Soon</span>
-                    </div>
+
+                    <a href="{% url 'teacher_colleagues' %}"
+                                class="teacher-nav-link {% if request.resolver_match.url_name == 'teacher_colleagues' or request.resolver_match.url_name == 'teacher_colleague_detail' %}active{% endif %}"
+                            {% if request.resolver_match.url_name == 'teacher_colleagues' or request.resolver_match.url_name == 'teacher_colleague_detail' %}aria-current="page"{% endif %}>
+                                        <i class="ri-team-line nav-icon"></i>
+                            <span class="nav-label">My Colleagues</span>
+                            </a>
 
                     <p class="teacher-nav-heading">Account</p>
 
@@ -921,13 +921,14 @@
 
                     <p class="teacher-nav-heading">Help &amp; Support</p>
 
-                    <div class="teacher-nav-link teacher-nav-link-placeholder"
-                        aria-disabled="true"
-                        title="This page has not been connected yet">
-                        <i class="ri-question-line nav-icon"></i>
-                        <span class="nav-label">FAQ</span>
-                        <span class="teacher-coming-soon">Soon</span>
-                    </div>
+
+                    <a href="{% url 'teacher_help_videos' %}"
+                            class="teacher-nav-link {% if request.resolver_match.url_name == 'teacher_help_videos' %}active{% endif %}"
+                            {% if request.resolver_match.url_name == 'teacher_help_videos' %}aria-current="page"{% endif %}>
+                            <i class="ri-question-answer-line nav-icon"></i>
+                                <span class="nav-label">Help Videos</span>
+                            </a>
+
 
                     <div class="teacher-nav-link teacher-nav-link-placeholder"
                         aria-disabled="true"

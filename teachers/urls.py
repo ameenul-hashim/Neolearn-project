@@ -12,6 +12,9 @@ from .views import (
     teacher_course_builder_entry_view,
     teacher_my_profile_view,
     teacher_edit_profile_view,
+    teacher_colleagues_view,
+    teacher_colleague_detail_view,
+    teacher_help_videos_view,
 )
 
 urlpatterns = [
@@ -59,5 +62,23 @@ urlpatterns = [
         "my-profile/edit/",
         teacher_edit_profile_view,
         name="teacher_edit_profile",
+    ),
+
+
+    path(
+        "colleagues/",
+        teacher_colleagues_view,
+        name="teacher_colleagues",
+    ),
+    path(
+        "colleagues/<int:teacher_id>/",
+        teacher_colleague_detail_view,
+        name="teacher_colleague_detail",
+    ),
+
+    path(
+    "help-videos/",
+    teacher_help_videos_view,
+    name="teacher_help_videos",
     ),
 ]
