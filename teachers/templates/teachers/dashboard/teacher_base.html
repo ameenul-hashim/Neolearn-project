@@ -868,21 +868,13 @@
     </div>
 </details>
 
-                    <div class="teacher-nav-link teacher-nav-link-placeholder"
-                        aria-disabled="true"
-                        title="This page has not been connected yet">
-                        <i class="ri-line-chart-line nav-icon"></i>
-                        <span class="nav-label">Analytics</span>
-                        <span class="teacher-coming-soon">Soon</span>
-                    </div>
-
-                    <div class="teacher-nav-link teacher-nav-link-placeholder"
-                        aria-disabled="true"
-                        title="This page has not been connected yet">
-                        <i class="ri-store-2-line nav-icon"></i>
-                        <span class="nav-label">Marketplace</span>
-                        <span class="teacher-coming-soon">Soon</span>
-                    </div>
+                  
+<a href="{% url 'teacher_analytics' %}"
+   class="teacher-nav-link {% if request.resolver_match.url_name == 'teacher_analytics' %}active{% endif %}"
+   {% if request.resolver_match.url_name == 'teacher_analytics' %}aria-current="page"{% endif %}>
+    <i class="ri-line-chart-line nav-icon"></i>
+    <span class="nav-label">Analytics</span>
+</a>
 
                     <p class="teacher-nav-heading">Communication</p>
 
@@ -929,14 +921,6 @@
                                 <span class="nav-label">Help Videos</span>
                             </a>
 
-
-                    <div class="teacher-nav-link teacher-nav-link-placeholder"
-                        aria-disabled="true"
-                        title="This page has not been connected yet">
-                        <i class="ri-customer-service-2-line nav-icon"></i>
-                        <span class="nav-label">Contact Admin</span>
-                        <span class="teacher-coming-soon">Soon</span>
-                    </div>
                 </nav>
             </div>
 
@@ -1108,6 +1092,59 @@
 
     <!-- Existing teacher JavaScript -->
     <script src="{% static 'teachers/js/teacher_base.js' %}"></script>
+
+    <!-- Preserve sidebar position when navigating between teacher pages -->
+    <script>
+    (() => {
+        "use strict";
+
+        const STORAGE_KEY = "neolearn_teacher_sidebar_scroll_top";
+
+        function initialiseSidebarScrollPosition() {
+            const sidebarScroll = document.querySelector(".teacher-sidebar-scroll");
+            const sidebar = document.getElementById("sidebar");
+
+            if (!sidebarScroll || !sidebar) return;
+
+            // Restore the previous sidebar position after the next page loads.
+            try {
+                const savedPosition = sessionStorage.getItem(STORAGE_KEY);
+                if (savedPosition !== null) {
+                    sidebarScroll.scrollTop = Number(savedPosition) || 0;
+                }
+            } catch (error) {
+                // Navigation remains usable if browser storage is unavailable.
+            }
+
+            // Save the position before a sidebar link navigates to another page.
+            sidebar.addEventListener("click", function (event) {
+                const link = event.target.closest("a[href]");
+                if (!link || link.classList.contains("teacher-brand")) return;
+
+                try {
+                    sessionStorage.setItem(STORAGE_KEY, String(sidebarScroll.scrollTop));
+                } catch (error) {
+                    // Do not block navigation if browser storage is unavailable.
+                }
+            }, true);
+
+            // Keep the stored value current when the user scrolls the sidebar.
+            sidebarScroll.addEventListener("scroll", function () {
+                try {
+                    sessionStorage.setItem(STORAGE_KEY, String(sidebarScroll.scrollTop));
+                } catch (error) {
+                    // Ignore storage restrictions.
+                }
+            }, { passive: true });
+        }
+
+        if (document.readyState === "loading") {
+            document.addEventListener("DOMContentLoaded", initialiseSidebarScrollPosition, { once: true });
+        } else {
+            initialiseSidebarScrollPosition();
+        }
+    })();
+    </script>
 
     <!-- Responsive sidebar controller -->
     <script>

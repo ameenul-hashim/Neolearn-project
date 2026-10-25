@@ -3,54 +3,78 @@
 
 {% block admin_content %}
 
-<div class="min-h-screen bg-slate-950 px-4 py-6">
+<style>
+    .neo-assignments-page {
+        color-scheme: dark;
+        background-image:
+            radial-gradient(ellipse at 12% 0%, rgba(8, 145, 178, .075), transparent 34%),
+            radial-gradient(ellipse at 100% 18%, rgba(79, 70, 229, .07), transparent 28%);
+    }
+    .neo-assignments-page .neo-profile-panel {
+        position: relative;
+        isolation: isolate;
+    }
+    .neo-assignments-page .neo-profile-panel::before {
+        content: "";
+        position: absolute;
+        inset: 0 auto 0 0;
+        width: 3px;
+        background: linear-gradient(180deg, #22d3ee, #818cf8 55%, #34d399);
+        opacity: .9;
+    }
+    .neo-assignments-page .group {
+        isolation: isolate;
+    }
+    .neo-assignments-page .group > a[aria-label^="Open subject assignments"] {
+        transition: background-color .25s ease;
+    }
+    .neo-assignments-page .group:hover > a[aria-label^="Open subject assignments"] {
+        background: linear-gradient(135deg, rgba(34,211,238,.025), rgba(99,102,241,.035));
+    }
+    .neo-assignments-page a:focus-visible,
+    .neo-assignments-page button:focus-visible {
+        outline: 2px solid rgba(103, 232, 249, .95);
+        outline-offset: 3px;
+    }
+    @media (prefers-reduced-motion: reduce) {
+        .neo-assignments-page *,
+        .neo-assignments-page *::before,
+        .neo-assignments-page *::after {
+            animation-duration: .01ms !important;
+            animation-iteration-count: 1 !important;
+            scroll-behavior: auto !important;
+            transition-duration: .01ms !important;
+        }
+    }
+</style>
+
+
+<div class="neo-assignments-page min-h-screen bg-[#050816] px-4 py-6">
 
     <div class="mx-auto max-w-[1700px]">
 
-        <!-- ================= HEADER ================= -->
-
-        <div class="mb-6">
-
-            <a
-                href="{% url 'admin_teachers' %}"
-                class="inline-flex items-center gap-2 text-sm font-medium text-cyan-400 hover:text-cyan-300 transition">
-
-                <svg xmlns="http://www.w3.org/2000/svg"
-                    class="h-5 w-5"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor">
-
-                    <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M15.75 19.5L8.25 12l7.5-7.5"/>
-
+        <!-- ================= BREADCRUMB + PAGE HEADER ================= -->
+        <div class="mb-7">
+            <nav aria-label="Breadcrumb" class="mb-4 flex items-center gap-2 text-sm">
+                <a href="{% url 'admin_teachers' %}" class="font-medium text-slate-400 transition hover:text-cyan-300">Teachers</a>
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m9 18 6-6-6-6"/>
                 </svg>
-
-                Back to Teachers
-
-            </a>
-
-            <h1 class="mt-3 text-4xl font-bold text-white">
-
-                Manage Assignments
-
-            </h1>
-
-            <p class="mt-1 text-slate-400">
-
-                Manage all assigned batches and subjects for this teacher.
-
-            </p>
-
+                <span class="font-semibold text-cyan-300">Manage Assignments</span>
+            </nav>
+            <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <h1 class="text-3xl font-bold tracking-tight text-white sm:text-4xl">Manage Assignments</h1>
+                <span class="inline-flex w-fit shrink-0 items-center gap-2 rounded-full border border-cyan-400/25 bg-gradient-to-r from-cyan-400/10 to-blue-500/10 px-4 py-2 text-xs font-semibold text-cyan-200 shadow-[0_6px_24px_rgba(34,211,238,0.08)] ring-1 ring-inset ring-white/[0.03]">
+                    <span class="relative flex h-2 w-2">
+                        <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-cyan-300 opacity-40"></span>
+                        <span class="relative inline-flex h-2 w-2 rounded-full bg-cyan-300"></span>
+                    </span>
+                    Assignment workspace
+                </span>
+            </div>
         </div>
 
-
-
-
-        <div class="mb-8 overflow-hidden rounded-2xl border border-slate-800 bg-[#020617]">
+        <div class="neo-profile-panel mb-8 overflow-hidden rounded-2xl border border-slate-800/90 bg-gradient-to-br from-[#0b1730] via-[#071020] to-[#050816] shadow-[0_18px_55px_rgba(0,0,0,0.22)]">
 
             <div class="flex flex-col gap-6 p-6 lg:flex-row lg:items-center lg:justify-between">
 
@@ -63,12 +87,12 @@
                         <img
                             src="{{ teacher.profile_image.url }}"
                             alt="{{ teacher.full_name }}"
-                            class="h-20 w-20 rounded-full border-2 border-cyan-500 object-cover">
+                            class="h-20 w-20 rounded-full border-2 border-cyan-300 object-cover shadow-[0_0_0_5px_rgba(34,211,238,0.08),0_0_28px_rgba(34,211,238,0.18)]">
 
                     {% else %}
 
                         <div
-                            class="flex h-20 w-20 items-center justify-center rounded-full bg-cyan-600 text-3xl font-bold text-white">
+                            class="flex h-20 w-20 items-center justify-center rounded-full border-2 border-cyan-300/80 bg-gradient-to-br from-cyan-400 to-blue-600 text-3xl font-bold text-white shadow-[0_0_28px_rgba(34,211,238,0.2)]">
 
                             {{ teacher.full_name|first|upper }}
 
@@ -109,7 +133,7 @@
                     class="grid grid-cols-2 gap-4 lg:w-[420px]">
 
                     <div
-                        class="rounded-xl border border-slate-800 bg-slate-900 p-4">
+                        class="neo-metric-card rounded-xl border border-cyan-300/10 bg-gradient-to-br from-[#111d34] to-[#0a1223] p-4 shadow-sm transition duration-300 hover:-translate-y-0.5 hover:border-cyan-300/30 hover:shadow-[0_8px_24px_rgba(34,211,238,0.08)]">
 
                         <p class="text-xs uppercase tracking-wider text-slate-500">
 
@@ -126,7 +150,7 @@
                     </div>
 
                     <div
-                        class="rounded-xl border border-slate-800 bg-slate-900 p-4">
+                        class="neo-metric-card rounded-xl border border-emerald-300/10 bg-gradient-to-br from-[#102a2a] to-[#0a1722] p-4 shadow-sm transition duration-300 hover:-translate-y-0.5 hover:border-emerald-300/30 hover:shadow-[0_8px_24px_rgba(52,211,153,0.08)]">
 
                         <p class="text-xs uppercase tracking-wider text-slate-500">
 
@@ -160,7 +184,7 @@
 
             <p class="mt-1 text-slate-400">
 
-                Click a batch to manage assigned subjects.
+                Select any batch card to open its subject assignments.
 
             </p>
 
@@ -170,47 +194,55 @@
 
         {% if teacher_batches %}
 
-        <!-- ================= BATCH CARDS - 3 PER ROW (LARGE) ================= -->
-        <div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <!-- ================= BATCH CARDS - FOUR PER ROW ================= -->
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
 
             {% for assignment in teacher_batches %}
 
 <div
     class="
+        group relative
         overflow-hidden
         rounded-2xl
         border
-        border-slate-800
-        bg-[#020617]
-        shadow-lg
-        transition
+        border-slate-800/90
+        bg-gradient-to-b from-[#0c172b] via-[#081224] to-[#050a17]
+        shadow-[0_12px_32px_rgba(0,0,0,0.22)]
+        transition-all
         duration-300
-        hover:border-cyan-500
-        hover:-translate-y-1
+        ease-out
+        hover:-translate-y-1.5
+        hover:border-cyan-300/70
+        hover:shadow-[0_20px_45px_rgba(8,145,178,0.16)]
+        focus-within:border-cyan-300
     ">
 
-    <div class="relative h-48 overflow-hidden">
+    <a href="{% url 'admin_view_teacher_subjects' teacher.id assignment.batch.id %}"
+       class="absolute inset-0 z-10 rounded-2xl focus:outline-none focus:ring-2 focus:ring-inset focus:ring-cyan-400"
+       aria-label="Open subject assignments for {{ assignment.batch.batch_name }}"></a>
+
+    <div class="relative h-36 overflow-hidden sm:h-40">
 
         {% if assignment.batch.batch_thumbnail %}
 
 <img
     src="{{ assignment.batch.batch_thumbnail.url }}"
                 alt="{{ assignment.batch.batch_name }}"
-                class="h-full w-full object-cover">
+                class="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-105">
 
         {% else %}
 
             <img
                 src="{% static 'admins/images/default_batch.jpg' %}"
                 alt="Default Batch"
-                class="h-full w-full object-cover">
+                class="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-105">
 
         {% endif %}
 
         <div class="absolute left-3 top-3">
 
             <span
-                class="rounded-full bg-slate-900/90 px-3 py-1 text-[11px] font-semibold text-white">
+                class="rounded-full border border-white/15 bg-[#07101f]/85 px-3 py-1 text-[10px] font-bold tracking-[0.12em] text-slate-100 shadow-lg backdrop-blur-md">
 
                 BATCH
 
@@ -221,7 +253,7 @@
         <div class="absolute right-3 top-3">
 
             <span
-                class="rounded-full bg-emerald-500 px-3 py-1 text-[11px] font-semibold text-white">
+                class="rounded-full border border-emerald-200/30 bg-emerald-400 px-3 py-1 text-[10px] font-bold text-[#03251d] shadow-[0_4px_16px_rgba(52,211,153,0.22)]">
 
                 Assigned
 
@@ -233,26 +265,20 @@
 
     <!-- ================= CONTENT ================= -->
 
-    <div class="p-5">
+    <div class="pointer-events-none relative z-20 p-4">
 
-        <h3 class="truncate text-xl font-bold text-white">
+        <h3 class="truncate text-base font-bold tracking-tight text-white transition-colors duration-300 group-hover:text-cyan-100 sm:text-lg">
 
             {{ assignment.batch.batch_name }}
 
         </h3>
 
-        <p class="mt-2 line-clamp-2 text-sm text-slate-400">
-
-            {{ assignment.batch.batch_description }}
-
-        </p>
-
         <!-- ================= STATS ================= -->
 
-        <div class="mt-4 grid grid-cols-2 gap-3">
+        <div class="mt-4 grid grid-cols-2 gap-2">
 
             <div
-                class="rounded-xl bg-slate-900 p-3 text-center">
+                class="rounded-xl border border-cyan-300/10 bg-gradient-to-br from-cyan-400/[0.09] to-slate-900/80 p-2.5 text-center transition-colors duration-300 group-hover:border-cyan-300/20">
 
                 <p class="text-[11px] uppercase tracking-wider text-slate-500">
 
@@ -269,7 +295,7 @@
             </div>
 
             <div
-                class="rounded-xl bg-slate-900 p-3 text-center">
+                class="rounded-xl border border-emerald-300/10 bg-gradient-to-br from-emerald-400/[0.08] to-slate-900/80 p-2.5 text-center transition-colors duration-300 group-hover:border-emerald-300/20">
 
                 <p class="text-[11px] uppercase tracking-wider text-slate-500">
 
@@ -287,144 +313,31 @@
 
         </div>
 
-        <hr class="my-4 border-slate-800">
+        <hr class="my-3 border-slate-800">
 
-        <!-- ====================================================== -->
-<!-- ACTION BUTTONS -->
-<!-- ====================================================== -->
-
-<div class="flex items-center justify-between gap-2">
-
-    <!-- View Subjects -->
-
-    <a
-        href="{% url 'admin_view_teacher_subjects' teacher.id assignment.batch.id %}"
-        title="View Subjects"
-        class="
-            flex-1
-            inline-flex
-            items-center
-            justify-center
-            gap-2
-            rounded-xl
-            border
-            border-cyan-500
-            bg-cyan-500/10
-            py-2.5
-            text-sm
-            font-semibold
-            text-cyan-400
-            transition
-            hover:bg-cyan-500
-            hover:text-white
-        ">
-
-        <svg xmlns="http://www.w3.org/2000/svg"
-             class="h-4 w-4"
-             fill="none"
-             viewBox="0 0 24 24"
-             stroke="currentColor">
-
-            <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M2.25 12S5.25 5.25 12 5.25 21.75 12 21.75 12 18.75 18.75 12 18.75 2.25 12 2.25 12z"/>
-
-            <circle
-                cx="12"
-                cy="12"
-                r="3"/>
-
-        </svg>
-
-        Subjects
-
-    </a>
-
-
-
-    <!-- Edit -->
-
-    <a
-        href="{% url 'admin_assign_teacher_batch' teacher.id %}?batch_id={{ assignment.batch.id }}"
-        title="Edit Subjects"
-        class="
-            h-10
-            w-10
-            inline-flex
-            items-center
-            justify-center
-            rounded-xl
-            border
-            border-amber-500
-            bg-amber-500/10
-            text-amber-400
-            transition
-            hover:bg-amber-500
-            hover:text-white
-        ">
-
-        <svg xmlns="http://www.w3.org/2000/svg"
-             class="h-4 w-4"
-             fill="none"
-             viewBox="0 0 24 24"
-             stroke="currentColor">
-
-            <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M16.862 4.487a2.25 2.25 0 113.182 3.182L8.25 19.463 3.75 20.25l.787-4.5L16.862 4.487z"/>
-
-        </svg>
-
-    </a>
-
-
-
-    <!-- Remove -->
-
-    <button
-        type="button"
-        title="Remove Batch Access"
-        data-batch="{{ assignment.batch.batch_name }}"
-        data-id="{{ assignment.id }}"
-        class="
-            remove-access-btn
-            h-10
-            w-10
-            inline-flex
-            items-center
-            justify-center
-            rounded-xl
-            border
-            border-red-500
-            bg-red-500/10
-            text-red-400
-            transition
-            hover:bg-red-500
-            hover:text-white
-        ">
-
-        <svg xmlns="http://www.w3.org/2000/svg"
-             class="h-4 w-4"
-             fill="none"
-             viewBox="0 0 24 24"
-             stroke="currentColor">
-
-            <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M6 7.5h12M9.75 7.5V6A2.25 2.25 0 0112 3.75 2.25 2.25 0 0114.25 6v1.5m-6.75 0V18A2.25 2.25 0 009.75 20.25h4.5A2.25 2.25 0 0016.5 18V7.5"/>
-
-        </svg>
-
-    </button>
-
-</div>
-
+        <!-- Edit and remove are independent of the clickable card -->
+        <div class="pointer-events-auto relative z-20 flex items-center justify-end gap-2">
+            <a
+                href="{% url 'admin_assign_teacher_batch' teacher.id %}?batch_id={{ assignment.batch.id }}"
+                title="Edit batch assignment"
+                aria-label="Edit assignment for {{ assignment.batch.batch_name }}"
+                class="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-amber-400/40 bg-amber-400/[0.08] text-amber-300 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-amber-300 hover:bg-amber-400 hover:text-[#241500] hover:shadow-[0_6px_18px_rgba(251,191,36,0.22)] focus:outline-none focus:ring-2 focus:ring-amber-300/70">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m16.862 4.487 2.651 2.651M4 20l4.5-.9L19.6 8a1.875 1.875 0 0 0-2.65-2.65L5.85 16.45 4 20Z"/>
+                </svg>
+            </a>
+            <button
+                type="button"
+                title="Remove batch access"
+                aria-label="Remove teacher access to {{ assignment.batch.batch_name }}"
+                data-batch="{{ assignment.batch.batch_name }}"
+                data-id="{{ assignment.id }}"
+                class="remove-access-btn inline-flex h-9 w-9 items-center justify-center rounded-xl border border-rose-400/40 bg-rose-400/[0.08] text-rose-300 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-rose-300 hover:bg-rose-500 hover:text-white hover:shadow-[0_6px_18px_rgba(244,63,94,0.22)] focus:outline-none focus:ring-2 focus:ring-rose-300/70">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 7h12m-10 0 .7 13h6.6L16 7M9 7V4h6v3m-5 3v6m4-6v6"/>
+                </svg>
+            </button>
+        </div>
 </div>
 
 </div>
@@ -435,7 +348,7 @@
 
 {% else %}
 
-<div class="rounded-2xl border border-dashed border-slate-700 bg-[#020617] py-16">
+<div class="rounded-2xl border border-dashed border-cyan-300/20 bg-gradient-to-br from-[#0c172b] to-[#050816] py-16 shadow-inner">
 
     <div class="mx-auto max-w-md text-center">
 
@@ -500,7 +413,7 @@
 
 <div
     id="removeBatchModal"
-    class="fixed inset-0 z-[999] hidden items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+    class="fixed inset-0 z-[999] hidden items-center justify-center bg-[#020617]/85 p-4 backdrop-blur-md">
 
     <div
         class="

@@ -1,0 +1,233 @@
+{% extends "admins/admin_base.html" %}
+
+{% block title %}Analytics | NeoLearn Admin{% endblock %}
+
+{% block extra_head %}
+<style>
+    .an-page{color:#e2e8f0;min-width:0}
+    .an-muted{color:#94a3b8}
+    .an-card{background:linear-gradient(145deg,#111c30 0%,#0b1324 100%);border:1px solid rgba(148,163,184,.15);border-radius:16px;box-shadow:0 8px 24px rgba(0,0,0,.13);min-width:0}
+    .an-kpi{position:relative;overflow:hidden;min-width:0}
+    .an-kpi:after{content:"";position:absolute;right:-30px;top:-38px;width:100px;height:100px;border-radius:50%;background:var(--glow,rgba(34,211,238,.08));pointer-events:none}
+    .an-icon{width:38px;height:38px;display:inline-flex;align-items:center;justify-content:center;border-radius:12px;flex-shrink:0;background:var(--ibg,rgba(34,211,238,.12));color:var(--ic,#22d3ee);font-size:19px}
+    .an-input{width:100%;min-width:0;background:#080f1e;border:1px solid rgba(148,163,184,.22);border-radius:9px;padding:9px 10px;color:#e2e8f0;font-size:12px;outline:none}
+    .an-input:focus{border-color:#22d3ee;box-shadow:0 0 0 2px rgba(34,211,238,.1)}
+    .an-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:8px 11px;border-radius:9px;border:1px solid rgba(148,163,184,.2);background:#111c30;color:#cbd5e1;font-size:11px;font-weight:800;white-space:nowrap;transition:background .15s,border-color .15s}
+    .an-btn:hover,.an-btn.is-active{background:rgba(34,211,238,.12);border-color:rgba(34,211,238,.45);color:#67e8f9}
+    .an-scroll{max-width:100%;overflow:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#334155 #0b1324}
+    .an-scroll::-webkit-scrollbar{width:6px;height:6px}
+    .an-scroll::-webkit-scrollbar-thumb{background:#334155;border-radius:20px}
+    .an-table{width:100%;border-collapse:collapse;min-width:440px}
+    .an-table th{padding:10px 12px;text-align:left;font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:#94a3b8;background:rgba(2,6,23,.35);white-space:nowrap}
+    .an-table td{padding:11px 12px;border-top:1px solid rgba(148,163,184,.1);font-size:11px;color:#dbe4f0;vertical-align:middle}
+    .an-table tbody tr:hover{background:rgba(148,163,184,.04)}
+    .an-pill{display:inline-flex;align-items:center;border-radius:999px;padding:4px 7px;font-size:9px;font-weight:800;text-transform:capitalize;white-space:nowrap}
+    .an-chart{height:174px;display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px;align-items:stretch}
+    .an-chart-col{height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:7px;min-width:0}
+    .an-bars{height:143px;width:100%;display:flex;align-items:flex-end;justify-content:center;gap:3px;border-bottom:1px solid rgba(148,163,184,.2);background:repeating-linear-gradient(to top,transparent 0,transparent 34px,rgba(148,163,184,.07) 35px)}
+    .an-bar{width:min(36%,19px);min-height:2px;border-radius:5px 5px 0 0}
+    .an-chart-label{font-size:9px;color:#94a3b8;white-space:nowrap}
+    .an-track{height:7px;width:100%;background:#1e293b;border-radius:99px;overflow:hidden}
+    .an-track>span{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,#0891b2,#2dd4bf)}
+    .an-section-title{font-size:13px;font-weight:800;color:#f8fafc}
+    .an-subtitle{font-size:10px;color:#94a3b8;margin-top:3px}
+    @media(max-width:640px){
+        .an-card{border-radius:13px}
+        .an-chart{gap:3px}
+        .an-chart-label{font-size:8px}
+        .an-table th,.an-table td{padding:9px}
+    }
+</style>
+{% endblock %}
+
+{% block admin_content %}
+<div class="an-page space-y-4 pb-4">
+    <!-- Page heading -->
+    <div class="flex flex-wrap items-center justify-between gap-3">
+        <div class="flex items-center gap-3 min-w-0">
+            <span class="an-icon" style="--ibg:rgba(34,211,238,.12);--ic:#22d3ee"><i class="ri-line-chart-line"></i></span>
+            <div class="min-w-0">
+                <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">Analytics</h1>
+                <p class="text-xs an-muted mt-1">Platform performance, payment collections and refunds.</p>
+            </div>
+        </div>
+        <span class="text-[10px] an-muted">Updated {{ today|date:"d M Y" }}</span>
+    </div>
+
+    <!-- Filters -->
+    <section class="an-card p-3 sm:p-4">
+        <form method="get" id="analyticsFilterForm" class="space-y-3">
+            <div class="flex flex-wrap items-center gap-2">
+                <span class="text-[10px] font-extrabold uppercase tracking-wider an-muted mr-1">Quick range</span>
+                <button name="range" value="7d" type="submit" class="an-btn {% if range_key == '7d' %}is-active{% endif %}">7 Days</button>
+                <button name="range" value="30d" type="submit" class="an-btn {% if range_key == '30d' %}is-active{% endif %}">30 Days</button>
+                <button name="range" value="month" type="submit" class="an-btn {% if range_key == 'month' %}is-active{% endif %}">This Month</button>
+                <button name="range" value="3m" type="submit" class="an-btn {% if range_key == '3m' %}is-active{% endif %}">3 Months</button>
+                <button name="range" value="year" type="submit" class="an-btn {% if range_key == 'year' %}is-active{% endif %}">This Year</button>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-[1fr_1fr_1.35fr_auto] gap-3 items-end">
+                <label class="block text-[10px] font-semibold an-muted">From date
+                    <input class="an-input mt-1" type="date" name="start" value="{{ start_date|date:'Y-m-d' }}">
+                </label>
+                <label class="block text-[10px] font-semibold an-muted">To date
+                    <input class="an-input mt-1" type="date" name="end" value="{{ end_date|date:'Y-m-d' }}">
+                </label>
+                <label class="block text-[10px] font-semibold an-muted">Batch
+                    <select name="batch" class="an-input mt-1">
+                        <option value="">All Batches</option>
+                        {% for batch in batches %}
+                        <option value="{{ batch.id }}" {% if batch_id == batch.id|stringformat:"s" %}selected{% endif %}>{{ batch.batch_name }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+                <div class="flex gap-2">
+                    <input type="hidden" name="range" value="custom">
+                    <button class="an-btn is-active flex-1" type="submit"><i class="ri-filter-3-line"></i> Apply</button>
+                    <a class="an-btn" href="{% url 'admin_analytics' %}"><i class="ri-refresh-line"></i> Reset</a>
+                </div>
+            </div>
+            <div class="border-t border-white/5 pt-2 flex flex-wrap items-center justify-between gap-2">
+                <p class="text-[10px] an-muted"><i class="ri-calendar-line mr-1"></i>{{ start_date|date:"d M Y" }} – {{ end_date|date:"d M Y" }}{% if selected_batch %} <span class="mx-1">·</span>{{ selected_batch.batch_name }}{% endif %}</p>
+                <p class="text-[10px] an-muted">Amounts in INR (₹)</p>
+            </div>
+        </form>
+    </section>
+
+    <!-- KPI cards -->
+    <section class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6 gap-3">
+        <article class="an-card an-kpi p-4" style="--glow:rgba(56,189,248,.12)">
+            <div class="flex items-center justify-between gap-2"><span class="text-[11px] font-bold an-muted">Students</span><span class="an-icon" style="--ibg:rgba(56,189,248,.13);--ic:#38bdf8"><i class="ri-group-line"></i></span></div>
+            <p class="text-2xl font-extrabold text-white mt-3">{{ total_students }}</p>
+            <p class="text-[10px] an-muted mt-1">{{ active_students }} active accounts</p>
+            <p class="text-[10px] text-cyan-300 mt-3">{{ registrations_period }} registrations in range</p>
+        </article>
+        <article class="an-card an-kpi p-4" style="--glow:rgba(52,211,153,.12)">
+            <div class="flex items-center justify-between gap-2"><span class="text-[11px] font-bold an-muted">Teachers</span><span class="an-icon" style="--ibg:rgba(52,211,153,.13);--ic:#34d399"><i class="ri-user-star-line"></i></span></div>
+            <p class="text-2xl font-extrabold text-white mt-3">{{ total_teachers }}</p>
+            <p class="text-[10px] an-muted mt-1">{{ active_teachers }} not blocked</p>
+            <p class="text-[10px] text-emerald-300 mt-3">{{ active_assignments }} active assignments</p>
+        </article>
+        <article class="an-card an-kpi p-4" style="--glow:rgba(167,139,250,.12)">
+            <div class="flex items-center justify-between gap-2"><span class="text-[11px] font-bold an-muted">Batches</span><span class="an-icon" style="--ibg:rgba(167,139,250,.13);--ic:#a78bfa"><i class="ri-book-open-line"></i></span></div>
+            <p class="text-2xl font-extrabold text-white mt-3">{{ total_batches }}</p>
+            <p class="text-[10px] an-muted mt-1">{{ published_batches }} published</p>
+            <p class="text-[10px] text-violet-300 mt-3">{{ enrollment_count }} purchases in range</p>
+        </article>
+        <article class="an-card an-kpi p-4" style="--glow:rgba(251,191,36,.12)">
+            <div class="flex items-center justify-between gap-2"><span class="text-[11px] font-bold an-muted">Captured Revenue</span><span class="an-icon" style="--ibg:rgba(251,191,36,.13);--ic:#fbbf24"><i class="ri-wallet-3-line"></i></span></div>
+            <p class="text-xl font-extrabold text-white mt-3">₹{{ revenue_total|floatformat:2 }}</p>
+            <p class="text-[10px] an-muted mt-1">Successful captured payments</p>
+            {% if revenue_change != None %}<p class="text-[10px] mt-3 {% if revenue_change >= 0 %}text-emerald-300{% else %}text-rose-300{% endif %}">{{ revenue_change }}% vs previous period</p>{% else %}<p class="text-[10px] an-muted mt-3">No previous-period baseline</p>{% endif %}
+        </article>
+        <article class="an-card an-kpi p-4" style="--glow:rgba(251,113,133,.12)">
+            <div class="flex items-center justify-between gap-2"><span class="text-[11px] font-bold an-muted">Completed Refunds</span><span class="an-icon" style="--ibg:rgba(251,113,133,.13);--ic:#fb7185"><i class="ri-refund-2-line"></i></span></div>
+            <p class="text-xl font-extrabold text-white mt-3">₹{{ refund_total|floatformat:2 }}</p>
+            <p class="text-[10px] an-muted mt-1">Refunds completed in range</p>
+            <p class="text-[10px] text-rose-300 mt-3">Deducted from captured revenue</p>
+        </article>
+        <article class="an-card an-kpi p-4" style="--glow:rgba(45,212,191,.12)">
+            <div class="flex items-center justify-between gap-2"><span class="text-[11px] font-bold an-muted">Net Revenue</span><span class="an-icon" style="--ibg:rgba(45,212,191,.13);--ic:#2dd4bf"><i class="ri-scales-3-line"></i></span></div>
+            <p class="text-xl font-extrabold {% if net_revenue < 0 %}text-rose-300{% else %}text-emerald-300{% endif %} mt-3">₹{{ net_revenue|floatformat:2 }}</p>
+            <p class="text-[10px] an-muted mt-1">Revenue − completed refunds</p>
+            <p class="text-[10px] text-teal-300 mt-3">Before operating costs and fees</p>
+        </article>
+    </section>
+
+    <!-- Charts -->
+    <section class="grid grid-cols-1 2xl:grid-cols-2 gap-4">
+        <article class="an-card p-4 sm:p-5 min-w-0">
+            <div class="flex flex-wrap items-start justify-between gap-3 mb-5">
+                <div><h2 class="an-section-title">Revenue & Refunds</h2><p class="an-subtitle">Daily captured payments compared with completed refunds</p></div>
+                <div class="flex flex-wrap gap-3 text-[10px] an-muted"><span><i class="inline-block w-2 h-2 rounded-sm bg-cyan-400 mr-1"></i>Revenue</span><span><i class="inline-block w-2 h-2 rounded-sm bg-rose-400 mr-1"></i>Refunds</span></div>
+            </div>
+            <div class="an-chart">
+                {% for row in chart_rows %}
+                <div class="an-chart-col" title="{{ row.label }} · Revenue ₹{{ row.sales|floatformat:2 }} · Refunds ₹{{ row.refunds|floatformat:2 }}">
+                    <div class="an-bars">
+                        <div class="an-bar" style="height:{{ row.sales_height }}%;background:linear-gradient(to top,#0891b2,#67e8f9)"></div>
+                        <div class="an-bar" style="height:{{ row.refund_height }}%;background:linear-gradient(to top,#e11d48,#fda4af)"></div>
+                    </div>
+                    <span class="an-chart-label">{% if forloop.first or forloop.last or forloop.counter0|divisibleby:5 %}{{ row.label }}{% else %}&nbsp;{% endif %}</span>
+                </div>
+                {% empty %}
+                <p class="text-xs an-muted">No transaction data is available for this period.</p>
+                {% endfor %}
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-5">
+                <div class="rounded-xl bg-white/[.03] border border-white/5 p-3"><p class="text-[10px] an-muted">Captured</p><p class="text-sm font-extrabold text-cyan-300 mt-1">₹{{ revenue_total|floatformat:2 }}</p></div>
+                <div class="rounded-xl bg-white/[.03] border border-white/5 p-3"><p class="text-[10px] an-muted">Refunded</p><p class="text-sm font-extrabold text-rose-300 mt-1">₹{{ refund_total|floatformat:2 }}</p></div>
+                <div class="rounded-xl bg-white/[.03] border border-white/5 p-3"><p class="text-[10px] an-muted">After refunds</p><p class="text-sm font-extrabold text-emerald-300 mt-1">₹{{ net_revenue|floatformat:2 }}</p></div>
+            </div>
+        </article>
+
+        <article class="an-card p-4 sm:p-5 min-w-0">
+            <div class="mb-4"><h2 class="an-section-title">Student Growth</h2><p class="an-subtitle">New registrations by day</p></div>
+            <div class="an-scroll max-h-[220px] pr-1">
+                <div class="space-y-3">
+                    {% for row in chart_rows %}
+                    <div class="grid grid-cols-[42px_minmax(0,1fr)_30px] items-center gap-3">
+                        <span class="text-[10px] an-muted">{{ row.label }}</span>
+                        <div class="an-track"><span style="width:{{ row.student_height }}%"></span></div>
+                        <span class="text-[11px] text-right text-white font-bold">{{ row.registrations }}</span>
+                    </div>
+                    {% empty %}
+                    <p class="text-xs an-muted">No registration data is available for this period.</p>
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="mt-4 rounded-xl bg-white/[.03] border border-white/5 p-3 flex items-center justify-between gap-3">
+                <div><p class="text-[10px] an-muted">Registrations in selected range</p><p class="text-xl font-extrabold text-white mt-1">{{ registrations_period }}</p></div>
+                <span class="an-icon" style="--ibg:rgba(45,212,191,.13);--ic:#2dd4bf"><i class="ri-user-add-line"></i></span>
+            </div>
+        </article>
+    </section>
+
+    <!-- Rankings -->
+    <section class="grid grid-cols-1 xl:grid-cols-3 gap-4">
+        <article class="an-card overflow-hidden min-w-0">
+            <div class="p-4 border-b border-white/5 flex items-center justify-between gap-2"><div><h2 class="an-section-title">Top Batches</h2><p class="an-subtitle">Purchases during selected range</p></div><i class="ri-trophy-line text-amber-300 text-xl"></i></div>
+            <div class="an-scroll max-h-[245px]"><table class="an-table"><thead><tr><th>Batch</th><th>Students</th><th>Status</th></tr></thead><tbody>
+                {% for item in top_batches %}<tr><td><span class="font-semibold">{{ forloop.counter }}. {{ item.name }}</span></td><td>{{ item.students }}</td><td><span class="an-pill {% if item.status == 'published' %}bg-emerald-400/10 text-emerald-300{% else %}bg-slate-400/10 text-slate-300{% endif %}">{{ item.status }}</span></td></tr>{% empty %}<tr><td colspan="3" class="an-muted">No purchases found.</td></tr>{% endfor %}
+            </tbody></table></div>
+        </article>
+        <article class="an-card overflow-hidden min-w-0">
+            <div class="p-4 border-b border-white/5 flex items-center justify-between gap-2"><div><h2 class="an-section-title">Top Subjects</h2><p class="an-subtitle">Active teacher assignments</p></div><i class="ri-book-2-line text-violet-300 text-xl"></i></div>
+            <div class="an-scroll max-h-[245px]"><table class="an-table"><thead><tr><th>Subject</th><th>Batch</th><th>Teachers</th></tr></thead><tbody>
+                {% for item in top_subjects %}<tr><td class="font-semibold">{{ item.subject_name }}</td><td>{{ item.batch.batch_name }}</td><td>{{ item.teacher_count }}</td></tr>{% empty %}<tr><td colspan="3" class="an-muted">No subject data found.</td></tr>{% endfor %}
+            </tbody></table></div>
+        </article>
+        <article class="an-card overflow-hidden min-w-0">
+            <div class="p-4 border-b border-white/5 flex items-center justify-between gap-2"><div><h2 class="an-section-title">Teacher Assignments</h2><p class="an-subtitle">Current active allocation</p></div><i class="ri-user-star-line text-emerald-300 text-xl"></i></div>
+            <div class="an-scroll max-h-[245px]"><table class="an-table"><thead><tr><th>Teacher</th><th>Subjects</th><th>Batches</th></tr></thead><tbody>
+                {% for item in top_teachers %}<tr><td><div class="font-semibold">{{ item.name }}</div>{% if item.blocked %}<span class="text-[9px] text-rose-300">Blocked</span>{% endif %}</td><td>{{ item.subjects }}</td><td>{{ item.batches }}</td></tr>{% empty %}<tr><td colspan="3" class="an-muted">No teacher data found.</td></tr>{% endfor %}
+            </tbody></table></div>
+        </article>
+    </section>
+
+    <!-- Orders and refunds -->
+    <section class="grid grid-cols-1 2xl:grid-cols-3 gap-4">
+        <article class="an-card overflow-hidden min-w-0 2xl:col-span-2">
+            <div class="p-4 border-b border-white/5 flex items-center justify-between gap-3"><div><h2 class="an-section-title">Recent Orders</h2><p class="an-subtitle">{{ order_count }} orders in selected range</p></div><i class="ri-shopping-bag-3-line text-cyan-300 text-xl"></i></div>
+            <div class="an-scroll max-h-[300px]"><table class="an-table"><thead><tr><th>Order</th><th>Student</th><th>Batch</th><th>Amount</th><th>Date</th><th>Status</th></tr></thead><tbody>
+                {% for item in recent_orders %}<tr><td class="font-semibold">{{ item.number }}</td><td>{{ item.student }}</td><td>{{ item.batch }}</td><td class="font-semibold">₹{{ item.amount|floatformat:2 }}</td><td>{{ item.date|date:"d M Y" }}</td><td><span class="an-pill bg-cyan-400/10 text-cyan-200">{{ item.status|cut:"_" }}</span></td></tr>{% empty %}<tr><td colspan="6" class="an-muted">No orders found for this period.</td></tr>{% endfor %}
+            </tbody></table></div>
+        </article>
+        <article class="an-card overflow-hidden min-w-0">
+            <div class="p-4 border-b border-white/5 flex items-center justify-between gap-3"><div><h2 class="an-section-title">Recent Refunds</h2><p class="an-subtitle">Latest refund requests</p></div><i class="ri-refund-2-line text-rose-300 text-xl"></i></div>
+            <div class="an-scroll max-h-[300px]"><table class="an-table"><thead><tr><th>Student / ID</th><th>Amount</th><th>Status</th></tr></thead><tbody>
+                {% for item in recent_refunds %}<tr><td><div class="font-semibold">{{ item.student }}</div><div class="text-[9px] an-muted">{{ item.number }}</div><div class="text-[9px] an-muted">{{ item.date|date:"d M Y" }}</div></td><td>₹{{ item.amount|floatformat:2 }}</td><td><span class="an-pill {% if item.status == 'completed' %}bg-emerald-400/10 text-emerald-300{% elif item.status == 'failed' or item.status == 'rejected' %}bg-rose-400/10 text-rose-300{% else %}bg-amber-400/10 text-amber-200{% endif %}">{{ item.status }}</span></td></tr>{% empty %}<tr><td colspan="3" class="an-muted">No refunds found.</td></tr>{% endfor %}
+            </tbody></table></div>
+        </article>
+    </section>
+
+    <!-- Coupon performance -->
+    <section class="an-card overflow-hidden">
+        <div class="p-4 border-b border-white/5 flex items-center justify-between gap-3"><div><h2 class="an-section-title">Coupon Performance</h2><p class="an-subtitle">Historical coupon applications and recorded discounts</p></div><i class="ri-coupon-3-line text-teal-300 text-xl"></i></div>
+        <div class="an-scroll max-h-[250px]"><table class="an-table"><thead><tr><th>#</th><th>Coupon Code</th><th>Uses</th><th>Discount Granted</th></tr></thead><tbody>
+            {% for item in top_coupons %}<tr><td>{{ forloop.counter }}</td><td class="font-semibold">{{ item.coupon_code }}</td><td>{{ item.uses }}</td><td>₹{{ item.discount|default:0|floatformat:2 }}</td></tr>{% empty %}<tr><td colspan="4" class="an-muted">No coupon applications found for this period.</td></tr>{% endfor %}
+        </tbody></table></div>
+    </section>
+
+    <p class="px-1 text-[9px] an-muted">Net revenue is captured payments minus completed refunds. It is not accounting profit: operating expenses, payment gateway fees, taxes and other costs are not deducted here. Rankings use the current assignment records.</p>
+</div>
+{% endblock %}

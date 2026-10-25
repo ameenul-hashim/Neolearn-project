@@ -3,8 +3,17 @@ from django.contrib.auth import authenticate,login,logout
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.cache import cache_control
 from django.contrib import messages
+from courses.models import CourseChapter
 import logging
 import re
+from datetime import date, datetime, timedelta
+from decimal import Decimal
+from django.db.models import Sum
+from django.db.models.functions import TruncDate
+from admins.models import Batch, Subject
+from teachers.models import Teacher, TeacherBatch, TeacherSubject
+from orders.models import Order, OrderItem, Payment, Refund, OrderCoupon
+from students.models import StudentProfile
 import secrets
 from django.db import IntegrityError, transaction
 from django.views.decorators.http import require_POST
@@ -58,7 +67,6 @@ from .helpers import (
     get_admin_refund_amount,
 
 )
-
 
 from django.shortcuts import get_object_or_404
 from django.core.mail import send_mail
@@ -2164,6 +2172,7 @@ def admin_teacher_assignments(request, teacher_id):
     )
 
 
+
 @login_required(login_url="admin_signin")
 @admin_required
 @cache_control(no_cache=True, must_revalidate=True, no_store=True)
@@ -2189,23 +2198,36 @@ def admin_view_teacher_subjects(request, teacher_id, batch_id):
         .order_by("subject__subject_name")
     )
 
+    # Keep the existing teacher count unchanged.
     for assignment in assigned_subjects:
-
         assignment.teacher_count = TeacherSubject.objects.filter(
             subject=assignment.subject,
             is_active=True,
         ).count()
 
+        # Count chapters for this particular subject in this batch.
+        assignment.chapter_count = CourseChapter.objects.filter(
+            batch=batch,
+            subject=assignment.subject,
+        ).count()
+
     subject_count = assigned_subjects.count()
 
+    # Keep the existing batch teacher count unchanged.
     batch_teacher_count = TeacherBatch.objects.filter(
         batch=batch,
         is_active=True,
     ).count()
 
+    # Keep the existing published-subject count unchanged.
     published_subject_count = Subject.objects.filter(
         batch=batch,
         subject_status="published",
+    ).count()
+
+    # Count all chapters belonging to this batch.
+    total_chapter_count = CourseChapter.objects.filter(
+        batch=batch,
     ).count()
 
     context = {
@@ -2215,6 +2237,7 @@ def admin_view_teacher_subjects(request, teacher_id, batch_id):
         "subject_count": subject_count,
         "batch_teacher_count": batch_teacher_count,
         "published_subject_count": published_subject_count,
+        "total_chapter_count": total_chapter_count,
     }
 
     return render(
@@ -2222,6 +2245,7 @@ def admin_view_teacher_subjects(request, teacher_id, batch_id):
         "admins/teachers/view_subjects.html",
         context,
     )
+
 @login_required(login_url="admin_signin")
 @admin_required
 @require_POST
@@ -5484,3 +5508,455 @@ def admin_faq_video_delete_view(request, video_id):
     )
 
     return redirect("admin_faq_videos")
+
+
+# ==========================================================
+# ADMIN ANALYTICS
+# ==========================================================
+
+@cache_control(no_cache=True, must_revalidate=True, no_store=True)
+@admin_required
+def admin_analytics_view(request):
+    today = timezone.localdate()
+    range_key = request.GET.get("range", "30d")
+    batch_id = request.GET.get("batch", "").strip()
+
+    # ------------------------------------------------------
+    # DATE RANGE
+    # ------------------------------------------------------
+    if range_key == "7d":
+        start_date = today - timedelta(days=6)
+        end_date = today
+    elif range_key == "month":
+        start_date = today.replace(day=1)
+        end_date = today
+    elif range_key == "3m":
+        start_date = today - timedelta(days=89)
+        end_date = today
+    elif range_key == "year":
+        start_date = today.replace(month=1, day=1)
+        end_date = today
+    elif range_key == "custom":
+        try:
+            start_date = date.fromisoformat(request.GET.get("start", ""))
+        except (TypeError, ValueError):
+            start_date = today - timedelta(days=29)
+
+        try:
+            end_date = date.fromisoformat(request.GET.get("end", ""))
+        except (TypeError, ValueError):
+            end_date = today
+
+        if start_date > end_date:
+            start_date, end_date = end_date, start_date
+
+        # Do not include future dates in the reporting period.
+        end_date = min(end_date, today)
+        start_date = min(start_date, end_date)
+    else:
+        range_key = "30d"
+        start_date = today - timedelta(days=29)
+        end_date = today
+
+    start_dt = timezone.make_aware(
+        datetime.combine(start_date, datetime.min.time())
+    )
+    end_dt = timezone.make_aware(
+        datetime.combine(end_date + timedelta(days=1), datetime.min.time())
+    )
+
+    # ------------------------------------------------------
+    # BATCH FILTER
+    # ------------------------------------------------------
+    batches = Batch.objects.order_by("batch_name")
+    selected_batch = None
+
+    if batch_id.isdigit():
+        selected_batch = batches.filter(pk=int(batch_id)).first()
+
+    if selected_batch is None:
+        batch_id = ""
+
+    # ------------------------------------------------------
+    # STUDENTS AND REGISTRATIONS
+    # ------------------------------------------------------
+    students = User.objects.filter(
+        is_staff=False,
+        is_superuser=False,
+        teacher_profile__isnull=True,
+    )
+
+    student_profiles = StudentProfile.objects.filter(
+        user__in=students,
+        joined_at__gte=start_dt,
+        joined_at__lt=end_dt,
+    )
+
+    total_students = students.count()
+    active_students = students.filter(is_active=True).count()
+    registrations_period = student_profiles.count()
+
+    registration_rows = (
+        student_profiles.annotate(day=TruncDate("joined_at"))
+        .values("day")
+        .annotate(total=Count("id"))
+        .order_by("day")
+    )
+    registrations_by_day = {
+        row["day"]: row["total"]
+        for row in registration_rows
+        if row["day"] is not None
+    }
+
+    # ------------------------------------------------------
+    # TEACHERS, BATCHES, SUBJECTS AND ASSIGNMENTS
+    # ------------------------------------------------------
+    total_teachers = Teacher.objects.count()
+    active_teachers = Teacher.objects.filter(is_blocked=False).count()
+    total_batches = Batch.objects.count()
+    published_batches = Batch.objects.filter(batch_status="published").count()
+    total_subjects = Subject.objects.count()
+    published_subjects = Subject.objects.filter(subject_status="published").count()
+    active_assignments = TeacherBatch.objects.filter(is_active=True).count()
+
+    # ------------------------------------------------------
+    # ORDERS, CAPTURED PAYMENTS AND COMPLETED REFUNDS
+    # ------------------------------------------------------
+    period_orders = Order.objects.filter(
+        created_at__gte=start_dt,
+        created_at__lt=end_dt,
+    )
+    if selected_batch:
+        period_orders = period_orders.filter(
+            items__batch=selected_batch
+        ).distinct()
+    order_count = period_orders.count()
+
+    captured_payments = Payment.objects.filter(
+        status="captured",
+        captured_at__gte=start_dt,
+        captured_at__lt=end_dt,
+        order__status__in=["paid", "partially_refunded", "refunded"],
+    )
+    if selected_batch:
+        captured_payments = captured_payments.filter(
+            order__items__batch=selected_batch
+        ).distinct()
+
+    revenue_total = (
+        captured_payments.aggregate(total=Sum("amount"))["total"]
+        or Decimal("0.00")
+    )
+
+    refunds_qs = Refund.objects.filter(
+        status="completed",
+        processed_at__gte=start_dt,
+        processed_at__lt=end_dt,
+    )
+    if selected_batch:
+        refunds_qs = refunds_qs.filter(
+            order__items__batch=selected_batch
+        ).distinct()
+
+    # Count completed refund records once; do not sum refund-item rows.
+    refund_total = (
+        refunds_qs.aggregate(total=Sum("refunded_amount"))["total"]
+        or Decimal("0.00")
+    )
+    net_revenue = revenue_total - refund_total
+
+    # ------------------------------------------------------
+    # BATCH PURCHASES / ENROLLMENTS
+    # ------------------------------------------------------
+    period_purchases = StudentBatchPurchase.objects.filter(
+        purchased_at__gte=start_dt,
+        purchased_at__lt=end_dt,
+    )
+    if selected_batch:
+        period_purchases = period_purchases.filter(batch=selected_batch)
+    enrollment_count = period_purchases.count()
+
+    top_batches_qs = StudentBatchPurchase.objects.filter(
+        status="active",
+        purchased_at__gte=start_dt,
+        purchased_at__lt=end_dt,
+    )
+    if selected_batch:
+        top_batches_qs = top_batches_qs.filter(batch=selected_batch)
+
+    top_batch_rows = (
+        top_batches_qs.values(
+            "batch_id", "batch__batch_name", "batch__batch_status"
+        )
+        .annotate(students=Count("student_id", distinct=True))
+        .order_by("-students", "batch__batch_name")[:5]
+    )
+    top_batches = [
+        {
+            "name": row["batch__batch_name"],
+            "students": row["students"],
+            "status": row["batch__batch_status"],
+        }
+        for row in top_batch_rows
+    ]
+
+    # ------------------------------------------------------
+    # DAILY CHART DATA
+    # ------------------------------------------------------
+    daily_payment_rows = (
+        captured_payments.annotate(day=TruncDate("captured_at"))
+        .values("day")
+        .annotate(total=Sum("amount"))
+        .order_by("day")
+    )
+    revenue_by_day = {
+        row["day"]: row["total"] or Decimal("0.00")
+        for row in daily_payment_rows
+        if row["day"] is not None
+    }
+
+    daily_refund_rows = (
+        refunds_qs.annotate(day=TruncDate("processed_at"))
+        .values("day")
+        .annotate(total=Sum("refunded_amount"))
+        .order_by("day")
+    )
+    refunds_by_day = {
+        row["day"]: row["total"] or Decimal("0.00")
+        for row in daily_refund_rows
+        if row["day"] is not None
+    }
+
+    # Display at most 31 daily columns, even for a longer date range.
+    chart_start = max(start_date, end_date - timedelta(days=30))
+    chart_dates = []
+    current_day = chart_start
+    while current_day <= end_date:
+        chart_dates.append(current_day)
+        current_day += timedelta(days=1)
+
+    max_money = max(
+        [float(revenue_by_day.get(day, 0)) for day in chart_dates]
+        + [float(refunds_by_day.get(day, 0)) for day in chart_dates]
+        + [1.0]
+    )
+    max_students = max(
+        [registrations_by_day.get(day, 0) for day in chart_dates] + [1]
+    )
+
+    chart_rows = []
+    for day in chart_dates:
+        sales = revenue_by_day.get(day, Decimal("0.00"))
+        refunds = refunds_by_day.get(day, Decimal("0.00"))
+        registrations = registrations_by_day.get(day, 0)
+
+        chart_rows.append({
+            "date": day,
+            "label": day.strftime("%d %b"),
+            "sales": sales,
+            "refunds": refunds,
+            "sales_height": max(3, min(100, float(sales) / max_money * 100)),
+            "refund_height": max(3, min(100, float(refunds) / max_money * 100)),
+            "registrations": registrations,
+            "student_height": max(
+                3, min(100, registrations / max_students * 100)
+            ),
+        })
+
+    # ------------------------------------------------------
+    # TOP SUBJECTS BY ACTIVE TEACHER ASSIGNMENTS
+    # This is assignment activity, not student subject enrolment.
+    # ------------------------------------------------------
+    subject_qs = Subject.objects.all()
+    if selected_batch:
+        subject_qs = subject_qs.filter(batch=selected_batch)
+
+    top_subjects = list(
+        subject_qs.annotate(
+            teacher_count=Count(
+                "assigned_teachers",
+                filter=Q(assigned_teachers__is_active=True),
+                distinct=True,
+            )
+        ).order_by("-teacher_count", "subject_name")[:5]
+    )
+
+    # ------------------------------------------------------
+    # TOP TEACHERS BY ACTIVE ASSIGNMENTS
+    # ------------------------------------------------------
+    teacher_rows = Teacher.objects.annotate(
+        subject_assignments=Count(
+            "assigned_subjects",
+            filter=Q(assigned_subjects__is_active=True),
+            distinct=True,
+        ),
+        batch_assignments=Count(
+            "assigned_batches",
+            filter=Q(assigned_batches__is_active=True),
+            distinct=True,
+        ),
+    ).order_by(
+        "-subject_assignments", "-batch_assignments", "full_name"
+    )[:5]
+
+    top_teachers = [
+        {
+            "name": teacher.full_name,
+            "subjects": teacher.subject_assignments,
+            "batches": teacher.batch_assignments,
+            "blocked": teacher.is_blocked,
+        }
+        for teacher in teacher_rows
+    ]
+
+    # ------------------------------------------------------
+    # RECENT ORDERS
+    # ------------------------------------------------------
+    recent_orders_qs = (
+        Order.objects.select_related("user")
+        .prefetch_related("items")
+        .order_by("-created_at")
+    )
+    if selected_batch:
+        recent_orders_qs = recent_orders_qs.filter(
+            items__batch=selected_batch
+        ).distinct()
+
+    recent_orders = []
+    for order in recent_orders_qs[:5]:
+        item_names = list(
+            order.items.values_list("batch_name", flat=True)[:2]
+        )
+        recent_orders.append({
+            "number": order.order_number,
+            "student": order.full_name or order.user.get_username(),
+            "batch": ", ".join(item_names) or "—",
+            "amount": order.final_amount,
+            "date": order.created_at,
+            "status": order.status,
+            "currency": order.currency or "INR",
+        })
+
+    # ------------------------------------------------------
+    # RECENT REFUNDS
+    # ------------------------------------------------------
+    recent_refunds_qs = (
+        Refund.objects.select_related("student", "order")
+        .order_by("-requested_at")
+    )
+    if selected_batch:
+        recent_refunds_qs = recent_refunds_qs.filter(
+            order__items__batch=selected_batch
+        ).distinct()
+
+    recent_refunds = [
+        {
+            "student": refund.student.get_username(),
+            "number": refund.refund_request_id or f"Refund #{refund.pk}",
+            "amount": (
+                refund.refunded_amount
+                if refund.status == "completed"
+                else refund.requested_amount
+            ),
+            "date": refund.processed_at or refund.requested_at,
+            "status": refund.status,
+        }
+        for refund in recent_refunds_qs[:5]
+    ]
+
+    # ------------------------------------------------------
+    # COUPON USAGE FROM HISTORICAL ORDER COUPON SNAPSHOTS
+    # ------------------------------------------------------
+    coupon_rows = OrderCoupon.objects.filter(
+        order__created_at__gte=start_dt,
+        order__created_at__lt=end_dt,
+    )
+    if selected_batch:
+        coupon_rows = coupon_rows.filter(
+            Q(applied_batch=selected_batch)
+            | Q(order__items__batch=selected_batch)
+        ).distinct()
+
+    top_coupons = list(
+        coupon_rows.values("coupon_code")
+        .annotate(uses=Count("id"), discount=Sum("discount_amount"))
+        .order_by("-uses", "-discount")[:5]
+    )
+    coupons_used = coupon_rows.count()
+    coupon_discount_total = (
+        coupon_rows.aggregate(total=Sum("discount_amount"))["total"]
+        or Decimal("0.00")
+    )
+
+    # ------------------------------------------------------
+    # PREVIOUS PERIOD REVENUE COMPARISON
+    # ------------------------------------------------------
+    period_days = max(1, (end_date - start_date).days + 1)
+    previous_start = start_date - timedelta(days=period_days)
+    previous_start_dt = timezone.make_aware(
+        datetime.combine(previous_start, datetime.min.time())
+    )
+
+    previous_payments = Payment.objects.filter(
+        status="captured",
+        captured_at__gte=previous_start_dt,
+        captured_at__lt=start_dt,
+        order__status__in=["paid", "partially_refunded", "refunded"],
+    )
+    if selected_batch:
+        previous_payments = previous_payments.filter(
+            order__items__batch=selected_batch
+        ).distinct()
+
+    previous_revenue = (
+        previous_payments.aggregate(total=Sum("amount"))["total"]
+        or Decimal("0.00")
+    )
+    revenue_change = None
+    if previous_revenue:
+        revenue_change = round(
+            float((revenue_total - previous_revenue) / previous_revenue * 100),
+            1,
+        )
+
+    # ------------------------------------------------------
+    # TEMPLATE CONTEXT
+    # ------------------------------------------------------
+    context = {
+        "today": today,
+        "start_date": start_date,
+        "end_date": end_date,
+        "range_key": range_key,
+        "batch_id": batch_id,
+        "batches": batches,
+        "selected_batch": selected_batch,
+        "total_students": total_students,
+        "active_students": active_students,
+        "total_teachers": total_teachers,
+        "active_teachers": active_teachers,
+        "total_batches": total_batches,
+        "published_batches": published_batches,
+        "total_subjects": total_subjects,
+        "published_subjects": published_subjects,
+        "active_assignments": active_assignments,
+        "revenue_total": revenue_total,
+        "refund_total": refund_total,
+        "net_revenue": net_revenue,
+        "order_count": order_count,
+        "enrollment_count": enrollment_count,
+        "registrations_period": registrations_period,
+        "coupon_discount_total": coupon_discount_total,
+        "coupons_used": coupons_used,
+        "revenue_change": revenue_change,
+        "chart_rows": chart_rows,
+        "max_money": max_money,
+        "max_students": max_students,
+        "top_batches": top_batches,
+        "top_subjects": top_subjects,
+        "top_teachers": top_teachers,
+        "recent_orders": recent_orders,
+        "recent_refunds": recent_refunds,
+        "top_coupons": top_coupons,
+    }
+
+    return render(request, "admins/analytics/analytics.html", context)
