@@ -1,552 +1,574 @@
 {% extends "admins/admin_base.html" %}
 {% load static %}
 
-{% block title %}
-Assign Batch & Subjects
-{% endblock %}
+{% block title %}Assign Batch &amp; Subjects | NeoLearn{% endblock %}
 
 {% block admin_content %}
 
-<div class="min-h-screen bg-slate-950 px-4 py-8">
+<style>
+    /* NeoLearn assignment workspace:
+       Teacher Information and Available Subjects may scroll internally.
+       Assignment Summary must display all content without an internal scrollbar. */
+    .neo-subject-list,
+    .neo-profile-scroll {
+        min-height: 0;
+        overscroll-behavior: contain;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+        -webkit-overflow-scrolling: touch;
+    }
 
-    <div class="mx-auto max-w-7xl">
+    .neo-subject-list::-webkit-scrollbar,
+    .neo-profile-scroll::-webkit-scrollbar {
+        display: none;
+        width: 0;
+        height: 0;
+    }
 
-        <!-- ================= PAGE HEADER ================= -->
+    .neo-summary-scroll {
+        height: auto !important;
+        max-height: none !important;
+        min-height: 0;
+        flex: 0 0 auto !important;
+        overflow: visible !important;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+    }
 
-        <div class="mb-8 flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+    @media (min-width: 1280px) {
+        .neo-assignment-layout {
+            height: calc(100vh - 225px);
+            min-height: 440px;
+            max-height: 760px;
+            align-items: stretch;
+        }
 
+        .neo-teacher-card,
+        .neo-assignment-main {
+            height: 100%;
+            min-height: 0;
+        }
+
+        .neo-teacher-card {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .neo-profile-scroll {
+            flex: 1 1 0%;
+            overflow-x: hidden !important;
+            overflow-y: auto !important;
+        }
+
+        .neo-assignment-main {
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+        }
+
+        .neo-assignment-main > form {
+            display: flex;
+            flex: 1 1 0%;
+            flex-direction: column;
+            min-height: 0;
+            overflow: hidden;
+        }
+
+        .neo-subject-section {
+            display: flex;
+            flex: 1 1 0%;
+            flex-direction: column;
+            height: 100%;
+            min-height: 0;
+        }
+
+        .neo-subject-list {
+            flex: 1 1 0%;
+            height: 100%;
+            min-height: 0;
+            align-content: start;
+            grid-auto-rows: max-content;
+            overflow-x: hidden !important;
+            overflow-y: auto !important;
+            padding: 0 1px 2px 0;
+            margin: 0;
+            scroll-padding-block: 2px;
+        }
+
+        /*
+         * Fix only the Available Subjects content area:
+         * remove the oversized four-sided inset that was shrinking the
+         * visible list and clipping the top/bottom rows. The card header,
+         * teacher profile, batch selection and summary are untouched.
+         */
+        .neo-subject-section > div:last-child {
+            flex: 1 1 0%;
+            min-height: 0;
+            padding: 8px 8px 8px 10px !important;
+            overflow: hidden !important;
+        }
+
+        .neo-subject-section .neo-subject-list > label {
+            min-height: 72px;
+            align-self: start;
+        }
+
+        /* The yellow-marked Assignment Summary area never scrolls or clips. */
+        .neo-summary-card {
+            height: auto !important;
+            min-height: 0;
+            align-self: stretch;
+        }
+
+        .neo-summary-section {
+            height: auto !important;
+            min-height: 0;
+            overflow: visible !important;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .neo-summary-section > div:last-child {
+            height: auto !important;
+            max-height: none !important;
+            flex: 0 0 auto !important;
+            overflow: visible !important;
+        }
+
+        .neo-summary-scroll {
+            overflow: visible !important;
+        }
+    }
+
+    @media (max-width: 1279px) {
+        .neo-assignment-layout {
+            height: auto;
+            max-height: none;
+        }
+
+        .neo-subject-list {
+            height: auto;
+            min-height: 0;
+            overflow: visible !important;
+            padding: 0;
+        }
+
+        .neo-profile-scroll {
+            overflow: visible !important;
+        }
+
+        .neo-summary-card,
+        .neo-summary-section,
+        .neo-summary-scroll {
+            height: auto !important;
+            max-height: none !important;
+            overflow: visible !important;
+        }
+    }
+
+    @media (max-height: 760px) and (min-width: 1280px) {
+        .neo-assignment-layout {
+            height: calc(100vh - 195px);
+            min-height: 390px;
+            gap: 0.75rem;
+        }
+
+        .neo-teacher-card > div:first-child,
+        .neo-summary-section > div:first-child {
+            padding-top: 0.65rem;
+            padding-bottom: 0.65rem;
+        }
+
+        .neo-profile-scroll,
+        .neo-summary-section > div:nth-child(2) {
+            padding: 0.75rem;
+        }
+    }
+</style>
+
+
+<div class="bg-[#050b18] px-3 py-4 text-slate-100 sm:px-5 lg:px-6">
+    <div class="mx-auto max-w-[1600px]">
+
+        <!-- Breadcrumbs -->
+        <nav aria-label="Breadcrumb" class="mb-5 flex flex-wrap items-center gap-2 text-sm">
+            <a href="{% url 'admin_teachers' %}"
+               class="font-medium text-slate-400 transition hover:text-cyan-300">
+                Teachers
+            </a>
+            <svg class="h-4 w-4 text-slate-600" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="m9 18 6-6-6-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span class="font-semibold text-cyan-300">Assign Batch &amp; Subjects</span>
+        </nav>
+
+        <!-- Page heading -->
+        <header class="mb-4 flex flex-col gap-3 border-b border-slate-800/80 pb-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
-
-                <a
-                    href="{% url 'admin_teachers' %}"
-                    class="inline-flex items-center gap-2 text-sm font-medium text-cyan-400 transition hover:text-cyan-300">
-
-                    <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke-width="2"
-                        stroke="currentColor"
-                        class="h-5 w-5">
-
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            d="M15.75 19.5L8.25 12l7.5-7.5" />
-
-                    </svg>
-
-                    Back to Teachers
-
-                </a>
-
-                <h1 class="mt-4 text-3xl font-bold tracking-tight text-white">
-
-                    Assign Batch & Subjects
-
+                <h1 class="text-2xl font-bold tracking-tight text-white sm:text-3xl">
+                    Assign Batch &amp; Subjects
                 </h1>
-
-                <p class="mt-2 max-w-2xl text-sm text-slate-400">
-
-                    Select a published batch and assign one or more published
-                    subjects to this teacher.
-
-                </p>
-
             </div>
-
-        </div>
-
-        <!-- ================= TEACHER INFORMATION ================= -->
-
-        <div class="overflow-hidden rounded-3xl border border-slate-800 bg-[#020617] shadow-2xl">
-
-            <div class="border-b border-slate-800 px-8 py-6">
-
-                <h2 class="text-xl font-semibold text-white">
-
-                    Teacher Information
-
-                </h2>
-
+            <div class="hidden shrink-0 items-center gap-2 rounded-xl border border-emerald-400/15 bg-emerald-400/[0.06] px-3 py-2 text-xs font-medium text-emerald-300 sm:inline-flex">
+                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="m5 12 4 4L19 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                Assignment workspace
             </div>
+        </header>
 
-            <div class="grid gap-8 p-8 lg:grid-cols-[180px_1fr]">
+        <div class="neo-assignment-layout grid items-stretch gap-5 lg:grid-cols-[250px_minmax(0,1fr)] xl:grid-cols-[270px_minmax(0,1fr)_300px]">
 
-                <!-- PROFILE -->
-
-                <div class="flex flex-col items-center">
-
-                    {% if teacher.profile_image %}
-
-                        <img
-                            src="{{ teacher.profile_image.url }}"
-                            alt="{{ teacher.full_name }}"
-                            class="h-40 w-40 rounded-full border-4 border-cyan-500 object-cover">
-
-                    {% else %}
-
-                        <div class="flex h-40 w-40 items-center justify-center rounded-full bg-cyan-600 text-5xl font-bold text-white">
-
-                            {{ teacher.initials }}
-
-                        </div>
-
-                    {% endif %}
-
-                    <span class="mt-5 rounded-full bg-cyan-500/10 px-4 py-2 text-sm font-medium text-cyan-400">
-
-                        Teacher Profile
-
+            <!-- LEFT: TEACHER PROFILE -->
+            <aside class="neo-teacher-card h-full min-w-0 overflow-hidden rounded-2xl border border-slate-800 bg-gradient-to-b from-[#0c1930] to-[#071020] shadow-xl shadow-black/20">
+                <div class="flex items-center gap-3 border-b border-slate-800/90 px-5 py-4">
+                    <span class="flex h-10 w-10 items-center justify-center rounded-xl border border-violet-400/20 bg-violet-400/10 text-violet-300">
+                        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM20 8v6m3-3h-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
                     </span>
-
+                    <div>
+                        <h2 class="text-sm font-semibold text-white">Teacher Information</h2>
+                        <p class="mt-0.5 text-xs text-slate-400">Profile and contact details</p>
+                    </div>
                 </div>
 
-                <!-- DETAILS -->
-
-                <div class="grid gap-6 md:grid-cols-2">
-
-                    <div>
-
-                        <p class="mb-2 text-xs uppercase tracking-wider text-slate-500">
-
-                            Full Name
-
-                        </p>
-
-                        <div class="rounded-xl border border-slate-800 bg-slate-900 px-5 py-4 text-white">
-
-                            {{ teacher.full_name }}
-
-                        </div>
-
+                <div class="neo-profile-scroll p-4 sm:p-5 xl:overflow-y-auto">
+                    <div class="flex flex-col items-center border-b border-slate-800/80 pb-5 text-center">
+                        {% if teacher.profile_image %}
+                            <img src="{{ teacher.profile_image.url }}"
+                                 alt="{{ teacher.full_name }}"
+                                 class="h-28 w-28 rounded-full border-[3px] border-cyan-400 object-cover shadow-lg shadow-cyan-950/50 ring-4 ring-cyan-400/[0.07]">
+                        {% else %}
+                            <div class="flex h-28 w-28 items-center justify-center rounded-full border-[3px] border-cyan-400 bg-cyan-500/15 text-3xl font-bold text-cyan-200 shadow-lg shadow-cyan-950/50">
+                                {{ teacher.initials }}
+                            </div>
+                        {% endif %}
+                        <h3 class="mt-4 break-words text-lg font-bold text-white">{{ teacher.full_name }}</h3>
+                        <span class="mt-2 inline-flex items-center gap-1.5 rounded-full border border-emerald-400/20 bg-emerald-400/[0.08] px-2.5 py-1 text-[11px] font-semibold text-emerald-300">
+                            <span class="h-1.5 w-1.5 rounded-full bg-emerald-300"></span>
+                            Teacher profile
+                        </span>
                     </div>
 
-                    <div>
-
-                        <p class="mb-2 text-xs uppercase tracking-wider text-slate-500">
-
-                            Email Address
-
-                        </p>
-
-                        <div class="rounded-xl border border-slate-800 bg-slate-900 px-5 py-4 text-white">
-
-                            {{ teacher.email }}
-
+                    <dl class="mt-4 space-y-3">
+                        <div class="flex min-w-0 items-start gap-3 rounded-xl border border-slate-800/80 bg-slate-950/40 p-3">
+                            <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-cyan-400/10 text-cyan-300">
+                                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                                </svg>
+                            </span>
+                            <div class="min-w-0">
+                                <dt class="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Full name</dt>
+                                <dd class="mt-1 break-words text-sm font-medium text-slate-100">{{ teacher.full_name }}</dd>
+                            </div>
                         </div>
-
-                    </div>
-
-                    <div>
-
-                        <p class="mb-2 text-xs uppercase tracking-wider text-slate-500">
-
-                            Phone Number
-
-                        </p>
-
-                        <div class="rounded-xl border border-slate-800 bg-slate-900 px-5 py-4 text-white">
-
-                            {{ teacher.phone_number }}
-
+                        <div class="flex min-w-0 items-start gap-3 rounded-xl border border-slate-800/80 bg-slate-950/40 p-3">
+                            <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-cyan-400/10 text-cyan-300">
+                                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                    <path d="M4 6h16v12H4zM4 7l8 6 8-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </span>
+                            <div class="min-w-0">
+                                <dt class="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Email address</dt>
+                                <dd class="mt-1 break-all text-sm font-medium text-slate-100">{{ teacher.email }}</dd>
+                            </div>
                         </div>
-
-                    </div>
-
-                    <div>
-
-                        <p class="mb-2 text-xs uppercase tracking-wider text-slate-500">
-
-                            Experience
-
-                        </p>
-
-                        <div class="rounded-xl border border-slate-800 bg-slate-900 px-5 py-4 text-white">
-
-                            {{ teacher.experience }} Years
-
+                        <div class="flex min-w-0 items-start gap-3 rounded-xl border border-slate-800/80 bg-slate-950/40 p-3">
+                            <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-cyan-400/10 text-cyan-300">
+                                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                    <path d="M6.6 3h3l1.5 4-2 1.5a15 15 0 0 0 6.4 6.4l1.5-2 4 1.5v3a2 2 0 0 1-2.2 2A17.8 17.8 0 0 1 4.6 5.2 2 2 0 0 1 6.6 3Z" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </span>
+                            <div class="min-w-0">
+                                <dt class="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Phone number</dt>
+                                <dd class="mt-1 break-words text-sm font-medium text-slate-100">{{ teacher.phone_number|default:"Not provided" }}</dd>
+                            </div>
                         </div>
+                        <div class="flex min-w-0 items-start gap-3 rounded-xl border border-slate-800/80 bg-slate-950/40 p-3">
+                            <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-cyan-400/10 text-cyan-300">
+                                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                    <path d="M12 8v4l2.5 2.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </span>
+                            <div class="min-w-0">
+                                <dt class="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Experience</dt>
+                                <dd class="mt-1 text-sm font-medium text-slate-100">{{ teacher.experience }} year{{ teacher.experience|pluralize }}</dd>
+                            </div>
+                        </div>
+                    </dl>
 
-                    </div>
-
+                    <a href="{% url 'admin_teachers' %}"
+                       class="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-cyan-400/30 bg-cyan-400/[0.06] px-4 py-3 text-sm font-semibold text-cyan-200 transition hover:border-cyan-300/60 hover:bg-cyan-400/10">
+                        View Teachers
+                        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                            <path d="M7 17 17 7M7 7h10v10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </a>
                 </div>
+            </aside>
 
-            </div>
-
-        </div>
-
-       
-
-        <!-- ================= BATCH ASSIGNMENT START ================= -->
-
-<div class="mt-8 overflow-hidden rounded-3xl border border-slate-800 bg-[#020617] shadow-2xl">
-
-    <!-- HEADER -->
-
-    <div class="border-b border-slate-800 px-8 py-6">
-
-        <h2 class="text-xl font-semibold text-white">
-
-            Batch Assignment
-
-        </h2>
-
-        <p class="mt-2 text-sm text-slate-400">
-
-            Select a published batch. After selecting the batch, its published
-            subjects will be displayed below.
-
-        </p>
-
-    </div>
-
-    <div class="p-8">
-
-        <!-- ================= GET FORM ================= -->
-
-        <form method="GET">
-
-            <div class="mb-8">
-
-                <label
-                    for="batch"
-                    class="mb-3 block text-sm font-semibold text-slate-300">
-
-                    Select Batch
-
-                </label>
-
-                <select
-                    id="batch"
-                    name="batch"
-                    onchange="this.form.submit()"
-                    class="
-                        w-full
-                        rounded-xl
-                        border
-                        border-slate-700
-                        bg-slate-900
-                        px-5
-                        py-4
-                        text-white
-                        outline-none
-                        transition
-                        focus:border-cyan-500
-                    ">
-
-                    <option value="">
-
-                        -- Select Batch --
-
-                    </option>
-
-                    {% for batch in batches %}
-
-                        <option
-                            value="{{ batch.id }}"
-                            {% if selected_batch and selected_batch.id == batch.id %}
-                                selected
-                            {% endif %}
-                        >
-
-                            {{ batch.batch_name }}
-
-                        </option>
-
-                    {% endfor %}
-
-                </select>
-
-            </div>
-
-        </form>
-
-        <!-- ================= POST FORM ================= -->
-
-<form method="POST">
-
-    {% csrf_token %}
-
-    <input
-        type="hidden"
-        name="batch"
-        value="{% if selected_batch %}{{ selected_batch.id }}{% endif %}">
-
-    <!-- AVAILABLE SUBJECTS -->
-
-    <div>
-
-        <div class="mb-5 flex items-center justify-between">
-
-            <div>
-
-                <h3 class="text-lg font-semibold text-white">
-
-                    Available Subjects
-
-                </h3>
-
-                <p class="mt-1 text-sm text-slate-400">
-
-                    Already assigned subjects are locked. You can assign only new
-                    subjects from this page. To remove a subject, use
-                    <span class="font-medium text-cyan-400">
-                        View Subjects
-                    </span>.
-
-                </p>
-
-            </div>
-
-            <span
-                class="
-                    rounded-full
-                    bg-cyan-500/10
-                    px-3
-                    py-1
-                    text-xs
-                    font-medium
-                    text-cyan-400
-                ">
-
-                Published Subjects
-
-            </span>
-
-        </div>
-
-        <div
-            class="
-                rounded-2xl
-                border
-                border-dashed
-                border-slate-700
-                bg-slate-900
-                p-8
-            ">
-
-            {% if selected_batch %}
-
-                <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-
-                    {% for subject in subjects %}
-
-                        <label
-                            class="
-                                flex
-                                items-center
-                                gap-4
-                                rounded-xl
-                                border
-                                p-4
-                                transition
-
-                                {% if subject.id in assigned_subject_ids %}
-
-                                    border-emerald-500/40
-                                    bg-emerald-500/10
-                                    cursor-not-allowed
-
+            <!-- MIDDLE: BATCH + SUBJECTS -->
+            <main class="neo-assignment-main min-w-0 space-y-3 xl:flex xl:min-h-0 xl:flex-col">
+                <!-- Batch selection -->
+                <section class="shrink-0 overflow-hidden rounded-2xl border border-cyan-900/70 bg-[#081426] shadow-xl shadow-black/20">
+                    <div class="flex items-center gap-3 border-b border-slate-800/90 px-5 py-4">
+                        <span class="flex h-10 w-10 items-center justify-center rounded-xl border border-cyan-400/20 bg-cyan-400/10 text-cyan-300">
+                            <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                <path d="m12 3 9 5-9 5-9-5 9-5ZM3 12l9 5 9-5M3 16l9 5 9-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </span>
+                        <div>
+                            <h2 class="text-sm font-semibold text-white">Batch Selection</h2>
+                            <p class="mt-0.5 text-xs text-slate-400">Choose a published batch to load its subjects.</p>
+                        </div>
+                    </div>
+                    <div class="p-5">
+                        <form method="GET">
+                            <label for="batch" class="mb-2 block text-xs font-semibold text-slate-300">Select batch</label>
+                            <div class="relative">
+                                <select id="batch" name="batch" onchange="this.form.submit()"
+                                        class="w-full appearance-none rounded-xl border border-slate-700 bg-slate-900/90 px-4 py-3.5 pr-10 text-sm text-white outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/10">
+                                    <option value="">-- Select Batch --</option>
+                                    {% for batch in batches %}
+                                        <option value="{{ batch.id }}" {% if selected_batch and selected_batch.id == batch.id %}selected{% endif %}>
+                                            {{ batch.batch_name }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                                <svg class="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                    <path d="m7 10 5 5 5-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </div>
+                        </form>
+                        {% if selected_batch %}
+                            <div class="mt-3 flex items-center gap-3 rounded-xl border border-slate-800 bg-slate-950/50 p-3">
+                                {% if selected_batch.batch_thumbnail %}
+                                    <img src="{{ selected_batch.batch_thumbnail.url }}" alt="{{ selected_batch.batch_name }}" class="h-12 w-14 shrink-0 rounded-lg object-cover">
                                 {% else %}
-
-                                    border-slate-700
-                                    bg-slate-800
-                                    cursor-pointer
-                                    hover:border-cyan-500
-
+                                    <span class="flex h-12 w-14 shrink-0 items-center justify-center rounded-lg bg-cyan-400/10 text-cyan-300">
+                                        <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                            <path d="m12 3 9 5-9 5-9-5 9-5ZM3 12l9 5 9-5M3 16l9 5 9-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                                        </svg>
+                                    </span>
                                 {% endif %}
-                            ">
-
-                            {% if subject.id in assigned_subject_ids %}
-
-                                <input
-                                    type="checkbox"
-                                    checked
-                                    disabled
-                                    class="h-5 w-5 accent-emerald-500 cursor-not-allowed">
-
-                                <input
-                                    type="hidden"
-                                    name="subjects"
-                                    value="{{ subject.id }}">
-
-                            {% else %}
-
-                                <input
-                                    type="checkbox"
-                                    name="subjects"
-                                    value="{{ subject.id }}"
-                                    class="subject-checkbox h-5 w-5 accent-cyan-500">
-
-                            {% endif %}
-
-                            <div class="flex-1">
-
-                                <div class="flex items-center justify-between gap-3">
-
-                                    <h4 class="font-semibold text-white">
-
-                                        {{ subject.subject_name }}
-
-                                    </h4>
-
-                                    {% if subject.id in assigned_subject_ids %}
-
-                                        <span
-                                            class="
-                                                rounded-full
-                                                bg-emerald-500/15
-                                                px-3
-                                                py-1
-                                                text-[11px]
-                                                font-semibold
-                                                uppercase
-                                                tracking-wide
-                                                text-emerald-400
-                                            ">
-
-                                            🔒 Assigned
-
-                                        </span>
-
-                                    {% endif %}
-
+                                <div class="min-w-0 flex-1">
+                                    <p class="truncate text-sm font-semibold text-white">{{ selected_batch.batch_name }}</p>
+                                    <p class="mt-1 text-xs text-slate-400">Published batch selected</p>
                                 </div>
+                                <span class="shrink-0 rounded-full border border-emerald-400/20 bg-emerald-400/[0.08] px-2.5 py-1 text-[10px] font-semibold text-emerald-300">Selected</span>
+                            </div>
+                        {% endif %}
+                    </div>
+                </section>
 
-                                {% if subject.id in assigned_subject_ids %}
+                <!-- Subject assignment form -->
+                <form id="assignment-form" method="POST" class="min-w-0 xl:flex-1 xl:min-h-0 xl:overflow-hidden">
+                    {% csrf_token %}
+                    <input type="hidden" name="batch" value="{% if selected_batch %}{{ selected_batch.id }}{% endif %}">
 
-                                    <p class="mt-2 text-xs text-emerald-300">
+                    <section class="neo-subject-section flex min-h-0 flex-col overflow-hidden rounded-2xl border border-slate-800 bg-[#081426] shadow-xl shadow-black/20 xl:h-full">
+                        <div class="flex flex-col gap-3 border-b border-slate-800/90 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+                            <div class="flex items-center gap-3">
+                                <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-cyan-400/20 bg-cyan-400/10 text-cyan-300">
+                                    <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                        <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16H6.5A2.5 2.5 0 0 0 4 21V5.5ZM4 5.5V21" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                </span>
+                                <div>
+                                    <h2 class="text-sm font-semibold text-white">Available Subjects</h2>
+                                    <p class="mt-0.5 text-xs text-slate-400">Select new subjects to assign.</p>
+                                </div>
+                            </div>
+                            <span class="inline-flex w-fit items-center gap-2 rounded-full border border-cyan-400/20 bg-cyan-400/[0.07] px-3 py-1.5 text-[11px] font-semibold text-cyan-200">
+                                <span class="h-1.5 w-1.5 rounded-full bg-cyan-300"></span>
+                                Published subjects
+                            </span>
+                        </div>
 
-                                        Already assigned to this teacher.
-                                        Removal is available only from
-                                        <strong>View Subjects</strong>.
+                        <div class="flex min-h-0 flex-col p-3 sm:p-4 xl:flex-1 xl:overflow-hidden">
+{% if selected_batch %}
+                                <div class="neo-subject-list grid gap-2.5 sm:grid-cols-2 xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:pr-1 2xl:grid-cols-2">
+                                    {% for subject in subjects %}
+                                        <label class="group flex min-w-0 items-center gap-2.5 rounded-xl border p-2.5 transition
+                                            {% if subject.id in assigned_subject_ids %}
+                                                cursor-not-allowed border-emerald-400/30 bg-emerald-400/[0.07]
+                                            {% else %}
+                                                cursor-pointer border-slate-700/90 bg-slate-900/65 hover:border-cyan-400/50 hover:bg-cyan-400/[0.04]
+                                            {% endif %}">
+                                            {% if subject.id in assigned_subject_ids %}
+                                                <input type="checkbox" checked disabled class="h-4 w-4 shrink-0 cursor-not-allowed accent-emerald-400">
+                                                <input type="hidden" name="subjects" value="{{ subject.id }}" data-assigned-subject="true">
+                                            {% else %}
+                                                <input type="checkbox" name="subjects" value="{{ subject.id }}" class="subject-checkbox h-4 w-4 shrink-0 accent-cyan-400" data-new-subject="true">
+                                            {% endif %}
 
-                                    </p>
+                                            <span class="relative h-10 w-10 shrink-0 overflow-hidden rounded-lg border p-0.5 shadow-sm
+                                                {% if subject.id in assigned_subject_ids %}
+                                                    border-emerald-400/40 bg-emerald-400/10
+                                                {% else %}
+                                                    border-slate-700 bg-slate-800 group-hover:border-cyan-400/50
+                                                {% endif %}">
+                                                {% if subject.subject_thumbnail %}
+                                                    <img src="{{ subject.subject_thumbnail.url }}"
+                                                         alt="{{ subject.subject_name }} thumbnail"
+                                                         loading="lazy"
+                                                         class="h-full w-full rounded-lg object-cover"
+                                                         onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                                    <span class="hidden h-full w-full items-center justify-center rounded-lg bg-slate-800 text-cyan-300" aria-hidden="true">
+                                                        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none"><path d="M5 4.5A2.5 2.5 0 0 1 7.5 2H20v17H7.5A2.5 2.5 0 0 0 5 21V4.5ZM5 5v16" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                                    </span>
+                                                {% else %}
+                                                    <span class="flex h-full w-full items-center justify-center rounded-lg bg-slate-800 text-cyan-300" aria-hidden="true">
+                                                        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none"><path d="M5 4.5A2.5 2.5 0 0 1 7.5 2H20v17H7.5A2.5 2.5 0 0 0 5 21V4.5ZM5 5v16" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                                    </span>
+                                                {% endif %}
+                                            </span>
 
-                                {% else %}
+                                            <span class="min-w-0 flex-1">
+                                                <span class="block break-words text-sm font-semibold leading-5 text-slate-100">{{ subject.subject_name }}</span>
+                                                {% if subject.id in assigned_subject_ids %}
+                                                    <span class="mt-1 inline-flex items-center gap-1 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-emerald-300">
+                                                        <svg class="h-3 w-3" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M8 10V7a4 4 0 1 1 8 0v3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+                                                        Assigned
+                                                    </span>
+                                                    <span class="mt-1 block text-[11px] leading-4 text-emerald-200/80">Already assigned to this teacher.</span>
+                                                {% else %}
+                                                    <span class="mt-1 block text-[11px] leading-4 text-slate-400">Available to assign</span>
+                                                {% endif %}
+                                            </span>
+                                        </label>
+                                    {% empty %}
+                                        <div class="col-span-full rounded-xl border border-dashed border-slate-700 px-5 py-10 text-center">
+                                            <span class="mx-auto flex h-11 w-11 items-center justify-center rounded-xl bg-slate-800 text-slate-400">
+                                                <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 4.5A2.5 2.5 0 0 1 7.5 2H20v17H7.5A2.5 2.5 0 0 0 5 21V4.5ZM5 5v16" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                            </span>
+                                            <h3 class="mt-3 text-sm font-semibold text-slate-200">No published subjects</h3>
+                                            <p class="mt-1 text-xs text-slate-500">There are no published subjects available in this batch.</p>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <div class="rounded-xl border border-dashed border-slate-700 px-5 py-12 text-center">
+                                    <span class="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl border border-cyan-400/15 bg-cyan-400/[0.06] text-cyan-300">
+                                        <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m12 3 9 5-9 5-9-5 9-5ZM3 12l9 5 9-5M3 16l9 5 9-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                    </span>
+                                    <h3 class="mt-3 text-sm font-semibold text-slate-200">Select a batch first</h3>
+                                    <p class="mx-auto mt-1 max-w-xs text-xs leading-5 text-slate-500">Choose a published batch above to view its available subjects.</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </section>
+                </form>
+            </main>
 
-                                    <p class="mt-2 text-xs text-slate-400">
+            <!-- RIGHT: LIVE ASSIGNMENT SUMMARY -->
+            <aside class="neo-summary-card h-auto min-w-0 lg:col-span-2 xl:col-span-1">
+                <section class="neo-summary-section min-h-0 overflow-visible rounded-2xl border border-cyan-900/70 bg-gradient-to-b from-[#0b1930] to-[#071020] shadow-xl shadow-black/20">
+                    <div class="flex items-center gap-3 border-b border-slate-800/90 px-5 py-4">
+                        <span class="flex h-10 w-10 items-center justify-center rounded-xl border border-cyan-400/20 bg-cyan-400/10 text-cyan-300">
+                            <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                <path d="M7 3h7l5 5v13H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2ZM14 3v5h5M9 13h6M9 17h6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </span>
+                        <div>
+                            <h2 class="text-sm font-semibold text-white">Assignment Summary</h2>
+                            <p class="mt-0.5 text-xs text-slate-400">Review before saving</p>
+                        </div>
+                    </div>
 
-                                        Available to assign.
+                    <div class="flex flex-col p-4">
+                        <div class="flex items-center gap-4 rounded-xl border border-slate-800/80 bg-slate-950/40 p-4">
+                            <div class="relative flex h-[76px] w-[76px] shrink-0 items-center justify-center rounded-full border-[7px] border-cyan-400/80 bg-slate-900 text-2xl font-bold text-white shadow-lg shadow-cyan-950/30">
+                                <span id="summary-total">{{ assigned_subject_ids|length }}</span>
+                            </div>
+                            <div class="min-w-0">
+                                <p class="text-sm font-semibold text-white">Subjects selected</p>
+                                <p class="mt-1 text-xs leading-5 text-slate-400">Already assigned plus new selections</p>
+                            </div>
+                        </div>
 
-                                    </p>
+                        <div class="my-3 h-px shrink-0 bg-slate-800"></div>
 
-                                {% endif %}
-
+                        <div class="neo-summary-scroll space-y-3">
+                            <div class="flex items-start gap-3 rounded-xl p-2">
+                                <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-violet-400/10 text-violet-300">
+                                    <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m12 3 9 5-9 5-9-5 9-5ZM3 12l9 5 9-5M3 16l9 5 9-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                </span>
+                                <div class="min-w-0">
+                                    <p class="text-xs text-slate-400">Selected batch</p>
+                                    <p id="summary-batch" class="mt-1 break-words text-sm font-semibold text-slate-100">{% if selected_batch %}{{ selected_batch.batch_name }}{% else %}None selected{% endif %}</p>
+                                </div>
                             </div>
 
-                        </label>
+                            <div class="flex items-start gap-3 rounded-xl p-2">
+                                <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-400/10 text-emerald-300">
+                                    <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m5 12 4 4L19 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                </span>
+                                <div class="min-w-0 flex-1">
+                                    <p class="text-xs text-slate-400">Already assigned</p>
+                                    <p id="summary-assigned" class="mt-1 text-sm font-semibold text-slate-100">{{ assigned_subject_ids|length }} subject{{ assigned_subject_ids|length|pluralize }}</p>
+                                </div>
+                            </div>
 
-                    {% empty %}
-
-                        <div class="col-span-full py-12 text-center">
-
-                            <h3 class="text-lg font-semibold text-slate-300">
-
-                                No Published Subjects
-
-                            </h3>
-
-                            <p class="mt-2 text-slate-500">
-
-                                There are no published subjects available in
-                                this batch.
-
-                            </p>
-
+                            <div class="flex items-start gap-3 rounded-xl p-2">
+                                <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-400/10 text-amber-300">
+                                    <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 8v4l2.5 2.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                </span>
+                                <div class="min-w-0 flex-1">
+                                    <p class="text-xs text-slate-400">New subjects to assign</p>
+                                    <p id="summary-new" class="mt-1 text-sm font-semibold text-slate-100">0 subjects</p>
+                                </div>
+                            </div>
                         </div>
 
-                    {% endfor %}
-
-                </div>
-
-            {% else %}
-
-                <div class="py-12 text-center">
-
-                    <h3 class="text-lg font-semibold text-slate-300">
-
-                        No Batch Selected
-
-                    </h3>
-
-                    <p class="mt-2 text-slate-500">
-
-                        Please select a batch to load its available subjects.
-
-                    </p>
-
-                </div>
-
-            {% endif %}
+                        <div class="mt-3 shrink-0 space-y-2">
+                            <button type="submit" form="assignment-form"
+                                    {% if not selected_batch %}disabled{% endif %}
+                                    class="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500 to-teal-400 px-4 py-3.5 text-sm font-bold text-slate-950 shadow-lg shadow-cyan-950/30 transition hover:brightness-110 focus:outline-none focus:ring-2 focus:ring-cyan-300/60 disabled:cursor-not-allowed disabled:opacity-40">
+                                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM20 8v6m3-3h-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                                Assign Batch &amp; Subjects
+                            </button>
+                            <a href="{% url 'admin_teachers' %}"
+                               class="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-slate-700 bg-slate-900/80 px-4 py-3 text-sm font-semibold text-slate-300 transition hover:border-slate-600 hover:bg-slate-800">
+                                Cancel
+                            </a>
+                        </div>
+                    </div>
+                </section>
+            </aside>
 
         </div>
-
     </div>
-<!-- ================= ACTION BUTTONS ================= -->
-
-<div
-    class="
-        mt-8
-        flex
-        flex-col
-        gap-4
-        sm:flex-row
-        sm:justify-end
-    ">
-
-    <a
-        href="{% url 'admin_teachers' %}"
-        class="
-            inline-flex
-            items-center
-            justify-center
-            rounded-xl
-            border
-            border-slate-700
-            bg-slate-900
-            px-8
-            py-4
-            font-medium
-            text-slate-300
-            transition
-            hover:bg-slate-800
-            hover:border-slate-600
-        ">
-
-        Cancel
-
-    </a>
-
-    <button
-        type="submit"
-        class="
-            inline-flex
-            items-center
-            justify-center
-            rounded-xl
-            bg-cyan-600
-            px-8
-            py-4
-            font-semibold
-            text-white
-            transition
-            hover:bg-cyan-700
-        ">
-
-        Assign Batch & Subjects
-
-    </button>
-
 </div>
 
-</form>
+<script>
+(function () {
+    "use strict";
 
-</div>
+    const form = document.getElementById("assignment-form");
+    if (!form) return;
 
-</div>
+    const newCheckboxes = Array.from(form.querySelectorAll("[data-new-subject]"));
+    const assignedInputs = Array.from(form.querySelectorAll("[data-assigned-subject]"));
+    const totalElement = document.getElementById("summary-total");
+    const newElement = document.getElementById("summary-new");
+    const assignedElement = document.getElementById("summary-assigned");
 
-</div>
+    function updateAssignmentSummary() {
+        const newCount = newCheckboxes.filter((checkbox) => checkbox.checked).length;
+        const assignedCount = assignedInputs.length;
+
+        if (totalElement) totalElement.textContent = String(assignedCount + newCount);
+        if (newElement) newElement.textContent = newCount + (newCount === 1 ? " subject" : " subjects");
+        if (assignedElement) assignedElement.textContent = assignedCount + (assignedCount === 1 ? " subject" : " subjects");
+    }
+
+    newCheckboxes.forEach((checkbox) => checkbox.addEventListener("change", updateAssignmentSummary));
+    updateAssignmentSummary();
+})();
+</script>
 <script src="{% static 'admins/js/assign_batch.js' %}"></script>
 {% endblock %}

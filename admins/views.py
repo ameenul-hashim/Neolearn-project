@@ -3,6 +3,7 @@ from django.contrib.auth import authenticate,login,logout
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.cache import cache_control
 from django.contrib import messages
+from courses.models import CourseChapter
 import logging
 import re
 from datetime import date, datetime, timedelta
@@ -2171,6 +2172,7 @@ def admin_teacher_assignments(request, teacher_id):
     )
 
 
+
 @login_required(login_url="admin_signin")
 @admin_required
 @cache_control(no_cache=True, must_revalidate=True, no_store=True)
@@ -2196,23 +2198,36 @@ def admin_view_teacher_subjects(request, teacher_id, batch_id):
         .order_by("subject__subject_name")
     )
 
+    # Keep the existing teacher count unchanged.
     for assignment in assigned_subjects:
-
         assignment.teacher_count = TeacherSubject.objects.filter(
             subject=assignment.subject,
             is_active=True,
         ).count()
 
+        # Count chapters for this particular subject in this batch.
+        assignment.chapter_count = CourseChapter.objects.filter(
+            batch=batch,
+            subject=assignment.subject,
+        ).count()
+
     subject_count = assigned_subjects.count()
 
+    # Keep the existing batch teacher count unchanged.
     batch_teacher_count = TeacherBatch.objects.filter(
         batch=batch,
         is_active=True,
     ).count()
 
+    # Keep the existing published-subject count unchanged.
     published_subject_count = Subject.objects.filter(
         batch=batch,
         subject_status="published",
+    ).count()
+
+    # Count all chapters belonging to this batch.
+    total_chapter_count = CourseChapter.objects.filter(
+        batch=batch,
     ).count()
 
     context = {
@@ -2222,6 +2237,7 @@ def admin_view_teacher_subjects(request, teacher_id, batch_id):
         "subject_count": subject_count,
         "batch_teacher_count": batch_teacher_count,
         "published_subject_count": published_subject_count,
+        "total_chapter_count": total_chapter_count,
     }
 
     return render(
@@ -2229,6 +2245,7 @@ def admin_view_teacher_subjects(request, teacher_id, batch_id):
         "admins/teachers/view_subjects.html",
         context,
     )
+
 @login_required(login_url="admin_signin")
 @admin_required
 @require_POST

@@ -1,1055 +1,465 @@
 {% extends "admins/admin_base.html" %}
 {% load static %}
 
-{% block title %}
-View Assigned Subjects
-{% endblock %}
+{% block title %}View Assigned Subjects | NeoLearn{% endblock %}
 
 {% block admin_content %}
+<style>
+    .vas-page {
+        --vas-cyan: #22d3ee;
+        --vas-blue: #38bdf8;
+        --vas-violet: #a855f7;
+        --vas-green: #34d399;
+        color: #eaf4ff;
+        min-height: calc(100vh - 68px);
+        background:
+            radial-gradient(ellipse at 90% 7%, rgba(76, 29, 149, .19), transparent 32%),
+            radial-gradient(ellipse at 12% 52%, rgba(8, 145, 178, .09), transparent 35%),
+            #020817;
+        padding: 24px clamp(14px, 2vw, 30px) 38px;
+    }
+    .vas-shell { width: 100%; max-width: 1800px; margin: 0 auto; }
+    .vas-breadcrumb { display:flex; flex-wrap:wrap; align-items:center; gap:9px; margin-bottom:17px; font-size:12px; color:#7891b5; }
+    .vas-breadcrumb a { color:#8da8cc; text-decoration:none; transition:color .2s; }
+    .vas-breadcrumb a:hover { color:#22d3ee; }
+    .vas-breadcrumb .current { color:#22d3ee; font-weight:700; }
+    .vas-page-title { margin:0; font-size:clamp(26px, 2.5vw, 36px); line-height:1.15; font-weight:850; letter-spacing:-.04em; color:#f8fbff; }
+    .vas-page-title span { background:linear-gradient(95deg,#22d3ee 8%,#3b82f6 55%,#a855f7 100%); -webkit-background-clip:text; background-clip:text; color:transparent; }
+    .vas-subtitle { margin-top:8px; color:#8297b8; font-size:13px; }
+    .vas-top-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:18px; margin-top:23px; }
+    .vas-summary-card { position:relative; overflow:hidden; min-width:0; padding:19px; border:1px solid rgba(56,189,248,.23); border-radius:18px; background:linear-gradient(125deg,rgba(8,24,49,.98),rgba(4,13,31,.97) 58%,rgba(39,16,78,.56)); box-shadow:0 14px 36px rgba(0,0,0,.22); }
+    .vas-summary-card:before { content:""; position:absolute; width:190px; height:190px; right:-90px; top:-110px; border-radius:50%; background:rgba(34,211,238,.09); filter:blur(4px); pointer-events:none; }
+    .vas-summary-main { display:flex; align-items:center; gap:16px; min-width:0; }
+    .vas-avatar { width:78px; height:78px; flex:0 0 78px; border-radius:50%; object-fit:cover; border:2px solid #22d3ee; box-shadow:0 0 0 5px rgba(34,211,238,.08),0 0 22px rgba(34,211,238,.14); }
+    .vas-avatar-fallback { display:flex; align-items:center; justify-content:center; color:white; font-size:25px; font-weight:800; background:linear-gradient(135deg,#0891b2,#4f46e5); }
+    .vas-summary-title { margin:0; font-size:clamp(17px,1.5vw,22px); line-height:1.25; font-weight:800; color:#f8fbff; overflow-wrap:anywhere; }
+    .vas-summary-sub { margin-top:5px; font-size:12px; color:#8ea5c8; }
+    .vas-status { display:inline-flex; align-items:center; gap:7px; margin-top:10px; padding:5px 10px; border-radius:999px; border:1px solid rgba(34,211,238,.18); background:rgba(8,145,178,.13); color:#67e8f9; font-size:10px; font-weight:800; letter-spacing:.035em; }
+    .vas-status-dot { width:6px; height:6px; border-radius:50%; background:#34d399; box-shadow:0 0 9px rgba(52,211,153,.8); }
+    .vas-batch-image { width:126px; height:86px; flex:0 0 126px; object-fit:cover; border-radius:13px; border:1px solid rgba(129,140,248,.28); }
+    .vas-batch-fallback { display:flex; align-items:center; justify-content:center; color:#67e8f9; background:linear-gradient(135deg,#0e7490,#312e81); font-size:24px; }
+    .vas-batch-line { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; min-width:0; }
+    .vas-batch-name { margin:0; font-size:clamp(17px,1.5vw,22px); font-weight:800; line-height:1.3; color:#f8fbff; overflow-wrap:anywhere; }
+    .vas-batch-tag { flex-shrink:0; padding:5px 10px; border-radius:999px; border:1px solid rgba(168,85,247,.55); background:rgba(109,40,217,.2); color:#d8b4fe; font-size:10px; font-weight:800; letter-spacing:.04em; }
+    .vas-batch-description { margin-top:7px; color:#8297b8; font-size:11px; line-height:1.5; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+    .vas-stat-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; margin-top:17px; }
+    .vas-stat { display:flex; align-items:center; gap:11px; min-width:0; padding:11px 12px; border-radius:12px; background:rgba(7,31,59,.85); border:1px solid rgba(69,111,166,.12); }
+    .vas-stat-icon { width:43px; height:43px; display:flex; flex:0 0 43px; align-items:center; justify-content:center; border-radius:11px; background:rgba(2,132,199,.18); color:#38bdf8; }
+    .vas-stat-icon.green { background:rgba(5,150,105,.17); color:#34d399; }
+    .vas-stat-icon.violet { background:rgba(124,58,237,.19); color:#c084fc; }
+    .vas-stat-icon.amber { background:rgba(217,119,6,.16); color:#fbbf24; }
+    .vas-stat-icon svg { width:23px; height:23px; }
+    .vas-stat-label { font-size:9px; line-height:1.35; text-transform:uppercase; letter-spacing:.07em; color:#8ba4c8; font-weight:750; }
+    .vas-stat-value { margin-top:3px; font-size:25px; line-height:1; font-weight:850; color:#22d3ee; }
+    .vas-stat-value.green { color:#34d399; }
+    .vas-stat-value.amber { color:#fbbf24; }
+    .vas-section-head { display:flex; align-items:flex-end; justify-content:space-between; gap:14px; margin:30px 2px 17px; }
+    .vas-section-title { margin:0; font-size:clamp(22px,2vw,29px); font-weight:850; letter-spacing:-.03em; color:#f8fbff; }
+    .vas-section-title span { color:#22d3ee; }
+    .vas-section-caption { margin-top:5px; font-size:12px; color:#7891b5; }
+    .vas-count-pill { display:inline-flex; align-items:center; gap:7px; white-space:nowrap; border:1px solid rgba(34,211,238,.2); background:rgba(8,145,178,.1); padding:7px 11px; border-radius:999px; color:#67e8f9; font-size:11px; font-weight:800; }
+    .vas-subject-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:14px; align-items:stretch; }
+    .vas-subject-card { --accent:#a855f7; --accent-rgb:168,85,247; position:relative; display:flex; flex-direction:column; min-width:0; overflow:hidden; border:1px solid rgba(var(--accent-rgb),.78); border-radius:17px; background:linear-gradient(180deg,rgba(10,22,47,.98),rgba(3,10,27,.99)); box-shadow:0 0 0 1px rgba(var(--accent-rgb),.06),0 12px 26px rgba(0,0,0,.25); transition:transform .22s ease,border-color .22s ease,box-shadow .22s ease; cursor:pointer; outline:none; }
+    .vas-subject-card:nth-child(4n+2) { --accent:#0ea5e9; --accent-rgb:14,165,233; }
+    .vas-subject-card:nth-child(4n+3) { --accent:#f59e0b; --accent-rgb:245,158,11; }
+    .vas-subject-card:nth-child(4n+4) { --accent:#14b8a6; --accent-rgb:20,184,166; }
+    .vas-subject-card:hover,.vas-subject-card:focus-visible { transform:none; border-color:var(--accent); box-shadow:0 0 0 1px rgba(var(--accent-rgb),.22),0 10px 24px rgba(var(--accent-rgb),.11); }
+    .vas-subject-image-wrap { position:relative; height:156px; overflow:hidden; isolation:isolate; border-radius:16px 16px 0 0; background:linear-gradient(135deg,rgba(var(--accent-rgb),.16),#061027); }
+    .vas-subject-image { width:100%; height:100%; display:block; object-fit:cover; object-position:center; transform:none !important; transition:filter .18s ease; }
+    .vas-subject-card:hover .vas-subject-image { transform:none !important; filter:brightness(1.035); }
+    .vas-image-shade { position:absolute; inset:0; background:linear-gradient(180deg,rgba(2,6,23,.04) 20%,rgba(2,6,23,.12) 52%,rgba(2,6,23,.92) 100%); pointer-events:none; }
+    .vas-subject-tag { position:absolute; top:11px; left:11px; padding:5px 10px; border-radius:999px; border:1px solid rgba(var(--accent-rgb),.75); background:rgba(2,8,23,.76); color:#f4f8ff; font-size:9px; font-weight:850; letter-spacing:.07em; backdrop-filter:blur(8px); }
+    .vas-open-arrow { position:absolute; right:11px; bottom:11px; width:39px; height:39px; display:flex; align-items:center; justify-content:center; border-radius:50%; border:1px solid var(--accent); background:rgba(2,8,23,.84); color:#f8fbff; box-shadow:0 0 17px rgba(var(--accent-rgb),.22); transition:background .2s,transform .2s; }
+    .vas-open-arrow svg { width:19px; height:19px; }
+    .vas-subject-card:hover .vas-open-arrow { background:var(--accent); transform:none; }
+    .vas-subject-body { display:flex; flex:1; flex-direction:column; padding:13px; }
+    .vas-subject-name { margin:0; min-height:25px; color:#f7faff; font-size:17px; line-height:1.35; font-weight:850; letter-spacing:-.02em; overflow-wrap:anywhere; }
+    .vas-subject-mini-label { margin-top:4px; color:#7189ad; font-size:10px; }
+    .vas-subject-stats { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin-top:13px; }
+    .vas-mini-stat { display:flex; align-items:center; gap:8px; min-width:0; padding:9px 8px; border-radius:10px; background:rgba(var(--accent-rgb),.075); border:1px solid rgba(var(--accent-rgb),.13); }
+    .vas-mini-icon { display:flex; align-items:center; justify-content:center; width:29px; height:29px; flex:0 0 29px; border-radius:8px; background:rgba(var(--accent-rgb),.15); color:var(--accent); }
+    .vas-mini-icon svg { width:17px; height:17px; }
+    .vas-mini-label { font-size:8px; text-transform:uppercase; letter-spacing:.04em; color:#8da4c6; font-weight:750; line-height:1.25; }
+    .vas-mini-value { margin-top:3px; font-size:19px; line-height:1; font-weight:850; color:#f8fbff; }
+    .vas-card-footer { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:13px; padding-top:11px; border-top:1px solid rgba(117,145,186,.12); }
+    .vas-manage-hint { color:#8da4c6; font-size:10px; font-weight:700; }
+    .vas-remove-btn { display:inline-flex; align-items:center; justify-content:center; gap:6px; min-height:34px; padding:7px 10px; border-radius:9px; border:1px solid rgba(248,113,113,.35); background:rgba(127,29,29,.18); color:#fca5a5; font-size:10px; font-weight:800; transition:all .18s ease; cursor:pointer; }
+    .vas-remove-btn:hover { border-color:#f87171; background:#dc2626; color:white; box-shadow:0 5px 16px rgba(220,38,38,.2); }
+    .vas-remove-btn:focus-visible { outline:2px solid #fca5a5; outline-offset:2px; }
+    .vas-remove-btn svg { width:14px; height:14px; flex:0 0 14px; }
+    .vas-empty { padding:55px 20px; text-align:center; border:1px dashed rgba(100,116,139,.45); border-radius:18px; background:rgba(7,17,37,.75); }
+    .vas-empty-icon { display:flex; align-items:center; justify-content:center; width:65px; height:65px; margin:0 auto; border-radius:18px; border:1px solid rgba(34,211,238,.2); background:rgba(8,145,178,.12); color:#67e8f9; }
+    .vas-empty-icon svg { width:29px; height:29px; }
+    .vas-empty h3 { margin:17px 0 0; font-size:20px; font-weight:850; color:#f8fbff; }
+    .vas-empty p { max-width:420px; margin:8px auto 0; color:#8297b8; font-size:13px; line-height:1.6; }
+    .vas-modal { position:fixed; inset:0; z-index:9999; display:none; align-items:center; justify-content:center; padding:18px; background:rgba(1,5,16,.82); backdrop-filter:blur(9px); }
+    .vas-modal.is-open { display:flex; }
+    .vas-modal-panel { width:100%; max-width:620px; max-height:92vh; overflow:auto; border:1px solid rgba(248,113,113,.28); border-radius:20px; background:linear-gradient(145deg,#0b1730,#030918 70%); box-shadow:0 25px 90px rgba(0,0,0,.6),0 0 35px rgba(220,38,38,.07); }
+    .vas-modal-header { display:flex; align-items:flex-start; gap:13px; padding:21px 22px 17px; border-bottom:1px solid rgba(148,163,184,.12); }
+    .vas-modal-warning-icon { display:flex; align-items:center; justify-content:center; width:43px; height:43px; flex:0 0 43px; border-radius:13px; border:1px solid rgba(248,113,113,.24); background:rgba(220,38,38,.13); color:#f87171; }
+    .vas-modal-warning-icon svg { width:22px; height:22px; }
+    .vas-modal-title { margin:1px 0 0; color:#fff; font-size:19px; line-height:1.3; font-weight:850; }
+    .vas-modal-description { margin-top:5px; color:#91a4c1; font-size:12px; line-height:1.55; }
+    .vas-modal-body { padding:18px 22px 20px; }
+    .vas-warning-note { padding:13px 14px; border:1px solid rgba(251,191,36,.22); border-radius:12px; background:rgba(245,158,11,.075); color:#f7dca0; font-size:12px; line-height:1.65; }
+    .vas-warning-note strong { display:block; margin-bottom:3px; color:#fbbf24; font-size:12px; }
+    .vas-modal-info-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; margin-top:14px; }
+    .vas-modal-info { min-width:0; padding:12px; border:1px solid rgba(100,116,139,.18); border-radius:12px; background:rgba(15,31,56,.62); }
+    .vas-modal-info-label { margin-bottom:6px; color:#7f96b8; font-size:9px; text-transform:uppercase; letter-spacing:.09em; font-weight:800; }
+    .vas-modal-info-value { color:#edf5ff; font-size:12px; font-weight:750; overflow-wrap:anywhere; }
+    .vas-modal-info-value.subject { color:#6ee7b7; }
+    .vas-confirm-wrap { margin-top:15px; }
+    .vas-confirm-label { display:block; margin-bottom:7px; color:#c6d4e8; font-size:11px; font-weight:800; }
+    .vas-confirm-input { width:100%; height:43px; padding:0 12px; border:1px solid rgba(100,116,139,.38); border-radius:11px; outline:none; background:#050d1e; color:#f8fbff; font-size:13px; transition:border-color .2s,box-shadow .2s; }
+    .vas-confirm-input:focus { border-color:#f87171; box-shadow:0 0 0 3px rgba(248,113,113,.1); }
+    .vas-confirm-help { margin-top:6px; color:#7186a6; font-size:10px; line-height:1.5; }
+    .vas-modal-footer { display:flex; justify-content:flex-end; gap:9px; padding:15px 22px 19px; border-top:1px solid rgba(148,163,184,.12); }
+    .vas-modal-btn { display:inline-flex; align-items:center; justify-content:center; gap:7px; min-height:40px; padding:0 16px; border-radius:10px; font-size:12px; font-weight:800; cursor:pointer; transition:all .18s; }
+    .vas-modal-cancel { border:1px solid rgba(100,116,139,.36); background:rgba(30,41,59,.55); color:#c5d2e5; }
+    .vas-modal-cancel:hover { background:#26364f; color:white; }
+    .vas-modal-submit { border:1px solid #dc2626; background:linear-gradient(135deg,#ef4444,#b91c1c); color:white; box-shadow:0 6px 16px rgba(220,38,38,.15); }
+    .vas-modal-submit:hover:not(:disabled) { filter:brightness(1.08); transform:translateY(-1px); }
+    .vas-modal-submit:disabled { cursor:not-allowed; opacity:.38; box-shadow:none; }
+    @media (max-width:1250px) { .vas-subject-grid { grid-template-columns:repeat(3,minmax(0,1fr)); } }
+    @media (max-width:900px) { .vas-top-grid { grid-template-columns:1fr; } .vas-subject-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+    @media (max-width:560px) {
+        .vas-page { padding:18px 12px 28px; }
+        .vas-summary-card { padding:14px; border-radius:15px; }
+        .vas-avatar { width:62px; height:62px; flex-basis:62px; }
+        .vas-batch-image { width:94px; height:74px; flex-basis:94px; }
+        .vas-stat { padding:9px 8px; gap:8px; }
+        .vas-stat-icon { width:35px; height:35px; flex-basis:35px; }
+        .vas-stat-label { font-size:8px; }
+        .vas-stat-value { font-size:22px; }
+        .vas-subject-grid { grid-template-columns:1fr; gap:12px; }
+        .vas-subject-card { display:grid; grid-template-columns:112px minmax(0,1fr); min-height:154px; }
+        .vas-subject-image-wrap { height:100%; min-height:154px; }
+        .vas-subject-body { padding:11px; }
+        .vas-subject-name { font-size:15px; }
+        .vas-subject-stats { margin-top:10px; gap:6px; }
+        .vas-mini-stat { padding:7px 5px; gap:5px; }
+        .vas-mini-icon { width:25px; height:25px; flex-basis:25px; }
+        .vas-mini-label { font-size:7px; }
+        .vas-mini-value { font-size:17px; }
+        .vas-card-footer { margin-top:10px; padding-top:8px; }
+        .vas-manage-hint { display:none; }
+        .vas-remove-btn { min-height:30px; padding:6px 8px; font-size:9px; }
+        .vas-modal-info-grid { grid-template-columns:1fr; }
+        .vas-modal-header,.vas-modal-body { padding-left:16px; padding-right:16px; }
+        .vas-modal-footer { padding:13px 16px 16px; }
+        .vas-modal-footer .vas-modal-btn { flex:1; }
+    }
+    @media (prefers-reduced-motion:reduce) { .vas-subject-card,.vas-subject-image,.vas-open-arrow,.vas-remove-btn { transition:none; } }
+</style>
 
-<div class="min-h-screen bg-slate-950 px-4 py-6">
+<div class="vas-page">
+    <div class="vas-shell">
+        <nav class="vas-breadcrumb" aria-label="Breadcrumb">
+            <a href="{% url 'admin_teachers' %}">Teachers</a>
+            <span aria-hidden="true">/</span>
+            <a href="{% url 'admin_teacher_assignments' teacher.id %}">Batch Management</a>
+            <span aria-hidden="true">/</span>
+            <span class="current" aria-current="page">Subject Management</span>
+        </nav>
 
-    <div class="mx-auto max-w-[1800px]">
+        <header>
+            <h1 class="vas-page-title">View Assigned <span>Subjects</span></h1>
+        </header>
 
-        <!-- ====================================================== -->
-        <!-- PAGE HEADER -->
-        <!-- ====================================================== -->
-
-        <div class="mb-8">
-
-            <a
-                href="{% url 'admin_teacher_assignments' teacher.id %}"
-                class="inline-flex items-center gap-2 text-cyan-400 transition hover:text-cyan-300">
-
-                <svg xmlns="http://www.w3.org/2000/svg"
-                    class="h-5 w-5"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor">
-
-                    <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M15.75 19.5L8.25 12l7.5-7.5"/>
-
-                </svg>
-
-                <span class="font-medium">
-
-                    Back to Assignments
-
-                </span>
-
-            </a>
-
-            <h1 class="mt-4 text-4xl font-bold text-white">
-
-                View Assigned Subjects
-
-            </h1>
-
-            <p class="mt-2 text-slate-400">
-
-                View all assigned subjects, manage teacher access and monitor subject ownership.
-
-            </p>
-
-        </div>
-
-
-
-        <!-- ====================================================== -->
-        <!-- TOP SUMMARY -->
-        <!-- ====================================================== -->
-
-        <div class="mb-8 grid gap-5 xl:grid-cols-2">
-
-            <!-- =========================================== -->
-            <!-- TEACHER CARD -->
-            <!-- =========================================== -->
-
-            <div
-                class="rounded-2xl border border-slate-800 bg-[#020617] p-5 shadow-lg">
-
-                <div class="flex items-center gap-5">
-
+        <section class="vas-top-grid" aria-label="Teacher and batch overview">
+            <article class="vas-summary-card">
+                <div class="vas-summary-main">
                     {% if teacher.profile_image %}
-
-                        <img
-                            src="{{ teacher.profile_image.url }}"
-                            alt="{{ teacher.full_name }}"
-                            class="h-20 w-20 rounded-full border-2 border-cyan-500 object-cover">
-
+                        <img class="vas-avatar" src="{{ teacher.profile_image.url }}" alt="{{ teacher.full_name }}">
                     {% else %}
-
-                        <div
-                            class="flex h-20 w-20 items-center justify-center rounded-full bg-cyan-600 text-3xl font-bold text-white">
-
-                            {{ teacher.initials }}
-
-                        </div>
-
+                        <div class="vas-avatar vas-avatar-fallback" aria-hidden="true">{{ teacher.initials|default:"T" }}</div>
                     {% endif %}
-
-                    <div class="flex-1">
-
-                        <h2 class="text-2xl font-bold text-white">
-
-                            {{ teacher.full_name }}
-
-                        </h2>
-
-                        <p class="mt-1 text-slate-400">
-
-                            {{ teacher.phone_number }}
-
-                        </p>
-
-                        <span
-                            class="mt-3 inline-flex rounded-full bg-cyan-500/10 px-3 py-1 text-xs font-semibold text-cyan-400">
-
-                            Active Teacher
-
+                    <div style="min-width:0;flex:1">
+                        <h2 class="vas-summary-title">{{ teacher.full_name }}</h2>
+                        <p class="vas-summary-sub">{{ teacher.phone_number|default:"Teacher account" }}</p>
+                        <span class="vas-status"><span class="vas-status-dot"></span>Active Teacher</span>
+                    </div>
+                </div>
+                <div class="vas-stat-grid">
+                    <div class="vas-stat">
+                        <span class="vas-stat-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16H6.5A2.5 2.5 0 0 0 4 21.5z"/><path d="M4 5.5v16M8 7h8M8 10h8"/></svg>
                         </span>
-
+                        <div><div class="vas-stat-label">Assigned Subjects</div><div class="vas-stat-value">{{ subject_count|default:0 }}</div></div>
                     </div>
-
+                    <div class="vas-stat">
+                        <span class="vas-stat-icon green" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M16 20v-1.5a3.5 3.5 0 0 0-3.5-3.5h-5A3.5 3.5 0 0 0 4 18.5V20"/><circle cx="10" cy="7" r="3.5"/><path d="M17 4.2a3.5 3.5 0 0 1 0 6.6M20 20v-1.5a3.5 3.5 0 0 0-2.5-3.35"/></svg>
+                        </span>
+                        <div><div class="vas-stat-label">Teachers Assigned</div><div class="vas-stat-value green">{{ batch_teacher_count|default:0 }}</div></div>
+                    </div>
                 </div>
+            </article>
 
-                <div class="mt-6 grid grid-cols-2 gap-4">
-
-                    <div
-                        class="rounded-xl bg-slate-900 p-4 text-center">
-
-                        <p class="text-xs uppercase tracking-widest text-slate-500">
-
-                            Assigned Subjects
-
-                        </p>
-
-                        <h3 class="mt-2 text-3xl font-bold text-cyan-400">
-
-                            {{ subject_count }}
-
-                        </h3>
-
-                    </div>
-
-                    <div
-                        class="rounded-xl bg-slate-900 p-4 text-center">
-
-                        <p class="text-xs uppercase tracking-widest text-slate-500">
-
-                            Teachers Assigned
-
-                        </p>
-
-                        <h3 class="mt-2 text-3xl font-bold text-emerald-400">
-
-                            {{ batch_teacher_count }}
-
-                        </h3>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-
-
-            <!-- =========================================== -->
-            <!-- BATCH CARD -->
-            <!-- =========================================== -->
-
-            <div
-                class="rounded-2xl border border-slate-800 bg-[#020617] p-5 shadow-lg">
-
-                <div class="flex gap-4">
-
+            <article class="vas-summary-card">
+                <div class="vas-summary-main">
                     {% if batch.batch_thumbnail %}
-
-                        <img
-                            src="{{ batch.batch_thumbnail.url }}"
-                            alt="{{ batch.batch_name }}"
-                            class="h-24 w-36 rounded-xl border border-slate-700 object-cover">
-
+                        <img class="vas-batch-image" src="{{ batch.batch_thumbnail.url }}" alt="{{ batch.batch_name }}">
                     {% else %}
-
-                        <img
-                            src="{% static 'admins/images/default_batch.jpg' %}"
-                            class="h-24 w-36 rounded-xl border border-slate-700 object-cover">
-
-                    {% endif %}
-
-                    <div class="flex-1">
-
-                        <h2 class="text-2xl font-bold text-white">
-
-                            {{ batch.batch_name }}
-
-                        </h2>
-
-                        <p class="mt-2 line-clamp-3 text-sm text-slate-400">
-
-                            {{ batch.batch_description }}
-
-                        </p>
-
-                    </div>
-
-                </div>
-
-                <div class="mt-6 grid grid-cols-2 gap-4">
-
-                    <div
-                        class="rounded-xl bg-slate-900 p-4 text-center">
-
-                        <p class="text-xs uppercase tracking-widest text-slate-500">
-
-                            Published Subjects
-
-                        </p>
-
-                        <h3 class="mt-2 text-3xl font-bold text-cyan-400">
-
-                            {{ published_subject_count }}
-
-                        </h3>
-
-                    </div>
-
-                    <div
-                        class="rounded-xl bg-slate-900 p-4 text-center">
-
-                        <p class="text-xs uppercase tracking-widest text-slate-500">
-
-                            Chapters
-
-                        </p>
-
-                        <h3 class="mt-2 text-3xl font-bold text-amber-400">
-
-                            0
-
-                        </h3>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-        </div>
-
-
-
-        <!-- ====================================================== -->
-        <!-- SUBJECTS HEADER -->
-        <!-- ====================================================== -->
-
-        <div class="mb-6 flex items-center justify-between">
-
-            <div>
-
-                <h2 class="text-3xl font-bold text-white">
-
-                    Assigned Subjects
-
-                </h2>
-
-                <p class="mt-2 text-slate-400">
-
-                    {{ subject_count }} Assigned Subject{{ subject_count|pluralize }}
-
-                </p>
-
-            </div>
-
-        </div>
-
-        {% if assigned_subjects %}
-
-        <div class="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-4">
-
-            {% for assignment in assigned_subjects %}
-
-<div
-    class="
-        overflow-hidden
-        rounded-2xl
-        border
-        border-slate-800
-        bg-[#020617]
-        shadow-lg
-        transition-all
-        duration-300
-        hover:-translate-y-1
-        hover:border-cyan-500
-    ">
-
-    <!-- ======================================= -->
-    <!-- SUBJECT IMAGE -->
-    <!-- ======================================= -->
-
-    <div class="relative h-36 overflow-hidden">
-
-        {% if assignment.subject.subject_thumbnail %}
-
-            <img
-                src="{{ assignment.subject.subject_thumbnail.url }}"
-                alt="{{ assignment.subject.subject_name }}"
-                class="h-full w-full object-cover">
-
-        {% else %}
-
-            <img
-                src="{% static 'admins/images/default_subject.jpg' %}"
-                alt="Subject"
-                class="h-full w-full object-cover">
-
-        {% endif %}
-
-        <div class="absolute left-3 top-3">
-
-            <span
-                class="
-                    rounded-full
-                    bg-cyan-600
-                    px-3
-                    py-1
-                    text-[11px]
-                    font-semibold
-                    text-white
-                ">
-
-                SUBJECT
-
-            </span>
-
-        </div>
-
-    </div>
-
-    <!-- ======================================= -->
-    <!-- BODY -->
-    <!-- ======================================= -->
-
-    <div class="p-4">
-
-        <h3 class="truncate text-lg font-bold text-white">
-
-            {{ assignment.subject.subject_name }}
-
-        </h3>
-
-        <p class="mt-2 line-clamp-2 text-sm leading-6 text-slate-400">
-
-            {{ assignment.subject.subject_description }}
-
-        </p>
-
-        <!-- ======================================= -->
-        <!-- STATS -->
-        <!-- ======================================= -->
-
-        <div class="mt-5 grid grid-cols-2 gap-3">
-
-            <!-- Teachers -->
-
-            <div
-                class="
-                    rounded-xl
-                    bg-slate-900
-                    p-3
-                    text-center
-                ">
-
-                <p
-                    class="
-                        text-[10px]
-                        uppercase
-                        tracking-widest
-                        text-slate-500
-                    ">
-
-                    Teachers
-
-                </p>
-
-                <h4
-                    class="
-                        mt-2
-                        text-2xl
-                        font-bold
-                        text-cyan-400
-                    ">
-
-                    {{ assignment.teacher_count }}
-
-                </h4>
-
-            </div>
-
-            <!-- Chapters -->
-
-            <div
-                class="
-                    rounded-xl
-                    bg-slate-900
-                    p-3
-                    text-center
-                ">
-
-                <p
-                    class="
-                        text-[10px]
-                        uppercase
-                        tracking-widest
-                        text-slate-500
-                    ">
-
-                    Chapters
-
-                </p>
-
-                <h4
-                    class="
-                        mt-2
-                        text-2xl
-                        font-bold
-                        text-amber-400
-                    ">
-
-                    0
-
-                </h4>
-
-            </div>
-
-        </div>
-
-        <hr class="my-5 border-slate-800">
-
-        <!-- ======================================= -->
-<!-- ACTION BUTTONS -->
-<!-- ======================================= -->
-
-<div class="flex items-center gap-2">
-
-    <!-- View Contents -->
-
-    <a
-        href="#"
-        title="View Contents"
-        class="
-            flex-1
-            inline-flex
-            items-center
-            justify-center
-            gap-2
-            rounded-xl
-            bg-cyan-600
-            px-4
-            py-2.5
-            text-sm
-            font-semibold
-            text-white
-            transition
-            hover:bg-cyan-700
-        ">
-
-        <svg xmlns="http://www.w3.org/2000/svg"
-            class="h-4 w-4"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor">
-
-            <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M2.25 12S5.25 5.25 12 5.25 21.75 12 21.75 12 18.75 18.75 12 18.75 2.25 12 2.25 12z"/>
-
-            <circle
-                cx="12"
-                cy="12"
-                r="3"/>
-
-        </svg>
-
-        View Contents
-
-    </a>
-
-    <!-- Remove Subject -->
-
-    <button
-        type="button"
-        data-id="{{ assignment.id }}"
-        data-subject="{{ assignment.subject.subject_name }}"
-        title="Remove Subject"
-        class="
-            remove-subject-btn
-            inline-flex
-            h-11
-            w-11
-            items-center
-            justify-center
-            rounded-xl
-            border
-            border-red-500
-            bg-red-500/10
-            text-red-400
-            transition
-            hover:bg-red-500
-            hover:text-white
-        ">
-
-        <svg xmlns="http://www.w3.org/2000/svg"
-            class="h-5 w-5"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor">
-
-            <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M6 7.5h12M9.75 7.5V6A2.25 2.25 0 0112 3.75A2.25 2.25 0 0114.25 6v1.5m-6.75 0V18A2.25 2.25 0 009.75 20.25h4.5A2.25 2.25 0 0016.5 18V7.5"/>
-
-        </svg>
-
-    </button>
-
-</div>
-
-</div>
-
-</div>
-
-{% endfor %}
-
-</div>
-
-{% else %}
-
-<!-- ======================================= -->
-<!-- EMPTY STATE -->
-<!-- ======================================= -->
-
-<div
-    class="
-        rounded-2xl
-        border
-        border-dashed
-        border-slate-700
-        bg-[#020617]
-        py-20
-    ">
-
-    <div class="mx-auto max-w-md text-center">
-
-        <div
-            class="
-                mx-auto
-                flex
-                h-20
-                w-20
-                items-center
-                justify-center
-                rounded-full
-                bg-slate-900
-                text-4xl
-            ">
-
-            📚
-
-        </div>
-
-        <h2 class="mt-6 text-2xl font-bold text-white">
-
-            No Subjects Assigned
-
-        </h2>
-
-        <p class="mt-3 text-slate-400 leading-7">
-
-            This teacher currently has no active subject assignments
-            for this batch.
-
-        </p>
-
-        <a
-            href="{% url 'admin_teacher_assignments' teacher.id %}"
-            class="
-                mt-8
-                inline-flex
-                items-center
-                rounded-xl
-                bg-cyan-600
-                px-6
-                py-3
-                font-semibold
-                text-white
-                transition
-                hover:bg-cyan-700
-            ">
-
-            Back to Assignments
-
-        </a>
-
-    </div>
-
-</div>
-
-{% endif %}
-
-<!-- ====================================================== -->
-<!-- REMOVE SUBJECT MODAL - CENTERED WITH REDUCED HEIGHT -->
-<!-- ====================================================== -->
-
-<div
-    id="removeSubjectModal"
-    class="fixed inset-0 z-[999] hidden items-center justify-center bg-black/80 backdrop-blur-md p-4">
-
-    <div
-        class="
-            relative
-            w-full
-            max-w-2xl
-            lg:max-w-3xl
-            overflow-hidden
-            rounded-3xl
-            border
-            border-slate-700
-            bg-[#020617]
-            shadow-[0_30px_90px_rgba(0,0,0,0.65)]
-            max-h-[90vh]
-            flex
-            flex-col
-        ">
-
-        <!-- =========================================== -->
-        <!-- HEADER - Without X button -->
-        <!-- =========================================== -->
-
-        <div
-            class="
-                flex
-                items-center
-                justify-between
-                border-b
-                border-slate-800
-                px-7
-                py-4
-                flex-shrink-0
-            ">
-
-            <div>
-
-                <h2
-                    class="text-xl font-bold text-red-400">
-
-                    Remove Subject Access
-
-                </h2>
-
-                <p
-                    class="mt-1 text-sm leading-5 text-slate-400">
-
-                    This will remove this teacher's access to the selected
-                    subject only.
-
-                </p>
-
-            </div>
-
-        </div>
-
-        <!-- =========================================== -->
-        <!-- BODY - Compact with reduced padding -->
-        <!-- =========================================== -->
-
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 p-5 overflow-y-auto flex-1">
-
-            <!-- Warning -->
-
-            <div
-                class="
-                    lg:col-span-2
-                    rounded-2xl
-                    border
-                    border-amber-500/30
-                    bg-amber-500/10
-                    p-4
-                ">
-
-                <h3
-                    class="font-semibold text-amber-300 text-sm">
-
-                    ⚠ Important Notice
-
-                </h3>
-
-                <p
-                    class="mt-2 text-sm leading-6 text-amber-100">
-
-                    Removing this assignment only removes this teacher's
-                    access.
-
-                    <br>
-
-                    Videos, Chapters, PDFs, Quizzes, Assignments and all
-                    uploaded contents remain safe and will not be deleted.
-
-                </p>
-
-            </div>
-
-            <!-- =========================================== -->
-            <!-- Teacher -->
-            <!-- =========================================== -->
-
-            <div>
-
-                <label
-                    class="
-                        mb-1.5
-                        block
-                        text-[10px]
-                        font-semibold
-                        uppercase
-                        tracking-widest
-                        text-slate-500
-                    ">
-
-                    Teacher
-
-                </label>
-
-                <div
-                    class="
-                        flex
-                        items-center
-                        gap-3
-                        rounded-2xl
-                        border
-                        border-slate-700
-                        bg-slate-900/70
-                        px-3
-                        py-2.5
-                    ">
-
-                    {% if teacher.profile_image %}
-
-                        <img
-                            src="{{ teacher.profile_image.url }}"
-                            alt="{{ teacher.full_name }}"
-                            class="h-10 w-10 rounded-full object-cover border border-slate-700">
-
-                    {% else %}
-
-                        <div
-                            class="
-                                flex
-                                h-10
-                                w-10
-                                items-center
-                                justify-center
-                                rounded-full
-                                bg-cyan-600
-                                font-bold
-                                text-white
-                                text-sm
-                            ">
-
-                            {{ teacher.initials }}
-
+                        <div class="vas-batch-image vas-batch-fallback" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 6.5 12 3l9 3.5-9 3.5z"/><path d="M3 12l9 3.5 9-3.5M3 17.5 12 21l9-3.5"/></svg>
                         </div>
-
                     {% endif %}
-
-                    <div>
-
-                        <h4 class="font-semibold text-white text-sm">
-
-                            {{ teacher.full_name }}
-
-                        </h4>
-
-                        <p class="text-xs text-slate-400">
-
-                            {{ teacher.phone_number }}
-
-                        </p>
-
+                    <div style="min-width:0;flex:1">
+                        <div class="vas-batch-line">
+                            <h2 class="vas-batch-name">{{ batch.batch_name }}</h2>
+                            <span class="vas-batch-tag">BATCH</span>
+                        </div>
+                        {% if batch.batch_description %}
+                            <p class="vas-batch-description">{{ batch.batch_description }}</p>
+                        {% else %}
+                            <p class="vas-batch-description">Manage this batch's subjects and learning content.</p>
+                        {% endif %}
                     </div>
-
                 </div>
-
-            </div>
-
-            <!-- =========================================== -->
-            <!-- Batch -->
-            <!-- =========================================== -->
-
-            <div>
-
-                <label
-                    class="
-                        mb-1.5
-                        block
-                        text-[10px]
-                        font-semibold
-                        uppercase
-                        tracking-widest
-                        text-slate-500
-                    ">
-
-                    Batch
-
-                </label>
-
-                <div
-                    class="
-                        rounded-2xl
-                        border
-                        border-slate-700
-                        bg-slate-900/70
-                        px-3
-                        py-2.5
-                    ">
-
-                    <h4
-                        class="font-semibold text-cyan-400 text-sm">
-
-                        {{ batch.batch_name }}
-
-                    </h4>
-
-                    <p
-                        class="mt-0.5 text-xs text-slate-400">
-
-                        Teacher assigned batch
-
-                    </p>
-
+                <div class="vas-stat-grid">
+                    <div class="vas-stat">
+                        <span class="vas-stat-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m12 3 9 5-9 5-9-5z"/><path d="m3 12 9 5 9-5M3 16l9 5 9-5"/></svg>
+                        </span>
+                        <div><div class="vas-stat-label">Published Subjects</div><div class="vas-stat-value">{{ published_subject_count|default:0 }}</div></div>
+                    </div>
+                    <div class="vas-stat">
+                        <span class="vas-stat-icon green" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 2.75h8l4 4V21H6z"/><path d="M14 3v5h5M9 12h6M9 16h6"/></svg>
+                        </span>
+                        <div><div class="vas-stat-label">Total Chapters</div><div class="vas-stat-value green">{{ total_chapter_count|default:0 }}</div></div>
+                    </div>
                 </div>
+            </article>
+        </section>
 
-            </div>
-
-            <!-- =========================================== -->
-            <!-- Subject -->
-            <!-- =========================================== -->
-
-            <div>
-
-                <label
-                    class="
-                        mb-1.5
-                        block
-                        text-[10px]
-                        font-semibold
-                        uppercase
-                        tracking-widest
-                        text-slate-500
-                    ">
-
-                    Subject
-
-                </label>
-
-                <div
-                    id="modalSubjectName"
-                    class="
-                        rounded-2xl
-                        border
-                        border-emerald-500/30
-                        bg-emerald-500/10
-                        px-3
-                        py-2.5
-                        font-semibold
-                        text-emerald-400
-                        text-sm
-                    ">
-
+        <section aria-labelledby="vas-subjects-heading">
+            <div class="vas-section-head">
+                <div>
+                    <h2 id="vas-subjects-heading" class="vas-section-title">Assigned <span>Subjects</span></h2>
+                    <p class="vas-section-caption">Select a subject card to open its content management area.</p>
                 </div>
-
+                <span class="vas-count-pill">{{ subject_count|default:0 }} Subject{{ subject_count|pluralize }}</span>
             </div>
 
-            <!-- =========================================== -->
-            <!-- Confirmation -->
-            <!-- =========================================== -->
+            {% if assigned_subjects %}
+                <div class="vas-subject-grid">
+                    {% for assignment in assigned_subjects %}
+                        <article
+                            class="vas-subject-card"
+                            role="link"
+                            tabindex="0"
+                            aria-label="Open content management for {{ assignment.subject.subject_name }}"
+                            data-open-url="{% url 'admin_course_builder_entry' batch_id=batch.id subject_id=assignment.subject.id %}"
+                        >
+                            <div class="vas-subject-image-wrap">
+                                {% if assignment.subject.subject_thumbnail %}
+                                    <img class="vas-subject-image" src="{{ assignment.subject.subject_thumbnail.url }}" alt="{{ assignment.subject.subject_name }}" loading="lazy">
+                                {% else %}
+                                    <div class="vas-subject-image" style="display:flex;align-items:center;justify-content:center;color:var(--accent);font-size:34px;" aria-hidden="true">
+                                        <svg viewBox="0 0 24 24" width="42" height="42" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v17H6.5A2.5 2.5 0 0 0 4 21.5z"/><path d="M4 4.5v17M8 6h8M8 9h8"/></svg>
+                                    </div>
+                                {% endif %}
+                                <div class="vas-image-shade"></div>
+                                <span class="vas-subject-tag">SUBJECT</span>
+                                <span class="vas-open-arrow" aria-hidden="true">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                                </span>
+                            </div>
 
-            <div>
+                            <div class="vas-subject-body">
+                                <h3 class="vas-subject-name">{{ assignment.subject.subject_name }}</h3>
+                                <p class="vas-subject-mini-label">Subject overview</p>
+                                <div class="vas-subject-stats">
+                                    <div class="vas-mini-stat">
+                                        <span class="vas-mini-icon" aria-hidden="true">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="7" r="3.5"/><path d="M4.5 21v-2.2a4.3 4.3 0 0 1 4.3-4.3h6.4a4.3 4.3 0 0 1 4.3 4.3V21"/></svg>
+                                        </span>
+                                        <div><div class="vas-mini-label">Teachers</div><div class="vas-mini-value">{{ assignment.teacher_count|default:0 }}</div></div>
+                                    </div>
+                                    <div class="vas-mini-stat">
+                                        <span class="vas-mini-icon" aria-hidden="true">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 3h14v18H5z"/><path d="M8 7h8M8 11h8M8 15h5"/></svg>
+                                        </span>
+                                        <div><div class="vas-mini-label">Chapters</div><div class="vas-mini-value">{{ assignment.chapter_count|default:0 }}</div></div>
+                                    </div>
+                                </div>
 
-                <label
-                    class="
-                        mb-1.5
-                        block
-                        text-[10px]
-                        font-semibold
-                        uppercase
-                        tracking-widest
-                        text-slate-500
-                    ">
-
-                    Confirm Subject Name
-
-                </label>
-
-                <input
-                    id="confirmSubjectInput"
-                    type="text"
-                    autocomplete="off"
-                    placeholder="Type subject name"
-                    class="
-                        w-full
-                        rounded-2xl
-                        border
-                        border-slate-700
-                        bg-slate-900
-                        px-3
-                        py-2.5
-                        text-white
-                        text-sm
-                        outline-none
-                        transition
-                        focus:border-red-500
-                        focus:ring-2
-                        focus:ring-red-500/20
-                    ">
-
-                <p
-                    class="mt-1.5 text-[10px] text-slate-500">
-
-                    Type the exact subject name to enable the
-                    <span class="font-semibold text-red-400">
-
-                        Remove Subject
-
-                    </span>
-
-                    button.
-
-                </p>
-
-            </div>
-
-        </div>
-
-        <!-- =========================================== -->
-        <!-- FOOTER - Compact -->
-        <!-- =========================================== -->
-
-        <div
-            class="
-                flex
-                flex-col-reverse
-                gap-2
-                border-t
-                border-slate-800
-                px-6
-                py-3.5
-                sm:flex-row
-                sm:items-center
-                sm:justify-end
-                flex-shrink-0
-            ">
-
-            <!-- Cancel -->
-
-            <button
-                type="button"
-                id="cancelRemoveSubject"
-                class="
-                    flex
-                    h-10
-                    min-w-[120px]
-                    items-center
-                    justify-center
-                    rounded-xl
-                    border
-                    border-slate-700
-                    bg-slate-900
-                    px-4
-                    text-sm
-                    font-medium
-                    text-slate-300
-                    transition-all
-                    duration-200
-                    hover:border-slate-500
-                    hover:bg-slate-800
-                    hover:text-white
-                ">
-
-                Cancel
-
-            </button>
-
-            <!-- Remove Form -->
-
-            <form
-                id="removeSubjectForm"
-                method="POST"
-                action="">
-
-                {% csrf_token %}
-
-                <button
-                    id="confirmRemoveSubjectBtn"
-                    type="submit"
-                    disabled
-                    class="
-                        flex
-                        h-10
-                        min-w-[150px]
-                        items-center
-                        justify-center
-                        rounded-xl
-                        bg-red-600
-                        px-4
-                        text-sm
-                        font-semibold
-                        text-white
-                        opacity-50
-                        transition-all
-                        duration-200
-                        hover:bg-red-700
-                        disabled:cursor-not-allowed
-                        disabled:opacity-50
-                    ">
-
-                    <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        class="mr-2 h-4 w-4"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor">
-
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M19 7H5M10 11V17M14 11V17M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2M6 7l1 12a2 2 0 002 2h6a2 2 0 002-2l1-12"/>
-
-                    </svg>
-
-                    Remove Subject
-
-                </button>
-
-            </form>
-
-        </div>
-
+                                <div class="vas-card-footer">
+                                    <span class="vas-manage-hint">Open content →</span>
+                                    <button
+                                        type="button"
+                                        class="vas-remove-btn remove-subject-btn"
+                                        data-id="{{ assignment.id }}"
+                                        data-subject="{{ assignment.subject.subject_name }}"
+                                        data-url="{% url 'admin_remove_teacher_subject' assignment.id %}"
+                                        aria-label="Remove {{ assignment.subject.subject_name }} access"
+                                        title="Remove teacher access to this subject"
+                                    >
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13M10 11v5M14 11v5"/></svg>
+                                        Remove Access
+                                    </button>
+                                </div>
+                            </div>
+                        </article>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="vas-empty">
+                    <div class="vas-empty-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v17H6.5A2.5 2.5 0 0 0 4 21.5z"/><path d="M4 4.5v17M8 6h8M8 10h8"/></svg>
+                    </div>
+                    <h3>No Subjects Assigned</h3>
+                    <p>This teacher currently has no active subject assignments for this batch. Assign a subject to make it appear here.</p>
+                </div>
+            {% endif %}
+        </section>
     </div>
-
 </div>
 
-<script src="{% static 'admins/js/view_subjects.js' %}"></script>
+<!-- Remove subject access confirmation modal -->
+<div id="removeSubjectModal" class="vas-modal" role="dialog" aria-modal="true" aria-labelledby="vas-remove-title" aria-describedby="vas-remove-description">
+    <div class="vas-modal-panel">
+        <div class="vas-modal-header">
+            <span class="vas-modal-warning-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3 2.8 19h18.4L12 3z"/><path d="M12 9v4M12 16.5h.01"/></svg>
+            </span>
+            <div>
+                <h2 id="vas-remove-title" class="vas-modal-title">Remove Subject Access?</h2>
+                <p id="vas-remove-description" class="vas-modal-description">Confirm this change before removing the teacher's access to the selected subject.</p>
+            </div>
+        </div>
+        <form id="removeSubjectForm" method="POST" action="">
+            {% csrf_token %}
+            <div class="vas-modal-body">
+                <div class="vas-warning-note">
+                    <strong>Important — content will be kept safe</strong>
+                    This action removes the teacher's assignment for this subject only. Chapters, videos, PDFs, quizzes, and other uploaded learning content will not be deleted.
+                </div>
+                <div class="vas-modal-info-grid">
+                    <div class="vas-modal-info">
+                        <div class="vas-modal-info-label">Teacher</div>
+                        <div class="vas-modal-info-value">{{ teacher.full_name }}</div>
+                    </div>
+                    <div class="vas-modal-info">
+                        <div class="vas-modal-info-label">Batch</div>
+                        <div class="vas-modal-info-value">{{ batch.batch_name }}</div>
+                    </div>
+                    <div class="vas-modal-info">
+                        <div class="vas-modal-info-label">Selected subject</div>
+                        <div id="modalSubjectName" class="vas-modal-info-value subject">—</div>
+                    </div>
+                    <div class="vas-modal-info">
+                        <div class="vas-modal-info-label">Confirmation required</div>
+                        <div class="vas-modal-info-value">Type the exact subject name below</div>
+                    </div>
+                </div>
+                <div class="vas-confirm-wrap">
+                    <label for="confirmSubjectInput" class="vas-confirm-label">Confirm subject name</label>
+                    <input id="confirmSubjectInput" class="vas-confirm-input" type="text" autocomplete="off" placeholder="Enter the subject name exactly" required>
+                    <p class="vas-confirm-help">The Remove Access button will be enabled only when the name matches exactly.</p>
+                </div>
+            </div>
+            <div class="vas-modal-footer">
+                <button type="button" id="cancelRemoveSubject" class="vas-modal-btn vas-modal-cancel">Cancel</button>
+                <button type="submit" id="confirmRemoveSubjectBtn" class="vas-modal-btn vas-modal-submit" disabled>
+                    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13"/></svg>
+                    Remove Access
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
 
+<script>
+(function () {
+    "use strict";
+
+    const modal = document.getElementById("removeSubjectModal");
+    const form = document.getElementById("removeSubjectForm");
+    const subjectName = document.getElementById("modalSubjectName");
+    const confirmInput = document.getElementById("confirmSubjectInput");
+    const confirmButton = document.getElementById("confirmRemoveSubjectBtn");
+    const cancelButton = document.getElementById("cancelRemoveSubject");
+    let activeSubjectName = "";
+    let previousFocus = null;
+
+    if (!modal || !form || !subjectName || !confirmInput || !confirmButton || !cancelButton) return;
+
+    function updateConfirmation() {
+        confirmButton.disabled = confirmInput.value.trim() !== activeSubjectName.trim();
+    }
+
+    function openModal(button) {
+        activeSubjectName = button.dataset.subject || "";
+        const actionUrl = button.dataset.url || "";
+        if (!actionUrl || !activeSubjectName) return;
+
+        previousFocus = button;
+        subjectName.textContent = activeSubjectName;
+        form.action = actionUrl;
+        confirmInput.value = "";
+        confirmButton.disabled = true;
+        modal.classList.add("is-open");
+        document.body.style.overflow = "hidden";
+        window.setTimeout(function () { confirmInput.focus(); }, 30);
+    }
+
+    function closeModal() {
+        modal.classList.remove("is-open");
+        document.body.style.overflow = "";
+        confirmInput.value = "";
+        confirmButton.disabled = true;
+        if (previousFocus) previousFocus.focus();
+    }
+
+    document.querySelectorAll(".remove-subject-btn").forEach(function (button) {
+        button.addEventListener("click", function (event) {
+            event.preventDefault();
+            event.stopPropagation();
+            openModal(button);
+        });
+    });
+
+    document.querySelectorAll(".vas-subject-card[data-open-url]").forEach(function (card) {
+        function openCard() {
+            if (card.dataset.openUrl) window.location.href = card.dataset.openUrl;
+        }
+        card.addEventListener("click", function (event) {
+            if (event.target.closest(".remove-subject-btn")) return;
+            openCard();
+        });
+        card.addEventListener("keydown", function (event) {
+            if (event.target !== card) return;
+            if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                openCard();
+            }
+        });
+    });
+
+    confirmInput.addEventListener("input", updateConfirmation);
+    cancelButton.addEventListener("click", closeModal);
+
+    modal.addEventListener("click", function (event) {
+        if (event.target === modal) closeModal();
+    });
+
+    document.addEventListener("keydown", function (event) {
+        if (event.key === "Escape" && modal.classList.contains("is-open")) closeModal();
+    });
+
+    form.addEventListener("submit", function (event) {
+        if (confirmInput.value.trim() !== activeSubjectName.trim()) {
+            event.preventDefault();
+            confirmButton.disabled = true;
+            confirmInput.focus();
+        } else {
+            confirmButton.disabled = true;
+            confirmButton.textContent = "Removing…";
+        }
+    });
+})();
+</script>
 {% endblock %}
