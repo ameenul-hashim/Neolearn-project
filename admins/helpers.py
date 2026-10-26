@@ -32,6 +32,7 @@ from orders.helpers import (
 from .models import (
     Batch,
     Coupon,
+    CouponUsage,
     CouponBatchRule,
     AdminOrderSelection,
 )
@@ -646,32 +647,32 @@ def is_coupon_expired(coupon):
 # PER STUDENT USAGE
 # =========================================================
 
+
 def student_coupon_usage_limit_reached(
     coupon,
     student,
 ):
+    """
+    Return True when this student has reached the coupon's limit.
+
+    Only successful coupon uses recorded in CouponUsage count.
+    A missing usage record means the student has not used it.
+    """
     limit = coupon.per_user_limit
 
     if limit is None:
         return False
 
-    usage_model = getattr(
-        coupon,
-        "usage_records",
-        None,
-    )
-
-    if usage_model is None:
+    if student is None:
         return False
 
-    try:
-        used_count = usage_model.filter(
-            student=student
-        ).count()
-    except Exception:
-        return False
+    used_count = CouponUsage.objects.filter(
+        coupon=coupon,
+        student=student,
+    ).count()
 
     return used_count >= limit
+
 
 
 # =========================================================
@@ -1763,49 +1764,60 @@ def update_coupon_instance(
 # RECORD SUCCESSFUL COUPON CHECKOUT
 # =========================================================
 
+
 def record_successful_coupon_use(
     coupon,
     discount_amount,
+    *,
+    student,
+    order,
 ):
     """
-    Atomically record one successful coupon checkout.
+    Record one successful coupon use for an order.
 
-    This is the function the future successful checkout/payment
-    flow should call after the purchase is confirmed.
-
-    It updates:
-        used_count
-        total_discount_given
-
-    The dashboard therefore shows the actual discount granted,
-    including percentage coupons, instead of an estimate.
+    The unique coupon/order constraint prevents duplicate
+    usage records and duplicate counter increments.
+    Call this only after payment is confirmed successful.
     """
-    discount_amount = _money(
-        discount_amount
-    )
+    if student is None or order is None:
+        raise ValueError(
+            "Student and order are required to record coupon usage."
+        )
+
+    discount_amount = _money(discount_amount)
 
     if discount_amount < Decimal("0"):
         discount_amount = Decimal("0.00")
 
-    Coupon.objects.filter(
-        pk=coupon.pk,
-    ).update(
-        used_count=F("used_count") + 1,
-        total_discount_given=(
-            F("total_discount_given")
-            + discount_amount
-        ),
-    )
+    with transaction.atomic():
+        _, created = CouponUsage.objects.get_or_create(
+            coupon=coupon,
+            order=order,
+            defaults={
+                "student": student,
+                "discount_amount": discount_amount,
+            },
+        )
 
-    coupon.refresh_from_db(
-        fields=[
-            "used_count",
-            "total_discount_given",
-        ]
-    )
+        if created:
+            Coupon.objects.filter(
+                pk=coupon.pk,
+            ).update(
+                used_count=F("used_count") + 1,
+                total_discount_given=(
+                    F("total_discount_given")
+                    + discount_amount
+                ),
+            )
+
+        coupon.refresh_from_db(
+            fields=[
+                "used_count",
+                "total_discount_given",
+            ]
+        )
 
     return coupon
-
 
 # =========================================================
 # COUPON MESSAGES
@@ -2121,7 +2133,7 @@ def get_coupon_listing_context(request):
 
     paginator = Paginator(
         coupons,
-        10,
+        12,
     )
 
     try:
