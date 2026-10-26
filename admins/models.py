@@ -1382,6 +1382,40 @@ class Coupon(models.Model):
         super().save(*args, **kwargs)
 
 
+class CouponUsage(models.Model):
+    coupon = models.ForeignKey(
+        Coupon,
+        on_delete=models.PROTECT,
+        related_name="usage_records",
+    )
+    student = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="coupon_usages",
+    )
+    order = models.ForeignKey(
+        "orders.Order",
+        on_delete=models.PROTECT,
+        related_name="coupon_usages",
+    )
+    discount_amount = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=Decimal("0.00"),
+    )
+    used_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["coupon", "order"],
+                name="unique_coupon_usage_per_order",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.coupon.code} - {self.order}"
+
 # =========================================================
 # COUPON BATCH RULE
 # =========================================================

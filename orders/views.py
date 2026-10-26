@@ -22,26 +22,23 @@ from .helpers import (
     validate_refund_request,
     get_order_item_refund_amount,
 )
+
 from .models import (
     Order,
     OrderItem,
+    OrderCoupon,
     Payment,
     Invoice,
     StudentBatchPurchase,
     Refund,
     RefundItem,
-    OrderTimelineEvent,
-)
+    OrderTimelineEvent,)
 
+from admins.models import Coupon
 from students.models import Cart
-
-
 from .razorpay_utils import (
-
     create_razorpay_order,
-
     verify_razorpay_payment,
-
 )
 
 
@@ -1575,788 +1572,398 @@ def payment_cancelled_view(request, order_number):
 # RAZORPAY PAYMENT VERIFICATION
 
 # ============================================================
-
-
 @login_required(login_url="signin")
-
 @require_POST
-
 def verify_payment_view(request):
-
-
     # --------------------------------------------------------
-
     # STUDENT ACCESS
-
     # --------------------------------------------------------
-
-
     if not is_student_user(request.user):
-
         return JsonResponse(
-
             {
-
                 "success": False,
-
                 "message": "Student access is required.",
-
             },
-
             status=403,
-
         )
 
-
     # --------------------------------------------------------
-
     # READ JSON REQUEST
-
     # --------------------------------------------------------
-
-
     try:
-
-        import json
-
-
-        payload = json.loads(
-
-            request.body.decode("utf-8")
-
-        )
-
-
-    except (json.JSONDecodeError, UnicodeDecodeError) as exc:
-
-
+        payload = json.loads(request.body.decode("utf-8"))
+    except (json.JSONDecodeError, UnicodeDecodeError):
         return JsonResponse(
-
             {
-
                 "success": False,
-
                 "message": "Invalid payment verification request.",
-
             },
-
             status=400,
-
         )
 
-
     # --------------------------------------------------------
-
     # GET RAZORPAY RESPONSE
-
     # --------------------------------------------------------
-
-
-    order_number = str(
-
-        payload.get("order_number", "")
-
-    ).strip()
-
-
+    order_number = str(payload.get("order_number", "")).strip()
     razorpay_order_id = str(
-
         payload.get("razorpay_order_id", "")
-
     ).strip()
-
-
     razorpay_payment_id = str(
-
         payload.get("razorpay_payment_id", "")
-
     ).strip()
-
-
     razorpay_signature = str(
-
         payload.get("razorpay_signature", "")
-
     ).strip()
 
-
     # --------------------------------------------------------
-
     # REQUIRED VALUES
-
     # --------------------------------------------------------
-
-
     if not order_number:
-
         return JsonResponse(
-
             {
-
                 "success": False,
-
                 "message": "Order number is missing.",
-
             },
-
             status=400,
-
         )
-
 
     if not razorpay_order_id:
-
         return JsonResponse(
-
             {
-
                 "success": False,
-
                 "message": "Razorpay order ID is missing.",
-
             },
-
             status=400,
-
         )
-
 
     if not razorpay_payment_id:
-
         return JsonResponse(
-
             {
-
                 "success": False,
-
                 "message": "Razorpay payment ID is missing.",
-
             },
-
             status=400,
-
         )
-
 
     if not razorpay_signature:
-
         return JsonResponse(
-
             {
-
                 "success": False,
-
                 "message": "Razorpay payment signature is missing.",
-
             },
-
             status=400,
-
         )
 
-
     # --------------------------------------------------------
-
     # FIND ORDER
-
     # --------------------------------------------------------
-
-
     try:
-
         order = Order.objects.get(
-
             order_number=order_number,
-
             razorpay_order_id=razorpay_order_id,
-
             user=request.user,
-
         )
-
-
-    except Order.DoesNotExist as exc:
-
-
+    except Order.DoesNotExist:
         return JsonResponse(
-
             {
-
                 "success": False,
-
                 "message": "Order could not be found.",
-
             },
-
             status=404,
-
         )
 
-
     # --------------------------------------------------------
-
     # ALREADY PAID
-
     # --------------------------------------------------------
-
-
     if order.status == Order.Status.PAID:
+        invoice = getattr(order, "invoice", None)
 
-
-        invoice = getattr(
-
-            order,
-
-            "invoice",
-
-            None,
-
-        )
-
-
-        # A repeated verification request is safe. The payment is already
-
-        # complete, so remove only the batches that belong to this order
-
-        # from the student's cart. This also keeps unrelated cart items.
-
+        # Repeated verification must not record coupon usage twice.
+        # Remove only batches belonging to this order from the cart.
         try:
-
             purchased_batch_ids = list(
-
                 order.items.values_list(
-
                     "batch_id",
-
                     flat=True,
-
                 )
-
             )
 
-
             cart = Cart.objects.filter(
-
                 student=request.user,
-
             ).first()
 
-
             if cart and purchased_batch_ids:
-
                 cart.items.filter(
-
                     batch_id__in=purchased_batch_ids,
-
                 ).delete()
 
-
-                # Coupons belong to the checkout/cart state. Once the
-
-                # purchased items are gone, clear the remaining checkout
-
-                # coupons only when the cart itself is empty.
-
                 if not cart.items.exists():
-
                     cart.cart_coupons.all().delete()
 
         except Exception:
-
-            # Do not turn an already-completed payment into a failure just
-
-            # because cart cleanup encountered a non-payment problem.
-
-            pass
-
+            logging.getLogger(__name__).exception(
+                "Cart cleanup failed for already-paid order %s",
+                order.order_number,
+            )
 
         return JsonResponse(
-
             {
-
                 "success": True,
-
                 "already_paid": True,
-
                 "order_number": order.order_number,
-
                 "invoice_number": (
-
-                    invoice.invoice_number
-
-                    if invoice
-
-                    else ""
-
+                    invoice.invoice_number if invoice else ""
                 ),
-
-                "message": (
-
-                    "Payment has already been verified."
-
-                ),
-
+                "message": "Payment has already been verified.",
             }
-
         )
 
-
     # --------------------------------------------------------
-
     # VERIFY RAZORPAY SIGNATURE
-
     # --------------------------------------------------------
-
-
     try:
-
-
         verify_razorpay_payment(
-
             razorpay_order_id=razorpay_order_id,
-
             razorpay_payment_id=razorpay_payment_id,
-
             razorpay_signature=razorpay_signature,
-
         )
 
-
-    except Exception as exc:
-
-
+    except Exception:
         order.status = Order.Status.PAYMENT_FAILED
-
-
         order.save(
-
             update_fields=[
-
                 "status",
-
                 "updated_at",
-
             ]
-
         )
 
-
-        Payment.objects.filter(
-
-            order=order
-
-        ).update(
-
+        Payment.objects.filter(order=order).update(
             status=Payment.Status.FAILED,
-
             razorpay_payment_id=razorpay_payment_id,
-
             razorpay_signature=razorpay_signature,
-
             failure_reason=(
-
-                "Razorpay payment signature "
-
-                "verification failed."
-
+                "Razorpay payment signature verification failed."
             ),
-
         )
-
 
         return JsonResponse(
-
             {
-
                 "success": False,
-
-                "message": (
-
-                    "Payment verification failed."
-
-                ),
-
+                "message": "Payment verification failed.",
             },
-
             status=400,
-
         )
 
-
     # --------------------------------------------------------
-
     # FINALIZE SUCCESSFUL PAYMENT
-
     # --------------------------------------------------------
-
-
     try:
-
-
         with transaction.atomic():
 
-
             # --------------------------------------------
-
             # LOCK ORDER
-
             # --------------------------------------------
-
-
             order = (
-
                 Order.objects
-
                 .select_for_update()
-
                 .get(
-
                     pk=order.pk,
-
                     user=request.user,
-
                 )
-
             )
 
+            # Handle a concurrent/repeated verification safely.
+            if order.status == Order.Status.PAID:
+                invoice = getattr(order, "invoice", None)
+
+                return JsonResponse(
+                    {
+                        "success": True,
+                        "already_paid": True,
+                        "order_number": order.order_number,
+                        "invoice_number": (
+                            invoice.invoice_number if invoice else ""
+                        ),
+                        "message": "Payment has already been verified.",
+                    }
+                )
 
             # --------------------------------------------
-
             # CREATE / UPDATE PAYMENT
-
             # --------------------------------------------
-
-
             payment, created = (
-
                 Payment.objects
-
                 .select_for_update()
-
                 .get_or_create(
-
                     order=order,
-
                     defaults={
-
                         "razorpay_order_id": razorpay_order_id,
-
                         "razorpay_payment_id": razorpay_payment_id,
-
                         "razorpay_signature": razorpay_signature,
-
                         "amount": order.final_amount,
-
                         "currency": order.currency,
-
                         "status": Payment.Status.CAPTURED,
-
                         "captured_at": timezone.now(),
-
                     },
-
                 )
-
             )
-
 
             if not created:
-
-
                 payment.razorpay_order_id = razorpay_order_id
-
-
                 payment.razorpay_payment_id = razorpay_payment_id
-
-
                 payment.razorpay_signature = razorpay_signature
-
-
                 payment.amount = order.final_amount
-
-
                 payment.currency = order.currency
-
-
                 payment.status = Payment.Status.CAPTURED
-
-
                 payment.failure_reason = ""
-
-
                 payment.captured_at = timezone.now()
-
-
                 payment.save()
 
-
             # --------------------------------------------
-
             # MARK ORDER PAID
-
             # --------------------------------------------
-
-
             order.status = Order.Status.PAID
-
-
             order.paid_at = timezone.now()
-
-
             order.save(
-
                 update_fields=[
-
                     "status",
-
                     "paid_at",
-
                     "updated_at",
-
                 ]
-
             )
 
-
             # --------------------------------------------
-
-            # CREATE INVOICE
-
+            # RECORD SUCCESSFUL COUPON USAGE
             # --------------------------------------------
+            from admins.helpers import record_successful_coupon_use
 
-
-            invoice, invoice_created = Invoice.objects.get_or_create(
-
+            order_coupons = OrderCoupon.objects.filter(
                 order=order,
-
-                defaults={
-
-                    "subtotal": order.subtotal,
-
-                    "coupon_discount": order.total_coupon_discount,
-
-                    "total_discount": order.total_discount,
-
-                    "final_amount": order.final_amount,
-
-                    "currency": order.currency,
-
-                },
-
             )
 
-
-            # --------------------------------------------
-
-            # CREATE STUDENT BATCH ACCESS
-
-            # --------------------------------------------
-
-
-            for order_item in (
-
-                order.items
-
-                .select_related("batch")
-
-                .all()
-
-            ):
-
-
-                purchase, created = (
-
-                    StudentBatchPurchase.objects.get_or_create(
-
-                        student=request.user,
-
-                        batch=order_item.batch,
-
-                        defaults={
-
-                            "order": order,
-
-                            "order_item": order_item,
-
-                            "status": (
-
-                                StudentBatchPurchase
-
-                                .Status.ACTIVE
-
-                            ),
-
-                        },
-
-                    )
-
-                )
-
-
-                if not created:
-
-                    purchase.order = order
-
-                    purchase.order_item = order_item
-
-                    purchase.status = (
-
-                        StudentBatchPurchase.Status.ACTIVE
-
-                    )
-
-                    purchase.save(
-
-                        update_fields=[
-
-                            "order",
-
-                            "order_item",
-
-                            "status",
-
-                        ]
-
-                    )
-
-
-            # --------------------------------------------
-
-            # REMOVE PURCHASED ITEMS FROM CART
-
-            # --------------------------------------------
-
-            # Only remove batches that were actually included in this paid
-
-            # order. This prevents an unrelated cart item from being lost
-
-            # if the cart changes between checkout creation and payment
-
-            # verification.
-
-            purchased_batch_ids = list(
-
-                order.items.values_list(
-
-                    "batch_id",
-
-                    flat=True,
-
-                )
-
-            )
-
-
-            if purchased_batch_ids:
-
-                cart = Cart.objects.filter(
-
-                    student=request.user,
-
+            for order_coupon in order_coupons:
+                coupon = Coupon.objects.filter(
+                    code__iexact=order_coupon.coupon_code,
                 ).first()
 
+                if coupon is None:
+                    raise ValueError(
+                        f"Coupon '{order_coupon.coupon_code}' "
+                        "could not be found during payment finalization."
+                    )
+
+                record_successful_coupon_use(
+                    coupon=coupon,
+                    discount_amount=order_coupon.discount_amount,
+                    student=request.user,
+                    order=order,
+                )
+
+            # --------------------------------------------
+            # CREATE INVOICE
+            # --------------------------------------------
+            invoice, invoice_created = Invoice.objects.get_or_create(
+                order=order,
+                defaults={
+                    "subtotal": order.subtotal,
+                    "coupon_discount": order.total_coupon_discount,
+                    "total_discount": order.total_discount,
+                    "final_amount": order.final_amount,
+                    "currency": order.currency,
+                },
+            )
+
+            # --------------------------------------------
+            # CREATE STUDENT BATCH ACCESS
+            # --------------------------------------------
+            for order_item in (
+                order.items
+                .select_related("batch")
+                .all()
+            ):
+                purchase, created = (
+                    StudentBatchPurchase.objects.get_or_create(
+                        student=request.user,
+                        batch=order_item.batch,
+                        defaults={
+                            "order": order,
+                            "order_item": order_item,
+                            "status": StudentBatchPurchase.Status.ACTIVE,
+                        },
+                    )
+                )
+
+                if not created:
+                    purchase.order = order
+                    purchase.order_item = order_item
+                    purchase.status = StudentBatchPurchase.Status.ACTIVE
+                    purchase.save(
+                        update_fields=[
+                            "order",
+                            "order_item",
+                            "status",
+                        ]
+                    )
+
+            # --------------------------------------------
+            # REMOVE PURCHASED ITEMS FROM CART
+            # --------------------------------------------
+            purchased_batch_ids = list(
+                order.items.values_list(
+                    "batch_id",
+                    flat=True,
+                )
+            )
+
+            if purchased_batch_ids:
+                cart = Cart.objects.filter(
+                    student=request.user,
+                ).first()
 
                 if cart:
-
                     cart.items.filter(
-
                         batch_id__in=purchased_batch_ids,
-
                     ).delete()
 
-
-                    # If the successful purchase emptied the cart, its
-
-                    # checkout coupon state is no longer needed.
-
+                    # Clear applied coupons only when the cart is empty.
                     if not cart.items.exists():
-
                         cart.cart_coupons.all().delete()
 
-
     except Exception as exc:
-
-
-        import logging
-
-
         logging.getLogger(__name__).exception(
-
             "NeoLearn payment finalization failed for order %s: %s",
-
             order.order_number,
-
             exc,
-
         )
-
 
         return JsonResponse(
-
             {
-
                 "success": False,
-
                 "message": (
-
                     "Payment was verified, but "
-
                     "order finalization failed."
-
                 ),
-
             },
-
             status=500,
-
         )
 
-
     # --------------------------------------------------------
-
     # SUCCESS
-
     # --------------------------------------------------------
-
-
-    invoice = getattr(
-
-        order,
-
-        "invoice",
-
-        None,
-
-    )
-
+    invoice = getattr(order, "invoice", None)
 
     return JsonResponse(
-
         {
-
             "success": True,
-
             "order_number": order.order_number,
-
             "invoice_number": (
-
-                invoice.invoice_number
-
-                if invoice
-
-                else ""
-
+                invoice.invoice_number if invoice else ""
             ),
-
-            "message": (
-
-                "Payment completed successfully."
-
-            ),
-
+            "message": "Payment completed successfully.",
         }
-
     )
+
+
 @login_required(login_url="signin")
 @cache_control(
     no_cache=True,
@@ -2425,7 +2032,7 @@ def payment_intro_view(request, order_number):
             "order_number": order.order_number,
         },
     )
-    
+
 # ============================================================
 # UPDATE RAZORPAY PAYMENT STATUS
 # ============================================================
@@ -2771,7 +2378,7 @@ def update_payment_status_view(request):
             },
             status=500,
         )
-        
+
 # ============================================================
 # STUDENT REFUND REQUEST
 # ============================================================
@@ -3081,7 +2688,7 @@ def request_refund_view(request):
             },
             status=500,
         )
-        
+
 # ============================================================
 # EDIT STUDENT REFUND REQUEST
 # ============================================================
