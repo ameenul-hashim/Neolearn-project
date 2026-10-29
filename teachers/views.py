@@ -18,7 +18,7 @@ from django.views.decorators.cache import cache_control
 from PIL import Image, UnidentifiedImageError
 from django.core.exceptions import ValidationError
 import re
-
+from django.db import transaction
 from admins.models import (
     Batch,
     Subject,
@@ -1695,3 +1695,508 @@ def teacher_analytics_view(request):
         "quiz_chart_json": __import__("json").dumps(quiz_chart),
     }
     return render(request, "teachers/analytics/analytics.html", context)
+
+# ============================================================
+# TEACHER SETTINGS
+# ============================================================
+
+@login_required(login_url="teacher_login")
+@cache_control(no_cache=True, must_revalidate=True, no_store=True)
+def teacher_settings_view(request):
+
+    try:
+        teacher = request.user.teacher_profile
+    except Teacher.DoesNotExist:
+        messages.error(
+            request,
+            "Your teacher profile could not be found. Please log in again.",
+        )
+        return redirect("teacher_login")
+
+    if teacher.is_blocked:
+        logout(request)
+        messages.error(
+            request,
+            "Your teacher account has been blocked. Please contact the administrator.",
+        )
+        return redirect("teacher_login")
+
+    if teacher.is_first_login:
+        return redirect("teacher_change_password")
+
+    user = request.user
+    errors = {}
+
+    allowed_sections = {
+        "profile",
+        "account",
+        "password",
+        "appearance",
+        "notifications",
+    }
+
+    active_section = request.GET.get("section", "profile").strip()
+
+    if active_section not in allowed_sections:
+        active_section = "profile"
+
+    values = {
+        "full_name": teacher.full_name or "",
+        "phone_number": teacher.phone_number or "",
+        "bio": teacher.bio or "",
+        "username": user.username or "",
+        "email": teacher.email or "",
+    }
+
+    if request.method == "POST":
+
+        action = request.POST.get("action", "").strip()
+
+        if action not in {"profile", "account", "password"}:
+            messages.error(
+                request,
+                "Please select a valid Settings section.",
+            )
+            return redirect("teacher_settings")
+
+        active_section = action
+
+        # ====================================================
+        # 1. PROFILE: FULL NAME, PRIMARY PHONE, BIO, IMAGE
+        # ====================================================
+
+        if action == "profile":
+
+            full_name = request.POST.get(
+                "full_name", ""
+            ).strip()
+
+            phone_number = request.POST.get(
+                "phone_number", ""
+            ).strip()
+
+            bio = request.POST.get(
+                "bio", ""
+            ).strip()
+
+            uploaded_image = request.FILES.get("profile_image")
+
+            values.update({
+                "full_name": full_name,
+                "phone_number": phone_number,
+                "bio": bio,
+            })
+
+            # Full name validation
+            if not full_name:
+                errors["full_name"] = (
+                    "Please enter your full name."
+                )
+            elif len(full_name) > 100:
+                errors["full_name"] = (
+                    "Full name cannot exceed 100 characters."
+                )
+
+            # Primary mobile number validation
+            if not phone_number:
+                errors["phone_number"] = (
+                    "Please enter your primary mobile number."
+                )
+
+            elif not re.fullmatch(r"[6-9]\d{9}", phone_number):
+                errors["phone_number"] = (
+                    "Enter a valid 10-digit Indian mobile number "
+                    "starting with 6, 7, 8, or 9."
+                )
+
+            elif Teacher.objects.filter(
+                phone_number=phone_number
+            ).exclude(pk=teacher.pk).exists():
+                errors["phone_number"] = (
+                    "This mobile number is already registered "
+                    "to another teacher."
+                )
+
+            # Bio validation
+            if len(bio) > 250:
+                errors["bio"] = (
+                    "Bio cannot exceed 250 characters."
+                )
+
+            # Profile image validation
+            if uploaded_image:
+
+                allowed_extensions = (
+                    ".jpg",
+                    ".jpeg",
+                    ".png",
+                    ".webp",
+                )
+
+                if not uploaded_image.name.lower().endswith(
+                    allowed_extensions
+                ):
+                    errors["profile_image"] = (
+                        "Upload a JPG, JPEG, PNG, or WEBP image."
+                    )
+
+                elif uploaded_image.size > 2 * 1024 * 1024:
+                    errors["profile_image"] = (
+                        "The profile image must be 2 MB or smaller."
+                    )
+
+                else:
+                    try:
+                        uploaded_image.seek(0)
+
+                        with Image.open(uploaded_image) as image:
+
+                            if image.format not in {
+                                "JPEG",
+                                "PNG",
+                                "WEBP",
+                            }:
+                                errors["profile_image"] = (
+                                    "The uploaded image format is not supported."
+                                )
+                            else:
+                                image.verify()
+
+                    except (
+                        UnidentifiedImageError,
+                        OSError,
+                        ValueError,
+                    ):
+                        errors["profile_image"] = (
+                            "The uploaded file is not a valid image."
+                        )
+
+                    finally:
+                        uploaded_image.seek(0)
+
+            # Save profile only after validation
+            if not errors:
+                try:
+                    teacher.full_name = full_name
+                    teacher.phone_number = phone_number
+                    teacher.bio = bio
+
+                    if uploaded_image:
+                        teacher.profile_image = uploaded_image
+
+                    teacher.full_clean()
+                    teacher.save()
+
+                    messages.success(
+                        request,
+                        "Your profile settings were saved successfully.",
+                    )
+                    return redirect("teacher_settings")
+
+                except ValidationError as exc:
+
+                    if hasattr(exc, "message_dict"):
+                        for field_name, field_errors in (
+                            exc.message_dict.items()
+                        ):
+                            errors[field_name] = " ".join(
+                                str(error)
+                                for error in field_errors
+                            )
+                    else:
+                        errors["general"] = " ".join(
+                            str(error)
+                            for error in exc.messages
+                        )
+
+                except Exception:
+                    errors["general"] = (
+                        "We could not save your profile. "
+                        "Please check your information and try again."
+                    )
+
+                teacher.refresh_from_db()
+
+                values.update({
+                    "full_name": full_name,
+                    "phone_number": phone_number,
+                    "bio": bio,
+                })
+
+        # ====================================================
+        # 2. ACCOUNT: USERNAME AND EMAIL
+        # ====================================================
+
+        elif action == "account":
+
+            username = request.POST.get(
+                "username", ""
+            ).strip()
+
+            email = request.POST.get(
+                "email", ""
+            ).strip().lower()
+
+            values.update({
+                "username": username,
+                "email": email,
+            })
+
+            # Username required
+            if not username:
+                errors["username"] = (
+                    "Please enter a username."
+                )
+
+            else:
+                try:
+                    User._meta.get_field(
+                        "username"
+                    ).clean(username, user)
+
+                except ValidationError as exc:
+                    errors["username"] = " ".join(
+                        str(error)
+                        for error in exc.messages
+                    )
+
+                # Username must not belong to another user
+                if User.objects.filter(
+                    username__iexact=username
+                ).exclude(pk=user.pk).exists():
+                    errors["username"] = (
+                        "This username is already in use. "
+                        "Please choose another."
+                    )
+
+            # Email required and format validation
+            if not email:
+                errors["email"] = (
+                    "Please enter your email address."
+                )
+
+            else:
+                try:
+                    validate_email(email)
+
+                except ValidationError:
+                    errors["email"] = (
+                        "Enter a valid email address, "
+                        "for example name@example.com."
+                    )
+
+            # Check email uniqueness across Teacher and User
+            if email and "email" not in errors:
+
+                teacher_email_exists = (
+                    Teacher.objects.filter(
+                        email__iexact=email
+                    )
+                    .exclude(pk=teacher.pk)
+                    .exists()
+                )
+
+                user_email_exists = (
+                    User.objects.filter(
+                        email__iexact=email
+                    )
+                    .exclude(pk=user.pk)
+                    .exists()
+                )
+
+                if teacher_email_exists or user_email_exists:
+                    errors["email"] = (
+                        "This email address is already registered "
+                        "to another account."
+                    )
+
+            # Update username and email together
+            if not errors:
+                try:
+                    with transaction.atomic():
+
+                        User._meta.get_field(
+                            "username"
+                        ).clean(username, user)
+
+                        teacher.email = email
+                        teacher.full_clean(
+                            exclude=[
+                                "user",
+                            ]
+                        )
+
+                        user.username = username
+                        user.email = email
+                        user.save(
+                            update_fields=[
+                                "username",
+                                "email",
+                            ]
+                        )
+
+                        teacher.save(
+                            update_fields=["email"]
+                        )
+
+                    messages.success(
+                        request,
+                        "Username and email were updated successfully.",
+                    )
+                    return redirect("teacher_settings")
+
+                except ValidationError as exc:
+
+                    if hasattr(exc, "message_dict"):
+                        for field_name, field_errors in (
+                            exc.message_dict.items()
+                        ):
+                            errors[field_name] = " ".join(
+                                str(error)
+                                for error in field_errors
+                            )
+                    else:
+                        errors["general"] = " ".join(
+                            str(error)
+                            for error in exc.messages
+                        )
+
+                except Exception:
+                    errors["general"] = (
+                        "We could not update your account settings. "
+                        "Please check your details and try again."
+                    )
+
+        # ====================================================
+        # 3. PASSWORD & SECURITY
+        # ====================================================
+
+        elif action == "password":
+
+            current_password = request.POST.get(
+                "current_password", ""
+            )
+
+            new_password = request.POST.get(
+                "new_password", ""
+            )
+
+            confirm_password = request.POST.get(
+                "confirm_password", ""
+            )
+
+            if (
+                not current_password
+                or not new_password
+                or not confirm_password
+            ):
+                errors["password"] = (
+                    "Please complete all password fields."
+                )
+
+            elif not user.check_password(current_password):
+                errors["current_password"] = (
+                    "Your current password is incorrect."
+                )
+
+            else:
+                # Minimum length
+                if len(new_password) < 8:
+                    errors.setdefault(
+                        "new_password",
+                        "Password must contain at least 8 characters.",
+                    )
+
+                # Uppercase
+                if not re.search(r"[A-Z]", new_password):
+                    errors.setdefault(
+                        "new_password",
+                        "Password must contain at least one uppercase letter.",
+                    )
+
+                # Lowercase
+                if not re.search(r"[a-z]", new_password):
+                    errors.setdefault(
+                        "new_password",
+                        "Password must contain at least one lowercase letter.",
+                    )
+
+                # Number
+                if not re.search(r"\d", new_password):
+                    errors.setdefault(
+                        "new_password",
+                        "Password must contain at least one number.",
+                    )
+
+                # Special character
+                if not re.search(
+                    r"""[!@#$%^&*()_+=\-\[\]{};:'"\\|,.<>/?]""",
+                    new_password,
+                ):
+                    errors.setdefault(
+                        "new_password",
+                        "Password must contain at least one special character.",
+                    )
+
+                # New password must differ from current password
+                if new_password == current_password:
+                    errors.setdefault(
+                        "new_password",
+                        "Your new password must differ from your current password.",
+                    )
+
+                # Confirmation must match
+                if new_password != confirm_password:
+                    errors["confirm_password"] = (
+                        "The new password and confirmation do not match."
+                    )
+
+            if not errors:
+                user.set_password(new_password)
+                user.save(update_fields=["password"])
+
+                update_session_auth_hash(
+                    request,
+                    user,
+                )
+
+                messages.success(
+                    request,
+                    "Your password was changed successfully.",
+                )
+                return redirect("teacher_settings")
+
+    # ========================================================
+    # VALIDATION FEEDBACK
+    # ========================================================
+    # The base template already renders Django messages as toast notifications.
+    # The errors dictionary above is for server-side validation only; it does
+    # not automatically create a Django message. Send one clear error toast
+    # while keeping the submitted values and active section in the response.
+    if errors:
+        first_error = next(iter(errors.values()))
+        messages.error(request, first_error)
+
+    # ========================================================
+    # RENDER SETTINGS
+    # ========================================================
+
+    response = render(
+        request,
+        "teachers/settings/teacher_settings.html",
+        {
+            "teacher": teacher,
+            "user_account": user,
+            "values": values,
+            "errors": errors,
+            "active_section": active_section,
+        },
+    )
+
+    response["Cache-Control"] = (
+        "no-cache, no-store, must-revalidate"
+    )
+    response["Pragma"] = "no-cache"
+    response["Expires"] = "0"
+
+    return response

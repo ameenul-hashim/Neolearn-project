@@ -1,3 +1,10 @@
+import re
+from PIL import Image, UnidentifiedImageError
+from django.contrib.auth import (
+    get_user_model,
+    update_session_auth_hash,)
+from django.core.exceptions import ValidationError
+from django.core.validators import validate_email
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.cache import cache_control
@@ -103,138 +110,495 @@ def dashboard_view(request):
 
 
 # ============================================================
-# STUDENT PROFILE
+# STUDENT SETTINGS
 # ============================================================
 
-@login_required(login_url='signin')
+@login_required(login_url="signin")
 @cache_control(
     no_cache=True,
     must_revalidate=True,
-    no_store=True
+    no_store=True,
 )
-def profile_view(request):
+def student_settings_view(request):
+    """
+    Single student Settings page.
+
+    Handles:
+    - Full name
+    - Primary phone number
+    - Username
+    - Email address
+    - Password
+    - Profile image
+
+    Shared family phone numbers are allowed.
+    """
 
     if not is_student_user(request.user):
-
         messages.error(
             request,
-            'Admin login is not allowed here. Please use the admin login area.'
+            "Student access required. Please use the student login area.",
         )
+        return redirect("signin")
 
-        return redirect('signin')
+    User = get_user_model()
 
-    profile, created = StudentProfile.objects.get_or_create(
+    profile, _ = StudentProfile.objects.get_or_create(
         user=request.user
     )
 
-    return render(
-        request,
-        'students/profile.html',
-        {
-            'profile': profile
-        }
-    )
+    def save_profile_image(image):
+        """
+        Validate and save a profile image to Cloudinary.
+        Returns (success, message). The profile's existing image is kept
+        unless the new image has been uploaded and saved successfully.
+        """
+        if not image:
+            return False, "Please select a profile image."
 
+        if image.size > 2 * 1024 * 1024:
+            return False, "Image size must be 2 MB or smaller."
 
-# ============================================================
-# PROFILE IMAGE UPDATE
-# ============================================================
-
-@login_required(login_url='signin')
-@cache_control(
-    no_cache=True,
-    must_revalidate=True,
-    no_store=True
-)
-def update_profile_image_view(request):
-
-    if not is_student_user(request.user):
-
-        messages.error(
-            request,
-            'Admin login is not allowed here. Please use the admin login area.'
+        extension = (
+            "." + image.name.rsplit(".", 1)[-1].lower()
+            if "." in image.name
+            else ""
         )
+        if extension not in {".jpg", ".jpeg", ".png"}:
+            return False, "Choose a JPG or PNG image."
 
-        return redirect('signin')
+        try:
+            image.seek(0)
+            with Image.open(image) as opened_image:
+                image_format = opened_image.format
+                opened_image.verify()
 
-    if request.method == 'POST':
+            if image_format not in {"JPEG", "PNG"}:
+                return False, "Choose a valid JPG or PNG image."
 
-        image = request.FILES.get('profile_image')
-
-        # ----------------------------------------------------
-        # IMAGE SIZE VALIDATION
-        # ----------------------------------------------------
-
-        if image and image.size > 10 * 1024 * 1024:
-
-            messages.error(
-                request,
-                'Image size must be below 10MB.'
+            image.seek(0)
+        except (UnidentifiedImageError, OSError, ValueError):
+            return False, (
+                "The image could not be loaded. "
+                "Please choose a valid JPG or PNG image."
             )
 
-            return redirect('profile')
+        old_public_id = profile.cloudinary_public_id
 
-        # ----------------------------------------------------
-        # IMAGE UPLOAD
-        # ----------------------------------------------------
-
-        if image:
-
-            profile, created = StudentProfile.objects.get_or_create(
-                user=request.user
+        try:
+            uploaded_image = cloudinary.uploader.upload(
+                image,
+                folder="neolearn_profiles",
+                resource_type="image",
+                allowed_formats=["jpg", "jpeg", "png"],
             )
 
-            # ------------------------------------------------
-            # DELETE OLD IMAGE FROM CLOUDINARY
-            # ------------------------------------------------
+            profile.profile_image = uploaded_image["secure_url"]
+            profile.cloudinary_public_id = uploaded_image["public_id"]
+            profile.save(
+                update_fields=["profile_image", "cloudinary_public_id"]
+            )
 
-            if profile.cloudinary_public_id:
-
+            # Delete the previous Cloudinary image only after the new one
+            # has successfully uploaded and the profile record has saved.
+            if (
+                old_public_id
+                and old_public_id != profile.cloudinary_public_id
+            ):
                 try:
-
-                    cloudinary.uploader.destroy(
-                        profile.cloudinary_public_id
-                    )
-
+                    cloudinary.uploader.destroy(old_public_id)
                 except Exception:
                     pass
 
-            # ------------------------------------------------
-            # UPLOAD NEW IMAGE
-            # ------------------------------------------------
+            return True, "Profile image updated successfully."
 
-            uploaded_image = cloudinary.uploader.upload(
-                image,
-                folder='neolearn_profiles'
+        except Exception:
+            return False, (
+                "The profile image could not be uploaded. "
+                "Please try again."
             )
 
-            # ------------------------------------------------
-            # SAVE IMAGE INFORMATION
-            # ------------------------------------------------
+    # ========================================================
+    # SAVE SETTINGS
+    # ========================================================
 
-            profile.profile_image = uploaded_image[
-                'secure_url'
-            ]
+    if request.method == "POST":
 
-            profile.cloudinary_public_id = uploaded_image[
-                'public_id'
-            ]
+        form_type = request.POST.get(
+            "form_type",
+            "",
+        ).strip()
 
-            profile.save()
+        # ====================================================
+        # PERSONAL DETAILS
+        # ====================================================
 
-            messages.success(
-                request,
-                'Profile image updated successfully.'
+        if form_type == "personal":
+
+            full_name = " ".join(
+                request.POST.get("full_name", "").split()
             )
 
-        else:
+            phone = request.POST.get(
+                "phone",
+                "",
+            ).strip()
 
-            messages.error(
-                request,
-                'Please select an image.'
+            errors = []
+
+            if not full_name:
+                errors.append("Full name is required.")
+
+            elif len(full_name) > 150:
+                errors.append(
+                    "Full name cannot exceed 150 characters."
+                )
+
+            # Phone number is optional.
+            # Shared family numbers are intentionally allowed.
+            if phone and not re.fullmatch(r"[6-9]\d{9}", phone):
+                errors.append(
+                    "Enter a valid 10-digit Indian mobile number "
+                    "starting with 6, 7, 8, or 9."
+                )
+
+            # The updated profile form submits the photo and personal details
+            # together using form_type="personal". Process the photo here too.
+            image = request.FILES.get("profile_image")
+
+            if errors:
+                for error in errors:
+                    messages.error(request, error)
+                return redirect("student_settings")
+
+            if image:
+                image_saved, image_message = save_profile_image(image)
+                if not image_saved:
+                    messages.error(request, image_message)
+                    return redirect("student_settings")
+
+            name_parts = full_name.split(" ", 1)
+            request.user.first_name = name_parts[0]
+            request.user.last_name = (
+                name_parts[1] if len(name_parts) > 1 else ""
+            )
+            request.user.save(update_fields=["first_name", "last_name"])
+
+            # Shared family phone numbers are allowed; no uniqueness check.
+            profile.phone = phone
+            profile.save(update_fields=["phone"])
+
+            if image:
+                messages.success(
+                    request,
+                    "Profile photo and personal details updated successfully.",
+                )
+            else:
+                messages.success(
+                    request,
+                    "Personal details updated successfully.",
+                )
+
+            return redirect("student_settings")
+
+        # ====================================================
+        # USERNAME AND EMAIL
+        # ====================================================
+
+        if form_type == "account":
+
+            username = request.POST.get(
+                "username",
+                "",
+            ).strip()
+
+            email = request.POST.get(
+                "email",
+                "",
+            ).strip()
+
+            errors = []
+
+            # -----------------------------
+            # USERNAME VALIDATION
+            # -----------------------------
+
+            if not username:
+
+                errors.append("Username is required.")
+
+            elif len(username) > 150:
+
+                errors.append(
+                    "Username cannot exceed 150 characters."
+                )
+
+            else:
+
+                try:
+                    User._meta.get_field("username").clean(
+                        username,
+                        request.user,
+                    )
+
+                except ValidationError:
+
+                    errors.append(
+                        "Enter a valid username."
+                    )
+
+            # Check all user accounts, excluding the current account.
+            if username and User.objects.filter(
+                username__iexact=username
+            ).exclude(
+                pk=request.user.pk
+            ).exists():
+
+                errors.append(
+                    "This username is already in use. "
+                    "Choose another username."
+                )
+
+            # -----------------------------
+            # EMAIL VALIDATION
+            # -----------------------------
+
+            if not email:
+
+                errors.append(
+                    "Email address is required."
+                )
+
+            elif len(email) > 254:
+
+                errors.append(
+                    "Email address cannot exceed 254 characters."
+                )
+
+            else:
+
+                try:
+                    validate_email(email)
+
+                except ValidationError:
+
+                    errors.append(
+                        "Enter a valid email address."
+                    )
+
+            email_valid = (
+                bool(email)
+                and len(email) <= 254
+                and not any(
+                    error in errors
+                    for error in [
+                        "Enter a valid email address.",
+                        "Email address is required.",
+                        "Email address cannot exceed 254 characters.",
+                    ]
+                )
             )
 
-    return redirect('profile')
+            # Check the entire User table, including inactive accounts.
+            if email_valid and User.objects.filter(
+                email__iexact=email
+            ).exclude(
+                pk=request.user.pk
+            ).exists():
+
+                errors.append(
+                    "This email address is already in use. "
+                    "Use a different email address."
+                )
+
+            if errors:
+
+                for error in errors:
+                    messages.error(request, error)
+
+            else:
+
+                request.user.username = username
+                request.user.email = email
+
+                try:
+
+                    request.user.save(
+                        update_fields=[
+                            "username",
+                            "email",
+                        ]
+                    )
+
+                    messages.success(
+                        request,
+                        "Username and email updated successfully.",
+                    )
+
+                except Exception:
+
+                    messages.error(
+                        request,
+                        "Account details could not be saved. "
+                        "Please check the username and try again.",
+                    )
+
+            return redirect("student_settings")
+
+        # ====================================================
+        # PASSWORD CHANGE
+        # ====================================================
+
+        if form_type == "password":
+
+            current_password = request.POST.get(
+                "current_password",
+                "",
+            )
+
+            new_password = request.POST.get(
+                "new_password",
+                "",
+            )
+
+            confirm_password = request.POST.get(
+                "confirm_password",
+                "",
+            )
+
+            errors = []
+
+            if not current_password:
+
+                errors.append(
+                    "Enter your current password."
+                )
+
+            elif not request.user.check_password(
+                current_password
+            ):
+
+                errors.append(
+                    "Your current password is incorrect."
+                )
+
+            if not new_password:
+
+                errors.append(
+                    "Enter a new password."
+                )
+
+            else:
+
+                if len(new_password) < 8:
+                    errors.append(
+                        "Password must contain at least 8 characters."
+                    )
+
+                if not re.search(r"[A-Z]", new_password):
+                    errors.append(
+                        "Password must contain an uppercase letter."
+                    )
+
+                if not re.search(r"[a-z]", new_password):
+                    errors.append(
+                        "Password must contain a lowercase letter."
+                    )
+
+                if not re.search(r"\d", new_password):
+                    errors.append(
+                        "Password must contain a number."
+                    )
+
+                if not re.search(
+                    r"[^A-Za-z0-9]",
+                    new_password,
+                ):
+                    errors.append(
+                        "Password must contain a special character."
+                    )
+
+                if request.user.check_password(new_password):
+                    errors.append(
+                        "Your new password must differ from "
+                        "your current password."
+                    )
+
+            if new_password != confirm_password:
+
+                errors.append(
+                    "The new passwords do not match."
+                )
+
+            if errors:
+
+                for error in errors:
+                    messages.error(request, error)
+
+            else:
+
+                request.user.set_password(new_password)
+
+                request.user.save(
+                    update_fields=["password"]
+                )
+
+                # Keep the student logged in after changing password.
+                update_session_auth_hash(
+                    request,
+                    request.user,
+                )
+
+                messages.success(
+                    request,
+                    "Password changed successfully.",
+                )
+
+            return redirect("student_settings")
+
+        # ====================================================
+        # PROFILE IMAGE
+        # ====================================================
+
+        if form_type == "image":
+            image = request.FILES.get("profile_image")
+            image_saved, image_message = save_profile_image(image)
+
+            if image_saved:
+                messages.success(request, image_message)
+            else:
+                messages.error(request, image_message)
+
+            return redirect("student_settings")
+
+        messages.error(
+            request,
+            "Invalid Settings form. Please try again.",
+        )
+
+        return redirect("student_settings")
+
+    # ========================================================
+    # DISPLAY SETTINGS PAGE
+    # ========================================================
+
+    full_name = " ".join(
+        part
+        for part in [
+            request.user.first_name,
+            request.user.last_name,
+        ]
+        if part
+    ).strip()
+
+    return render(
+        request,
+        "students/settings/settings.html",
+        {
+            "profile": profile,
+            "full_name": full_name,
+        },
+    )
 
 # ============================================================
 # MARKETPLACE

@@ -1,0 +1,1466 @@
+{% extends "teachers/dashboard/teacher_base.html" %}
+
+{% block title %}Teacher Settings | NeoLearn{% endblock %}
+
+{% block teacher_content %}
+
+<div class="w-full max-w-none space-y-4 pb-2">
+
+
+
+    <!-- PAGE HEADER -->
+    <div class="flex flex-wrap items-center justify-between gap-4">
+        <div>
+            <p class="text-xs font-bold uppercase tracking-[0.2em] text-cyan-500">
+                Account Management
+            </p>
+            <h1 class="mt-1 text-2xl font-extrabold tracking-tight text-white">
+                Settings
+            </h1>
+            <p class="mt-1 text-sm text-slate-400">
+                Manage your account preferences and security.
+            </p>
+        </div>
+
+        <div class="hidden items-center gap-2 text-sm text-slate-400 sm:flex">
+            <span>Settings</span>
+            <span>/</span>
+            <span id="settings-breadcrumb" class="font-semibold text-cyan-400">
+                Profile
+            </span>
+        </div>
+    </div>
+
+    <!-- SETTINGS LAYOUT -->
+    <div class="settings-layout grid grid-cols-1 items-stretch gap-4 lg:grid-cols-[minmax(250px,0.34fr)_minmax(0,1fr)]">
+
+        <!-- LEFT NAVIGATION -->
+        <aside class="settings-sidebar rounded-2xl border border-slate-800 bg-slate-950/70 p-4 shadow-xl sm:p-5">
+            <p class="px-3 pb-3 pt-2 text-xs font-bold uppercase tracking-widest text-slate-500">
+                Account Settings
+            </p>
+
+            <nav id="settings-navigation" class="space-y-1" aria-label="Settings sections">
+
+                <button type="button"
+                    data-section="profile"
+                    class="settings-nav-item is-active flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-semibold transition">
+                    <svg class="h-5 w-5 shrink-0" fill="none" stroke="currentColor"
+                        viewBox="0 0 24 24" aria-hidden="true">
+                        <circle cx="12" cy="8" r="4" stroke-width="1.8"/>
+                        <path d="M4 21a8 8 0 0 1 16 0" stroke-width="1.8"/>
+                    </svg>
+                    <span class="flex-1">Profile</span>
+                    <span class="settings-nav-arrow" aria-hidden="true">›</span>
+                </button>
+
+                <button type="button"
+                    data-section="account"
+                    class="settings-nav-item flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-semibold transition">
+                    <svg class="h-5 w-5 shrink-0" fill="none" stroke="currentColor"
+                        viewBox="0 0 24 24" aria-hidden="true">
+                        <rect x="3" y="5" width="18" height="14" rx="2" stroke-width="1.8"/>
+                        <path d="m4 7 8 6 8-6" stroke-width="1.8"/>
+                    </svg>
+                    <span class="flex-1">Username &amp; Email</span>
+                    <span class="settings-nav-arrow" aria-hidden="true">›</span>
+                </button>
+
+                <button type="button"
+                    data-section="password"
+                    class="settings-nav-item flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-semibold transition">
+                    <svg class="h-5 w-5 shrink-0" fill="none" stroke="currentColor"
+                        viewBox="0 0 24 24" aria-hidden="true">
+                        <rect x="4" y="10" width="16" height="11" rx="2" stroke-width="1.8"/>
+                        <path d="M8 10V7a4 4 0 0 1 8 0v3" stroke-width="1.8"/>
+                        <path d="M12 14v3" stroke-width="1.8"/>
+                    </svg>
+                    <span class="flex-1">Password &amp; Security</span>
+                    <span class="settings-nav-arrow" aria-hidden="true">›</span>
+                </button>
+
+                <button type="button"
+                    data-section="appearance"
+                    class="settings-nav-item flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-semibold transition">
+                    <svg class="h-5 w-5 shrink-0" fill="none" stroke="currentColor"
+                        viewBox="0 0 24 24" aria-hidden="true">
+                        <circle cx="12" cy="12" r="9" stroke-width="1.8"/>
+                        <circle cx="8" cy="9" r="1" stroke-width="1.5"/>
+                        <circle cx="15" cy="7" r="1" stroke-width="1.5"/>
+                        <circle cx="16" cy="14" r="1" stroke-width="1.5"/>
+                        <path d="M12 21v-3a2 2 0 0 0-2-2H8a2 2 0 0 1-2-2v-1"
+                            stroke-width="1.5"/>
+                    </svg>
+                    <span class="flex-1">Appearance</span>
+                    <span class="rounded-full bg-slate-800 px-2 py-1 text-[10px] text-slate-400">
+                        Soon
+                    </span>
+                </button>
+
+                <button type="button"
+                    data-section="notifications"
+                    class="settings-nav-item flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-semibold transition">
+                    <svg class="h-5 w-5 shrink-0" fill="none" stroke="currentColor"
+                        viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"
+                            stroke-width="1.8" stroke-linejoin="round"/>
+                        <path d="M10 21h4" stroke-width="1.8"/>
+                    </svg>
+                    <span class="flex-1">Notifications</span>
+                    <span class="rounded-full bg-slate-800 px-2 py-1 text-[10px] text-slate-400">
+                        Soon
+                    </span>
+                </button>
+
+            </nav>
+
+            <div class="settings-security-card mt-4 rounded-xl border border-cyan-900/60 bg-cyan-950/30 p-4">
+                <div class="flex items-center gap-2 text-xs font-semibold text-cyan-400">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor"
+                        viewBox="0 0 24 24" aria-hidden="true">
+                        <circle cx="12" cy="12" r="9" stroke-width="1.8"/>
+                        <path d="M12 11v5m0-8h.01" stroke-width="1.8"/>
+                    </svg>
+                    Account Security
+                </div>
+                <p class="mt-2 text-xs leading-5 text-slate-400">
+                    Keep your account details up to date and use a strong password.
+                </p>
+            </div>
+        </aside>
+
+        <!-- RIGHT CONTENT -->
+        <div class="min-w-0">
+
+            <!-- PROFILE PANEL -->
+            <section data-panel="profile"
+                class="settings-panel settings-content-card rounded-2xl border border-slate-800 bg-slate-950/60 p-5 shadow-xl sm:p-7">
+
+                <div class="mb-4 flex items-center gap-3">
+                    <div class="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-cyan-700/60 bg-cyan-950/60 text-cyan-400">
+                        <svg class="h-7 w-7" fill="none" stroke="currentColor"
+                            viewBox="0 0 24 24" aria-hidden="true">
+                            <circle cx="12" cy="8" r="4" stroke-width="1.8"/>
+                            <path d="M4 21a8 8 0 0 1 16 0" stroke-width="1.8"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h2 class="text-base font-bold text-white">Profile Information</h2>
+                        <p class="mt-1 text-sm text-slate-400">
+                            Update your full name, primary mobile number, and profile photo.
+                        </p>
+                    </div>
+                </div>
+
+                <form method="post" enctype="multipart/form-data" class="settings-form" novalidate>
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="profile">
+
+                    <div class="grid gap-5 md:grid-cols-[170px_minmax(0,1fr)]">
+
+                        <!-- PROFILE PHOTO -->
+                        <div class="flex flex-col items-center">
+                            <div class="relative">
+                                {% if teacher.profile_image %}
+                                    <img id="profile-preview"
+                                        src="{{ teacher.profile_image.url }}"
+                                        alt="Teacher profile photo"
+                                        class="h-32 w-32 rounded-full border-4 border-cyan-500/70 bg-slate-900 object-cover shadow-lg shadow-cyan-950/50">
+                                {% else %}
+                                    <div id="profile-placeholder"
+                                        class="flex h-32 w-32 items-center justify-center rounded-full border-4 border-cyan-500/70 bg-slate-900 text-cyan-400">
+                                        <svg class="h-12 w-12" fill="none" stroke="currentColor"
+                                            viewBox="0 0 24 24" aria-hidden="true">
+                                            <circle cx="12" cy="8" r="4" stroke-width="1.5"/>
+                                            <path d="M4 21a8 8 0 0 1 16 0" stroke-width="1.5"/>
+                                        </svg>
+                                    </div>
+                                    <img id="profile-preview" src="" alt="Selected profile photo"
+                                        class="hidden h-32 w-32 rounded-full border-4 border-cyan-500/70 object-cover shadow-lg shadow-cyan-950/50">
+                                {% endif %}
+
+                                <button type="button" id="open-cropper"
+                                    class="absolute bottom-1 right-1 flex h-9 w-9 items-center justify-center rounded-full border-4 border-slate-950 bg-cyan-400 text-slate-950 transition hover:bg-cyan-300"
+                                    aria-label="Crop profile photo" title="Choose and crop photo">
+                                    <svg class="h-5 w-5" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24" aria-hidden="true">
+                                        <path d="M4 8h3l2-3h6l2 3h3a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2Z"
+                                            stroke-width="1.7" stroke-linejoin="round"/>
+                                        <circle cx="12" cy="13" r="3.5" stroke-width="1.7"/>
+                                    </svg>
+                                </button>
+                            </div>
+
+                            <label for="profile_image"
+                                class="mt-3 cursor-pointer text-xs font-bold text-cyan-400 underline-offset-4 hover:underline">
+                                Change Photo
+                            </label>
+
+                            <input id="profile_image" name="profile_image" type="file" accept=".jpg,.jpeg,.png,image/jpeg,image/png"
+
+                                class="sr-only">
+
+                            <p class="mt-2 text-center text-[11px] leading-4 text-slate-400">
+                                Recommended: 400 × 400 px<br>
+                                JPG or PNG · Maximum 2 MB
+                            </p>
+                            <p id="image-status" class="mt-2 text-center text-xs text-cyan-400"></p>
+                        </div>
+
+                        <!-- PROFILE FIELDS -->
+                        <div class="min-w-0 space-y-4">
+                            <div>
+                                <label for="full_name"
+                                    class="mb-1.5 block text-xs font-semibold text-slate-200">
+                                    Full Name
+                                </label>
+                                <input id="full_name" name="full_name" type="text" value="{{ values.full_name }}"
+                                    placeholder="Enter your full name"
+                                    class="settings-input w-full rounded-lg px-3 py-2.5">
+                            </div>
+
+                            <div>
+                                <label for="phone_number"
+                                    class="mb-1.5 block text-xs font-semibold text-slate-200">
+                                    Primary Mobile Number
+                                </label>
+                                <input id="phone_number" name="phone_number" type="text"
+                                    inputmode="numeric" autocomplete="tel"
+                                    value="{{ values.phone_number }}"
+                                    placeholder="Enter 10-digit mobile number"
+                                    class="settings-input w-full rounded-lg px-3 py-2.5">
+                            </div>
+
+                            <div>
+                                <label for="bio"
+                                    class="mb-1.5 block text-xs font-semibold text-slate-200">
+                                    Bio <span class="font-normal text-slate-500">(Optional, maximum 250 characters)</span>
+                                </label>
+                                <textarea id="bio" name="bio" rows="3"
+                                    placeholder="Briefly describe your teaching experience and interests"
+                                    class="settings-input w-full resize-y rounded-lg px-3 py-2.5">{{ values.bio }}</textarea>
+                            </div>
+
+                            <div class="flex justify-end border-t border-slate-800 pt-5">
+                                <button type="submit"
+                                    class="inline-flex items-center justify-center gap-2 rounded-xl bg-cyan-400 px-6 py-3 font-bold text-slate-950 transition hover:bg-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-300 focus:ring-offset-2 focus:ring-offset-slate-950">
+                                    <svg class="h-5 w-5" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24" aria-hidden="true">
+                                        <path d="M5 3h12l4 4v14H3V3h2Zm2 0v6h10V3M7 21v-8h10v8"
+                                            stroke-width="1.7" stroke-linejoin="round"/>
+                                    </svg>
+                                    Save Changes
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </section>
+
+            <!-- USERNAME AND EMAIL PANEL -->
+            <section data-panel="account"
+                class="settings-panel settings-content-card hidden rounded-2xl border border-slate-800 bg-slate-950/60 p-4 shadow-lg sm:p-5">
+
+                <div class="mb-7 flex items-center gap-4">
+                    <div class="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-blue-700/60 bg-blue-950/60 text-cyan-400">
+                        <svg class="h-7 w-7" fill="none" stroke="currentColor"
+                            viewBox="0 0 24 24" aria-hidden="true">
+                            <rect x="3" y="5" width="18" height="14" rx="2" stroke-width="1.8"/>
+                            <path d="m4 7 8 6 8-6" stroke-width="1.8"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h2 class="text-base font-bold text-white">Username &amp; Email</h2>
+                        <p class="mt-1 text-sm text-slate-400">
+                            Update your username and email address.
+                        </p>
+                    </div>
+                </div>
+
+                <form method="post" class="settings-form space-y-4" novalidate>
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="account">
+
+                    <div>
+                        <label for="username"
+                            class="mb-2 block text-xs font-semibold text-slate-200">
+                            Username
+                        </label>
+                        <input id="username" name="username" type="text" autocomplete="username"
+                            value="{{ values.username }}"
+                            class="settings-input w-full rounded-lg px-3 py-2.5">
+                        <p class="mt-2 text-xs text-slate-500">
+                            This username will be used to log in to your account.
+                        </p>
+                    </div>
+
+                    <div>
+                        <label for="email"
+                            class="mb-2 block text-xs font-semibold text-slate-200">
+                            Email Address
+                        </label>
+                        <input id="email" name="email" type="text" inputmode="email" autocomplete="email"
+                            value="{{ values.email }}"
+                            class="settings-input w-full rounded-lg px-3 py-2.5">
+                        <p class="mt-2 text-xs text-slate-500">
+                            Use an email address you can access.
+                        </p>
+                    </div>
+
+                    <div class="flex justify-end border-t border-slate-800 pt-5">
+                        <button type="submit"
+                            class="inline-flex items-center justify-center gap-2 rounded-xl bg-cyan-400 px-6 py-3 font-bold text-slate-950 transition hover:bg-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-300">
+                            <svg class="h-5 w-5" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M5 3h12l4 4v14H3V3h2Zm2 0v6h10V3M7 21v-8h10v8"
+                                    stroke-width="1.7" stroke-linejoin="round"/>
+                            </svg>
+                            Save Changes
+                        </button>
+                    </div>
+                </form>
+            </section>
+
+            <!-- PASSWORD PANEL -->
+            <section data-panel="password"
+                class="settings-panel settings-content-card hidden rounded-2xl border border-slate-800 bg-slate-950/60 p-4 shadow-lg sm:p-5">
+
+                <div class="mb-7 flex items-center gap-4">
+                    <div class="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-blue-700/60 bg-blue-950/60 text-cyan-400">
+                        <svg class="h-7 w-7" fill="none" stroke="currentColor"
+                            viewBox="0 0 24 24" aria-hidden="true">
+                            <rect x="4" y="10" width="16" height="11" rx="2" stroke-width="1.8"/>
+                            <path d="M8 10V7a4 4 0 0 1 8 0v3" stroke-width="1.8"/>
+                            <path d="M12 14v3" stroke-width="1.8"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h2 class="text-base font-bold text-white">Password &amp; Security</h2>
+                        <p class="mt-1 text-sm text-slate-400">
+                            Update your password to keep your account secure.
+                        </p>
+                    </div>
+                </div>
+
+                <form method="post" id="password-form" class="settings-form space-y-4" novalidate>
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="password">
+
+                    <!-- CURRENT PASSWORD -->
+                    <div>
+                        <label for="current_password"
+                            class="mb-2 block text-xs font-semibold text-slate-200">
+                            Current Password
+                        </label>
+                        <div class="password-field relative">
+                            <input id="current_password" name="current_password"
+                                type="password" autocomplete="current-password"
+                                placeholder="Enter your current password"
+                                class="settings-input w-full rounded-lg px-3 py-2.5 pr-14">
+                            <button type="button" class="toggle-password"
+                                data-target="current_password"
+                                aria-label="Show current password">
+                                <svg class="h-5 w-5" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24" aria-hidden="true">
+                                    <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"
+                                        stroke-width="1.7"/>
+                                    <circle cx="12" cy="12" r="3" stroke-width="1.7"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- NEW PASSWORD -->
+                    <div>
+                        <label for="new_password"
+                            class="mb-2 block text-xs font-semibold text-slate-200">
+                            New Password
+                        </label>
+                        <div class="password-field relative">
+                            <input id="new_password" name="new_password"
+                                type="password"
+                                autocomplete="new-password"
+                                placeholder="Enter your new password"
+                                class="settings-input w-full rounded-lg px-3 py-2.5 pr-14">
+                            <button type="button" class="toggle-password"
+                                data-target="new_password"
+                                aria-label="Show new password">
+                                <svg class="h-5 w-5" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24" aria-hidden="true">
+                                    <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"
+                                        stroke-width="1.7"/>
+                                    <circle cx="12" cy="12" r="3" stroke-width="1.7"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- CONFIRM PASSWORD -->
+                    <div>
+                        <label for="confirm_password"
+                            class="mb-2 block text-xs font-semibold text-slate-200">
+                            Confirm New Password
+                        </label>
+                        <div class="password-field relative">
+                            <input id="confirm_password" name="confirm_password"
+                                type="password"
+                                autocomplete="new-password"
+                                placeholder="Confirm your new password"
+                                class="settings-input w-full rounded-lg px-3 py-2.5 pr-14">
+                            <button type="button" class="toggle-password"
+                                data-target="confirm_password"
+                                aria-label="Show password confirmation">
+                                <svg class="h-5 w-5" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24" aria-hidden="true">
+                                    <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"
+                                        stroke-width="1.7"/>
+                                    <circle cx="12" cy="12" r="3" stroke-width="1.7"/>
+                                </svg>
+                            </button>
+                        </div>
+</div>
+                    <div class="flex justify-end border-t border-slate-800 pt-5">
+                        <button type="submit"
+                            class="inline-flex items-center justify-center gap-2 rounded-xl bg-cyan-400 px-6 py-3 font-bold text-slate-950 transition hover:bg-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-300">
+                            <svg class="h-5 w-5" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24" aria-hidden="true">
+                                <rect x="4" y="10" width="16" height="11" rx="2" stroke-width="1.8"/>
+                                <path d="M8 10V7a4 4 0 0 1 8 0v3" stroke-width="1.8"/>
+                            </svg>
+                            Update Password
+                        </button>
+                    </div>
+                </form>
+            </section>
+
+            <!-- APPEARANCE PANEL -->
+            <section data-panel="appearance"
+                class="settings-panel settings-content-card hidden rounded-2xl border border-slate-800 bg-slate-950/60 p-4 shadow-lg sm:p-5">
+                <div class="settings-panel-heading flex items-center gap-4 border-b border-slate-800 pb-5">
+                    <div class="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-cyan-700/70 bg-cyan-950/50 text-cyan-400">
+                        <svg class="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <circle cx="12" cy="12" r="9" stroke-width="1.8"/>
+                            <circle cx="8" cy="9" r="1" stroke-width="1.5"/>
+                            <circle cx="15" cy="7" r="1" stroke-width="1.5"/>
+                            <circle cx="16" cy="14" r="1" stroke-width="1.5"/>
+                            <path d="M12 21v-3a2 2 0 0 0-2-2H8a2 2 0 0 1-2-2v-1" stroke-width="1.5"/>
+                        </svg>
+                    </div>
+                    <div class="min-w-0">
+                        <h2 class="text-base font-bold text-white">Appearance</h2>
+                        <p class="mt-1 text-sm text-slate-300">Customize the look and feel of your NeoLearn dashboard.</p>
+                    </div>
+                </div>
+
+                <div class="mt-4 grid gap-4 md:grid-cols-2">
+                    <div class="settings-theme-card relative rounded-2xl border border-slate-800 bg-slate-900/50 p-4">
+                        <span class="settings-lock-badge" aria-label="Coming soon">
+                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                <rect x="4" y="10" width="16" height="11" rx="2" stroke-width="1.8"/>
+                                <path d="M8 10V7a4 4 0 0 1 8 0v3" stroke-width="1.8"/>
+                            </svg>
+                        </span>
+                        <div class="theme-preview theme-preview-dark" aria-hidden="true">
+                            <div class="theme-preview-sidebar"><i></i><i></i><i class="selected"></i><i></i><i></i></div>
+                            <div class="theme-preview-main"><i></i><i></i><i></i></div>
+                        </div>
+                        <div class="mt-4 flex items-center gap-3">
+                            <span class="theme-radio" aria-hidden="true"></span>
+                            <h3 class="font-bold text-white">Dark Mode</h3>
+                        </div>
+                        <p class="ml-8 mt-2 text-sm leading-6 text-slate-400">A modern dark theme for a better viewing experience.</p>
+                    </div>
+
+                    <div class="settings-theme-card relative rounded-2xl border border-slate-800 bg-slate-900/50 p-4">
+                        <span class="settings-lock-badge" aria-label="Coming soon">
+                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                <rect x="4" y="10" width="16" height="11" rx="2" stroke-width="1.8"/>
+                                <path d="M8 10V7a4 4 0 0 1 8 0v3" stroke-width="1.8"/>
+                            </svg>
+                        </span>
+                        <div class="theme-preview theme-preview-light" aria-hidden="true">
+                            <div class="theme-preview-sidebar"><i></i><i></i><i></i><i></i><i></i></div>
+                            <div class="theme-preview-main"><i></i><i></i><i></i></div>
+                        </div>
+                        <div class="mt-4 flex items-center gap-3">
+                            <span class="theme-radio" aria-hidden="true"></span>
+                            <h3 class="font-bold text-white">Light Mode</h3>
+                        </div>
+                        <p class="ml-8 mt-2 text-sm leading-6 text-slate-400">A clean and bright theme for daytime use.</p>
+                    </div>
+                </div>
+
+                <div class="settings-coming-soon mt-5 flex items-center gap-4 rounded-2xl border border-sky-800/80 bg-sky-950/30 p-4 sm:p-5">
+                    <div class="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-blue-900/70 text-sky-100">
+                        <svg class="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <rect x="4" y="10" width="16" height="11" rx="2" stroke-width="1.8"/>
+                            <path d="M8 10V7a4 4 0 0 1 8 0v3" stroke-width="1.8"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-white">Coming Soon</h3>
+                        <p class="mt-1 text-sm leading-6 text-slate-300">Theme customization will be available in a future update.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- NOTIFICATIONS PANEL -->
+            <section data-panel="notifications"
+                class="settings-panel settings-content-card hidden rounded-2xl border border-slate-800 bg-slate-950/60 p-4 shadow-lg sm:p-5">
+                <div class="settings-panel-heading flex items-center gap-4 border-b border-slate-800 pb-5">
+                    <div class="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-cyan-700/70 bg-cyan-950/50 text-cyan-400">
+                        <svg class="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" stroke-width="1.8" stroke-linejoin="round"/>
+                            <path d="M10 21h4" stroke-width="1.8"/>
+                        </svg>
+                    </div>
+                    <div class="min-w-0">
+                        <h2 class="text-base font-bold text-white">Notifications</h2>
+                        <p class="mt-1 text-sm text-slate-300">Manage how and when you receive notifications from NeoLearn.</p>
+                    </div>
+                </div>
+
+                <div class="mt-4 space-y-3">
+                    <div class="settings-notification-row">
+                        <div class="settings-notification-icon">
+                            <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                <rect x="3" y="5" width="18" height="14" rx="2" stroke-width="1.8"/>
+                                <path d="m4 7 8 6 8-6" stroke-width="1.8"/>
+                            </svg>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <h3 class="text-sm font-bold text-white">Email Notifications</h3>
+                            <p class="mt-1 text-sm text-slate-400">Receive important updates and announcements via email.</p>
+                        </div>
+                        <div class="settings-locked-control">
+                            <span class="settings-switch" aria-hidden="true"><i></i></span>
+                            <svg class="h-5 w-5 shrink-0 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                <rect x="5" y="10" width="14" height="11" rx="2" stroke-width="1.8"/><path d="M8 10V7a4 4 0 0 1 8 0v3" stroke-width="1.8"/>
+                            </svg>
+                            <span class="settings-lock-caption">Coming Soon</span>
+                        </div>
+                    </div>
+
+                    <div class="settings-notification-row">
+                        <div class="settings-notification-icon">
+                            <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                <rect x="3" y="5" width="18" height="16" rx="2" stroke-width="1.8"/><path d="M16 3v4M8 3v4M3 10h18" stroke-width="1.8"/>
+                            </svg>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <h3 class="text-sm font-bold text-white">Class Reminders</h3>
+                            <p class="mt-1 text-sm text-slate-400">Get notified about upcoming live classes.</p>
+                        </div>
+                        <div class="settings-locked-control">
+                            <span class="settings-switch" aria-hidden="true"><i></i></span>
+                            <svg class="h-5 w-5 shrink-0 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                <rect x="5" y="10" width="14" height="11" rx="2" stroke-width="1.8"/><path d="M8 10V7a4 4 0 0 1 8 0v3" stroke-width="1.8"/>
+                            </svg>
+                            <span class="settings-lock-caption">Coming Soon</span>
+                        </div>
+                    </div>
+
+                    <div class="settings-notification-row">
+                        <div class="settings-notification-icon">
+                            <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M6 3h9l4 4v14H6z" stroke-width="1.8" stroke-linejoin="round"/><path d="M14 3v5h5M9 13h7M9 17h7" stroke-width="1.8"/>
+                            </svg>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <h3 class="text-sm font-bold text-white">Course Updates</h3>
+                            <p class="mt-1 text-sm text-slate-400">Receive notifications about new content and materials.</p>
+                        </div>
+                        <div class="settings-locked-control">
+                            <span class="settings-switch" aria-hidden="true"><i></i></span>
+                            <svg class="h-5 w-5 shrink-0 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                <rect x="5" y="10" width="14" height="11" rx="2" stroke-width="1.8"/><path d="M8 10V7a4 4 0 0 1 8 0v3" stroke-width="1.8"/>
+                            </svg>
+                            <span class="settings-lock-caption">Coming Soon</span>
+                        </div>
+                    </div>
+
+                    <div class="settings-notification-row">
+                        <div class="settings-notification-icon">
+                            <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                <circle cx="9" cy="20" r="1.5" stroke-width="1.8"/><circle cx="18" cy="20" r="1.5" stroke-width="1.8"/><path d="M2 3h2l2.5 12h12L21 7H5" stroke-width="1.8" stroke-linejoin="round"/>
+                            </svg>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <h3 class="text-sm font-bold text-white">Order &amp; Payment Alerts</h3>
+                            <p class="mt-1 text-sm text-slate-400">Get updates about your orders and payments.</p>
+                        </div>
+                        <div class="settings-locked-control">
+                            <span class="settings-switch" aria-hidden="true"><i></i></span>
+                            <svg class="h-5 w-5 shrink-0 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                <rect x="5" y="10" width="14" height="11" rx="2" stroke-width="1.8"/><path d="M8 10V7a4 4 0 0 1 8 0v3" stroke-width="1.8"/>
+                            </svg>
+                            <span class="settings-lock-caption">Coming Soon</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="settings-coming-soon mt-5 flex items-center gap-4 rounded-2xl border border-sky-800/80 bg-sky-950/30 p-4 sm:p-5">
+                    <div class="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-blue-900/70 text-sky-100">
+                        <svg class="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <rect x="4" y="10" width="16" height="11" rx="2" stroke-width="1.8"/><path d="M8 10V7a4 4 0 0 1 8 0v3" stroke-width="1.8"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-white">Coming Soon</h3>
+                        <p class="mt-1 text-sm leading-6 text-slate-300">Notification settings will be available in a future update.</p>
+                        <p class="text-sm leading-6 text-slate-300">Stay tuned for more customization options.</p>
+                    </div>
+                </div>
+            </section>
+
+        </div>
+    </div>
+</div>
+
+<!-- COMPACT IMAGE CROPPER -->
+<div id="crop-modal" class="crop-modal-overlay fixed inset-0 z-[100000] hidden items-center justify-center overflow-y-auto bg-slate-950/90 p-2 sm:p-4"
+    role="dialog" aria-modal="true" aria-labelledby="crop-title">
+    <div class="crop-dialog my-auto w-full max-w-3xl overflow-hidden rounded-2xl border border-slate-700 bg-slate-950 shadow-2xl">
+        <div id="crop-dialog-header" class="flex items-start justify-between gap-3 border-b border-slate-800 px-4 py-3 sm:px-5">
+            <div>
+                <h2 id="crop-title" class="text-lg font-bold text-white">Crop Profile Photo</h2>
+                <p class="mt-1 text-xs leading-5 text-slate-400">Drag the square to choose the crop area, or drag the photo to reposition it. Use zoom for fine adjustment.</p>
+            </div>
+            <button type="button" id="close-cropper" class="rounded-lg px-3 py-1 text-xl text-slate-400 hover:bg-slate-800 hover:text-white" aria-label="Close crop dialog">&times;</button>
+        </div>
+        <div class="p-3 sm:p-4">
+            <div id="crop-stage" class="relative mx-auto h-[min(34dvh,270px)] min-h-[170px] w-full select-none overflow-hidden rounded-xl border border-slate-800 bg-black touch-none">
+                <img id="crop-source-image" alt="Image to crop" draggable="false" class="pointer-events-none absolute block object-contain">
+                <div id="crop-selection" class="absolute hidden cursor-move border-2 border-white shadow-[0_0_0_9999px_rgba(2,6,23,.62)] touch-none" role="slider" aria-label="Square crop selection. Drag to reposition." aria-valuetext="Drag to choose the crop area" tabindex="0">
+                    <div class="pointer-events-none absolute inset-0 grid grid-cols-3 grid-rows-3">
+                        <span class="border-b border-r border-white/70"></span><span class="border-b border-r border-white/70"></span><span class="border-b border-white/70"></span>
+                        <span class="border-b border-r border-white/70"></span><span class="border-b border-r border-white/70"></span><span class="border-b border-white/70"></span>
+                        <span class="border-r border-white/70"></span><span class="border-r border-white/70"></span><span></span>
+                    </div>
+                    <span class="pointer-events-none absolute -left-1 -top-1 h-4 w-4 border-l-4 border-t-4 border-cyan-300"></span>
+                    <span class="pointer-events-none absolute -right-1 -top-1 h-4 w-4 border-r-4 border-t-4 border-cyan-300"></span>
+                    <span class="pointer-events-none absolute -bottom-1 -left-1 h-4 w-4 border-b-4 border-l-4 border-cyan-300"></span>
+                    <span class="pointer-events-none absolute -bottom-1 -right-1 h-4 w-4 border-b-4 border-r-4 border-cyan-300"></span>
+                </div>
+            </div>
+            <div class="crop-controls mt-3 rounded-xl border border-slate-800 bg-slate-900/70 p-3">
+                <div class="mb-2 flex items-center justify-between gap-3">
+                    <label for="crop-zoom" class="text-sm font-semibold text-slate-200">Image zoom</label>
+                    <span id="crop-zoom-value" class="text-sm font-bold text-cyan-400">1.00×</span>
+                </div>
+                <input id="crop-zoom" type="range" min="1" max="3" step="0.01" value="1"
+                    class="w-full cursor-pointer accent-cyan-400" aria-label="Zoom the background photo">
+                <p class="mt-2 text-xs text-slate-400">Move the square or the photo independently. The saved image is always a 1:1 square.</p>
+            </div>
+            <canvas id="crop-preview-canvas" width="400" height="400" class="hidden" aria-hidden="true"></canvas>
+            <p id="crop-error" class="mt-2 hidden text-sm text-rose-400" role="alert"></p>
+            <div class="mt-4 flex flex-col-reverse gap-2 border-t border-slate-800 pt-4 sm:flex-row sm:justify-end">
+                <button type="button" id="cancel-crop" class="rounded-xl border border-slate-700 px-5 py-2.5 text-sm font-semibold text-slate-300 transition hover:bg-slate-900">Cancel</button>
+                <button type="button" id="apply-crop" class="rounded-xl bg-cyan-400 px-5 py-2.5 text-sm font-bold text-slate-950 transition hover:bg-cyan-300">Apply Crop</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<style>
+
+    .settings-layout {
+        align-items: stretch;
+        grid-auto-rows: 1fr;
+    }
+    .settings-sidebar {
+        min-width: 0;
+        height: 100%;
+        min-height: 500px;
+        display: flex;
+        flex-direction: column;
+    }
+    #settings-navigation { flex: 0 0 auto; }
+    .settings-security-card { margin-top: auto; }
+    .settings-nav-item { min-height: 54px; }
+    .settings-nav-arrow {
+        color: #b6c8e1;
+        font-size: 27px;
+        line-height: 1;
+        font-weight: 300;
+        margin-left: auto;
+    }
+    .settings-nav-item.is-active .settings-nav-arrow { color: #22d3ee; }
+    .settings-security-card { border-top-color: rgba(8,145,178,.45); }
+    .settings-content-card {
+        min-width: 0;
+        height: 100%;
+        min-height: 500px;
+        max-height: calc(100vh - 225px);
+        overflow-y: auto;
+        overflow-x: hidden;
+        scrollbar-width: auto;
+        scrollbar-color: #22d3ee #0b1728;
+        overscroll-behavior: auto;
+        scrollbar-gutter: stable;
+    }
+    /* Keep the right-hand settings typography compact like the reference image. */
+    .settings-content-card[data-panel="profile"],
+    .settings-content-card[data-panel="account"],
+    .settings-content-card[data-panel="password"],
+    .settings-content-card[data-panel="appearance"],
+    .settings-content-card[data-panel="notifications"] {
+        min-height: 500px;
+    }
+    .settings-content-card .text-3xl { font-size: 1.25rem !important; line-height: 1.35 !important; }
+    .settings-content-card .text-2xl { font-size: 1.1rem !important; line-height: 1.4 !important; }
+    .settings-content-card .text-xl { font-size: .98rem !important; line-height: 1.4 !important; }
+    .settings-content-card .text-lg { font-size: .88rem !important; line-height: 1.45 !important; }
+    .settings-content-card .text-base { font-size: .78rem !important; line-height: 1.5 !important; }
+    .settings-content-card .text-sm { font-size: .68rem !important; line-height: 1.5 !important; }
+    .settings-content-card .text-xs { font-size: .58rem !important; line-height: 1.45 !important; }
+    .settings-content-card input,
+    .settings-content-card textarea,
+    .settings-content-card select,
+    .settings-content-card button { font-size: .72rem; }
+    .settings-content-card .settings-notification-row h3 { font-size: .72rem !important; }
+    .settings-content-card .settings-notification-row p { font-size: .66rem !important; line-height: 1.45 !important; }
+    .settings-content-card .settings-lock-caption { font-size: .55rem !important; }
+    .settings-panel-heading { min-width: 0; }
+    .settings-theme-card { min-width: 0; }
+    .settings-lock-badge {
+        position: absolute; top: 10px; right: 10px; z-index: 2;
+        display: flex; align-items: center; justify-content: center;
+        width: 42px; height: 42px; border-radius: 9999px;
+        color: #e2e8f0; background: rgba(51,65,85,.95);
+        border: 3px solid #0b1224;
+    }
+    .theme-preview {
+        display: flex; gap: 10px; height: 145px; padding: 12px;
+        border-radius: 12px; overflow: hidden; border: 1px solid #334155;
+    }
+    .theme-preview-sidebar {
+        display: flex; flex-direction: column; gap: 10px;
+        width: 27%; padding: 10px; border-radius: 8px;
+    }
+    .theme-preview-sidebar i { display: block; height: 8px; border-radius: 99px; opacity: .8; }
+    .theme-preview-sidebar i:nth-child(odd) { width: 55%; }
+    .theme-preview-sidebar i:nth-child(even) { width: 85%; }
+    .theme-preview-sidebar i.selected { width: 100%; height: 13px; }
+    .theme-preview-main { flex: 1; display: flex; flex-direction: column; gap: 8px; }
+    .theme-preview-main i { display: block; border-radius: 8px; height: 28px; }
+    .theme-preview-main i:first-child { height: 20px; width: 45%; }
+    .theme-preview-main i:nth-child(2) { height: 45px; }
+    .theme-preview-main i:nth-child(3) { flex: 1; }
+    .theme-preview-dark { background: #030b1b; }
+    .theme-preview-dark .theme-preview-sidebar { background: #0b1428; }
+    .theme-preview-dark .theme-preview-sidebar i { background: #253752; }
+    .theme-preview-dark .theme-preview-sidebar i.selected { background: #06b6d4; }
+    .theme-preview-dark .theme-preview-main i { background: #111f38; }
+    .theme-preview-dark .theme-preview-main i:first-child { background: #263957; }
+    .theme-preview-light { background: #f8fafc; border-color: #dbeafe; }
+    .theme-preview-light .theme-preview-sidebar { background: #eef2f7; }
+    .theme-preview-light .theme-preview-sidebar i { background: #cbd5e1; }
+    .theme-preview-light .theme-preview-main i { background: #e2e8f0; }
+    .theme-preview-light .theme-preview-main i:first-child { background: #cbd5e1; }
+    .theme-radio {
+        display: inline-block; width: 25px; height: 25px; flex: 0 0 25px;
+        border: 2px solid #64748b; border-radius: 9999px;
+    }
+    .settings-notification-row {
+        display: flex; align-items: center; gap: 16px; min-width: 0;
+        padding: 12px; border: 1px solid #1e344b; border-radius: 15px;
+        background: rgba(2, 12, 28, .45);
+    }
+    .settings-notification-icon {
+        display: flex; align-items: center; justify-content: center;
+        width: 58px; height: 58px; flex: 0 0 58px;
+        border-radius: 13px; color: #cbd5e1; background: #111e32;
+    }
+    .settings-locked-control {
+        display: grid; grid-template-columns: auto auto; grid-template-rows: auto auto;
+        align-items: center; justify-items: center; column-gap: 12px; row-gap: 4px;
+        color: #cbd5e1; flex: 0 0 auto; min-width: 94px;
+    }
+    .settings-switch {
+        display: inline-flex; align-items: center; width: 61px; height: 34px;
+        padding: 5px; border-radius: 9999px; background: #334155;
+    }
+    .settings-switch i { width: 23px; height: 23px; border-radius: 50%; background: #cbd5e1; }
+    .settings-lock-caption {
+        grid-column: 1 / -1; color: #a9bdd6; font-size: 10px; line-height: 1.2;
+        white-space: nowrap;
+    }
+    @media (max-width: 1023px) {
+        .settings-content-card {
+            height: auto;
+            min-height: 0;
+            max-height: none;
+            overflow: visible;
+            scrollbar-gutter: auto;
+        }
+        .settings-layout { grid-template-columns: minmax(0, 1fr); grid-auto-rows: auto; }
+        .settings-sidebar { width: 100%; height: auto; min-height: 0; }
+        .settings-content-card[data-panel="profile"],
+        .settings-content-card[data-panel="account"],
+        .settings-content-card[data-panel="password"],
+        .settings-content-card[data-panel="appearance"],
+        .settings-content-card[data-panel="notifications"] { min-height: 0; }
+        .settings-security-card { margin-top: 14px; }
+    }
+    @media (max-width: 640px) {
+        .settings-notification-row { gap: 10px; padding: 10px; }
+        .settings-notification-icon { width: 42px; height: 42px; flex-basis: 42px; }
+        .settings-notification-row p { font-size: 12px; line-height: 1.45; }
+        .settings-locked-control { min-width: 48px; grid-template-columns: 1fr; }
+        .settings-locked-control .settings-switch { width: 42px; height: 25px; padding: 4px; }
+        .settings-locked-control .settings-switch i { width: 17px; height: 17px; }
+        .settings-locked-control > svg { display: none; }
+        .settings-lock-caption { white-space: normal; text-align: center; font-size: 9px; }
+        .theme-preview { height: 120px; }
+    }
+
+    .settings-nav-item {
+        color: #b8c6d9;
+        border: 1px solid transparent;
+        background: transparent;
+    }
+
+    .settings-nav-item:hover {
+        color: #ffffff;
+        background: rgba(15, 36, 55, 0.8);
+    }
+
+    .settings-nav-item.is-active {
+        color: #22d3ee;
+        background: linear-gradient(90deg, rgba(8, 145, 178, .22), rgba(8, 47, 73, .5));
+        border-color: rgba(8, 145, 178, .3);
+        box-shadow: inset 3px 0 0 #22d3ee;
+    }
+
+    .settings-input {
+        color: #f1f5f9;
+        background: #071827;
+        border: 1px solid #244258;
+        outline: none;
+        transition: border-color .2s, box-shadow .2s;
+    }
+
+    .settings-input::placeholder {
+        color: #71859c;
+    }
+
+    .settings-input:focus {
+        border-color: #06b6d4;
+        box-shadow: 0 0 0 3px rgba(6, 182, 212, .12);
+    }
+
+    .password-field .toggle-password {
+        position: absolute;
+        top: 50%;
+        right: 1rem;
+        transform: translateY(-50%);
+        color: #94a3b8;
+        padding: .25rem;
+    }
+
+    .password-field .toggle-password:hover {
+        color: #22d3ee;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .settings-nav-item,
+        .settings-input {
+            transition: none;
+        }
+    }
+
+    .crop-modal-overlay {
+        box-sizing: border-box;
+        padding-top: max(12px, env(safe-area-inset-top));
+        padding-bottom: max(12px, env(safe-area-inset-bottom));
+        overscroll-behavior: contain;
+    }
+    .crop-dialog {
+        max-height: calc(100dvh - 32px);
+        overflow-x: hidden;
+        overflow-y: auto;
+        margin: auto;
+        flex: 0 1 768px;
+        scrollbar-width: thin;
+        scrollbar-color: #334155 #020617;
+    }
+    #crop-stage { touch-action: none; position: relative; height: min(34dvh, 270px); min-height: 170px; }
+    #crop-source-image { display: block; max-width: none; max-height: none; object-fit: fill; user-select: none; -webkit-user-drag: none; }
+    #crop-selection { box-sizing: border-box; touch-action: none; }
+    @media (max-width: 640px) {
+        .crop-modal-overlay { padding: 8px; }
+        .crop-dialog { max-height: calc(100dvh - 16px); border-radius: 14px; }
+        #crop-stage { height: min(30dvh, 230px); min-height: 155px; }
+        #crop-dialog-header { padding: 10px 12px; }
+    }
+    @media (max-height: 650px) {
+        .crop-dialog { max-height: calc(100dvh - 16px); }
+        #crop-stage { height: min(27dvh, 210px); min-height: 135px; }
+        #crop-modal .crop-controls { padding: 10px; }
+    }
+
+
+
+    .crop-modal-overlay {
+        box-sizing: border-box;
+        padding-top: max(12px, env(safe-area-inset-top));
+        padding-bottom: max(12px, env(safe-area-inset-bottom));
+        overscroll-behavior: contain;
+    }
+    .crop-dialog {
+        max-height: calc(100dvh - 32px);
+        overflow-x: hidden;
+        overflow-y: auto;
+        margin: auto;
+        flex: 0 1 768px;
+        scrollbar-width: thin;
+        scrollbar-color: #334155 #020617;
+    }
+    #crop-stage { touch-action: none; position: relative; height: min(34dvh, 270px); min-height: 170px; }
+    #crop-source-image { display: block; max-width: none; max-height: none; object-fit: fill; user-select: none; -webkit-user-drag: none; }
+    #crop-selection { box-sizing: border-box; touch-action: none; }
+    @media (max-width: 640px) {
+        .crop-modal-overlay { padding: 8px; }
+        .crop-dialog { max-height: calc(100dvh - 16px); border-radius: 14px; }
+        #crop-stage { height: min(30dvh, 230px); min-height: 155px; }
+        #crop-dialog-header { padding: 10px 12px; }
+    }
+    @media (max-height: 650px) {
+        .crop-dialog { max-height: calc(100dvh - 16px); }
+        #crop-stage { height: min(27dvh, 210px); min-height: 135px; }
+        #crop-modal .crop-controls { padding: 10px; }
+    }
+
+    /* =========================================================
+       SETTINGS LAYOUT FIX
+       - Right card fills the available column height.
+       - The right card scrolls internally when needed.
+       - Its scrollbar is visually hidden.
+       - Forms and Save buttons use the available card space.
+       ========================================================= */
+    .settings-layout {
+        align-items: stretch;
+        grid-auto-rows: auto;
+    }
+
+    .settings-layout > .min-w-0 {
+        min-width: 0;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .settings-content-card:not(.hidden) {
+        display: flex;
+        flex: 1 1 auto;
+        flex-direction: column;
+        min-width: 0;
+        height: clamp(500px, calc(100vh - 330px), 720px);
+        min-height: 500px;
+        max-height: calc(100dvh - 300px);
+        overflow-x: hidden;
+        overflow-y: auto;
+        overscroll-behavior-y: contain;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+        scrollbar-gutter: auto;
+    }
+
+    .settings-content-card:not(.hidden)::-webkit-scrollbar {
+        width: 0;
+        height: 0;
+        display: none;
+    }
+
+    .settings-content-card .settings-form {
+        display: flex;
+        flex: 1 1 auto;
+        flex-direction: column;
+        min-height: 0;
+    }
+
+    /* Profile: keep photo and fields aligned, and push Save Changes down. */
+    .settings-content-card[data-panel="profile"] > .settings-form > .grid {
+        flex: 1 1 auto;
+        min-height: 0;
+        align-content: start;
+    }
+
+    .settings-content-card[data-panel="profile"] .settings-form > .grid > .min-w-0 {
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+    }
+
+    .settings-content-card[data-panel="profile"] #bio {
+        min-height: 90px;
+    }
+
+    .settings-content-card[data-panel="profile"] .settings-form > .grid > .min-w-0 > .flex.justify-end {
+        margin-top: auto;
+    }
+
+    /* Account and password: forms occupy the card; action stays at bottom. */
+    .settings-content-card[data-panel="account"] > .settings-form,
+    .settings-content-card[data-panel="password"] > .settings-form {
+        flex: 1 1 auto;
+    }
+
+    .settings-content-card[data-panel="account"] > .settings-form > .flex.justify-end,
+    .settings-content-card[data-panel="password"] > .settings-form > .flex.justify-end {
+        margin-top: auto;
+    }
+
+    /* Coming-soon panels use the same card height without forced blank space
+       between individual cards. */
+    .settings-content-card[data-panel="appearance"] .settings-coming-soon,
+    .settings-content-card[data-panel="notifications"] .settings-coming-soon {
+        flex-shrink: 0;
+    }
+
+    @media (min-width: 1024px) {
+        .settings-sidebar {
+            min-height: 500px;
+        }
+
+        .settings-content-card:not(.hidden) {
+            height: clamp(500px, calc(100dvh - 330px), 720px);
+        }
+    }
+
+    @media (max-width: 1023px) {
+        .settings-layout > .min-w-0 {
+            display: block;
+        }
+
+        .settings-content-card:not(.hidden) {
+            display: block;
+            height: auto;
+            min-height: 0;
+            max-height: none;
+            overflow: visible;
+        }
+
+        .settings-content-card .settings-form {
+            display: block;
+        }
+    }
+
+    @media (max-width: 640px) {
+        .settings-content-card:not(.hidden) {
+            padding: 1rem;
+        }
+
+        .settings-content-card[data-panel="profile"] > .settings-form > .grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr);
+        }
+
+        .settings-content-card[data-panel="profile"] .settings-form > .grid > .flex.flex-col.items-center {
+            margin-bottom: .5rem;
+        }
+    }
+
+</style>
+
+
+
+
+<script>
+
+document.addEventListener("DOMContentLoaded", function () {
+    "use strict";
+    const navItems = document.querySelectorAll(".settings-nav-item");
+    const panels = document.querySelectorAll(".settings-panel");
+    const breadcrumb = document.getElementById("settings-breadcrumb");
+    const sectionNames = {
+        profile: "Profile",
+        account: "Username & Email",
+        password: "Password & Security",
+        appearance: "Appearance",
+        notifications: "Notifications"
+    };
+    function showSection(section, updateHash = true) {
+        if (!sectionNames[section]) section = "profile";
+        panels.forEach(panel => panel.classList.toggle("hidden", panel.dataset.panel !== section));
+        navItems.forEach(button => {
+            const active = button.dataset.section === section;
+            button.classList.toggle("is-active", active);
+            button.setAttribute("aria-current", active ? "page" : "false");
+        });
+        if (breadcrumb) breadcrumb.textContent = sectionNames[section];
+        if (updateHash && window.history && window.history.replaceState) {
+            window.history.replaceState(null, "", "#" + section);
+        }
+    }
+    navItems.forEach(button => button.addEventListener("click", () => showSection(button.dataset.section)));
+    const requestedSection = window.location.hash.replace("#", "");
+    showSection(sectionNames[requestedSection] ? requestedSection : "profile", false);
+    document.querySelectorAll(".toggle-password").forEach(button => {
+        button.addEventListener("click", function () {
+            const input = document.getElementById(button.dataset.target);
+            if (!input) return;
+            const showing = input.type === "text";
+            input.type = showing ? "password" : "text";
+            button.setAttribute("aria-label", (showing ? "Show " : "Hide ") + "password");
+        });
+    });
+
+    /* Same centered 1:1 image cropper used by Admin Settings. */
+    const imageInput = document.getElementById("profile_image");
+    const openCropper = document.getElementById("open-cropper");
+    const cropModal = document.getElementById("crop-modal");
+    const closeCropper = document.getElementById("close-cropper");
+    const cancelCrop = document.getElementById("cancel-crop");
+    const applyCrop = document.getElementById("apply-crop");
+    const cropStage = document.getElementById("crop-stage");
+    const cropSourceImage = document.getElementById("crop-source-image");
+    const cropSelection = document.getElementById("crop-selection");
+    const cropError = document.getElementById("crop-error");
+    const imageStatus = document.getElementById("image-status");
+    const profilePreview = document.getElementById("profile-preview");
+    const profilePlaceholder = document.getElementById("profile-placeholder");
+
+    let selectedFile = null;
+    let previousFile = null;
+    let cropReady = false;
+    let cropRect = { x: 0, y: 0, size: 0 };
+    let imageRect = { x: 0, y: 0, width: 0, height: 0 };
+    let dragState = null;
+    let imageDataUrl = null;
+
+    function displayImageError(message) {
+        cropError.textContent = message;
+        cropError.classList.remove("hidden");
+    }
+
+    function hideCropModal() {
+        cropModal.classList.add("hidden");
+        cropModal.classList.remove("flex");
+        document.body.style.overflow = "";
+    }
+
+    function showCropModal() {
+        cropError.classList.add("hidden");
+        cropModal.classList.remove("hidden");
+        cropModal.classList.add("flex");
+        document.body.style.overflow = "hidden";
+    }
+
+    // Fixed centered 1:1 crop frame; move and zoom the photo behind it.
+    const zoomSlider = document.getElementById("crop-zoom");
+    const zoomValue = document.getElementById("crop-zoom-value");
+    let baseImageScale = 1;
+    let zoomFactor = 1;
+    let imageDragState = null;
+
+    function measureImage(resetZoom = true) {
+        if (!cropReady || !cropSourceImage.naturalWidth || !cropSourceImage.naturalHeight) return;
+
+        const stageWidth = cropStage.clientWidth;
+        const stageHeight = cropStage.clientHeight;
+        const side = Math.min(stageWidth * 0.72, stageHeight * 0.78);
+        cropRect.size = side;
+        cropRect.x = (stageWidth - side) / 2;
+        cropRect.y = (stageHeight - side) / 2;
+
+        // Start with the whole image scaled enough to cover the square crop.
+        baseImageScale = Math.max(
+            side / cropSourceImage.naturalWidth,
+            side / cropSourceImage.naturalHeight
+        );
+        if (resetZoom) {
+            zoomFactor = 1;
+            zoomSlider.value = "1";
+        }
+        applyImageTransform(true);
+        renderCrop();
+    }
+
+    function applyImageTransform(centerImage = false) {
+        if (!cropReady) return;
+        const width = cropSourceImage.naturalWidth * baseImageScale * zoomFactor;
+        const height = cropSourceImage.naturalHeight * baseImageScale * zoomFactor;
+        let left = imageRect.x;
+        let top = imageRect.y;
+        if (centerImage || !imageRect.width || !imageRect.height) {
+            left = (cropStage.clientWidth - width) / 2;
+            top = (cropStage.clientHeight - height) / 2;
+        } else {
+            // Keep the image centre stable while zooming.
+            const centreX = imageRect.x + imageRect.width / 2;
+            const centreY = imageRect.y + imageRect.height / 2;
+            left = centreX - width / 2;
+            top = centreY - height / 2;
+        }
+        cropSourceImage.style.width = width + "px";
+        cropSourceImage.style.height = height + "px";
+        cropSourceImage.style.left = left + "px";
+        cropSourceImage.style.top = top + "px";
+        imageRect = { x: left, y: top, width: width, height: height };
+        zoomValue.textContent = zoomFactor.toFixed(2) + "×";
+    }
+
+    function renderCrop() {
+        if (!cropReady || !cropRect.size) return;
+        cropSelection.style.left = cropRect.x + "px";
+        cropSelection.style.top = cropRect.y + "px";
+        cropSelection.style.width = cropRect.size + "px";
+        cropSelection.style.height = cropRect.size + "px";
+        cropSelection.classList.remove("hidden");
+    }
+
+    function clampCropPosition(x, y) {
+        const maxX = Math.max(0, cropStage.clientWidth - cropRect.size);
+        const maxY = Math.max(0, cropStage.clientHeight - cropRect.size);
+        return {
+            x: Math.max(0, Math.min(x, maxX)),
+            y: Math.max(0, Math.min(y, maxY))
+        };
+    }
+
+    function clampImagePosition(x, y) {
+        const minX = cropRect.x + cropRect.size - imageRect.width;
+        const maxX = cropRect.x;
+        const minY = cropRect.y + cropRect.size - imageRect.height;
+        const maxY = cropRect.y;
+        return {
+            x: Math.max(minX, Math.min(x, maxX)),
+            y: Math.max(minY, Math.min(y, maxY))
+        };
+    }
+
+    function setImagePosition(x, y) {
+        const clamped = clampImagePosition(x, y);
+        imageRect.x = clamped.x;
+        imageRect.y = clamped.y;
+        cropSourceImage.style.left = clamped.x + "px";
+        cropSourceImage.style.top = clamped.y + "px";
+    }
+
+    zoomSlider.addEventListener("input", function () {
+        const nextZoom = Number(zoomSlider.value);
+        if (!cropReady || !Number.isFinite(nextZoom)) return;
+
+        const centreX = imageRect.x + imageRect.width / 2;
+        const centreY = imageRect.y + imageRect.height / 2;
+        zoomFactor = nextZoom;
+        applyImageTransform(false);
+        setImagePosition(
+            centreX - imageRect.width / 2,
+            centreY - imageRect.height / 2
+        );
+    });
+
+    // Drag the square crop frame to choose a different area of the photo.
+    cropSelection.addEventListener("pointerdown", function (event) {
+        if (!cropReady) return;
+        event.preventDefault();
+        event.stopPropagation();
+        cropSelection.setPointerCapture(event.pointerId);
+        dragState = {
+            type: "crop",
+            pointerX: event.clientX,
+            pointerY: event.clientY,
+            x: cropRect.x,
+            y: cropRect.y
+        };
+    });
+
+    cropSelection.addEventListener("pointermove", function (event) {
+        if (!dragState || dragState.type !== "crop" || !cropReady) return;
+        const bounds = cropStage.getBoundingClientRect();
+        const factorX = cropStage.clientWidth / bounds.width;
+        const factorY = cropStage.clientHeight / bounds.height;
+        const next = clampCropPosition(
+            dragState.x + (event.clientX - dragState.pointerX) * factorX,
+            dragState.y + (event.clientY - dragState.pointerY) * factorY
+        );
+        cropRect.x = next.x;
+        cropRect.y = next.y;
+        renderCrop();
+        setImagePosition(imageRect.x, imageRect.y);
+    });
+
+    function stopCropDrag() {
+        if (dragState && dragState.type === "crop") dragState = null;
+    }
+    cropSelection.addEventListener("pointerup", stopCropDrag);
+    cropSelection.addEventListener("pointercancel", stopCropDrag);
+    cropSelection.addEventListener("lostpointercapture", stopCropDrag);
+
+    // Drag outside the square to move the background image under the crop frame.
+    cropStage.addEventListener("pointerdown", function (event) {
+        if (!cropReady || event.target === cropSelection || cropSelection.contains(event.target)) return;
+        event.preventDefault();
+        cropStage.setPointerCapture(event.pointerId);
+        imageDragState = {
+            pointerX: event.clientX,
+            pointerY: event.clientY,
+            x: imageRect.x,
+            y: imageRect.y
+        };
+    });
+
+    cropStage.addEventListener("pointermove", function (event) {
+        if (!imageDragState || !cropReady) return;
+        const bounds = cropStage.getBoundingClientRect();
+        const factorX = cropStage.clientWidth / bounds.width;
+        const factorY = cropStage.clientHeight / bounds.height;
+        setImagePosition(
+            imageDragState.x + (event.clientX - imageDragState.pointerX) * factorX,
+            imageDragState.y + (event.clientY - imageDragState.pointerY) * factorY
+        );
+    });
+
+    function stopImageDrag() { imageDragState = null; }
+    cropStage.addEventListener("pointerup", stopImageDrag);
+    cropStage.addEventListener("pointercancel", stopImageDrag);
+    cropStage.addEventListener("lostpointercapture", stopImageDrag);
+
+    function openSelectedImage(file) {
+        if (!file) return;
+
+        previousFile = selectedFile;
+        selectedFile = null;
+        cropReady = false;
+        imageStatus.textContent = "";
+        cropSelection.classList.add("hidden");
+        cropError.classList.add("hidden");
+        cropSourceImage.removeAttribute("src");
+
+        // No client-side validation messages. Files that cannot be cropped here
+        // remain selected and are submitted to Django for authoritative validation.
+        const allowedTypes = ["image/jpeg", "image/png"];
+        const extensionAllowed = /\.(jpe?g|png)$/i.test(file.name);
+        const typeAllowed = !file.type || allowedTypes.includes(file.type);
+
+        // Keep validation on the Django backend. If the file is too large
+        // or has an unsupported format, leave it selected for server validation.
+        if (!extensionAllowed || !typeAllowed || file.size > 2 * 1024 * 1024) {
+            hideCropModal();
+            return;
+        }
+
+        showCropModal();
+        const reader = new FileReader();
+        reader.onload = function () {
+            imageDataUrl = reader.result;
+            cropSourceImage.onload = function () {
+                if (!cropSourceImage.naturalWidth || !cropSourceImage.naturalHeight) {
+                    hideCropModal();
+                    return;
+                }
+                cropReady = true;
+                requestAnimationFrame(function () {
+                    requestAnimationFrame(function () { measureImage(true); });
+                });
+            };
+            cropSourceImage.onerror = function () {
+                cropReady = false;
+                hideCropModal();
+            };
+            cropSourceImage.src = imageDataUrl;
+        };
+        reader.onerror = function () { hideCropModal(); };
+        reader.readAsDataURL(file);
+    }
+
+    imageInput.addEventListener("change", function () {
+        const file = imageInput.files && imageInput.files[0];
+        selectedFile = null;
+        imageStatus.textContent = "";
+        if (file) openSelectedImage(file);
+    });
+
+    if (openCropper) openCropper.addEventListener("click", function () { imageInput.click(); });
+
+    function cancelCurrentCrop() {
+        imageInput.value = "";
+        selectedFile = previousFile;
+        hideCropModal();
+    }
+    closeCropper.addEventListener("click", cancelCurrentCrop);
+    cancelCrop.addEventListener("click", cancelCurrentCrop);
+    cropModal.addEventListener("click", function (event) {
+        if (event.target === cropModal) cancelCurrentCrop();
+    });
+    document.addEventListener("keydown", function (event) {
+        if (event.key === "Escape" && !cropModal.classList.contains("hidden")) cancelCurrentCrop();
+    });
+    window.addEventListener("resize", function () {
+        if (!cropModal.classList.contains("hidden") && cropReady) requestAnimationFrame(function () { measureImage(false); });
+    });
+
+    applyCrop.addEventListener("click", function () {
+        if (!cropReady || !cropSourceImage.naturalWidth || !cropRect.size) {
+            displayImageError("Please select a valid image and wait for it to load.");
+            return;
+        }
+
+        applyCrop.disabled = true;
+        applyCrop.textContent = "Preparing image...";
+
+        const scaleX = cropSourceImage.naturalWidth / imageRect.width;
+        const scaleY = cropSourceImage.naturalHeight / imageRect.height;
+        const sx = Math.max(0, Math.min(cropSourceImage.naturalWidth - 1,
+            Math.round((cropRect.x - imageRect.x) * scaleX)));
+        const sy = Math.max(0, Math.min(cropSourceImage.naturalHeight - 1,
+            Math.round((cropRect.y - imageRect.y) * scaleY)));
+        const sourceWidth = Math.round(cropRect.size * scaleX);
+        const sourceHeight = Math.round(cropRect.size * scaleY);
+        const side = Math.min(
+            sourceWidth, sourceHeight,
+            cropSourceImage.naturalWidth - sx,
+            cropSourceImage.naturalHeight - sy
+        );
+
+        if (side < 1) {
+            applyCrop.disabled = false;
+            applyCrop.textContent = "Apply Crop";
+            displayImageError("The selected crop area is invalid. Please move the square and try again.");
+            return;
+        }
+
+        const output = document.createElement("canvas");
+        output.width = 400;
+        output.height = 400;
+        const context = output.getContext("2d");
+        context.imageSmoothingEnabled = true;
+        context.imageSmoothingQuality = "high";
+        context.drawImage(cropSourceImage, sx, sy, side, side, 0, 0, 400, 400);
+
+        output.toBlob(function (blob) {
+            applyCrop.disabled = false;
+            applyCrop.textContent = "Apply Crop";
+            if (!blob) {
+                displayImageError("Unable to crop this image. Please try another file.");
+                return;
+            }
+            const croppedFile = new File([blob], "teacher-profile.png", {
+                type: "image/png",
+                lastModified: Date.now()
+            });
+            const transfer = new DataTransfer();
+            transfer.items.add(croppedFile);
+            imageInput.files = transfer.files;
+            selectedFile = croppedFile;
+
+            const previewUrl = URL.createObjectURL(croppedFile);
+            profilePreview.onload = function () { URL.revokeObjectURL(previewUrl); };
+            profilePreview.onerror = function () { URL.revokeObjectURL(previewUrl); };
+            profilePreview.src = previewUrl;
+            profilePreview.classList.remove("hidden");
+            if (profilePlaceholder) profilePlaceholder.classList.add("hidden");
+
+            imageStatus.textContent = "Cropped image ready to save.";
+            imageStatus.className = "mt-2 text-center text-xs text-cyan-400";
+            hideCropModal();
+        }, "image/png");
+    });
+
+});
+</script>
+{% endblock %}

@@ -1,1257 +1,2517 @@
 {% load static %}
+
 <!DOCTYPE html>
+
 <html lang="en">
+
 <head>
+
     <meta charset="UTF-8">
+
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <title>{% block title %}Teacher Panel | NeoLearn{% endblock %}</title>
 
+
+
     <!-- Tailwind CSS -->
+
     <script src="https://cdn.tailwindcss.com"></script>
 
+
+
     <!-- Remix Icons -->
+
     <link rel="stylesheet"
+
         href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/4.6.0/remixicon.min.css">
 
+
+
     <!-- Existing Toast Messages CSS -->
+
     <link rel="stylesheet" href="{% static 'toast-messages.css' %}">
 
+
+
     <style>
+
         :root {
+
             --teacher-bg: #030712;
+
             --teacher-sidebar: #0D1118;
+
             --teacher-panel: #0b1120;
+
             --teacher-border: rgba(255, 255, 255, 0.07);
+
             --teacher-cyan: #67e8f9;
+
             --teacher-blue: #38bdf8;
+
             --teacher-muted: #94a3b8;
+
         }
+
+
 
         * {
+
             box-sizing: border-box;
+
             scrollbar-width: none;
+
         }
+
+
 
         *::-webkit-scrollbar {
+
             width: 0;
+
             height: 0;
+
         }
+
+
 
         html {
+
             scroll-behavior: smooth;
+
         }
+
+
 
         html,
-        body {
-            width: 100%;
-            height: 100%;
-            margin: 0;
-        }
 
         body {
-            min-height: 100vh;
-            overflow: hidden;
-            background: var(--teacher-bg);
-            color: #fff;
-            font-family: Inter, ui-sans-serif, system-ui, -apple-system,
-                        BlinkMacSystemFont, "Segoe UI", sans-serif;
-            -webkit-font-smoothing: antialiased;
+
+            width: 100%;
+
+            height: 100%;
+
+            margin: 0;
+
         }
+
+
+
+        body {
+
+            min-height: 100vh;
+
+            overflow: hidden;
+
+            background: var(--teacher-bg);
+
+            color: #fff;
+
+            font-family: Inter, ui-sans-serif, system-ui, -apple-system,
+
+                        BlinkMacSystemFont, "Segoe UI", sans-serif;
+
+            -webkit-font-smoothing: antialiased;
+
+        }
+
+
 
         button,
+
         a {
+
             -webkit-tap-highlight-color: transparent;
+
         }
+
+
 
         button:focus-visible,
+
         a:focus-visible {
+
             outline: 2px solid var(--teacher-cyan);
+
             outline-offset: 3px;
+
         }
+
+
 
         /* Background effects */
+
         .teacher-background {
+
             position: fixed;
+
             inset: 0;
+
             z-index: 0;
+
             overflow: hidden;
+
             pointer-events: none;
+
             background: var(--teacher-bg);
+
         }
+
+
 
         .teacher-glow-cyan {
+
             position: absolute;
+
             top: -260px;
+
             left: -200px;
+
             width: 600px;
+
             height: 600px;
+
             border-radius: 50%;
+
             background: rgb(56 189 248 / 8%);
+
             filter: blur(120px);
+
         }
+
+
 
         .teacher-glow-purple {
+
             position: absolute;
+
             right: -220px;
+
             bottom: -260px;
+
             width: 650px;
+
             height: 650px;
+
             border-radius: 50%;
+
             background: rgb(14 165 233 / 7%);
+
             filter: blur(130px);
+
         }
+
+
 
         .teacher-grid {
+
             position: absolute;
+
             inset: 0;
+
             opacity: .12;
+
             background-image:
+
                 linear-gradient(
+
                     rgb(255 255 255 / 5%) 1px,
+
                     transparent 1px
+
                 ),
+
                 linear-gradient(
+
                     90deg,
+
                     rgb(255 255 255 / 5%) 1px,
+
                     transparent 1px
+
                 );
+
             background-size: 40px 40px;
+
         }
+
+
 
         /* Main application */
+
         .teacher-app {
+
             position: relative;
+
             z-index: 1;
+
             display: flex;
+
             width: 100%;
+
             height: 100vh;
+
             height: 100dvh;
+
             overflow: hidden;
+
         }
+
+
 
         /* Brand */
+
         .teacher-brand {
+
             display: flex;
+
             align-items: center;
+
             gap: 12px;
+
             min-width: 0;
+
             text-decoration: none;
+
         }
+
+
 
         .teacher-brand-icon {
+
             position: relative;
+
             display: flex;
+
             width: 42px;
+
             height: 42px;
+
             flex-shrink: 0;
+
             align-items: center;
+
             justify-content: center;
+
             overflow: hidden;
+
             border: 1px solid rgb(103 232 249 / 25%);
+
             border-radius: 13px;
+
             background: linear-gradient(145deg, #164e63, #10233f);
+
             color: var(--teacher-cyan);
+
             box-shadow:
+
                 0 0 22px rgb(103 232 249 / 8%),
+
                 inset 0 1px rgb(255 255 255 / 5%);
+
             transition: box-shadow .22s ease, transform .22s ease;
+
         }
+
+
 
         .teacher-brand:hover .teacher-brand-icon {
+
             transform: translateY(-1px);
+
             box-shadow: 0 0 25px rgb(103 232 249 / 20%);
+
         }
+
+
 
         .teacher-brand-icon i {
+
             font-size: 25px;
+
             filter: drop-shadow(0 0 5px rgb(103 232 249 / 15%));
+
         }
+
+
 
         .teacher-brand-name {
+
             color: #fff;
+
             font-size: 19px;
+
             font-weight: 850;
+
             letter-spacing: .065em;
+
             line-height: 1;
+
             white-space: nowrap;
+
         }
+
+
 
         .teacher-brand-name span {
+
             color: var(--teacher-cyan);
+
         }
+
+
 
         /* Sidebar */
+
         .teacher-sidebar {
+
             position: relative;
+
             z-index: 50;
+
             display: flex;
+
             width: 270px;
+
             height: 100%;
+
             flex-shrink: 0;
+
             flex-direction: column;
+
             border-right: 1px solid var(--teacher-border);
+
             background: rgb(3 7 18 / 96%);
+
             backdrop-filter: blur(14px);
+
             -webkit-backdrop-filter: blur(14px);
+
         }
+
+
 
         .teacher-sidebar-header {
+
             display: flex;
+
             height: 74px;
+
             min-height: 74px;
+
             align-items: center;
+
             justify-content: space-between;
+
             padding: 0 22px;
+
             border-bottom: 1px solid var(--teacher-border);
+
         }
+
+
 
         .teacher-sidebar-scroll {
+
             min-height: 0;
+
             flex: 1;
+
             overflow-y: auto;
+
             padding: 20px 13px 24px;
+
             overscroll-behavior-y: contain;
+
         }
+
+
 
         .teacher-nav-heading {
+
             margin: 20px 12px 9px;
+
             color: #64748b;
+
             font-size: 10px;
+
             font-weight: 750;
+
             letter-spacing: .16em;
+
             line-height: 1.4;
+
             text-transform: uppercase;
+
         }
+
+
 
         .teacher-nav-heading:first-child {
+
             margin-top: 3px;
+
         }
+
+
 
         .teacher-nav-link {
+
             position: relative;
+
             display: flex;
+
             min-height: 49px;
+
             align-items: center;
+
             gap: 14px;
+
             margin: 3px 0;
+
             padding: 11px 15px;
+
             overflow: hidden;
+
             border: 1px solid transparent;
+
             border-radius: 14px;
+
             color: #94a3b8;
+
             font-size: 14px;
+
             font-weight: 500;
+
             letter-spacing: .005em;
+
             text-decoration: none;
+
             transition:
+
                 background-color .22s ease,
+
                 border-color .22s ease,
+
                 color .22s ease,
+
                 transform .22s ease,
+
                 box-shadow .22s ease;
+
         }
+
+
 
         .teacher-nav-link:hover {
+
             transform: translateX(2px);
+
             border-color: rgb(255 255 255 / 5%);
+
             background: rgb(255 255 255 / 5%);
+
             color: #fff;
+
         }
+
+
 
         .teacher-nav-link:active {
+
             transform: scale(.99);
+
         }
+
+
 
         .teacher-nav-link.active {
+
             border-color: rgb(103 232 249 / 10%);
+
             background: linear-gradient(
+
                 100deg,
+
                 rgb(103 232 249 / 11%),
+
                 rgb(56 189 248 / 5%)
+
             );
+
             color: #fff;
+
             box-shadow: inset 0 0 18px rgb(103 232 249 / 2%);
+
         }
+
+
 
         .teacher-nav-link.active::before {
+
             position: absolute;
+
             top: 50%;
+
             left: 0;
+
             width: 4px;
+
             height: 27px;
+
             border-radius: 0 999px 999px 0;
+
             background: var(--teacher-cyan);
+
             box-shadow: 0 0 13px rgb(103 232 249 / 65%);
+
             content: "";
+
             transform: translateY(-50%);
+
         }
+
+
 
         .teacher-nav-link .nav-icon {
+
             display: inline-flex;
+
             width: 23px;
+
             flex-shrink: 0;
+
             align-items: center;
+
             justify-content: center;
+
             color: #8291a5;
+
             font-size: 19px;
+
             transition: color .2s ease, transform .2s ease;
+
         }
+
+
 
         .teacher-nav-link:hover .nav-icon {
+
             transform: scale(1.06);
+
             color: #67e8f9;
+
         }
+
+
 
         .teacher-nav-link.active .nav-icon {
+
             color: var(--teacher-cyan);
+
             filter: drop-shadow(0 0 5px rgb(103 232 249 / 12%));
+
         }
+
+
 
         .teacher-nav-link .nav-label {
+
             min-width: 0;
+
             flex: 1;
+
         }
+
+
 
         .teacher-nav-link-placeholder {
+
             cursor: default;
+
             opacity: .8;
+
         }
+
+
 
         .teacher-live-group { margin: 3px 0; }
+
         .teacher-live-group > summary { list-style: none; cursor: pointer; }
+
         .teacher-live-group > summary::-webkit-details-marker { display: none; }
+
         .teacher-live-group[open] .teacher-live-arrow { transform: rotate(180deg); }
+
         .teacher-live-arrow { margin-left: auto; transition: transform .2s ease; }
+
         .teacher-live-submenu {
+
             display: flex; flex-direction: column; gap: 2px;
+
             margin: 3px 0 8px 13px; padding-left: 9px;
+
             border-left: 2px solid rgb(103 232 249 / 22%);
+
         }
+
         .teacher-live-submenu .teacher-nav-link {
+
             min-height: 40px; margin: 1px 0; padding: 8px 10px;
+
             gap: 10px; border-radius: 10px; font-size: 13px;
+
         }
+
         .teacher-live-submenu .nav-icon { width: 20px; font-size: 17px; }
+
         .teacher-live-submenu .teacher-nav-link.active {
+
             background: rgb(103 232 249 / 10%); color: var(--teacher-cyan);
+
         }
+
+
 
         .teacher-nav-link-placeholder:hover {
+
             transform: none;
+
             border-color: transparent;
+
             background: rgb(255 255 255 / 2%);
+
             color: #cbd5e1;
+
         }
+
+
 
         .teacher-nav-link-placeholder:hover .nav-icon {
+
             transform: none;
+
             color: #8291a5;
+
         }
+
+
 
         .teacher-coming-soon {
+
             margin-left: auto;
+
             padding: 3px 6px;
+
             border: 1px solid rgb(148 163 184 / 12%);
+
             border-radius: 6px;
+
             background: rgb(255 255 255 / 3%);
+
             color: #64748b;
+
             font-size: 9px;
+
             font-weight: 650;
+
             white-space: nowrap;
+
         }
+
+
 
         .teacher-sidebar-footer {
+
             flex-shrink: 0;
+
             padding: 13px;
+
             border-top: 1px solid var(--teacher-border);
+
         }
+
+
 
         .teacher-logout-link,
+
         .teacher-logout-link .nav-icon {
+
             color: #fb7185;
+
         }
+
+
 
         .teacher-logout-link:hover {
+
             border-color: rgb(248 113 113 / 12%);
+
             background: rgb(239 68 68 / 9%);
+
             color: #fda4af;
+
         }
+
+
 
         /* Mobile sidebar buttons */
+
         .teacher-mobile-button {
+
             display: flex;
+
             width: 42px;
+
             height: 42px;
+
             flex-shrink: 0;
+
             align-items: center;
+
             justify-content: center;
+
             border: 1px solid rgb(255 255 255 / 9%);
+
             border-radius: 12px;
+
             background: #0b1120;
+
             color: #94a3b8;
+
             transition:
+
                 background .2s ease,
+
                 color .2s ease,
+
                 border-color .2s ease;
+
         }
+
+
 
         .teacher-mobile-button:hover {
+
             border-color: rgb(103 232 249 / 18%);
+
             background: rgb(255 255 255 / 5%);
+
             color: var(--teacher-cyan);
+
         }
+
+
 
         /* Main area and navbar */
+
         .teacher-main {
+
             display: flex;
+
             min-width: 0;
+
             flex: 1;
+
             flex-direction: column;
+
             overflow: hidden;
+
         }
+
+
 
         .teacher-navbar {
+
             position: relative;
+
             z-index: 30;
+
             display: flex;
+
             height: 74px;
+
             min-height: 74px;
+
             align-items: center;
+
             justify-content: space-between;
+
             gap: 14px;
+
             padding: 0 28px;
+
             border-bottom: 1px solid var(--teacher-border);
+
             background: rgb(3 7 18 / 93%);
+
             backdrop-filter: blur(14px);
+
             -webkit-backdrop-filter: blur(14px);
+
         }
+
+
 
         .teacher-navbar-left,
+
         .teacher-navbar-right {
+
             display: flex;
+
             min-width: 0;
+
             align-items: center;
+
             gap: 13px;
+
         }
+
+
 
         .teacher-navbar-context {
+
             min-width: 0;
+
         }
+
+
 
         .teacher-navbar-eyebrow {
+
             margin-bottom: 4px;
+
             color: #64748b;
+
             font-size: 9px;
+
             font-weight: 750;
+
             letter-spacing: .16em;
+
             text-transform: uppercase;
+
         }
+
+
 
         .teacher-navbar-heading {
+
             overflow: hidden;
+
             color: #f8fafc;
+
             font-size: 14px;
+
             font-weight: 650;
+
             text-overflow: ellipsis;
+
             white-space: nowrap;
+
         }
+
+
 
         .teacher-icon-button {
+
             position: relative;
+
             display: flex;
+
             width: 42px;
+
             height: 42px;
+
             flex-shrink: 0;
+
             align-items: center;
+
             justify-content: center;
+
             border: 1px solid rgb(255 255 255 / 8%);
+
             border-radius: 13px;
+
             background: #0b1120;
+
             color: #94a3b8;
+
             transition:
+
                 background .2s ease,
+
                 color .2s ease,
+
                 border-color .2s ease;
+
         }
+
+
 
         .teacher-icon-button:hover {
+
             border-color: rgb(103 232 249 / 20%);
+
             background: rgb(255 255 255 / 5%);
+
             color: var(--teacher-cyan);
+
         }
+
+
 
         .teacher-icon-button i {
+
             font-size: 19px;
+
         }
+
+
 
         .teacher-notification-dot {
+
             position: absolute;
+
             top: 9px;
+
             right: 10px;
+
             width: 7px;
+
             height: 7px;
+
             border-radius: 50%;
+
             background: #ec4899;
+
             box-shadow: 0 0 8px rgb(236 72 153 / 60%);
+
         }
+
+
 
         /* Profile image and dropdown */
+
         .teacher-profile-trigger {
+
             display: flex;
+
             width: 44px;
+
             height: 44px;
+
             flex-shrink: 0;
+
             align-items: center;
+
             justify-content: center;
+
             border: 1px solid transparent;
+
             border-radius: 50%;
+
             background: transparent;
+
             cursor: pointer;
+
             transition: border-color .2s ease, box-shadow .2s ease;
+
         }
+
+
 
         .teacher-profile-trigger:hover {
+
             border-color: rgb(103 232 249 / 30%);
+
             box-shadow: 0 0 0 3px rgb(103 232 249 / 5%);
+
         }
+
+
 
         .teacher-profile-image,
+
         .teacher-profile-fallback {
+
             display: flex;
+
             width: 40px;
+
             height: 40px;
+
             flex-shrink: 0;
+
             align-items: center;
+
             justify-content: center;
+
             border: 1px solid rgb(103 232 249 / 25%);
+
             border-radius: 50%;
+
         }
+
+
 
         .teacher-profile-image {
+
             object-fit: cover;
+
         }
+
+
 
         .teacher-profile-fallback {
+
             background: linear-gradient(135deg, #a5f3fc, #38bdf8);
+
             color: #020617;
+
             font-size: 15px;
+
             font-weight: 800;
+
         }
+
+
 
         .teacher-profile-dropdown {
+
             position: absolute;
+
             top: calc(100% + 12px);
+
             right: 0;
+
             z-index: 60;
+
             width: 255px;
+
             overflow: hidden;
+
             border: 1px solid rgb(255 255 255 / 9%);
+
             border-radius: 17px;
+
             background: #0b1120;
+
             box-shadow: 0 20px 55px rgb(0 0 0 / 40%);
+
             transform-origin: top right;
+
             animation: teacher-dropdown-in .16s ease-out;
+
         }
+
+
 
         @keyframes teacher-dropdown-in {
+
             from {
+
                 opacity: 0;
+
                 transform: translateY(-5px) scale(.99);
+
             }
+
             to {
+
                 opacity: 1;
+
                 transform: translateY(0) scale(1);
+
             }
+
         }
+
+
 
         .teacher-dropdown-header {
+
             padding: 17px;
+
             border-bottom: 1px solid var(--teacher-border);
+
         }
+
+
 
         .teacher-dropdown-link {
+
             display: flex;
+
             min-height: 45px;
+
             align-items: center;
+
             gap: 12px;
+
             padding: 12px 17px;
+
             color: #cbd5e1;
+
             font-size: 13px;
+
             text-decoration: none;
+
             transition: background .18s ease, color .18s ease;
+
         }
+
+
 
         .teacher-dropdown-link:hover {
+
             background: rgb(255 255 255 / 5%);
+
             color: var(--teacher-cyan);
+
         }
+
+
 
         .teacher-dropdown-link i {
+
             font-size: 17px;
+
         }
+
+
 
         .teacher-dropdown-placeholder {
+
             cursor: default;
+
             opacity: .8;
+
         }
+
+
 
         .teacher-dropdown-placeholder:hover {
+
             background: transparent;
+
             color: #cbd5e1;
+
         }
+
+
 
         /* Main content scrolling */
+
         .teacher-content {
+
             position: relative;
+
             z-index: 1;
+
             min-height: 0;
+
             flex: 1;
+
             overflow-x: hidden;
+
             overflow-y: auto;
+
             padding: 25px 28px 36px;
+
             overscroll-behavior-y: contain;
+
             -webkit-overflow-scrolling: touch;
+
         }
+
+
 
         /* Django toast messages */
+
         .message-container {
+
             position: fixed;
+
             top: 90px;
+
             right: 25px;
+
             z-index: 9999;
+
             display: flex;
+
             width: min(400px, calc(100vw - 32px));
+
             max-width: 400px;
+
             flex-direction: column;
+
             gap: 12px;
+
             pointer-events: none;
+
         }
+
+
 
         .message-item {
+
             pointer-events: auto;
+
         }
+
+
 
         /* Mobile sidebar overlay */
+
         .teacher-sidebar-overlay {
+
             display: none;
+
         }
+
+
 
         @media (max-width: 1023px) {
+
             .teacher-sidebar {
+
                 position: fixed;
+
                 top: 0;
+
                 bottom: 0;
+
                 left: 0;
+
                 width: 270px;
+
                 max-width: calc(100vw - 48px);
+
                 height: 100vh;
+
                 height: 100dvh;
+
                 transform: translateX(-100%);
+
                 transition: transform .25s ease;
+
             }
+
+
 
             .teacher-sidebar.sidebar-open {
+
                 transform: translateX(0);
+
             }
 
+
+
             .teacher-sidebar-overlay {
+
                 position: fixed;
+
                 inset: 0;
+
                 z-index: 40;
+
                 display: block;
+
                 background: rgb(0 0 0 / 65%);
+
                 backdrop-filter: blur(3px);
+
                 -webkit-backdrop-filter: blur(3px);
+
                 opacity: 0;
+
                 visibility: hidden;
+
                 transition: opacity .25s ease, visibility .25s ease;
+
             }
+
+
 
             .teacher-sidebar-overlay.overlay-open {
+
                 opacity: 1;
+
                 visibility: visible;
+
             }
+
+
 
             body.teacher-sidebar-is-open {
+
                 overflow: hidden;
+
             }
+
+
 
             .teacher-navbar {
+
                 padding-right: 16px;
+
                 padding-left: 16px;
+
             }
 
+
+
             .teacher-content {
+
                 padding: 20px 16px 30px;
+
             }
+
+
 
             .message-container {
+
                 top: 82px;
+
                 right: 12px;
+
                 width: calc(100vw - 24px);
+
                 max-width: none;
+
             }
+
         }
+
+
 
         @media (min-width: 1024px) {
+
             .teacher-sidebar {
+
                 transform: translateX(0);
+
             }
+
+
 
             .teacher-sidebar-overlay {
+
                 display: none !important;
+
             }
+
+
 
             #menuButton,
+
             #closeSidebar {
+
                 display: none !important;
+
             }
+
         }
+
+
 
         @media (max-width: 480px) {
+
             .teacher-navbar {
+
                 height: 66px;
+
                 min-height: 66px;
+
                 gap: 8px;
+
                 padding-right: 12px;
+
                 padding-left: 12px;
+
             }
+
+
 
             .teacher-navbar-eyebrow {
+
                 display: none;
+
             }
+
+
 
             .teacher-navbar-heading {
+
                 max-width: 155px;
+
                 font-size: 13px;
+
             }
+
+
 
             .teacher-navbar-left,
+
             .teacher-navbar-right {
+
                 gap: 8px;
+
             }
+
+
 
             .teacher-icon-button {
+
                 width: 38px;
+
                 height: 38px;
+
             }
+
+
 
             .teacher-profile-trigger {
+
                 width: 40px;
+
                 height: 40px;
+
             }
+
+
 
             .teacher-profile-image,
+
             .teacher-profile-fallback {
+
                 width: 36px;
+
                 height: 36px;
+
             }
+
+
 
             .teacher-content {
+
                 padding: 17px 12px 25px;
+
             }
+
         }
+
+
 
         @media (max-height: 650px) {
+
             .teacher-nav-heading {
+
                 margin-top: 14px;
+
             }
+
+
 
             .teacher-nav-link {
+
                 min-height: 43px;
+
                 padding-top: 9px;
+
                 padding-bottom: 9px;
+
             }
+
         }
+
+
 
         @media (prefers-reduced-motion: reduce) {
+
             *,
+
             *::before,
+
             *::after {
+
                 scroll-behavior: auto !important;
+
                 animation-duration: .01ms !important;
+
                 animation-iteration-count: 1 !important;
+
                 transition-duration: .01ms !important;
+
             }
+
         }
+
     </style>
 
+
+
     {% block extra_head %}{% endblock %}
+
 </head>
 
+
+
 <body>
+
     <!-- Background effects -->
+
     <div class="teacher-background" aria-hidden="true">
+
         <div class="teacher-glow-cyan"></div>
+
         <div class="teacher-glow-purple"></div>
+
         <div class="teacher-grid"></div>
+
     </div>
 
+
+
     <!-- Application -->
+
     <div class="teacher-app">
 
+
+
         <!-- Mobile sidebar overlay -->
+
         <div
+
             id="sidebarOverlay"
+
             class="teacher-sidebar-overlay"
+
             aria-hidden="true">
+
         </div>
 
+
+
         <!-- Sidebar -->
+
         <aside id="sidebar" class="teacher-sidebar" aria-label="Teacher navigation">
 
+
+
             <!-- Brand -->
+
             <div class="teacher-sidebar-header">
+
                 <a href="{% url 'teacher_dashboard' %}"
+
                 class="teacher-brand"
+
                 aria-label="NeoLearn Teacher Dashboard">
+
                     <span class="teacher-brand-icon">
+
                         <i class="ri-flashlight-fill"></i>
+
                     </span>
+
                     <span class="teacher-brand-name">NEO<span>LEARN</span></span>
+
                 </a>
 
+
+
                 <button type="button"
+
                         id="closeSidebar"
+
                         class="teacher-mobile-button"
+
                         aria-label="Close navigation menu">
+
                     <i class="ri-close-line text-xl"></i>
+
                 </button>
+
             </div>
 
+
+
             <!-- Navigation -->
+
             <div class="teacher-sidebar-scroll">
+
                 <nav aria-label="Teacher menu">
+
+
 
                     <p class="teacher-nav-heading">Workspace</p>
 
+
+
                     <a href="{% url 'teacher_dashboard' %}"
+
                     class="teacher-nav-link {% if request.resolver_match.url_name == 'teacher_dashboard' %}active{% endif %}"
+
                     {% if request.resolver_match.url_name == 'teacher_dashboard' %}aria-current="page"{% endif %}>
+
                         <i class="ri-dashboard-3-line nav-icon"></i>
+
                         <span class="nav-label">Dashboard</span>
+
                     </a>
+
+
 
                     <a href="{% url 'teacher_batches' %}"
+
                     class="teacher-nav-link {% if request.resolver_match.url_name == 'teacher_batches' or request.resolver_match.url_name == 'teacher_subjects' or request.resolver_match.url_name == 'teacher_course_builder_entry' %}active{% endif %}"
+
                     {% if request.resolver_match.url_name == 'teacher_batches' or request.resolver_match.url_name == 'teacher_subjects' or request.resolver_match.url_name == 'teacher_course_builder_entry' %}aria-current="page"{% endif %}>
+
                         <i class="ri-stack-line nav-icon"></i>
+
                         <span class="nav-label">My Batches</span>
+
                     </a>
 
+
+
 <details class="teacher-live-group"
+
     {% if request.resolver_match.url_name == 'teacher_live_classes' or request.resolver_match.url_name == 'teacher_reschedule_live_class' or request.resolver_match.url_name == 'teacher_request_cancellation' %}open{% endif %}>
+
     <summary class="teacher-nav-link {% if request.resolver_match.url_name == 'teacher_live_classes' or request.resolver_match.url_name == 'teacher_reschedule_live_class' or request.resolver_match.url_name == 'teacher_request_cancellation' %}active{% endif %}"
+
         aria-label="Live Classes submenu">
+
         <i class="ri-live-line nav-icon"></i>
+
         <span class="nav-label">Live Classes</span>
+
         <i class="ri-arrow-down-s-line teacher-live-arrow"></i>
+
     </summary>
+
     <div class="teacher-live-submenu">
+
         <a href="{% url 'live_classes:teacher_live_classes' %}"
+
             class="teacher-nav-link {% if request.resolver_match.url_name == 'teacher_live_classes' %}active{% endif %}"
+
             {% if request.resolver_match.url_name == 'teacher_live_classes' %}aria-current="page"{% endif %}>
+
             <i class="ri-calendar-schedule-line nav-icon"></i><span class="nav-label">My Timetable</span>
+
         </a>
+
         <div class="teacher-nav-link teacher-nav-link-placeholder" aria-disabled="true" title="Connect after the upcoming classes view is implemented">
+
             <i class="ri-calendar-event-line nav-icon"></i><span class="nav-label">Upcoming Classes</span>
+
         </div>
+
         <div class="teacher-nav-link teacher-nav-link-placeholder" aria-disabled="true" title="Connect after the live room view is implemented">
+
             <i class="ri-broadcast-line nav-icon"></i><span class="nav-label">Live Now</span>
+
         </div>
+
         <div class="teacher-nav-link teacher-nav-link-placeholder" aria-disabled="true" title="Connect after the cancellation requests page is implemented">
+
             <i class="ri-close-circle-line nav-icon"></i><span class="nav-label">Cancellation Requests</span>
+
         </div>
+
         <div class="teacher-nav-link teacher-nav-link-placeholder" aria-disabled="true" title="Connect after the class history page is implemented">
+
             <i class="ri-history-line nav-icon"></i><span class="nav-label">All Classes &amp; History</span>
+
         </div>
+
     </div>
+
 </details>
 
-                  
+
+
+
+
 <a href="{% url 'teacher_analytics' %}"
+
    class="teacher-nav-link {% if request.resolver_match.url_name == 'teacher_analytics' %}active{% endif %}"
+
    {% if request.resolver_match.url_name == 'teacher_analytics' %}aria-current="page"{% endif %}>
+
     <i class="ri-line-chart-line nav-icon"></i>
+
     <span class="nav-label">Analytics</span>
+
 </a>
+
+
 
                     <p class="teacher-nav-heading">Communication</p>
 
+
+
                     <div class="teacher-nav-link teacher-nav-link-placeholder"
+
                         aria-disabled="true"
+
                         title="This page has not been connected yet">
+
                         <i class="ri-notification-3-line nav-icon"></i>
+
                         <span class="nav-label">Notifications</span>
+
                         <span class="teacher-coming-soon">Soon</span>
+
                     </div>
+
+
+
 
 
                     <a href="{% url 'teacher_colleagues' %}"
+
                                 class="teacher-nav-link {% if request.resolver_match.url_name == 'teacher_colleagues' or request.resolver_match.url_name == 'teacher_colleague_detail' %}active{% endif %}"
+
                             {% if request.resolver_match.url_name == 'teacher_colleagues' or request.resolver_match.url_name == 'teacher_colleague_detail' %}aria-current="page"{% endif %}>
+
                                         <i class="ri-team-line nav-icon"></i>
+
                             <span class="nav-label">My Colleagues</span>
+
                             </a>
+
+
 
                     <p class="teacher-nav-heading">Account</p>
 
+
+
                     <a href="{% url 'teacher_my_profile' %}"
+
                     class="teacher-nav-link {% if request.resolver_match.url_name == 'teacher_my_profile' %}active{% endif %}"
+
                     {% if request.resolver_match.url_name == 'teacher_my_profile' %}aria-current="page"{% endif %}>
+
                         <i class="ri-user-3-line nav-icon"></i>
+
                         <span class="nav-label">My Profile</span>
+
                     </a>
 
-                    <div class="teacher-nav-link teacher-nav-link-placeholder"
-                        aria-disabled="true"
-                        title="This page has not been connected yet">
-                        <i class="ri-settings-3-line nav-icon"></i>
-                        <span class="nav-label">Settings</span>
-                        <span class="teacher-coming-soon">Soon</span>
-                    </div>
+
+
+
+
+                    <a href="{% url 'teacher_settings' %}"
+
+                        class="teacher-nav-link {% if request.resolver_match.url_name == 'teacher_settings' %}active{% endif %}"
+
+                        {% if request.resolver_match.url_name == 'teacher_settings' %}aria-current="page"{% endif %}>
+
+                            <i class="ri-settings-3-line nav-icon"></i>
+
+                            <span class="nav-label">Settings</span>
+
+                    </a>
+
+
+
+
 
                     <p class="teacher-nav-heading">Help &amp; Support</p>
 
 
+
+
+
                     <a href="{% url 'teacher_help_videos' %}"
+
                             class="teacher-nav-link {% if request.resolver_match.url_name == 'teacher_help_videos' %}active{% endif %}"
+
                             {% if request.resolver_match.url_name == 'teacher_help_videos' %}aria-current="page"{% endif %}>
+
                             <i class="ri-question-answer-line nav-icon"></i>
+
                                 <span class="nav-label">Help Videos</span>
+
                             </a>
 
+
+
                 </nav>
+
             </div>
+
+
 
             <!-- Logout -->
+
             <div class="teacher-sidebar-footer">
+
                 <a href="{% url 'teacher_logout' %}"
+
                 class="teacher-nav-link teacher-logout-link">
+
                     <i class="ri-logout-box-r-line nav-icon"></i>
+
                     <span class="nav-label">Logout</span>
+
                 </a>
+
             </div>
+
         </aside>
 
+
+
         <!-- Main area -->
+
         <div class="teacher-main">
 
+
+
             <!-- Navbar -->
+
             <header class="teacher-navbar">
+
                 <div class="teacher-navbar-left">
 
+
+
                     <button type="button"
+
                             id="menuButton"
+
                             class="teacher-mobile-button"
+
                             aria-label="Open navigation menu"
+
                             aria-controls="sidebar"
+
                             aria-expanded="false">
+
                         <i class="ri-menu-line text-xl"></i>
+
                     </button>
 
+
+
                     <div class="teacher-navbar-context">
+
                         <p class="teacher-navbar-eyebrow">
+
                             NeoLearn / Teacher Portal
+
                         </p>
+
                         <h1 class="teacher-navbar-heading">
+
                             {% block page_heading %}Teacher Workspace{% endblock %}
+
                         </h1>
+
                     </div>
+
                 </div>
+
+
 
                 <div class="teacher-navbar-right">
 
+
+
                     <!-- Notifications -->
+
                     <button type="button"
+
                             id="notificationButton"
+
                             class="teacher-icon-button"
+
                             aria-label="Notifications"
+
                             title="Notifications">
+
                         <i class="ri-notification-3-line"></i>
+
                         <span class="teacher-notification-dot" aria-hidden="true"></span>
+
                     </button>
 
+
+
                     <!-- Profile dropdown -->
+
                     <div class="relative">
+
                         <button type="button"
+
                                 id="profileButton"
+
                                 class="teacher-profile-trigger"
+
                                 aria-label="Open profile menu"
+
                                 aria-controls="profileDropdown"
+
                                 aria-expanded="false">
 
+
+
                             {% if request.user.teacher_profile.profile_image %}
+
                                 <img
+
                                     src="{{ request.user.teacher_profile.profile_image.url }}"
+
                                     alt="Teacher profile"
+
                                     class="teacher-profile-image"
+
                                     onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
 
+
+
                                 <span class="teacher-profile-fallback"
+
                                     style="display:none;"
+
                                     aria-label="Teacher initials">
+
                                     {{ request.user.teacher_profile.full_name|default:request.user.username|first|upper }}
+
                                 </span>
+
                             {% else %}
+
                                 <span class="teacher-profile-fallback"
+
                                     aria-label="Teacher initials">
+
                                     {{ request.user.teacher_profile.full_name|default:request.user.username|first|upper }}
+
                                 </span>
+
                             {% endif %}
+
                         </button>
 
+
+
                         <!-- Dropdown -->
+
                         <div id="profileDropdown"
+
                             class="teacher-profile-dropdown hidden">
 
+
+
                             <div class="teacher-dropdown-header">
+
                                 <p class="truncate text-sm font-semibold text-white">
+
                                     {{ request.user.teacher_profile.full_name|default:request.user.username }}
+
                                 </p>
+
+
 
                                 <p class="mt-1 truncate text-xs text-slate-400">
+
                                     {{ request.user.teacher_profile.email|default:request.user.email }}
+
                                 </p>
 
+
+
                                 <span class="mt-3 inline-flex items-center gap-1.5 rounded-md bg-sky-400/10 px-2 py-1 text-[10px] font-semibold text-sky-300">
+
                                     <i class="ri-shield-user-line"></i>
+
                                     Teacher Account
+
                                 </span>
+
                             </div>
+
+
 
                             <a href="{% url 'teacher_my_profile' %}"
+
                             class="teacher-dropdown-link">
+
                                 <i class="ri-user-settings-line"></i>
+
                                 <span>My Profile</span>
+
                             </a>
 
-                            <div class="teacher-dropdown-link teacher-dropdown-placeholder"
-                                aria-disabled="true">
-                                <i class="ri-settings-3-line"></i>
-                                <span>Settings</span>
-                                <span class="ml-auto text-[9px] text-slate-500">Soon</span>
-                            </div>
+
+
+
+
+                    <a href="{% url 'teacher_settings' %}"
+
+                        class="teacher-dropdown-link">
+
+                    <i class="ri-settings-3-line"></i>
+
+                    <span>Settings</span>
+
+                    </a>
+
+
+
+
 
                             <div class="border-t border-white/5"></div>
 
+
+
                             <a href="{% url 'teacher_logout' %}"
+
                             class="teacher-dropdown-link text-red-400 hover:bg-red-500/10 hover:text-red-300">
+
                                 <i class="ri-logout-box-r-line"></i>
+
                                 <span>Logout</span>
+
                             </a>
+
                         </div>
+
                     </div>
+
                 </div>
+
             </header>
 
+
+
             <!-- Main content -->
+
             <main class="teacher-content">
 
+
+
                 <!-- Django messages -->
+
                 {% if messages %}
+
                     <div class="message-container" id="messageContainer">
+
                         {% for message in messages %}
+
                             <div class="message-item {{ message.tags }}">
+
                                 <div class="message-header">
+
                                     <div class="message-left">
+
                                         <div class="message-icon">
+
                                             <i class="ri-{% if message.tags == 'success' %}check-line{% elif message.tags == 'error' %}close-circle-line{% elif message.tags == 'warning' %}alert-line{% else %}information-line{% endif %}"></i>
+
                                         </div>
+
+
 
                                         <div class="message-title">
+
                                             {% if message.tags == "success" %}
+
                                                 Success
+
                                             {% elif message.tags == "error" %}
+
                                                 Error
+
                                             {% elif message.tags == "warning" %}
+
                                                 Warning
+
                                             {% else %}
+
                                                 Information
+
                                             {% endif %}
+
                                         </div>
+
                                     </div>
 
+
+
                                     <button type="button"
+
                                             class="message-close"
+
                                             aria-label="Close message">
+
                                         <i class="ri-close-line"></i>
+
                                     </button>
+
                                 </div>
 
+
+
                                 <div class="message-text">{{ message }}</div>
+
                             </div>
+
                         {% endfor %}
+
                     </div>
+
                 {% endif %}
 
+
+
                 {% block teacher_content %}{% endblock %}
+
             </main>
+
         </div>
+
     </div>
 
+
+
     <!-- Existing teacher JavaScript -->
+
     <script src="{% static 'teachers/js/teacher_base.js' %}"></script>
 
+
+
     <!-- Preserve sidebar position when navigating between teacher pages -->
+
     <script>
+
     (() => {
+
         "use strict";
+
+
 
         const STORAGE_KEY = "neolearn_teacher_sidebar_scroll_top";
 
+
+
         function initialiseSidebarScrollPosition() {
+
             const sidebarScroll = document.querySelector(".teacher-sidebar-scroll");
+
             const sidebar = document.getElementById("sidebar");
+
+
 
             if (!sidebarScroll || !sidebar) return;
 
+
+
             // Restore the previous sidebar position after the next page loads.
+
             try {
+
                 const savedPosition = sessionStorage.getItem(STORAGE_KEY);
+
                 if (savedPosition !== null) {
+
                     sidebarScroll.scrollTop = Number(savedPosition) || 0;
+
                 }
+
             } catch (error) {
+
                 // Navigation remains usable if browser storage is unavailable.
+
             }
 
+
+
             // Save the position before a sidebar link navigates to another page.
+
             sidebar.addEventListener("click", function (event) {
+
                 const link = event.target.closest("a[href]");
+
                 if (!link || link.classList.contains("teacher-brand")) return;
 
+
+
                 try {
+
                     sessionStorage.setItem(STORAGE_KEY, String(sidebarScroll.scrollTop));
+
                 } catch (error) {
+
                     // Do not block navigation if browser storage is unavailable.
+
                 }
+
             }, true);
 
+
+
             // Keep the stored value current when the user scrolls the sidebar.
+
             sidebarScroll.addEventListener("scroll", function () {
+
                 try {
+
                     sessionStorage.setItem(STORAGE_KEY, String(sidebarScroll.scrollTop));
+
                 } catch (error) {
+
                     // Ignore storage restrictions.
+
                 }
+
             }, { passive: true });
+
         }
+
+
 
         if (document.readyState === "loading") {
+
             document.addEventListener("DOMContentLoaded", initialiseSidebarScrollPosition, { once: true });
+
         } else {
+
             initialiseSidebarScrollPosition();
+
         }
+
     })();
+
     </script>
 
+
+
     <!-- Responsive sidebar controller -->
+
     <script>
+
     (() => {
+
         "use strict";
 
+
+
         function initialiseTeacherSidebar() {
+
             const sidebar = document.getElementById("sidebar");
+
             const overlay = document.getElementById("sidebarOverlay");
+
             const menuButton = document.getElementById("menuButton");
+
             const closeButton = document.getElementById("closeSidebar");
+
+
 
             if (!sidebar || !overlay || !menuButton || !closeButton) return;
 
+
+
             const mobileQuery = window.matchMedia("(max-width: 1023px)");
 
+
+
             function setSidebarOpen(shouldOpen) {
+
                 const isMobile = mobileQuery.matches;
+
                 const open = Boolean(shouldOpen && isMobile);
 
+
+
                 sidebar.classList.toggle("sidebar-open", open);
+
                 overlay.classList.toggle("overlay-open", open);
+
                 document.body.classList.toggle("teacher-sidebar-is-open", open);
 
+
+
                 menuButton.setAttribute("aria-expanded", String(open));
+
                 menuButton.setAttribute(
+
                     "aria-label",
+
                     open ? "Close navigation menu" : "Open navigation menu"
+
                 );
 
+
+
                 overlay.setAttribute("aria-hidden", String(!open));
+
                 sidebar.setAttribute("aria-hidden", String(isMobile && !open));
 
+
+
                 if (open) {
+
                     closeButton.focus({ preventScroll: true });
+
                 } else if (isMobile && document.activeElement === closeButton) {
+
                     menuButton.focus({ preventScroll: true });
+
                 }
+
             }
+
+
 
             menuButton.addEventListener("click", function (event) {
+
                 event.preventDefault();
+
                 event.stopImmediatePropagation();
+
                 setSidebarOpen(!sidebar.classList.contains("sidebar-open"));
+
             }, true);
+
+
 
             closeButton.addEventListener("click", function (event) {
+
                 event.preventDefault();
+
                 event.stopImmediatePropagation();
+
                 setSidebarOpen(false);
+
             }, true);
+
+
 
             overlay.addEventListener("click", function (event) {
+
                 event.preventDefault();
+
                 event.stopImmediatePropagation();
+
                 setSidebarOpen(false);
+
             }, true);
 
+
+
             sidebar.addEventListener("click", function (event) {
+
                 const link = event.target.closest("a[href]");
 
+
+
                 if (link && !link.classList.contains("teacher-brand") && mobileQuery.matches) {
+
                     setSidebarOpen(false);
+
                 }
+
             });
+
+
 
             document.addEventListener("keydown", function (event) {
+
                 if (event.key === "Escape" && sidebar.classList.contains("sidebar-open")) {
+
                     setSidebarOpen(false);
+
                 }
+
             });
 
+
+
             function handleBreakpointChange() {
+
                 setSidebarOpen(false);
 
+
+
                 if (!mobileQuery.matches) {
+
                     sidebar.removeAttribute("aria-hidden");
+
                     overlay.setAttribute("aria-hidden", "true");
+
                 }
+
             }
 
+
+
             if (typeof mobileQuery.addEventListener === "function") {
+
                 mobileQuery.addEventListener("change", handleBreakpointChange);
+
             } else {
+
                 mobileQuery.addListener(handleBreakpointChange);
+
             }
+
+
 
             setSidebarOpen(false);
 
+
+
             if (!mobileQuery.matches) {
+
                 sidebar.removeAttribute("aria-hidden");
+
                 overlay.setAttribute("aria-hidden", "true");
+
             }
+
         }
+
+
 
         if (document.readyState === "loading") {
+
             document.addEventListener("DOMContentLoaded", initialiseTeacherSidebar, { once: true });
+
         } else {
+
             initialiseTeacherSidebar();
+
         }
+
     })();
+
     </script>
 
+
+
     <!-- Existing toast JavaScript -->
+
     <script src="{% static 'toast-messages.js' %}"></script>
 
+
+
     <!-- Child template JavaScript -->
+
     {% block extra_js %}{% endblock %}
+
 </body>
+
 </html>
