@@ -137,6 +137,35 @@
             padding: 16px 16px 8px 16px;
         }
 
+        .student-nav-link {
+            display: flex;
+            min-width: 0;
+            height: 48px;
+            align-items: center;
+            gap: 12px;
+            border-radius: 14px;
+            padding: 0 16px;
+            color: #94A3B8;
+            font-size: 14px;
+            font-weight: 600;
+            transition: background 180ms ease, color 180ms ease;
+        }
+
+        .student-nav-link:hover {
+            background: rgba(255,255,255,0.05);
+            color: #ffffff;
+        }
+
+        .student-nav-link.active-menu {
+            background: linear-gradient(
+                90deg,
+                rgba(0,255,224,0.14),
+                rgba(0,255,224,0.03)
+            );
+            border-left: 3px solid #00F5D4;
+            color: #00F5D4;
+        }
+
 
         /* =====================================================
            PROFILE IMAGE
@@ -482,416 +511,75 @@
 
 
                 <!-- LEARNING -->
+                <div class="nav-label">Learning</div>
 
-                <div class="nav-label">
-                    Learning
-                </div>
-
-
-                <!-- DASHBOARD -->
-
-                <a
-                    href="{% url 'dashboard' %}"
-                    class="
-                        flex
-                        h-[48px]
-                        min-w-0
-                        items-center
-                        gap-3
-                        rounded-[14px]
-                        px-4
-                        text-[14px]
-                        font-semibold
-                        transition-all
-
-                        {% if request.resolver_match.url_name == 'dashboard' %}
-
-                            active-menu
-
-                        {% else %}
-
-                            text-[#94A3B8]
-                            hover:bg-white/5
-                            hover:text-white
-
-                        {% endif %}
-                    "
-                >
-
+                <a href="{% url 'dashboard' %}" class="student-nav-link {% if request.resolver_match.url_name == 'dashboard' %}active-menu{% endif %}">
                     <i class="ri-layout-grid-fill shrink-0 text-[18px]"></i>
-
-                    <span class="truncate">
-                        Dashboard
-                    </span>
-
+                    <span class="truncate">Dashboard</span>
                 </a>
 
-
-
-                <!-- MY LEARNING -->
-
-                <a
-                    href="{% url 'my_learning' %}"
-                    class="
-                        flex
-                        h-[48px]
-                        min-w-0
-                        items-center
-                        gap-3
-                        rounded-[14px]
-                        px-4
-                        text-[14px]
-                        font-semibold
-                        transition-all
-
-                        {% if request.resolver_match.url_name == 'my_learning' %}
-
-                            active-menu
-
-                        {% else %}
-
-                            text-[#94A3B8]
-                            hover:bg-white/5
-                            hover:text-white
-
-                        {% endif %}
-                    "
-                >
-
+                <a href="{% url 'my_learning' %}" class="student-nav-link {% if request.resolver_match.url_name == 'my_learning' %}active-menu{% endif %}">
                     <i class="ri-book-open-line shrink-0 text-[18px]"></i>
-
-                    <span class="truncate text-[14px] font-medium">
-                        My Learning
-                    </span>
-
+                    <span class="truncate">My Learning</span>
                 </a>
 
+                <!-- ORDERS AND SAVED -->
+                <div class="nav-label mt-4">Orders &amp; Saved</div>
 
-
-                <!-- ORDER HISTORY -->
-
-                <a
-                    href="{% url 'order_history' %}"
-                    class="
-                        flex
-                        h-[48px]
-                        min-w-0
-                        items-center
-                        gap-3
-                        rounded-[14px]
-                        px-4
-                        text-[14px]
-                        font-semibold
-                        transition-all
-
-                        {% if request.resolver_match.url_name == 'order_history' %}
-
-                            active-menu
-
-                        {% else %}
-
-                            text-[#94A3B8]
-                            hover:bg-white/5
-                            hover:text-white
-
-                        {% endif %}
-                    "
-                >
-
+                <a href="{% url 'order_history' %}" class="student-nav-link {% if request.resolver_match.url_name == 'order_history' %}active-menu{% endif %}">
                     <i class="ri-file-list-3-line shrink-0 text-[18px]"></i>
-
-                    <span class="truncate text-[14px] font-medium">
-                        Order History
-                    </span>
-
+                    <span class="truncate">Order History</span>
                 </a>
 
+                <a href="{% url 'wishlist' %}" class="student-nav-link {% if request.resolver_match.url_name == 'wishlist' %}active-menu{% endif %}">
+                    <i class="ri-heart-3-line shrink-0 text-[18px]"></i>
+                    <span class="truncate">Wishlist</span>
+                </a>
 
+                <a href="{% url 'cart' %}" class="student-nav-link {% if request.resolver_match.url_name == 'cart' %}active-menu{% endif %}">
+                    <i class="ri-shopping-cart-2-line shrink-0 text-[18px]"></i>
+                    <span class="truncate">Shopping Cart</span>
+                </a>
 
-                <!-- MARKETPLACE -->
+                <!-- EXPLORE AND PROGRESS -->
+                <div class="nav-label mt-4">Explore &amp; Progress</div>
 
-                <a
-                    href="{% url 'marketplace' %}"
-                    class="
-                        flex
-                        h-[48px]
-                        min-w-0
-                        items-center
-                        gap-3
-                        rounded-[14px]
-                        px-4
-                        text-[14px]
-                        font-semibold
-                        transition-all
-
-                        {% if request.resolver_match.url_name == 'marketplace' %}
-
-                            active-menu
-
-                        {% else %}
-
-                            text-[#94A3B8]
-                            hover:bg-white/5
-                            hover:text-white
-
-                        {% endif %}
-                    "
-                >
-
+                <a href="{% url 'marketplace' %}" class="student-nav-link {% if request.resolver_match.url_name == 'marketplace' %}active-menu{% endif %}">
                     <i class="ri-shopping-bag-3-line shrink-0 text-[18px]"></i>
-
-                    <span class="truncate text-[14px] font-medium">
-                        Marketplace
-                    </span>
-
+                    <span class="truncate">Marketplace</span>
                 </a>
 
-
-
-                <!-- LIVE CLASSES -->
-
-                <a
-                    href="#"
-                    class="
-                        flex
-                        h-[48px]
-                        min-w-0
-                        items-center
-                        gap-3
-                        rounded-[14px]
-                        px-4
-                        text-[14px]
-                        font-semibold
-                        transition-all
-
-                        {% if request.resolver_match.url_name == 'live_classes' %}
-
-                            active-menu
-
-                        {% else %}
-
-                            text-[#94A3B8]
-                            hover:bg-white/5
-                            hover:text-white
-
-                        {% endif %}
-                    "
-                >
-
+                <a href="#" class="student-nav-link">
                     <i class="ri-live-line shrink-0 text-[18px]"></i>
-
-                    <span class="truncate text-[14px] font-medium">
-                        Live Classes
-                    </span>
-
+                    <span class="truncate">Live Classes</span>
                 </a>
 
-
-
-                <!-- TEACHERS -->
-
-                <a
-                    href="#"
-                    class="
-                        flex
-                        h-[48px]
-                        min-w-0
-                        items-center
-                        gap-3
-                        rounded-[14px]
-                        px-4
-                        text-[14px]
-                        font-semibold
-                        transition-all
-
-                        {% if request.resolver_match.url_name == 'teachers' %}
-
-                            active-menu
-
-                        {% else %}
-
-                            text-[#94A3B8]
-                            hover:bg-white/5
-                            hover:text-white
-
-                        {% endif %}
-                    "
-                >
-
+                <a href="#" class="student-nav-link">
                     <i class="ri-user-star-line shrink-0 text-[18px]"></i>
-
-                    <span class="truncate text-[14px] font-medium">
-                        Teachers
-                    </span>
-
+                    <span class="truncate">Teachers</span>
                 </a>
 
-
-
-                <!-- ACHIEVEMENTS -->
-
-                <a
-                    href="#"
-                    class="
-                        flex
-                        h-[48px]
-                        min-w-0
-                        items-center
-                        gap-3
-                        rounded-[14px]
-                        px-4
-                        text-[14px]
-                        font-semibold
-                        transition-all
-
-                        {% if request.resolver_match.url_name == 'achievements' %}
-
-                            active-menu
-
-                        {% else %}
-
-                            text-[#94A3B8]
-                            hover:bg-white/5
-                            hover:text-white
-
-                        {% endif %}
-                    "
-                >
-
+                <a href="#" class="student-nav-link">
                     <i class="ri-award-line shrink-0 text-[18px]"></i>
-
-                    <span class="truncate text-[14px] font-medium">
-                        Achievements
-                    </span>
-
+                    <span class="truncate">Achievements</span>
                 </a>
 
-
-
-                <!-- LEARNING PROGRESS -->
-
-                <a
-                    href="#"
-                    class="
-                        flex
-                        h-[48px]
-                        min-w-0
-                        items-center
-                        gap-3
-                        rounded-[14px]
-                        px-4
-                        text-[14px]
-                        font-semibold
-                        transition-all
-
-                        {% if request.resolver_match.url_name == 'learning_progress' %}
-
-                            active-menu
-
-                        {% else %}
-
-                            text-[#94A3B8]
-                            hover:bg-white/5
-                            hover:text-white
-
-                        {% endif %}
-                    "
-                >
-
+                <a href="#" class="student-nav-link">
                     <i class="ri-bar-chart-2-line shrink-0 text-[18px]"></i>
-
-                    <span class="truncate text-[14px] font-medium">
-                        Learning Progress
-                    </span>
-
+                    <span class="truncate">Learning Progress</span>
                 </a>
 
+                <!-- ACCOUNT AND SUPPORT -->
+                <div class="nav-label mt-4">Account &amp; Support</div>
 
-
-                <!-- ACCOUNT -->
-
-                <div class="nav-label mt-4">
-                    Account
-                </div>
-
-
-
-                <!-- SUPPORT / FAQ & HELP VIDEOS -->
-
-                <a
-                    href="{% url 'student_help_videos' %}"
-                    class="
-                        flex
-                        h-[48px]
-                        min-w-0
-                        items-center
-                        gap-3
-                        rounded-[14px]
-                        px-4
-                        text-[14px]
-                        font-semibold
-                        transition-all
-
-                        {% if request.resolver_match.url_name == 'student_help_videos' %}
-
-                            active-menu
-
-                        {% else %}
-
-                            text-[#94A3B8]
-                            hover:bg-white/5
-                            hover:text-white
-
-                        {% endif %}
-                    "
-                >
-
+                <a href="{% url 'student_help_videos' %}" class="student-nav-link {% if request.resolver_match.url_name == 'student_help_videos' %}active-menu{% endif %}">
                     <i class="ri-question-line shrink-0 text-[18px]"></i>
-
-                    <span class="truncate text-[14px] font-medium">
-                        FAQ &amp; Support
-                    </span>
-
+                    <span class="truncate">FAQ &amp; Support</span>
                 </a>
 
-
-
-                <!-- SETTINGS -->
-
-                <a
-                    href="#"
-                    class="
-                        flex
-                        h-[48px]
-                        min-w-0
-                        items-center
-                        gap-3
-                        rounded-[14px]
-                        px-4
-                        text-[14px]
-                        font-semibold
-                        transition-all
-
-                        {% if request.resolver_match.url_name == 'settings' %}
-
-                            active-menu
-
-                        {% else %}
-
-                            text-[#94A3B8]
-                            hover:bg-white/5
-                            hover:text-white
-
-                        {% endif %}
-                    "
-                >
-
+                <a href="{% url 'student_settings' %}" class="student-nav-link {% if request.resolver_match.url_name == 'student_settings' %}active-menu{% endif %}">
                     <i class="ri-settings-3-line shrink-0 text-[18px]"></i>
-
-                    <span class="truncate text-[14px] font-medium">
-                        Settings
-                    </span>
-
+                    <span class="truncate">Settings</span>
                 </a>
 
             </nav>
@@ -1574,40 +1262,6 @@
                         <div class="py-2">
 
 
-                            <!-- VIEW PROFILE -->
-
-                            <a
-                                href="{% url 'profile' %}"
-                                class="
-                                    flex
-                                    h-[46px]
-                                    min-w-0
-                                    items-center
-                                    gap-3
-
-                                    px-5
-
-                                    text-[14px]
-                                    font-medium
-                                    text-[#94A3B8]
-
-                                    transition-all
-
-                                    hover:bg-white/5
-                                    hover:text-white
-                                "
-                            >
-
-                                <i class="ri-user-line shrink-0 text-[18px]"></i>
-
-                                <span class="truncate">
-                                    View Profile
-                                </span>
-
-                            </a>
-
-
-
                             <!-- MY ORDERS -->
 
                             <a
@@ -1642,40 +1296,14 @@
 
 
                             <!-- SETTINGS -->
-
                             <a
-                                href="{% url 'order_history' %}"
-                                class="
-                                    flex
-                                    h-[46px]
-                                    min-w-0
-                                    items-center
-                                    gap-3
-
-                                    px-5
-
-                                    text-[14px]
-                                    font-medium
-                                    text-[#94A3B8]
-
-                                    transition-all
-
-                                    hover:bg-white/5
-                                    hover:text-white
-                                "
+                                href="{% url 'student_settings' %}"
+                                class="flex h-[46px] min-w-0 items-center gap-3 px-5 text-[14px] font-medium text-[#94A3B8] transition-all hover:bg-white/5 hover:text-white"
                             >
-
                                 <i class="ri-settings-3-line shrink-0 text-[18px]"></i>
-
-                                <span class="truncate">
-                                    Settings
-                                </span>
-
+                                <span class="truncate">Settings</span>
                             </a>
-
                         </div>
-
-
 
                         <!-- LOGOUT -->
 

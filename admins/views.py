@@ -1,3 +1,6 @@
+from PIL import Image, UnidentifiedImageError
+from django.core.files.uploadedfile import UploadedFile
+from admins.models import AdminProfile
 from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate,login,logout
 from django.contrib.auth.decorators import login_required
@@ -171,6 +174,255 @@ def admin_logout_view(request):
 
     return response
 
+
+# ==========================================================
+# ADMIN SETTINGS
+# ==========================================================
+
+@cache_control(no_cache=True, must_revalidate=True, no_store=True)
+@admin_required
+def admin_settings_view(request):
+    user = request.user
+
+    # Only staff and superusers can access admin settings.
+    if not (user.is_staff or user.is_superuser):
+        messages.error(request, "Access denied. Admin access only.")
+        return redirect("admin_signin")
+
+    profile, _ = AdminProfile.objects.get_or_create(user=user)
+
+    if request.method == "POST":
+        action = request.POST.get("action", "").strip()
+
+        # ----------------------------------------------
+        # PROFILE: full name, bio and profile image
+        # ----------------------------------------------
+        if action == "profile":
+            full_name = request.POST.get("full_name", "").strip()
+            bio = request.POST.get("bio", "").strip()
+            uploaded_image = request.FILES.get("profile_image")
+
+            if not full_name:
+                messages.error(request, "Full name is required.")
+
+            elif len(full_name) > 100:
+                messages.error(
+                    request, "Full name cannot exceed 100 characters."
+                )
+
+            elif len(bio) > 250:
+                messages.error(
+                    request, "Bio cannot exceed 250 characters."
+                )
+
+            else:
+                image_is_valid = True
+
+                if uploaded_image:
+                    if uploaded_image.size > 2 * 1024 * 1024:
+                        messages.error(
+                            request,
+                            "Profile image must not exceed 2 MB."
+                        )
+                        image_is_valid = False
+
+                    elif uploaded_image.name.rsplit(".", 1)[-1].lower() not in {
+                        "jpg", "jpeg", "png"
+                    }:
+                        messages.error(
+                            request,
+                            "Only JPG, JPEG and PNG profile images are allowed."
+                        )
+                        image_is_valid = False
+
+                    else:
+                        try:
+                            uploaded_image.seek(0)
+
+                            with Image.open(uploaded_image) as image:
+                                if image.format not in {"JPEG", "PNG"}:
+                                    raise ValueError("Unsupported image format.")
+                                image.verify()
+
+                            uploaded_image.seek(0)
+
+                        except (UnidentifiedImageError, OSError, ValueError):
+                            messages.error(
+                                request,
+                                "The uploaded file is not a valid JPG or PNG image."
+                            )
+                            image_is_valid = False
+
+                if image_is_valid:
+                    profile.full_name = full_name
+                    profile.bio = bio
+
+                    if uploaded_image:
+                        profile.profile_image = uploaded_image
+
+                    profile.save()
+
+                    messages.success(
+                        request, "Profile details updated successfully."
+                    )
+                    return redirect("admin_settings")
+
+        # ----------------------------------------------
+        # ACCOUNT: username and email
+        # ----------------------------------------------
+        elif action == "account":
+            username = request.POST.get("username", "").strip()
+            email = request.POST.get("email", "").strip().lower()
+
+            if not username:
+                messages.error(request, "Username is required.")
+
+            elif len(username) > 150:
+                messages.error(
+                    request, "Username cannot exceed 150 characters."
+                )
+
+            elif User.objects.filter(
+                username__iexact=username
+            ).exclude(pk=user.pk).exists():
+                messages.error(
+                    request,
+                    "This username already exists. Please choose another."
+                )
+
+            elif not email:
+                messages.error(request, "Email address is required.")
+
+            else:
+                try:
+                    validate_email(email)
+                except ValidationError:
+                    messages.error(
+                        request, "Please enter a valid email address."
+                    )
+                else:
+                    if User.objects.filter(
+                        email__iexact=email
+                    ).exclude(pk=user.pk).exists():
+                        messages.error(
+                            request,
+                            "This email address is already used by another account."
+                        )
+                    else:
+                        try:
+                            with transaction.atomic():
+                                user.username = username
+                                user.email = email
+                                user.save(
+                                    update_fields=["username", "email"]
+                                )
+
+                        except IntegrityError:
+                            messages.error(
+                                request,
+                                "These account details conflict with an existing account."
+                            )
+                        else:
+                            messages.success(
+                                request,
+                                "Username and email updated successfully."
+                            )
+                            return redirect("admin_settings")
+
+        # ----------------------------------------------
+        # SECURITY: change password
+        # ----------------------------------------------
+        elif action == "password":
+            current_password = request.POST.get("current_password", "")
+            new_password = request.POST.get("new_password", "")
+            confirm_password = request.POST.get("confirm_password", "")
+
+            if not current_password or not new_password or not confirm_password:
+                messages.error(
+                    request, "All password fields are required."
+                )
+
+            elif not user.check_password(current_password):
+                messages.error(
+                    request, "Your current password is incorrect."
+                )
+
+            elif len(new_password) < 8:
+                messages.error(
+                    request,
+                    "New password must contain at least 8 characters."
+                )
+
+            elif not re.search(r"[A-Z]", new_password):
+                messages.error(
+                    request,
+                    "New password must contain at least one uppercase letter."
+                )
+
+            elif not re.search(r"[a-z]", new_password):
+                messages.error(
+                    request,
+                    "New password must contain at least one lowercase letter."
+                )
+
+            elif not re.search(r"\d", new_password):
+                messages.error(
+                    request,
+                    "New password must contain at least one number."
+                )
+
+            elif not re.search(r"[^A-Za-z0-9]", new_password):
+                messages.error(
+                    request,
+                    "New password must contain at least one special character."
+                )
+
+            elif new_password != confirm_password:
+                messages.error(
+                    request,
+                    "New password and confirmation do not match."
+                )
+
+            else:
+                try:
+                    validate_password(new_password, user=user)
+                except ValidationError as exc:
+                    for error in exc.messages:
+                        messages.error(request, error)
+                else:
+                    user.set_password(new_password)
+                    user.save(update_fields=["password"])
+
+                    # Keep the admin logged in after changing the password.
+                    from django.contrib.auth import update_session_auth_hash
+                    update_session_auth_hash(request, user)
+
+                    messages.success(
+                        request, "Password changed successfully."
+                    )
+                    return redirect("admin_settings")
+
+        else:
+            messages.error(
+                request, "Invalid settings request. Please try again."
+            )
+
+    context = {
+        "profile": profile,
+        "admin_user": user,
+    }
+
+    response = render(
+        request,
+        "admins/settings/admin_settings.html",
+        context,
+    )
+
+    response["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    response["Pragma"] = "no-cache"
+    response["Expires"] = "0"
+
+    return response
 
 # ==========================================================
 # ADMIN STUDENT LISTING

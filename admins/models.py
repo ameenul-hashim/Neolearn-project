@@ -1,1716 +1,3521 @@
 from decimal import Decimal
+
 from datetime import timedelta
+
 import uuid
+
 from datetime import date
+
 from django.core.validators import RegexValidator
+
 from django.db import models
 
+from django.core.validators import FileExtensionValidator
+
 from cloudinary.models import CloudinaryField
+
 from django.conf import settings
+
 from django.contrib.auth.models import User
+
 from django.core.exceptions import ValidationError
+
 from django.db import models
+
 from django.db.models import Q
+
 from django.utils import timezone
 
-from cloudinary.models import CloudinaryField
+
+
+# ============================================================
+
+# ADMIN PROFILE — SETTINGS
+
+# ============================================================
+
+class AdminProfile(models.Model):
+
+    """
+
+    Stores profile information for an Admin account.
+
+
+
+    Username, email and password remain in Django's User model.
+
+    """
+
+
+
+    user = models.OneToOneField(
+
+        settings.AUTH_USER_MODEL,
+
+        on_delete=models.CASCADE,
+
+        related_name="admin_profile",
+
+    )
+
+
+
+    full_name = models.CharField(
+
+        max_length=100,
+
+        blank=True,
+
+    )
+
+
+
+    bio = models.CharField(
+
+        max_length=250,
+
+        blank=True,
+
+    )
+
+
+
+
+
+    profile_image = CloudinaryField(
+
+    "image",
+
+    folder="neolearn/admins/profile",
+
+    blank=True,
+
+    null=True,
+
+    validators=[FileExtensionValidator(allowed_extensions=["jpg", "jpeg", "png"])],
+
+    )
+
+
+
+
+
+    created_at = models.DateTimeField(
+
+        auto_now_add=True,
+
+    )
+
+
+
+    updated_at = models.DateTimeField(
+
+        auto_now=True,
+
+    )
+
+
+
+    def __str__(self):
+
+        return f"Admin profile: {self.user.username}"
+
+
 
 class Batch(models.Model):
 
+
+
     STATUS_CHOICES = [
+
         ("draft", "Draft"),
+
         ("published", "Published"),
+
         ("archived", "Archived"),
+
     ]
+
+
 
     DISCOUNT_CHOICES = [
+
         ("none", "No Discount"),
+
         ("percentage", "Percentage"),
+
         ("fixed", "Fixed Amount"),
+
     ]
+
+
 
     PUBLISH_TYPE_CHOICES = [
+
         ("immediate", "Publish Immediately"),
+
         ("scheduled", "Schedule Publish"),
+
     ]
 
-    # --------------------------------------------------
-    # Basic Information
+
+
     # --------------------------------------------------
 
+    # Basic Information
+
+    # --------------------------------------------------
+
+
+
     batch_name = models.CharField(
+
         max_length=200,
+
         unique=True,
+
     )
+
+
 
     batch_description = models.TextField()
 
+
+
     batch_thumbnail = CloudinaryField(
+
         "batch_thumbnail",
+
         blank=True,
+
         null=True,
+
     )
 
+
+
     # --------------------------------------------------
+
     # Marketplace Pricing
+
     # --------------------------------------------------
+
+
 
     original_price = models.DecimalField(
+
         max_digits=10,
+
         decimal_places=2,
+
     )
+
+
 
     discount_type = models.CharField(
+
         max_length=20,
+
         choices=DISCOUNT_CHOICES,
+
         default="none",
+
     )
+
+
 
     discount_value = models.DecimalField(
+
         max_digits=10,
+
         decimal_places=2,
+
         default=0,
+
     )
+
+
 
     offer_start_date = models.DateTimeField(
+
         blank=True,
+
         null=True,
+
     )
 
+
+
     offer_end_date = models.DateTimeField(
+
         blank=True,
+
         null=True,
+
     )
+
+
 
     marketplace_visible = models.BooleanField(default=True)
 
+
+
     featured = models.BooleanField(default=False)
 
+
+
     final_price = models.DecimalField(
+
         max_digits=10,
+
         decimal_places=2,
+
         default=0,
+
     )
 
+
+
     # --------------------------------------------------
+
     # Publishing
+
     # --------------------------------------------------
+
+
 
     batch_status = models.CharField(
+
         max_length=20,
+
         choices=STATUS_CHOICES,
+
         default="draft",
+
     )
+
+
 
     publish_type = models.CharField(
+
         max_length=20,
+
         choices=PUBLISH_TYPE_CHOICES,
+
         default="immediate",
+
     )
+
+
 
     publish_datetime = models.DateTimeField(
+
         blank=True,
+
         null=True,
+
         help_text="Required only for scheduled publishing.",
+
     )
+
+
 
     published_at = models.DateTimeField(
+
         blank=True,
+
         null=True,
+
         help_text="Actual time when the batch becomes live.",
+
     )
+
+
 
     admission_close_datetime = models.DateTimeField(
+
         blank=True,
+
         null=True,
+
         help_text="Leave blank to keep admissions open.",
+
     )
+
+
 
     course_end_date = models.DateField(
+
         blank=True,
+
         null=True,
+
     )
 
+
+
     # --------------------------------------------------
+
     # Timestamps
+
     # --------------------------------------------------
+
+
 
     created_at = models.DateTimeField(
+
         auto_now_add=True,
+
     )
+
+
 
     updated_at = models.DateTimeField(
+
         auto_now=True,
+
     )
 
+
+
     class Meta:
+
         ordering = ["-created_at"]
+
         verbose_name = "Batch"
+
         verbose_name_plural = "Batches"
 
+
+
         indexes = [
+
             models.Index(fields=["batch_status"]),
+
             models.Index(fields=["publish_datetime"]),
+
             models.Index(fields=["admission_close_datetime"]),
+
         ]
 
+
+
     def __str__(self):
+
         return self.batch_name
 
-    # ==================================================
-    # Helper Properties
+
+
     # ==================================================
 
+    # Helper Properties
+
+    # ==================================================
+
+
+
     @property
+
     def marketplace_status(self):
+
         """
+
         Returns:
+
         hidden
+
         coming_soon
+
         buy_now
+
         admissions_closed
+
         """
+
+
 
         now = timezone.now()
 
+
+
         if self.batch_status == "draft":
+
             return "hidden"
 
+
+
         if self.batch_status == "archived":
+
             return "admissions_closed"
 
+
+
         if (
+
             self.publish_type == "scheduled"
+
             and self.publish_datetime
+
             and now < self.publish_datetime
+
         ):
+
             return "coming_soon"
 
+
+
         if (
+
             self.admission_close_datetime
+
             and now >= self.admission_close_datetime
+
         ):
+
             return "admissions_closed"
+
+
 
         return "buy_now"
 
+
+
     @property
+
     def is_new(self):
+
         """
+
         Show NEW badge for first 30 days after publishing.
+
         """
+
+
 
         if not self.published_at:
+
             return False
 
+
+
         return (
+
             timezone.now()
+
             <= self.published_at + timedelta(days=30)
+
         )
 
+
+
     @property
+
     def is_offer_active(self):
+
         """
+
         Returns True if offer is currently active.
+
         """
+
+
 
         now = timezone.now()
 
+
+
         if self.discount_type == "none":
+
             return False
+
+
 
         if self.offer_start_date and now < self.offer_start_date:
+
             return False
 
+
+
         if self.offer_end_date and now > self.offer_end_date:
+
             return False
+
+
 
         return True
 
+
+
     # ==================================================
+
     # Validation
+
     # ==================================================
+
+
 
     def clean(self):
 
+
+
         if (
+
             self.offer_start_date
+
             and self.offer_end_date
+
             and self.offer_end_date <= self.offer_start_date
+
         ):
+
             raise ValidationError(
+
                 "Offer end date must be after offer start date."
+
             )
 
+
+
         if (
+
             self.discount_type == "percentage"
+
             and self.discount_value > 100
+
         ):
+
             raise ValidationError(
+
                 "Percentage discount cannot exceed 100."
+
             )
 
+
+
         if (
+
             self.discount_type == "fixed"
+
             and self.discount_value > self.original_price
+
         ):
+
             raise ValidationError(
+
                 "Discount cannot exceed original price."
+
             )
 
+
+
         if (
+
             self.publish_type == "scheduled"
+
             and not self.publish_datetime
+
         ):
+
             raise ValidationError(
+
                 "Publish date and time is required for scheduled publishing."
+
             )
 
+
+
         if (
+
             self.publish_datetime
+
             and self.admission_close_datetime
+
             and self.admission_close_datetime <= self.publish_datetime
+
         ):
+
             raise ValidationError(
+
                 "Admission close must be after publish date."
+
             )
+
+
 
         if (
+
             self.course_end_date
+
             and self.admission_close_datetime
+
             and self.course_end_date <= self.admission_close_datetime.date()
+
         ):
+
             raise ValidationError(
+
                 "Course end date must be after admission close date."
+
             )
 
+
+
     # ==================================================
+
     # Save
+
     # ==================================================
+
+
 
     def save(self, *args, **kwargs):
 
+
+
         # -----------------------------------------
+
         # Calculate Final Price
+
         # -----------------------------------------
+
+
 
         if self.discount_type == "none":
 
+
+
             self.final_price = self.original_price
+
+
 
         elif self.discount_type == "percentage":
 
+
+
             discount_amount = (
+
                 self.original_price *
+
                 (self.discount_value / Decimal("100"))
+
             )
 
+
+
             self.final_price = max(
+
                 Decimal("0"),
+
                 self.original_price - discount_amount
+
             )
+
+
 
         elif self.discount_type == "fixed":
 
+
+
             self.final_price = max(
+
                 Decimal("0"),
+
                 self.original_price - self.discount_value
+
             )
 
+
+
         else:
+
+
 
             self.final_price = self.original_price
 
+
+
         # -----------------------------------------
+
         # Published Time
+
         # -----------------------------------------
+
+
 
         if (
+
             self.batch_status == "published"
+
             and self.publish_type == "immediate"
+
             and not self.published_at
+
         ):
+
             self.published_at = timezone.now()
 
+
+
         # -----------------------------------------
+
         # Save
+
         # -----------------------------------------
+
         # -----------------------------------------
+
         # Marketplace Visibility
+
         # -----------------------------------------
+
+
 
         if self.batch_status == "draft":
+
             self.marketplace_visible = False
+
         else:
+
             self.marketplace_visible = True
 
+
+
         super().save(*args, **kwargs)
+
+
+
+
 
 
 
 class Subject(models.Model):
 
+
+
     STATUS_CHOICES = [('draft', 'Draft'),('published', 'Published'),('archived', 'Archived')]
+
     batch = models.ForeignKey(Batch,on_delete=models.CASCADE,related_name='subjects')
+
     subject_name = models.CharField(max_length=200)
+
     subject_description = models.TextField()
+
     subject_thumbnail = CloudinaryField('subject_thumbnail')
+
     subject_status = models.CharField(max_length=20,choices=STATUS_CHOICES,default='draft')
+
     created_at = models.DateTimeField(auto_now_add=True)
+
     updated_at = models.DateTimeField(auto_now=True)
+
     class Meta:
+
         ordering = ['-created_at']
+
         unique_together = ['batch', 'subject_name']
+
         verbose_name = 'Subject'
+
         verbose_name_plural = 'Subjects'
+
     def __str__(self):
+
         return f"{self.batch.batch_name} - {self.subject_name}"
+
+
 
 class Teacher(models.Model):
 
+
+
     # ==================================================
+
     # VALIDATORS
+
     # ==================================================
+
+
 
     indian_mobile_validator = RegexValidator(
+
         regex=r"^[6-9]\d{9}$",
+
         message=(
+
             "Enter a valid Indian mobile number containing exactly "
+
             "10 digits and starting with 6, 7, 8, or 9."
+
         ),
+
     )
 
+
+
     # ==================================================
+
     # PERMANENT TEACHER ID
+
     # Example: NEO-TEACHER-C6F84066
+
     # ==================================================
+
+
 
     teacher_id = models.CharField(
+
         max_length=50,
+
         unique=True,
+
         null=True,
+
         blank=True,
+
         editable=False,
+
         db_index=True,
+
     )
 
+
+
     # ==================================================
+
     # BASIC INFORMATION
+
     # ==================================================
+
+
 
     user = models.OneToOneField(
+
         settings.AUTH_USER_MODEL,
+
         on_delete=models.CASCADE,
+
         related_name="teacher_profile",
+
     )
+
+
 
     full_name = models.CharField(max_length=100)
 
+
+
     email = models.EmailField(unique=True)
 
+
+
     phone_number = models.CharField(
+
         max_length=10,
+
         unique=True,
+
         validators=[indian_mobile_validator],
+
     )
+
+
 
     date_of_birth = models.DateField(
+
         null=True,
+
         blank=True,
+
     )
+
+
 
     GENDER_CHOICES = [
+
         ("male", "Male"),
+
         ("female", "Female"),
+
     ]
+
+
 
     gender = models.CharField(
+
         max_length=10,
+
         choices=GENDER_CHOICES,
+
         blank=True,
+
     )
 
+
+
     # ==================================================
+
     # PROFILE IMAGE — CLOUDINARY
+
     # ==================================================
+
+
 
     profile_image = CloudinaryField(
+
         "image",
+
         folder="neolearn/teachers/profile",
+
         blank=True,
+
         null=True,
+
     )
 
+
+
     # ==================================================
+
     # ALTERNATE AND EMERGENCY CONTACT
+
     # ==================================================
+
+
 
     alternate_phone = models.CharField(
+
         max_length=10,
+
         blank=True,
+
         validators=[indian_mobile_validator],
+
     )
+
+
 
     emergency_contact_name = models.CharField(
+
         max_length=100,
+
         blank=True,
+
     )
+
+
 
     RELATIONSHIP_CHOICES = [
+
         ("father", "Father"),
+
         ("mother", "Mother"),
+
         ("husband", "Husband"),
+
         ("wife", "Wife"),
+
         ("brother", "Brother"),
+
         ("sister", "Sister"),
+
         ("other", "Other"),
+
     ]
 
+
+
     emergency_contact_relationship = models.CharField(
+
         max_length=20,
+
         choices=RELATIONSHIP_CHOICES,
+
         blank=True,
+
     )
+
+
 
     emergency_contact_phone = models.CharField(
+
         max_length=10,
+
         blank=True,
+
         validators=[indian_mobile_validator],
+
     )
 
+
+
     # ==================================================
+
     # ADDRESS
+
     # ==================================================
+
+
 
     address_line_1 = models.CharField(
+
         max_length=150,
+
         blank=True,
+
     )
+
+
 
     address_line_2 = models.CharField(
+
         max_length=150,
+
         blank=True,
+
     )
+
+
 
     city = models.CharField(
+
         max_length=50,
+
         blank=True,
+
     )
+
+
 
     state = models.CharField(
+
         max_length=50,
+
         blank=True,
+
     )
+
+
 
     postal_code = models.CharField(
+
         max_length=12,
+
         blank=True,
+
     )
+
+
 
     country = models.CharField(
+
         max_length=50,
+
         default="India",
+
         blank=True,
+
     )
 
+
+
     # ==================================================
+
     # EDUCATION AND QUALIFICATIONS
+
     # ==================================================
+
+
 
     qualification = models.CharField(
+
         max_length=100,
+
         blank=True,
+
     )
+
+
 
     institution_name = models.CharField(
+
         max_length=150,
+
         blank=True,
+
     )
+
+
 
     graduation_year = models.PositiveSmallIntegerField(
+
         null=True,
+
         blank=True,
+
     )
+
+
 
     additional_qualifications = models.TextField(
+
         blank=True,
+
         help_text="Additional degrees, diplomas or certifications.",
+
     )
+
+
 
     specialization = models.CharField(
+
         max_length=100,
+
         blank=True,
+
     )
+
+
 
     qualified_subjects = models.TextField(
+
         blank=True,
+
         help_text="Subjects the teacher is qualified to teach.",
+
     )
 
+
+
     # ==================================================
+
     # PROFESSIONAL EXPERIENCE
+
     # ==================================================
+
+
 
     experience = models.PositiveIntegerField(
+
         default=1,
+
         help_text="Years of teaching experience.",
+
     )
+
+
 
     previous_institution = models.CharField(
+
         max_length=150,
+
         blank=True,
+
     )
+
+
 
     bio = models.CharField(
+
         max_length=250,
+
         blank=True,
+
         help_text="A short professional introduction (maximum 250 characters).",
+
     )
+
+
 
     language = models.CharField(
+
         max_length=100,
+
         blank=True,
+
         help_text="Languages the teacher can use for teaching.",
+
     )
+
+
 
     linkedin = models.URLField(
+
         max_length=200,
+
         blank=True,
+
     )
+
+
 
     website = models.URLField(
+
         max_length=200,
+
         blank=True,
+
     )
 
+
+
     # ==================================================
+
     # ACCOUNT AND PROFILE STATUS
+
     # ==================================================
+
+
 
     is_first_login = models.BooleanField(
+
         default=True,
+
     )
+
+
 
     is_blocked = models.BooleanField(
+
         default=False,
+
     )
+
+
 
     profile_completed = models.BooleanField(
+
         default=False,
+
     )
 
+
+
     # ==================================================
+
     # AUDIT INFORMATION
+
     # ==================================================
+
+
 
     created_by = models.ForeignKey(
+
         settings.AUTH_USER_MODEL,
+
         on_delete=models.SET_NULL,
+
         related_name="created_teachers",
+
         null=True,
+
         blank=True,
+
     )
+
+
 
     created_at = models.DateTimeField(
+
         auto_now_add=True,
+
     )
+
+
 
     updated_at = models.DateTimeField(
+
         auto_now=True,
+
     )
 
-    # ==================================================
-    # DISPLAY HELPERS
+
+
     # ==================================================
 
+    # DISPLAY HELPERS
+
+    # ==================================================
+
+
+
     @property
+
     def initials(self):
+
         if not self.full_name:
+
             return "NA"
+
+
 
         words = self.full_name.split()
 
+
+
         if len(words) >= 2:
+
             return (words[0][0] + words[1][0]).upper()
+
+
 
         return self.full_name[:2].upper()
 
-    # ==================================================
-    # MODEL VALIDATION
+
+
     # ==================================================
 
+    # MODEL VALIDATION
+
+    # ==================================================
+
+
+
     def clean(self):
+
         super().clean()
+
+
 
         errors = {}
 
+
+
         # Validate primary mobile number.
+
         if self.phone_number:
+
             if not self.indian_mobile_validator.regex.fullmatch(
+
                 self.phone_number
+
             ):
+
                 errors["phone_number"] = (
+
                     "Enter a valid Indian mobile number containing "
+
                     "exactly 10 digits and starting with 6, 7, 8, or 9."
+
                 )
+
+
 
         # Validate alternate mobile number.
+
         if self.alternate_phone:
+
             if not self.indian_mobile_validator.regex.fullmatch(
+
                 self.alternate_phone
+
             ):
+
                 errors["alternate_phone"] = (
+
                     "Alternate mobile number must contain exactly "
+
                     "10 digits and start with 6, 7, 8, or 9."
+
                 )
+
+
 
             if (
+
                 self.phone_number
+
                 and self.alternate_phone == self.phone_number
+
             ):
+
                 errors["alternate_phone"] = (
+
                     "Alternate mobile number must be different "
+
                     "from the primary mobile number."
+
                 )
+
+
 
         # Validate emergency contact number.
+
         if self.emergency_contact_phone:
+
             if not self.indian_mobile_validator.regex.fullmatch(
+
                 self.emergency_contact_phone
+
             ):
+
                 errors["emergency_contact_phone"] = (
+
                     "Emergency contact number must contain exactly "
+
                     "10 digits and start with 6, 7, 8, or 9."
+
                 )
+
+
 
         # Date of birth must be in the past.
+
         if self.date_of_birth:
+
             if self.date_of_birth >= date.today():
+
                 errors["date_of_birth"] = (
+
                     "Date of birth must be in the past."
+
                 )
+
+
 
         # Validate gender choice.
+
         if self.gender and self.gender not in dict(self.GENDER_CHOICES):
+
             errors["gender"] = "Select Male or Female."
 
+
+
         # Validate emergency relationship choice.
+
         if (
+
             self.emergency_contact_relationship
+
             and self.emergency_contact_relationship
+
             not in dict(self.RELATIONSHIP_CHOICES)
+
         ):
+
             errors["emergency_contact_relationship"] = (
+
                 "Select a valid emergency contact relationship."
+
             )
+
+
 
         # Validate experience.
+
         if self.experience is not None and self.experience > 80:
+
             errors["experience"] = (
+
                 "Experience cannot exceed 80 years."
+
             )
 
+
+
         if errors:
+
             raise ValidationError(errors)
 
+
+
     # ==================================================
+
     # PERMANENT SHORT TEACHER ID GENERATION
+
     # Example: NEO-TEACHER-C6F84066
+
     # ==================================================
+
+
 
     def save(self, *args, **kwargs):
+
         if not self.teacher_id:
+
             while True:
+
                 new_teacher_id = (
+
                     f"NEO-TEACHER-{uuid.uuid4().hex[:8].upper()}"
+
                 )
 
+
+
                 if not type(self).objects.filter(
+
                     teacher_id=new_teacher_id
+
                 ).exists():
+
                     self.teacher_id = new_teacher_id
+
                     break
+
+
 
         super().save(*args, **kwargs)
 
-    # ==================================================
-    # STRING REPRESENTATION
+
+
     # ==================================================
 
+    # STRING REPRESENTATION
+
+    # ==================================================
+
+
+
     def __str__(self):
+
         return self.full_name
+
+
+
 
 
 class TeacherBatch(models.Model):
 
+
+
     teacher = models.ForeignKey(Teacher,on_delete=models.CASCADE,related_name="assigned_batches")
+
     batch = models.ForeignKey(Batch,on_delete=models.CASCADE,related_name="assigned_teachers")
+
     assigned_by = models.ForeignKey(User,on_delete=models.SET_NULL,null=True,blank=True,related_name="teacher_batch_assignments")
+
     is_active = models.BooleanField(default=True)
+
     assigned_at = models.DateTimeField(auto_now_add=True)
+
     class Meta:
+
         unique_together = ("teacher", "batch")
+
     def __str__(self):
+
         return f"{self.teacher.full_name} → {self.batch.batch_name}"
+
+
 
 class TeacherSubject(models.Model):
 
+
+
     teacher = models.ForeignKey(Teacher,on_delete=models.CASCADE,related_name="assigned_subjects")
+
     batch = models.ForeignKey(Batch,on_delete=models.CASCADE,related_name="teacher_subject_batches")
+
     subject = models.ForeignKey(Subject,on_delete=models.CASCADE,related_name="assigned_teachers")
+
     assigned_by = models.ForeignKey(User,on_delete=models.SET_NULL,null=True,blank=True,related_name="teacher_subject_assignments")
+
     is_active = models.BooleanField(default=True)
+
     assigned_at = models.DateTimeField(auto_now_add=True)
+
     class Meta:
+
         unique_together = (
+
             "teacher",
+
             "batch",
+
             "subject",
+
         )
 
+
+
     def __str__(self):
+
         return (f"{self.teacher.full_name} → " f"{self.subject.subject_name}")
 
+
+
 # =========================================================
+
 # COUPON MANAGEMENT
+
 # =========================================================
+
+
+
 
 
 class Coupon(models.Model):
 
+
+
     # -----------------------------------------------------
+
     # Coupon Type
+
     # -----------------------------------------------------
+
+
 
     COUPON_TYPE_CHOICES = [
+
         ("general", "General Coupon"),
+
         ("batch_specific", "Batch-Specific Coupon"),
+
         ("multi_checkout", "Multi Checkout Coupon"),
+
     ]
 
+
+
     # -----------------------------------------------------
+
     # Discount Type
+
     # -----------------------------------------------------
+
+
 
     DISCOUNT_TYPE_CHOICES = [
+
         ("percentage", "Percentage"),
+
         ("fixed", "Fixed Amount"),
+
     ]
 
+
+
     # -----------------------------------------------------
+
     # Status
+
     # -----------------------------------------------------
+
+
 
     STATUS_CHOICES = [
+
         ("active", "Active"),
+
         ("inactive", "Inactive"),
+
     ]
 
+
+
     # -----------------------------------------------------
+
     # Basic Information
+
     # -----------------------------------------------------
+
+
 
     code = models.CharField(
+
         max_length=50,
+
         unique=True,
+
         db_index=True,
+
         help_text="Unique coupon code, for example NEO30.",
+
     )
+
+
 
     description = models.TextField(
+
         blank=True,
+
         help_text="Internal description of this coupon.",
+
     )
+
+
 
     coupon_thumbnail = CloudinaryField(
+
         "coupon_thumbnail",
+
         blank=True,
+
         null=True,
+
         help_text="Promotional image for this coupon.",
+
     )
 
+
+
     # -----------------------------------------------------
+
     # Coupon Type
+
     # -----------------------------------------------------
+
+
 
     coupon_type = models.CharField(
+
         max_length=20,
+
         choices=COUPON_TYPE_CHOICES,
+
         default="general",
+
         db_index=True,
+
     )
 
+
+
     # -----------------------------------------------------
+
     # Batch-Specific Coupon Marketplace Visibility
+
     # -----------------------------------------------------
+
+
 
     marketplace_visible = models.BooleanField(
+
         default=True,
+
         help_text=(
+
             "Controls whether a batch-specific coupon "
+
             "is shown in the student's available coupon list. "
+
             "Manual coupon-code entry can still be used when "
+
             "the coupon is otherwise valid."
+
         ),
+
     )
 
+
+
     # -----------------------------------------------------
+
     # Discount Settings
+
     # -----------------------------------------------------
+
+
 
     discount_type = models.CharField(
+
         max_length=20,
+
         choices=DISCOUNT_TYPE_CHOICES,
+
         default="percentage",
+
     )
+
+
 
     discount_value = models.DecimalField(
+
         max_digits=10,
+
         decimal_places=2,
+
         default=Decimal("0.00"),
+
         help_text="Percentage value or fixed discount amount.",
+
     )
 
+
+
     # -----------------------------------------------------
+
     # Order / Checkout Amount Restrictions
+
     # -----------------------------------------------------
+
+
 
     minimum_order_amount = models.DecimalField(
+
         max_digits=10,
+
         decimal_places=2,
+
         default=Decimal("0.00"),
+
         help_text=(
+
             "For General Coupon: minimum order amount. "
+
             "For Multi Checkout Coupon: minimum combined "
+
             "checkout amount."
+
         ),
+
     )
+
+
 
     maximum_order_amount = models.DecimalField(
+
         max_digits=10,
+
         decimal_places=2,
+
         blank=True,
+
         null=True,
+
         help_text=(
+
             "For General Coupon: maximum order amount. "
+
             "For Multi Checkout Coupon: maximum combined "
+
             "checkout amount."
+
         ),
+
     )
 
+
+
     # -----------------------------------------------------
+
     # Percentage Coupon Maximum Discount
+
     # -----------------------------------------------------
+
+
 
     # Legacy field retained for schema compatibility.
+
     # It is no longer used by coupon validation,
+
     # discount calculation, create forms, or edit forms.
 
+
+
     maximum_discount_amount = models.DecimalField(
+
         max_digits=10,
+
         decimal_places=2,
+
         blank=True,
+
         null=True,
+
         help_text="Legacy field — no longer used.",
+
     )
 
+
+
     # -----------------------------------------------------
+
     # Validity
+
     # -----------------------------------------------------
+
+
 
     valid_from = models.DateTimeField(
+
         help_text=(
+
             "Date and time from which the coupon becomes valid."
+
         ),
+
     )
+
+
 
     valid_until = models.DateTimeField(
+
         help_text=(
+
             "Date and time after which the coupon expires."
+
         ),
+
     )
 
+
+
     # -----------------------------------------------------
+
     # Usage Limits
+
     # -----------------------------------------------------
+
+
 
     usage_limit = models.PositiveIntegerField(
+
         blank=True,
+
         null=True,
+
         help_text=(
+
             "Maximum total number of successful uses. "
+
             "Leave blank for unlimited usage."
+
         ),
+
     )
+
+
 
     per_user_limit = models.PositiveIntegerField(
+
         blank=True,
+
         null=True,
+
         help_text=(
+
             "Maximum successful uses per student. "
+
             "Leave blank for unlimited usage."
+
         ),
+
     )
+
+
 
     used_count = models.PositiveIntegerField(
+
         default=0,
+
         editable=False,
+
         help_text="Number of successful coupon uses.",
+
     )
+
+
 
     total_discount_given = models.DecimalField(
+
         max_digits=12,
+
         decimal_places=2,
+
         default=Decimal("0.00"),
+
         editable=False,
+
         help_text=(
+
             "Actual total discount granted across successful "
+
             "coupon checkouts."
+
         ),
+
     )
 
+
+
     # -----------------------------------------------------
+
     # Status Fields
+
     # -----------------------------------------------------
+
+
 
     status = models.CharField(
+
         max_length=20,
+
         choices=STATUS_CHOICES,
+
         default="active",
+
         db_index=True,
+
     )
+
+
 
     # Kept for compatibility with existing code.
+
     is_active = models.BooleanField(
+
         default=True,
+
         db_index=True,
+
     )
 
+
+
     # -----------------------------------------------------
+
     # Timestamps
+
     # -----------------------------------------------------
+
+
 
     created_at = models.DateTimeField(
+
         auto_now_add=True,
+
     )
+
+
 
     updated_at = models.DateTimeField(
+
         auto_now=True,
+
     )
 
+
+
     # -----------------------------------------------------
+
     # Meta
+
     # -----------------------------------------------------
+
+
 
     class Meta:
+
         ordering = ["-created_at"]
 
+
+
         verbose_name = "Coupon"
+
         verbose_name_plural = "Coupons"
 
+
+
         indexes = [
+
             models.Index(
+
                 fields=["coupon_type"],
+
                 name="coupon_type_idx",
+
             ),
+
             models.Index(
+
                 fields=["status"],
+
                 name="coupon_status_idx",
+
             ),
+
             models.Index(
+
                 fields=["is_active"],
+
                 name="coupon_active_idx",
+
             ),
+
             models.Index(
+
                 fields=["valid_from"],
+
                 name="coupon_valid_from_idx",
+
             ),
+
             models.Index(
+
                 fields=["valid_until"],
+
                 name="coupon_valid_until_idx",
+
             ),
+
         ]
 
+
+
     # -----------------------------------------------------
+
     # String Representation
+
     # -----------------------------------------------------
+
+
 
     def __str__(self):
+
         return self.code
 
-    # -----------------------------------------------------
-    # Helper Properties
+
+
     # -----------------------------------------------------
 
+    # Helper Properties
+
+    # -----------------------------------------------------
+
+
+
     @property
+
     def is_expired(self):
+
         """
+
         Returns True when the coupon validity period has ended.
+
         """
+
+
 
         return timezone.now() > self.valid_until
 
+
+
     @property
+
     def is_started(self):
+
         """
+
         Returns True when the coupon validity period has started.
+
         """
+
+
 
         return timezone.now() >= self.valid_from
 
+
+
     @property
+
     def usage_limit_reached(self):
-        """
-        Returns True when the total usage limit has been reached.
+
         """
 
+        Returns True when the total usage limit has been reached.
+
+        """
+
+
+
         if self.usage_limit is None:
+
             return False
+
+
 
         return self.used_count >= self.usage_limit
 
+
+
     @property
+
     def is_valid_now(self):
+
         """
+
         Returns True when the coupon is active,
+
         within the validity period, and usable.
+
         """
+
+
 
         now = timezone.now()
 
+
+
         return (
+
             self.status == "active"
+
             and self.is_active
+
             and self.valid_from <= now <= self.valid_until
+
             and not self.usage_limit_reached
+
         )
 
-    # -----------------------------------------------------
-    # Validation
+
+
     # -----------------------------------------------------
 
+    # Validation
+
+    # -----------------------------------------------------
+
+
+
     def clean(self):
+
         """
+
         Validate coupon information before saving.
+
+
 
         Coupon types:
 
+
+
         General:
+
             Uses minimum_order_amount and
+
             maximum_order_amount.
+
+
 
         Batch-Specific:
+
             Does not use minimum_order_amount or
+
             maximum_order_amount.
 
+
+
         Multi Checkout:
+
             Uses minimum_order_amount and
+
             maximum_order_amount as the combined
+
             checkout amount range.
 
+
+
         maximum_discount_amount is a legacy field
+
         and is intentionally not validated.
+
         """
 
+
+
         # -------------------------------------------------
+
         # Normalize Coupon Code
+
         # -------------------------------------------------
+
+
 
         if self.code:
+
             self.code = self.code.strip().upper()
 
+
+
         # -------------------------------------------------
+
         # Discount Value
+
         # -------------------------------------------------
+
+
 
         if self.discount_value is None:
+
             raise ValidationError(
+
                 {
+
                     "discount_value": (
+
                         "Discount value is required."
+
                     )
+
                 }
+
             )
+
+
 
         if self.discount_value <= Decimal("0.00"):
+
             raise ValidationError(
+
                 {
+
                     "discount_value": (
+
                         "Discount value must be greater than zero."
+
                     )
+
                 }
+
             )
 
+
+
         # -------------------------------------------------
+
         # Percentage Discount Validation
+
         # -------------------------------------------------
+
+
 
         if (
+
             self.discount_type == "percentage"
+
             and self.discount_value > Decimal("100.00")
+
         ):
+
             raise ValidationError(
+
                 {
+
                     "discount_value": (
+
                         "Percentage discount cannot exceed 100%."
+
                     )
+
                 }
+
             )
 
+
+
         # -------------------------------------------------
+
         # Minimum Order / Checkout Amount
+
         # -------------------------------------------------
+
+
 
         if self.minimum_order_amount is None:
+
             self.minimum_order_amount = Decimal("0.00")
 
+
+
         if self.minimum_order_amount < Decimal("0.00"):
+
             raise ValidationError(
+
                 {
+
                     "minimum_order_amount": (
+
                         "Minimum order amount cannot be negative."
+
                     )
+
                 }
+
             )
 
+
+
         # -------------------------------------------------
+
         # Maximum Order / Checkout Amount
+
         # -------------------------------------------------
 
+
+
         if (
+
             self.maximum_order_amount is not None
+
             and self.maximum_order_amount < Decimal("0.00")
+
         ):
+
             raise ValidationError(
+
                 {
+
                     "maximum_order_amount": (
+
                         "Maximum order amount cannot be negative."
+
                     )
+
                 }
+
             )
 
+
+
         # -------------------------------------------------
+
         # General / Multi Checkout Amount Relationship
+
         # -------------------------------------------------
+
+
 
         if (
+
             self.maximum_order_amount is not None
+
             and self.maximum_order_amount
+
             < self.minimum_order_amount
+
         ):
+
             raise ValidationError(
+
                 {
+
                     "maximum_order_amount": (
+
                         "Maximum amount cannot be less "
+
                         "than minimum amount."
+
                     )
+
                 }
+
             )
 
+
+
         # -------------------------------------------------
+
         # Batch-Specific Restrictions
+
         # -------------------------------------------------
+
+
 
         if self.coupon_type == "batch_specific":
 
+
+
             if self.minimum_order_amount != Decimal("0.00"):
+
                 raise ValidationError(
+
                     {
+
                         "minimum_order_amount": (
+
                             "Minimum order amount is not applicable "
+
                             "to batch-specific coupons."
+
                         )
+
                     }
+
                 )
+
+
 
             if self.maximum_order_amount is not None:
+
                 raise ValidationError(
+
                     {
+
                         "maximum_order_amount": (
+
                             "Maximum order amount is not applicable "
+
                             "to batch-specific coupons."
+
                         )
+
                     }
+
                 )
 
+
+
         # -------------------------------------------------
+
         # Multi Checkout Restrictions
+
         # -------------------------------------------------
+
+
 
         if self.coupon_type == "multi_checkout":
 
+
+
             if self.minimum_order_amount <= Decimal("0.00"):
+
                 raise ValidationError(
+
                     {
+
                         "minimum_order_amount": (
+
                             "Minimum checkout amount must be "
+
                             "greater than zero for a "
+
                             "multi-checkout coupon."
+
                         )
+
                     }
+
                 )
+
+
 
             if self.maximum_order_amount is None:
+
                 raise ValidationError(
+
                     {
+
                         "maximum_order_amount": (
+
                             "Maximum checkout amount is required "
+
                             "for a multi-checkout coupon."
+
                         )
+
                     }
+
                 )
+
+
 
             if self.maximum_order_amount <= Decimal("0.00"):
+
                 raise ValidationError(
+
                     {
+
                         "maximum_order_amount": (
+
                             "Maximum checkout amount must be "
+
                             "greater than zero for a "
+
                             "multi-checkout coupon."
+
                         )
+
                     }
+
                 )
+
+
 
             if (
+
                 self.maximum_order_amount
+
                 < self.minimum_order_amount
+
             ):
+
                 raise ValidationError(
+
                     {
+
                         "maximum_order_amount": (
+
                             "Maximum checkout amount cannot be "
+
                             "less than minimum checkout amount."
+
                         )
+
                     }
+
                 )
 
+
+
         # -------------------------------------------------
+
         # Validity Dates
+
         # -------------------------------------------------
+
+
 
         if self.valid_from is None:
+
             raise ValidationError(
+
                 {
+
                     "valid_from": (
+
                         "Valid from date and time is required."
+
                     )
+
                 }
+
             )
+
+
 
         if self.valid_until is None:
+
             raise ValidationError(
+
                 {
+
                     "valid_until": (
+
                         "Valid until date and time is required."
+
                     )
+
                 }
+
             )
+
+
 
         if self.valid_until <= self.valid_from:
+
             raise ValidationError(
+
                 {
+
                     "valid_until": (
+
                         "Coupon expiry date must be after "
+
                         "the start date."
+
                     )
+
                 }
+
             )
 
+
+
         # -------------------------------------------------
+
         # Usage Limits
+
         # -------------------------------------------------
 
+
+
         if (
+
             self.usage_limit is not None
+
             and self.usage_limit == 0
+
         ):
+
             raise ValidationError(
+
                 {
+
                     "usage_limit": (
+
                         "Usage limit must be greater than zero "
+
                         "or left blank for unlimited usage."
+
                     )
+
                 }
+
             )
 
+
+
         if (
+
             self.per_user_limit is not None
+
             and self.per_user_limit == 0
+
         ):
+
             raise ValidationError(
+
                 {
+
                     "per_user_limit": (
+
                         "Per-student usage limit must be "
+
                         "greater than zero or left blank "
+
                         "for unlimited usage."
+
                     )
+
                 }
+
             )
+
+
 
         if (
+
             self.usage_limit is not None
+
             and self.per_user_limit is not None
+
             and self.per_user_limit > self.usage_limit
+
         ):
+
             raise ValidationError(
+
                 {
+
                     "per_user_limit": (
+
                         "Per-student usage limit cannot exceed "
+
                         "the total usage limit."
+
                     )
+
                 }
+
             )
 
+
+
     # -----------------------------------------------------
+
     # Save
+
     # -----------------------------------------------------
+
+
 
     def save(self, *args, **kwargs):
+
         """
+
         Normalize coupon code and keep status fields synchronized.
+
         """
+
+
 
         if self.code:
+
             self.code = self.code.strip().upper()
 
+
+
         if self.status == "inactive":
+
             self.is_active = False
+
         else:
+
             self.status = "active"
+
             self.is_active = True
 
+
+
         super().save(*args, **kwargs)
+
+
+
 
 
 class CouponUsage(models.Model):
+
     coupon = models.ForeignKey(
+
         Coupon,
+
         on_delete=models.PROTECT,
+
         related_name="usage_records",
+
     )
+
     student = models.ForeignKey(
+
         settings.AUTH_USER_MODEL,
+
         on_delete=models.PROTECT,
+
         related_name="coupon_usages",
+
     )
+
     order = models.ForeignKey(
+
         "orders.Order",
+
         on_delete=models.PROTECT,
+
         related_name="coupon_usages",
+
     )
+
     discount_amount = models.DecimalField(
+
         max_digits=12,
+
         decimal_places=2,
+
         default=Decimal("0.00"),
+
     )
+
     used_at = models.DateTimeField(auto_now_add=True)
 
+
+
     class Meta:
+
         constraints = [
+
             models.UniqueConstraint(
+
                 fields=["coupon", "order"],
+
                 name="unique_coupon_usage_per_order",
+
             ),
+
         ]
 
+
+
     def __str__(self):
+
         return f"{self.coupon.code} - {self.order}"
 
+
+
 # =========================================================
+
 # COUPON BATCH RULE
+
 # =========================================================
+
+
+
 
 
 class CouponBatchRule(models.Model):
+
     """
+
     Connects coupons with batches.
 
+
+
     General coupon:
+
         Can connect to multiple batches.
 
+
+
     Batch-specific coupon:
+
         Can connect to only one batch.
 
+
+
     Multi-checkout coupon:
+
         Cannot connect to batches.
 
+
+
     This model is used for admin coupon configuration.
+
     Student coupon application will be handled separately.
+
     """
 
+
+
     coupon = models.ForeignKey(
+
         Coupon,
+
         on_delete=models.CASCADE,
+
         related_name="batch_rules",
+
     )
+
+
 
     batch = models.ForeignKey(
+
         "Batch",
+
         on_delete=models.CASCADE,
+
         related_name="coupon_rules",
+
     )
+
+
 
     is_enabled = models.BooleanField(
+
         default=True,
+
         help_text=(
+
             "Enable or disable this coupon for this batch."
+
         ),
+
     )
+
+
 
     created_at = models.DateTimeField(
+
         auto_now_add=True,
+
     )
+
+
 
     updated_at = models.DateTimeField(
+
         auto_now=True,
+
     )
 
+
+
     class Meta:
+
         ordering = ["-created_at"]
 
+
+
         verbose_name = "Coupon Batch Rule"
+
         verbose_name_plural = "Coupon Batch Rules"
 
+
+
         constraints = [
+
             models.UniqueConstraint(
+
                 fields=["coupon", "batch"],
+
                 name="unique_coupon_batch_rule",
+
             ),
+
         ]
 
+
+
     def __str__(self):
+
         return (
+
             f"{self.coupon.code} - "
+
             f"{self.batch.batch_name}"
+
         )
 
+
+
     def clean(self):
+
         """
+
         Validate coupon-to-batch relationships.
 
+
+
         Batch-specific:
+
             Only one batch is allowed.
 
+
+
         General:
+
             Multiple batches are allowed.
 
+
+
         Multi-checkout:
+
             Batch rules are not allowed.
+
         """
 
+
+
         if not self.coupon_id or not self.batch_id:
+
             return
 
+
+
         # -------------------------------------------------
+
         # Multi Checkout Cannot Use Batch Rules
+
         # -------------------------------------------------
+
+
 
         if self.coupon.coupon_type == "multi_checkout":
+
             raise ValidationError(
+
                 {
+
                     "coupon": (
+
                         "Multi-checkout coupons cannot be "
+
                         "connected to batches."
+
                     )
+
                 }
+
             )
 
+
+
         # -------------------------------------------------
+
         # Batch-Specific Can Use Only One Batch
+
         # -------------------------------------------------
+
+
 
         if self.coupon.coupon_type == "batch_specific":
 
+
+
             existing_rule = (
+
                 CouponBatchRule.objects
+
                 .filter(coupon=self.coupon)
+
                 .exclude(pk=self.pk)
+
             )
+
+
 
             if existing_rule.exists():
+
                 raise ValidationError(
+
                     (
+
                         "A batch-specific coupon can be "
+
                         "connected to only one batch."
+
                     )
+
                 )
 
+
+
     def save(self, *args, **kwargs):
+
         self.full_clean()
+
         super().save(*args, **kwargs)
 
+
+
 class AdminOrderSelection(models.Model):
+
     admin = models.ForeignKey(
+
         settings.AUTH_USER_MODEL,
+
         on_delete=models.CASCADE,
+
         related_name="admin_order_selections",
+
     )
+
+
 
     order = models.ForeignKey(
+
         "orders.Order",
+
         on_delete=models.CASCADE,
+
         related_name="admin_selections",
+
     )
+
+
 
     selected_at = models.DateTimeField(
+
         auto_now_add=True,
+
     )
 
+
+
     class Meta:
+
         constraints = [
+
             models.UniqueConstraint(
+
                 fields=["admin", "order"],
+
                 name="unique_admin_order_selection",
+
             )
+
         ]
 
+
+
         indexes = [
+
             models.Index(
+
                 fields=["admin", "selected_at"]
+
             ),
+
         ]
+
+
 
         ordering = ["-selected_at"]
 
+
+
     def __str__(self):
+
         return (
+
             f"{self.admin.username} → "
+
             f"{self.order.order_number}"
+
         )
 
 
+
+
+
 # ============================================================
+
 # FAQ / HELP VIDEOS
+
 # ============================================================
+
+
 
 class FAQVideo(models.Model):
 
+
+
     CATEGORY_CHOICES = [
+
         ("payments", "Payments"),
+
         ("requests", "Requests"),
+
         ("exams", "Exams"),
+
         ("tests", "Tests"),
+
         ("profile", "Profile & Account"),
+
         ("general", "General Support"),
+
     ]
+
+
 
     AUDIENCE_CHOICES = [
+
         ("students", "Students"),
+
         ("teachers", "Teachers"),
+
         ("both", "Students & Teachers"),
+
     ]
+
+
 
     STATUS_CHOICES = [
+
         ("draft", "Draft"),
+
         ("published", "Published"),
+
     ]
 
+
+
     # --------------------------------------------------------
+
     # VIDEO INFORMATION
+
     # --------------------------------------------------------
+
+
 
     title = models.CharField(
+
         max_length=200,
+
     )
+
+
 
     description = models.TextField(
+
         blank=True,
+
     )
+
+
 
     category = models.CharField(
+
         max_length=20,
+
         choices=CATEGORY_CHOICES,
+
         default="general",
+
         db_index=True,
+
     )
+
+
 
     audience = models.CharField(
+
         max_length=20,
+
         choices=AUDIENCE_CHOICES,
+
         default="both",
+
         db_index=True,
+
     )
+
+
 
     # Upload a video to Cloudinary, or provide an external URL.
+
     video_file = CloudinaryField(
+
         "video",
+
         resource_type="video",
+
         folder="neolearn/faq-videos",
+
         blank=True,
+
         null=True,
+
     )
+
+
 
     video_url = models.URLField(
+
         max_length=1000,
+
         blank=True,
+
     )
 
+
+
     # --------------------------------------------------------
+
     # PUBLICATION AND DISPLAY ORDER
+
     # --------------------------------------------------------
+
+
 
     status = models.CharField(
+
         max_length=15,
+
         choices=STATUS_CHOICES,
+
         default="draft",
+
         db_index=True,
+
     )
+
+
 
     display_order = models.PositiveIntegerField(
+
         default=1,
+
     )
 
+
+
     # --------------------------------------------------------
+
     # ADMIN AUDIT INFORMATION
+
     # --------------------------------------------------------
+
+
 
     created_by = models.ForeignKey(
+
         settings.AUTH_USER_MODEL,
+
         on_delete=models.PROTECT,
+
         related_name="faq_videos_created",
+
     )
+
+
 
     created_at = models.DateTimeField(
+
         auto_now_add=True,
+
     )
+
+
 
     updated_at = models.DateTimeField(
+
         auto_now=True,
+
     )
 
+
+
     class Meta:
+
         ordering = [
+
             "display_order",
+
             "-created_at",
+
             "-pk",
+
         ]
+
+
 
         indexes = [
+
             models.Index(
+
                 fields=["audience", "status"],
+
                 name="faq_video_audience_status_idx",
+
             ),
+
             models.Index(
+
                 fields=["category", "status"],
+
                 name="faq_video_category_status_idx",
+
             ),
+
         ]
 
+
+
     def clean(self):
+
         super().clean()
 
+
+
         has_uploaded_video = bool(self.video_file)
+
         has_external_url = bool(self.video_url and self.video_url.strip())
 
+
+
         if has_uploaded_video and has_external_url:
+
             raise ValidationError(
+
                 "Provide either an uploaded video or an external video URL, not both."
+
             )
+
+
 
         if not has_uploaded_video and not has_external_url:
+
             raise ValidationError(
+
                 "Upload a video or provide an external video URL."
+
             )
 
+
+
     def __str__(self):
+
         return self.title

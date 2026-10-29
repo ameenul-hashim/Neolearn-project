@@ -679,7 +679,7 @@
 
                 <!-- SETTINGS -->
                 <a
-                    href="#"
+                    href="{% url 'admin_settings' %}"
                     class="admin-nav-link {% if request.resolver_match.url_name == 'admin_settings' %}active{% endif %}"
                     {% if request.resolver_match.url_name == 'admin_settings' %}aria-current="page"{% endif %}
                     aria-label="Settings (page connection pending)">

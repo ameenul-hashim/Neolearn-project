@@ -1,0 +1,620 @@
+{% extends "students/base_student.html" %}
+{% load static %}
+
+{% block title %}Student Settings | NeoLearn{% endblock %}
+
+{% block student_content %}
+<div class="student-settings mx-auto w-full max-w-7xl space-y-4 pb-4">
+    <!-- PAGE HEADER -->
+    <div class="flex flex-wrap items-end justify-between gap-4">
+        <div>
+            <p class="text-xs font-bold uppercase tracking-[0.18em] text-cyan-600">Account management</p>
+            <h1 class="mt-1 text-3xl font-extrabold tracking-tight text-slate-900">Settings</h1>
+            <p class="mt-2 text-sm text-slate-500">Manage your profile, login details, appearance and notifications.</p>
+        </div>
+        <div class="hidden items-center gap-2 text-sm text-slate-500 sm:flex">
+            <span>Student</span><span>/</span><span class="font-semibold text-cyan-700" id="settings-breadcrumb">Profile</span>
+        </div>
+    </div>
+
+    {# Success and error messages are rendered by students/base_student.html. #}
+
+    <div class="grid grid-cols-1 items-start gap-5 lg:grid-cols-[270px_minmax(0,1fr)]">
+        <!-- SETTINGS NAVIGATION -->
+        <aside class="settings-sidebar rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:p-4">
+            <p class="px-3 pb-3 pt-2 text-[11px] font-extrabold uppercase tracking-[0.16em] text-slate-400">Settings menu</p>
+            <nav id="settings-navigation" class="space-y-1" aria-label="Settings sections">
+                <button type="button" data-section="profile" class="settings-nav-item is-active">
+                    <i class="ri-user-3-line"></i><span>Profile</span><i class="ri-arrow-right-s-line nav-arrow"></i>
+                </button>
+                <button type="button" data-section="account" class="settings-nav-item">
+                    <i class="ri-at-line"></i><span>Username &amp; Email</span><i class="ri-arrow-right-s-line nav-arrow"></i>
+                </button>
+                <button type="button" data-section="password" class="settings-nav-item">
+                    <i class="ri-shield-keyhole-line"></i><span>Password &amp; Security</span><i class="ri-arrow-right-s-line nav-arrow"></i>
+                </button>
+                <button type="button" data-section="appearance" class="settings-nav-item">
+                    <i class="ri-palette-line"></i><span>Appearance</span><i class="ri-arrow-right-s-line nav-arrow"></i>
+                </button>
+                <button type="button" data-section="notifications" class="settings-nav-item">
+                    <i class="ri-notification-3-line"></i><span>Notifications</span><i class="ri-arrow-right-s-line nav-arrow"></i>
+                </button>
+            </nav>
+            <div class="mt-4 rounded-xl border border-cyan-100 bg-cyan-50 p-4">
+                <div class="flex items-center gap-2 text-xs font-bold text-cyan-800"><i class="ri-lock-2-line text-base"></i> Account security</div>
+                <p class="mt-2 text-xs leading-5 text-slate-600">Use a strong password and keep your contact details up to date.</p>
+            </div>
+        </aside>
+
+        <!-- RIGHT SIDE PANELS -->
+        <div class="min-w-0">
+            <!-- PROFILE -->
+            <section data-panel="profile" class="settings-panel settings-card profile-settings-card">
+                <div class="panel-heading">
+                    <div class="panel-icon bg-cyan-50 text-cyan-700"><i class="ri-user-3-line"></i></div>
+                    <div>
+                        <h2>Profile information</h2>
+                        <p>Update your personal details and profile photo.</p>
+                    </div>
+                </div>
+
+                <form method="post" enctype="multipart/form-data" novalidate id="student-image-form" class="profile-form">
+                    {% csrf_token %}
+                    <input type="hidden" name="form_type" value="personal">
+                    <input id="profile_image" name="profile_image" type="file" accept=".jpg,.jpeg,.png,image/jpeg,image/png" class="sr-only">
+
+                    <div class="profile-photo-column">
+                        <div class="profile-photo-frame">
+                            {% if profile.profile_image %}
+                            <img id="profile-preview" src="{{ profile.profile_image }}" alt="Current profile photo" class="profile-preview">
+                            <div id="profile-placeholder" class="profile-placeholder hidden">
+                                {{ request.user.first_name|default:request.user.username|first|upper }}
+                            </div>
+                            {% else %}
+                            <div id="profile-placeholder" class="profile-placeholder">
+                                {{ request.user.first_name|default:request.user.username|first|upper }}
+                            </div>
+                            <img id="profile-preview" src="" alt="Selected profile photo" class="profile-preview hidden">
+                            {% endif %}
+                            <span class="profile-camera-mark"><i class="ri-camera-line"></i></span>
+                        </div>
+
+                        <button type="button" id="open-cropper" class="change-photo-button">
+                            <i class="ri-crop-line"></i> Change Photo
+                        </button>
+                        <button type="button" id="remove-selected-photo" class="clear-photo-button hidden">Clear selection</button>
+                        <p id="image-status" class="image-help">JPG or PNG. The crop is saved as a square image (1:1).</p>
+                        <p class="student-id-help">Student ID: {{ profile.neo_student_id|default:"Not assigned" }}</p>
+                    </div>
+
+                    <div class="profile-fields-column">
+                        <div>
+                            <label for="full_name" class="settings-label">Full Name</label>
+                            <div class="profile-input-wrap">
+                                <i class="ri-user-line"></i>
+                                <input id="full_name" name="full_name" type="text" value="{{ full_name }}" maxlength="150" autocomplete="name" class="settings-input" placeholder="Enter your full name">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label for="phone" class="settings-label">Primary Phone Number</label>
+                            <div class="profile-input-wrap">
+                                <i class="ri-phone-line"></i>
+                                <input id="phone" name="phone" type="tel" value="{{ profile.phone }}" maxlength="10" inputmode="numeric" autocomplete="tel" class="settings-input" placeholder="10-digit phone number">
+                            </div>
+                            <p class="profile-field-help">A parent or guardian's number can be shared by siblings. Phone numbers do not need to be unique.</p>
+                        </div>
+
+                        <div class="profile-save-row">
+                            <button type="submit" id="save-profile" class="save-profile-button">
+                                <i class="ri-save-line"></i> Save Changes
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </section>
+
+            <!-- ACCOUNT -->
+            <section data-panel="account" class="settings-panel settings-card hidden">
+                <div class="panel-heading">
+                    <div class="panel-icon bg-blue-50 text-blue-700"><i class="ri-at-line"></i></div>
+                    <div><h2>Username &amp; Email</h2><p>Update the details you use to access your account.</p></div>
+                </div>
+                <form method="post" novalidate class="space-y-5">
+                    {% csrf_token %}
+                    <input type="hidden" name="form_type" value="account">
+                    <div>
+                        <label for="username" class="settings-label">Username</label>
+                        <input id="username" name="username" type="text" value="{{ request.user.username }}" maxlength="150" autocomplete="username" class="settings-input" placeholder="Enter username">
+                        <p class="mt-2 text-xs text-slate-500">Your username must be unique across accounts.</p>
+                    </div>
+                    <div>
+                        <label for="email" class="settings-label">Email address</label>
+                        <input id="email" name="email" type="text" value="{{ request.user.email }}" maxlength="254" inputmode="email" autocomplete="email" class="settings-input" placeholder="you@example.com">
+                        <p class="mt-2 text-xs text-slate-500">Use an email address you can access. Email uniqueness is checked by the server.</p>
+                    </div>
+                    <div class="flex justify-end border-t border-slate-100 pt-5">
+                        <button type="submit" class="rounded-xl bg-cyan-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-cyan-700">Save account information</button>
+                    </div>
+                </form>
+            </section>
+
+            <!-- PASSWORD -->
+            <section data-panel="password" class="settings-panel settings-card hidden">
+                <div class="panel-heading">
+                    <div class="panel-icon bg-violet-50 text-violet-700"><i class="ri-shield-keyhole-line"></i></div>
+                    <div><h2>Password &amp; Security</h2><p>Change your password to keep your account protected.</p></div>
+                </div>
+                <form method="post" novalidate class="password-settings-form space-y-4">
+                    {% csrf_token %}
+                    <input type="hidden" name="form_type" value="password">
+                    <div>
+                        <label for="current_password" class="settings-label">Current password</label>
+                        <div class="password-wrap"><input id="current_password" name="current_password" type="password" autocomplete="current-password" class="settings-input" placeholder="Enter current password"><button type="button" class="toggle-password" data-target="current_password" aria-label="Show current password"><i class="ri-eye-line"></i></button></div>
+                    </div>
+                    <div>
+                        <label for="new_password" class="settings-label">New password</label>
+                        <div class="password-wrap"><input id="new_password" name="new_password" type="password" autocomplete="new-password" class="settings-input" placeholder="Enter new password"><button type="button" class="toggle-password" data-target="new_password" aria-label="Show new password"><i class="ri-eye-line"></i></button></div>
+                    </div>
+                    <div>
+                        <label for="confirm_password" class="settings-label">Confirm new password</label>
+                        <div class="password-wrap"><input id="confirm_password" name="confirm_password" type="password" autocomplete="new-password" class="settings-input" placeholder="Confirm new password"><button type="button" class="toggle-password" data-target="confirm_password" aria-label="Show password confirmation"><i class="ri-eye-line"></i></button></div>
+                    </div>
+                    <div class="flex justify-end border-t border-slate-100 pt-5">
+                        <button type="submit" class="rounded-xl bg-cyan-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-cyan-700">Update password</button>
+                    </div>
+                </form>
+            </section>
+
+            <!-- APPEARANCE -->
+            <section data-panel="appearance" class="settings-panel settings-card hidden">
+                <div class="panel-heading">
+                    <div class="panel-icon bg-amber-50 text-amber-700"><i class="ri-palette-line"></i></div>
+                    <div><h2>Appearance</h2><p>Choose your preferred appearance for the student content area.</p></div>
+                </div>
+                <div class="grid gap-4 sm:grid-cols-2">
+                    <button type="button" class="theme-option" data-theme-choice="dark">
+                        <div class="theme-swatch theme-swatch-dark"><div class="swatch-sidebar"><i></i><i></i><i></i><i></i></div><div class="swatch-content"><i></i><i></i><i></i></div></div>
+                        <div class="mt-4 flex items-center gap-3"><span class="theme-radio"></span><span class="font-bold">Dark appearance</span><span class="theme-selected ml-auto hidden text-xs font-bold text-cyan-700">Selected</span></div>
+                        <p class="mt-2 text-left text-xs leading-5 text-slate-500">Keep the existing dark navy and cyan look.</p>
+                    </button>
+                    <button type="button" class="theme-option" data-theme-choice="light">
+                        <div class="theme-swatch theme-swatch-light"><div class="swatch-sidebar"><i></i><i></i><i></i><i></i></div><div class="swatch-content"><i></i><i></i><i></i></div></div>
+                        <div class="mt-4 flex items-center gap-3"><span class="theme-radio"></span><span class="font-bold">Light appearance</span><span class="theme-selected ml-auto hidden text-xs font-bold text-cyan-700">Selected</span></div>
+                        <p class="mt-2 text-left text-xs leading-5 text-slate-500">Use a bright surface for the student content area.</p>
+                    </button>
+                </div>
+                <p id="theme-status" class="mt-4 rounded-xl bg-slate-50 px-4 py-3 text-xs leading-5 text-slate-600">Choose the appearance for this browser. The shared navigation stays in the existing NeoLearn theme.</p>
+            </section>
+
+            <!-- NOTIFICATIONS -->
+            <section data-panel="notifications" class="settings-panel settings-card hidden">
+                <div class="panel-heading">
+                    <div class="panel-icon bg-rose-50 text-rose-700"><i class="ri-notification-3-line"></i></div>
+                    <div><h2>Notifications</h2><p>Turn notification preferences on or off.</p></div>
+                </div>
+                <div class="space-y-3">
+                    <label class="notification-option"><span class="notification-icon"><i class="ri-mail-line"></i></span><span class="min-w-0 flex-1"><strong>Email updates</strong><small>Preference for important account updates and announcements.</small></span><input type="checkbox" class="preference-toggle" data-pref="email_updates"><span class="toggle-ui"></span></label>
+                    <label class="notification-option"><span class="notification-icon"><i class="ri-calendar-event-line"></i></span><span class="min-w-0 flex-1"><strong>Live class reminders</strong><small>Preference for upcoming live-class reminders.</small></span><input type="checkbox" class="preference-toggle" data-pref="class_reminders"><span class="toggle-ui"></span></label>
+                    <label class="notification-option"><span class="notification-icon"><i class="ri-book-open-line"></i></span><span class="min-w-0 flex-1"><strong>Course updates</strong><small>Preference for new learning content and materials.</small></span><input type="checkbox" class="preference-toggle" data-pref="course_updates"><span class="toggle-ui"></span></label>
+                    <label class="notification-option"><span class="notification-icon"><i class="ri-shopping-bag-3-line"></i></span><span class="min-w-0 flex-1"><strong>Order and payment alerts</strong><small>Preference for purchase and order status updates.</small></span><input type="checkbox" class="preference-toggle" data-pref="order_alerts"><span class="toggle-ui"></span></label>
+                </div>
+                <p id="notification-status" class="mt-4 rounded-xl bg-amber-50 px-4 py-3 text-xs leading-5 text-amber-900">Notification preferences are saved in this browser. Delivery of emails and class reminders must be configured separately.</p>
+            </section>
+        </div>
+    </div>
+</div>
+
+<!-- IMAGE CROPPER MODAL -->
+<div id="crop-modal" class="crop-modal hidden" role="dialog" aria-modal="true" aria-labelledby="crop-title">
+    <div class="crop-dialog">
+        <div class="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4">
+            <div><h2 id="crop-title" class="text-lg font-extrabold text-slate-900">Crop profile photo</h2><p class="mt-1 text-xs leading-5 text-slate-500">Move the photo and adjust zoom. The output is always a 1:1 square.</p></div>
+            <button type="button" id="close-cropper" class="rounded-lg px-3 py-1 text-2xl leading-none text-slate-400 hover:bg-slate-100 hover:text-slate-800" aria-label="Close crop dialog">&times;</button>
+        </div>
+        <div class="p-4 sm:p-5">
+            <div id="crop-stage"><img id="crop-source-image" alt="Image to crop" draggable="false"><div id="crop-selection"><div class="crop-grid"></div></div></div>
+            <div class="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
+                <div class="mb-2 flex items-center justify-between"><label for="crop-zoom" class="text-sm font-bold text-slate-700">Zoom</label><span id="crop-zoom-value" class="text-sm font-bold text-cyan-700">1.00×</span></div>
+                <input id="crop-zoom" type="range" min="1" max="3" step="0.01" value="1" class="w-full accent-cyan-600">
+                <p class="mt-2 text-xs text-slate-500">Drag the photo to reposition it inside the square.</p>
+            </div>
+            <p id="crop-error" class="mt-3 hidden text-sm text-rose-600" role="alert"></p>
+            <div class="mt-5 flex flex-col-reverse gap-2 border-t border-slate-200 pt-4 sm:flex-row sm:justify-end">
+                <button type="button" id="cancel-crop" class="rounded-xl border border-slate-300 px-5 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-50">Cancel</button>
+                <button type="button" id="apply-crop" class="rounded-xl bg-cyan-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-cyan-700">Apply crop</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* NeoLearn Student Settings — aligned with the Admin Settings navy/cyan design. */
+    .student-settings{width:100%;max-width:none;margin:0 auto;color:#e5edf8}
+    .student-settings h1{color:#f8fafc!important;font-size:clamp(25px,2vw,32px);line-height:1.12}
+    .student-settings .text-slate-900,.student-settings .text-slate-800,.student-settings .text-slate-700,.student-settings .text-slate-600{color:#d5e1f0!important}
+    .student-settings .text-slate-500,.student-settings .text-slate-400{color:#91a4bd!important}
+    .student-settings .text-cyan-600,.student-settings .text-cyan-700,.student-settings .text-cyan-800{color:#22d3ee!important}
+    .student-settings .settings-sidebar{min-width:0;padding:16px;border:1px solid #1e2b40!important;border-radius:18px;background:linear-gradient(160deg,#050b18,#070d1d)!important;box-shadow:0 12px 35px #0002}
+    .settings-nav-item{display:flex;align-items:center;gap:12px;width:100%;min-height:49px;padding:11px 13px;border:1px solid transparent;border-radius:11px;text-align:left;color:#b8c6d9;font-size:13px;font-weight:700;transition:background .18s,color .18s,border-color .18s}
+    .settings-nav-item>i:first-child{font-size:19px;flex-shrink:0}.settings-nav-item>span{flex:1}
+    .settings-nav-item:hover{background:#0b1b2c;color:#f8fafc}
+    .settings-nav-item.is-active{color:#22d3ee;background:linear-gradient(90deg,rgba(8,145,178,.22),rgba(8,47,73,.5));border-color:rgba(8,145,178,.35);box-shadow:inset 3px 0 0 #22d3ee}
+    .nav-arrow{margin-left:auto;font-size:19px;color:#a9bdd6}
+    .student-settings .settings-card{min-width:0;padding:clamp(20px,2vw,29px);border:1px solid #1e2b40;border-radius:18px;background:linear-gradient(145deg,#050b19,#070d1d)!important;box-shadow:0 12px 35px #0002;color:#e5edf8}
+    .panel-heading{display:flex;align-items:center;gap:14px;margin-bottom:22px;padding-bottom:17px;border-bottom:1px solid #1b2940}
+    .panel-heading h2{font-size:20px;line-height:1.35;font-weight:800;color:#f8fafc!important}
+    .panel-heading p{margin-top:4px;font-size:13px;line-height:1.5;color:#91a4bd!important}
+    .panel-icon{display:flex;align-items:center;justify-content:center;width:52px;height:52px;flex:0 0 52px;border-radius:50%;font-size:23px;background:#062331!important;color:#22d3ee!important;border:1px solid #07506a}
+    .student-settings .bg-slate-50,.student-settings .bg-cyan-50,.student-settings .bg-blue-50,.student-settings .bg-violet-50,.student-settings .bg-amber-50,.student-settings .bg-rose-50{background:#081727!important}
+    .student-settings .border-slate-200,.student-settings .border-slate-300,.student-settings .border-cyan-100,.student-settings .border-amber-100{border-color:#20344b!important}
+    .student-settings .border-slate-100{border-color:#1b2940!important}
+    .student-settings .text-blue-700,.student-settings .text-violet-700,.student-settings .text-amber-700,.student-settings .text-rose-700{color:#22d3ee!important}
+    .settings-label{display:block;margin-bottom:8px;color:#dbe7f5!important;font-size:13px;font-weight:700}
+    .settings-input{display:block;width:100%;min-width:0;border:1px solid #29415a;border-radius:11px;background:#081927!important;padding:13px 14px;color:#f1f5f9!important;font-size:14px;outline:none;transition:border-color .18s,box-shadow .18s}
+    .settings-input::placeholder{color:#6f849e}.settings-input:focus{border-color:#06b6d4;box-shadow:0 0 0 3px rgba(6,182,212,.13)}
+    .student-settings input,.student-settings textarea{color-scheme:dark}
+    .student-settings button.bg-cyan-600,.student-settings .bg-cyan-600{background:#06b6d4!important;color:#03111d!important}
+    .student-settings button.bg-cyan-600:hover,.student-settings .hover\:bg-cyan-700:hover{background:#22d3ee!important}
+    .student-settings button{transition:background .18s,border-color .18s,color .18s}
+    .password-wrap{position:relative}.password-wrap .settings-input{padding-right:48px}
+    .toggle-password{position:absolute;right:12px;top:50%;transform:translateY(-50%);padding:5px;color:#91a4bd;font-size:19px}.toggle-password:hover{color:#22d3ee}
+    .theme-option{display:block;padding:15px;border:1px solid #20344b;border-radius:14px;background:#081727;color:#e5edf8;text-align:left;transition:border-color .2s,box-shadow .2s,background .2s}
+    .theme-option:hover{border-color:#08758d}.theme-option.is-selected{border-color:#0891b2;box-shadow:0 0 0 3px rgba(8,145,178,.12);background:#06202d}
+    .theme-radio{width:20px;height:20px;flex:0 0 20px;border:2px solid #486078;border-radius:50%}.theme-option.is-selected .theme-radio{border:6px solid #22d3ee}
+    .theme-swatch{display:flex;gap:10px;height:108px;padding:9px;border:1px solid #20344b;border-radius:11px;overflow:hidden}
+    .theme-swatch .swatch-sidebar{display:flex;flex-direction:column;gap:8px;width:28%;padding:8px;border-radius:7px}.theme-swatch .swatch-sidebar i{height:7px;border-radius:9px;background:#64748b;opacity:.65}.theme-swatch .swatch-sidebar i:nth-child(2){width:75%}.theme-swatch .swatch-sidebar i:nth-child(3){height:12px;background:#06b6d4;opacity:1}
+    .theme-swatch .swatch-content{display:flex;flex:1;flex-direction:column;gap:7px}.theme-swatch .swatch-content i{display:block;height:19px;border-radius:7px}.theme-swatch .swatch-content i:first-child{width:55%;height:12px}
+    .theme-swatch-dark{background:#020817}.theme-swatch-dark .swatch-sidebar{background:#0b1428}.theme-swatch-dark .swatch-content i{background:#15243b}.theme-swatch-dark .swatch-content i:first-child{background:#334155}
+    .theme-swatch-light{background:#f8fafc}.theme-swatch-light .swatch-sidebar{background:#e2e8f0}.theme-swatch-light .swatch-content i{background:#e2e8f0}.theme-swatch-light .swatch-content i:first-child{background:#cbd5e1}
+    .notification-option{position:relative;display:flex;align-items:center;gap:14px;min-width:0;padding:14px;border:1px solid #20344b;border-radius:13px;background:#081727;cursor:pointer}
+    .notification-option:hover{border-color:#08758d;background:#092033}.notification-icon{display:flex;align-items:center;justify-content:center;width:48px;height:48px;flex:0 0 48px;border-radius:11px;background:#10263a;color:#22d3ee;font-size:21px}
+    .notification-option strong{display:block;color:#e5edf8;font-size:13px;font-weight:800}.notification-option small{display:block;margin-top:4px;color:#91a4bd;font-size:12px;line-height:1.45}
+    .preference-toggle{position:absolute;width:1px;height:1px;opacity:0}.toggle-ui{position:relative;width:44px;height:25px;flex:0 0 44px;border-radius:99px;background:#334155;transition:background .2s}.toggle-ui:after{content:"";position:absolute;top:3px;left:3px;width:19px;height:19px;border-radius:50%;background:#e2e8f0;box-shadow:0 1px 3px #0006;transition:transform .2s}.preference-toggle:checked+.toggle-ui{background:#0891b2}.preference-toggle:checked+.toggle-ui:after{transform:translateX(19px)}.preference-toggle:focus-visible+.toggle-ui{outline:3px solid #67e8f9;outline-offset:3px}
+    .student-settings .rounded-xl.bg-amber-50{background:#2a2110!important;color:#fcd34d!important}
+    /* Cropper uses the same dark navy/cyan palette as the rest of NeoLearn. */
+    .crop-modal{position:fixed;inset:0;z-index:100000;align-items:center;justify-content:center;overflow-y:auto;padding:16px;background:rgba(2,6,23,.86);backdrop-filter:blur(5px)}.crop-modal:not(.hidden){display:flex}
+    .crop-dialog{width:100%;max-width:720px;max-height:calc(100dvh - 32px);margin:auto;overflow-y:auto;border:1px solid #29415a;border-radius:18px;background:#07101f;color:#e5edf8;box-shadow:0 24px 80px rgba(0,0,0,.52)}
+    .crop-dialog .border-slate-200{border-color:#20344b!important}.crop-dialog .text-slate-900,.crop-dialog .text-slate-700{color:#f1f5f9!important}.crop-dialog .text-slate-500{color:#91a4bd!important}
+    .crop-dialog .border-b{border-color:#20344b!important}.crop-dialog .bg-slate-50{background:#0b1728!important}.crop-dialog #crop-error{color:#fb7185!important}
+    .crop-dialog #crop-zoom{accent-color:#06b6d4}.crop-dialog #crop-zoom-value{color:#22d3ee!important}
+    .crop-dialog #cancel-crop{border-color:#40516a!important;color:#cbd5e1!important}.crop-dialog #cancel-crop:hover{background:#142238!important}
+    #crop-stage{position:relative;width:100%;height:min(42dvh,340px);min-height:200px;overflow:hidden;border:1px solid #29415a;border-radius:12px;background:#020817;touch-action:none}
+    #crop-source-image{position:absolute;display:block;max-width:none;max-height:none;object-fit:fill;user-select:none;-webkit-user-drag:none}#crop-selection{position:absolute;box-sizing:border-box;border:2px solid white;box-shadow:0 0 0 9999px rgba(2,6,23,.48);pointer-events:none}
+    .crop-grid{position:absolute;inset:0;background-image:linear-gradient(to right,transparent 33.1%,rgba(255,255,255,.65) 33.1%,rgba(255,255,255,.65) 33.6%,transparent 33.6%,transparent 66.3%,rgba(255,255,255,.65) 66.3%,rgba(255,255,255,.65) 66.8%,transparent 66.8%),linear-gradient(to bottom,transparent 33.1%,rgba(255,255,255,.65) 33.1%,rgba(255,255,255,.65) 33.6%,transparent 33.6%,transparent 66.3%,rgba(255,255,255,.65) 66.3%,rgba(255,255,255,.65) 66.8%,transparent 66.8%)}
+    /* Profile panel: compact two-column layout matching the supplied reference. */
+    .student-settings .settings-panel.hidden{display:none!important}\n    .student-settings .profile-settings-card{min-width:0}
+    .student-settings .profile-form{display:grid;grid-template-columns:minmax(210px,.62fr) minmax(0,1.38fr);align-items:center;gap:clamp(22px,3vw,48px);min-width:0}
+    .student-settings .profile-photo-column{display:flex;min-width:0;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+    .student-settings .profile-photo-frame{position:relative;width:clamp(142px,15vw,190px);height:clamp(142px,15vw,190px);margin:0 auto 16px}
+    .student-settings .profile-preview,.student-settings .profile-placeholder{display:flex;width:100%;height:100%;align-items:center;justify-content:center;overflow:hidden;border:4px solid #06b6d4;border-radius:50%;object-fit:cover;box-shadow:0 0 0 5px rgba(6,182,212,.10)}
+    .student-settings .profile-preview.hidden,.student-settings .profile-placeholder.hidden{display:none!important}
+    .student-settings .profile-placeholder{background:linear-gradient(145deg,#073047,#0b1b31);color:#67e8f9;font-size:56px;font-weight:800}
+    .student-settings .profile-camera-mark{position:absolute;right:0;bottom:0;display:flex;width:48px;height:48px;align-items:center;justify-content:center;border:4px solid #07101f;border-radius:50%;background:#06b6d4;color:#03111d;font-size:22px}
+    .student-settings .change-photo-button{display:inline-flex;align-items:center;justify-content:center;gap:9px;min-height:44px;width:100%;max-width:220px;padding:10px 15px;border:1px solid #06b6d4;border-radius:12px;background:rgba(6,182,212,.06);color:#22d3ee;font-size:14px;font-weight:800}
+    .student-settings .change-photo-button:hover{background:rgba(6,182,212,.16)}
+    .student-settings .clear-photo-button{margin-top:8px;padding:6px 10px;border:1px solid #29415a;border-radius:8px;color:#a8b8cd;font-size:12px}
+    .student-settings .image-help{max-width:230px;margin:11px auto 0;color:#91a4bd!important;font-size:12px;line-height:1.6}
+    .student-settings .student-id-help{margin-top:9px;color:#6f849e!important;font-size:11px}
+    .student-settings .profile-fields-column{display:flex;min-width:0;flex-direction:column;gap:22px}
+    .student-settings .profile-input-wrap{position:relative}
+    .student-settings .profile-input-wrap>i{position:absolute;top:50%;left:15px;z-index:1;transform:translateY(-50%);color:#91a4bd;font-size:18px;pointer-events:none}
+    .student-settings .profile-input-wrap .settings-input{min-height:56px;padding-left:48px;border-color:#08758d;border-radius:12px;background:rgba(3,19,34,.88)!important}
+    .student-settings .profile-field-help{margin-top:8px;color:#91a4bd!important;font-size:11px;line-height:1.5}
+    .student-settings .profile-save-row{display:flex;justify-content:flex-end;margin-top:2px;padding-top:20px;border-top:1px solid #1b2940}
+    .student-settings .save-profile-button{display:inline-flex;min-height:50px;align-items:center;justify-content:center;gap:10px;padding:13px 24px;border:0;border-radius:12px;background:#06c8df;color:#03111d;font-size:14px;font-weight:900;box-shadow:0 8px 22px rgba(6,200,223,.12)}
+    .student-settings .save-profile-button:hover{background:#22d3ee}
+    .student-settings .save-profile-button i{font-size:19px}
+    /* Password panel: compact, fully visible form with no inner scrolling on desktop. */
+    .student-settings [data-panel="password"] .password-settings-form{display:flex;flex-direction:column;gap:10px}
+    .student-settings [data-panel="password"] .password-settings-form>div{min-width:0}
+    .student-settings [data-panel="password"] .password-settings-form .settings-label{margin-bottom:5px;font-size:12px;line-height:1.25}
+    .student-settings [data-panel="password"] .password-settings-form .settings-input{min-height:42px;padding:9px 44px 9px 12px;font-size:13px}
+    .student-settings [data-panel="password"] .password-settings-form .toggle-password{right:9px;font-size:17px}
+    .student-settings [data-panel="password"] .password-settings-form .flex.justify-end{margin-top:0;padding-top:9px}
+    .student-settings [data-panel="password"] .password-settings-form button[type="submit"]{min-height:42px;padding:10px 18px;font-size:13px}
+    @media(min-width:1100px) and (min-height:700px){
+        .student-settings [data-panel="password"]{display:flex!important;flex-direction:column;overflow:hidden!important;padding:18px 22px!important}
+        .student-settings [data-panel="password"] .panel-heading{flex:0 0 auto;gap:11px;margin-bottom:11px;padding-bottom:11px}
+        .student-settings [data-panel="password"] .panel-heading .panel-icon{width:44px;height:44px;flex-basis:44px;font-size:20px}
+        .student-settings [data-panel="password"] .panel-heading h2{font-size:18px;line-height:1.25}
+        .student-settings [data-panel="password"] .panel-heading p{margin-top:3px;font-size:12px;line-height:1.35}
+        .student-settings [data-panel="password"] .password-settings-form{flex:1 1 auto;min-height:0;justify-content:space-between;gap:7px}
+        .student-settings [data-panel="password"] .password-settings-form .settings-input{min-height:39px;padding-top:7px;padding-bottom:7px}
+        .student-settings [data-panel="password"] .password-settings-form .flex.justify-end{padding-top:8px}
+        .student-settings [data-panel="password"] .password-settings-form button[type="submit"]{min-height:39px;padding:9px 16px}
+    }
+    @media(max-width:1099px){
+        .student-settings [data-panel="password"]{overflow:visible!important}
+        .student-settings [data-panel="password"] .password-settings-form{gap:13px}
+    }
+    /* Desktop: keep the page fixed and the profile panel fully visible without an inner scrollbar. */
+    @media(min-width:1100px) and (min-height:700px){
+        body:has(.student-settings){overflow:hidden}
+        .student-settings{height:calc(100dvh - 150px);max-height:calc(100dvh - 150px);overflow:hidden;padding-bottom:0!important;display:flex;flex-direction:column}
+        .student-settings>.flex:first-child{flex:0 0 auto;margin-bottom:14px}
+        .student-settings>.grid{flex:1 1 auto;min-height:0;overflow:hidden;grid-template-columns:minmax(270px,.38fr) minmax(0,1fr);align-items:stretch}
+        .student-settings>.grid>aside{overflow-y:auto;overflow-x:hidden;scrollbar-width:none}
+        .student-settings>.grid>aside::-webkit-scrollbar{display:none}
+        .student-settings>.grid>div{min-height:0;height:100%;overflow:hidden}
+        .student-settings .settings-card{height:100%;max-height:100%;overflow-y:auto;overflow-x:hidden;scrollbar-width:none;-ms-overflow-style:none;overscroll-behavior:contain}
+        .student-settings .settings-card::-webkit-scrollbar{display:none;width:0;height:0}
+        .student-settings [data-panel="profile"]{overflow:hidden!important}
+        .student-settings .profile-settings-card{display:flex;flex-direction:column}
+        .student-settings .profile-settings-card .panel-heading{flex:0 0 auto;margin-bottom:20px;padding-bottom:16px}
+        .student-settings .profile-form{flex:1 1 auto;min-height:0}
+        .student-settings .profile-photo-frame{width:clamp(128px,11vw,158px);height:clamp(128px,11vw,158px);margin-bottom:10px}.student-settings .profile-fields-column{gap:16px}.student-settings .image-help{margin-top:7px;line-height:1.35}.student-settings .student-id-help{margin-top:5px}.student-settings .profile-save-row{padding-top:12px}
+    }
+    @media(max-width:1099px){.student-settings{padding-bottom:24px}.student-settings .settings-card{max-height:none;overflow:visible}.student-settings .profile-form{grid-template-columns:minmax(180px,.65fr) minmax(0,1.35fr);gap:24px}.student-settings .profile-photo-frame{width:150px;height:150px}}
+    @media(max-width:640px){.student-settings .settings-card{padding:17px;border-radius:15px}.panel-heading{gap:11px}.panel-heading h2{font-size:18px}.panel-icon{width:43px;height:43px;flex-basis:43px;font-size:20px}.student-settings .profile-form{grid-template-columns:minmax(0,1fr);gap:24px}.student-settings .profile-photo-frame{width:150px;height:150px}.student-settings .profile-fields-column{gap:18px}.student-settings .profile-save-row{padding-top:16px}.student-settings .save-profile-button{width:100%}.notification-option{gap:9px;padding:11px}.notification-icon{width:38px;height:38px;flex-basis:38px;font-size:18px}.notification-option small{font-size:11px}.crop-modal{padding:8px}.crop-dialog{max-height:calc(100dvh - 16px);border-radius:14px}#crop-stage{height:min(35dvh,260px);min-height:160px}}
+    body.student-light-mode .student-settings .settings-card,body.student-light-mode .student-settings .settings-sidebar{background:#f8fafc!important;color:#0f172a;border-color:#dbe4ee!important}
+    body.student-light-mode .student-settings .settings-card h2,body.student-light-mode .student-settings h1,body.student-light-mode .student-settings .settings-label,body.student-light-mode .student-settings .notification-option strong{color:#0f172a!important}
+    body.student-light-mode .student-settings .settings-card p,body.student-light-mode .student-settings .settings-sidebar p{color:#475569!important}
+    body.student-light-mode .student-settings .settings-input{background:#fff!important;color:#0f172a!important;border-color:#cbd5e1!important}
+</style>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    "use strict";
+
+    // Settings section navigation.
+    const navItems = document.querySelectorAll(".settings-nav-item");
+    const panels = document.querySelectorAll(".settings-panel");
+    const breadcrumb = document.getElementById("settings-breadcrumb");
+    const sectionNames = {profile:"Profile",account:"Username & Email",password:"Password & Security",appearance:"Appearance",notifications:"Notifications"};
+
+    function showSection(section, updateHash) {
+        if (!sectionNames[section]) section = "profile";
+        panels.forEach(panel => panel.classList.toggle("hidden", panel.dataset.panel !== section));
+        navItems.forEach(button => {
+            const active = button.dataset.section === section;
+            button.classList.toggle("is-active", active);
+            button.setAttribute("aria-current", active ? "page" : "false");
+        });
+        breadcrumb.textContent = sectionNames[section];
+        if (updateHash) history.replaceState(null, "", "#" + section);
+    }
+    navItems.forEach(button => button.addEventListener("click", () => showSection(button.dataset.section, true)));
+    const initialSection = location.hash.replace("#", "");
+    showSection(sectionNames[initialSection] ? initialSection : "profile", false);
+
+    // Password visibility buttons.
+    document.querySelectorAll(".toggle-password").forEach(button => button.addEventListener("click", function () {
+        const input = document.getElementById(button.dataset.target);
+        if (!input) return;
+        const show = input.type === "password";
+        input.type = show ? "text" : "password";
+        button.innerHTML = show ? '<i class="ri-eye-off-line"></i>' : '<i class="ri-eye-line"></i>';
+        button.setAttribute("aria-label", (show ? "Hide " : "Show ") + input.name.replaceAll("_", " "));
+    }));
+
+    // Appearance preference: stored locally, and applied to the content canvas.
+    const themeButtons = document.querySelectorAll("[data-theme-choice]");
+    const themeStatus = document.getElementById("theme-status");
+    function applyTheme(theme, save) {
+        document.body.classList.toggle("student-light-mode", theme === "light");
+        themeButtons.forEach(button => {
+            const selected = button.dataset.themeChoice === theme;
+            button.classList.toggle("is-selected", selected);
+            button.querySelector(".theme-selected").classList.toggle("hidden", !selected);
+            button.setAttribute("aria-pressed", selected ? "true" : "false");
+        });
+        if (save) {
+            try { localStorage.setItem("neolearn_student_appearance", theme); } catch (error) {}
+            themeStatus.textContent = "Appearance preference saved in this browser.";
+        }
+    }
+    let savedTheme = "dark";
+    try { savedTheme = localStorage.getItem("neolearn_student_appearance") || "dark"; } catch (error) {}
+    applyTheme(savedTheme, false);
+    themeButtons.forEach(button => button.addEventListener("click", () => applyTheme(button.dataset.themeChoice, true)));
+
+    // Notification switches are explicitly browser-local preferences, not delivery controls.
+    const notificationStatus = document.getElementById("notification-status");
+    document.querySelectorAll(".preference-toggle").forEach(input => {
+        try { input.checked = localStorage.getItem("neolearn_student_notification_" + input.dataset.pref) === "true"; } catch (error) {}
+        input.addEventListener("change", function () {
+            try { localStorage.setItem("neolearn_student_notification_" + input.dataset.pref, input.checked ? "true" : "false"); } catch (error) {}
+            notificationStatus.textContent = "Notification preference saved in this browser.";
+        });
+    });
+
+    // Image cropper: fixed square selection, movable image, zoom, 400x400 PNG output.
+    const imageInput = document.getElementById("profile_image");
+    const openCropper = document.getElementById("open-cropper");
+    const cropModal = document.getElementById("crop-modal");
+    const closeCropper = document.getElementById("close-cropper");
+    const cancelCrop = document.getElementById("cancel-crop");
+    const applyCrop = document.getElementById("apply-crop");
+    const cropStage = document.getElementById("crop-stage");
+    const cropImage = document.getElementById("crop-source-image");
+    const cropSelection = document.getElementById("crop-selection");
+    const cropError = document.getElementById("crop-error");
+    const cropZoom = document.getElementById("crop-zoom");
+    const cropZoomValue = document.getElementById("crop-zoom-value");
+    const imageStatus = document.getElementById("image-status");
+    const profilePreview = document.getElementById("profile-preview");
+    const profilePlaceholder = document.getElementById("profile-placeholder");
+    const removeSelected = document.getElementById("remove-selected-photo");
+
+    let sourceFile = null, sourceUrl = null, cropReady = false;
+    let crop = {x:0,y:0,size:0}, image = {x:0,y:0,w:0,h:0}, baseScale = 1, zoom = 1, dragging = false, last = {x:0,y:0};
+
+    function showCropError(message) { cropError.textContent = message; cropError.classList.remove("hidden"); }
+    function modalOpen() { cropError.classList.add("hidden"); cropModal.classList.remove("hidden"); document.body.style.overflow = "hidden"; }
+    function modalClose() { cropModal.classList.add("hidden"); document.body.style.overflow = ""; dragging = false; }
+    function clamp(value, min, max) { return Math.max(min, Math.min(value, max)); }
+
+    function drawLayout(resetZoom) {
+        if (!cropReady || !cropImage.naturalWidth) return;
+        const stageW = cropStage.clientWidth, stageH = cropStage.clientHeight;
+        const side = Math.min(stageW * 0.72, stageH * 0.84);
+        crop = {x:(stageW-side)/2, y:(stageH-side)/2, size:side};
+        baseScale = Math.max(side / cropImage.naturalWidth, side / cropImage.naturalHeight);
+        if (resetZoom) { zoom = 1; cropZoom.value = "1"; }
+        const w = cropImage.naturalWidth * baseScale * zoom, h = cropImage.naturalHeight * baseScale * zoom;
+        image = {x:(stageW-w)/2, y:(stageH-h)/2, w:w, h:h};
+        applyImageLayout();
+    }
+    function applyImageLayout() {
+        const minX = crop.x + crop.size - image.w, maxX = crop.x;
+        const minY = crop.y + crop.size - image.h, maxY = crop.y;
+        image.x = clamp(image.x, minX, maxX); image.y = clamp(image.y, minY, maxY);
+        cropImage.style.width = image.w + "px"; cropImage.style.height = image.h + "px";
+        cropImage.style.left = image.x + "px"; cropImage.style.top = image.y + "px";
+        cropSelection.style.left = crop.x + "px"; cropSelection.style.top = crop.y + "px";
+        cropSelection.style.width = crop.size + "px"; cropSelection.style.height = crop.size + "px";
+        cropZoomValue.textContent = zoom.toFixed(2) + "×";
+    }
+    function openFile(file) {
+        if (!file) return;
+
+        /*
+         * Keep backend validation authoritative:
+         * - Do not open the cropper for files larger than 2 MB.
+         * - Do not open the cropper for unsupported formats such as PDF.
+         * - Do not show a JavaScript validation message here.
+         * The original selected file stays in the input so Save Changes submits
+         * it to Django, which displays the existing backend validation message.
+         */
+        const allowedTypes = ["image/jpeg", "image/png"];
+        const maxBytes = 2 * 1024 * 1024;
+        const fileName = (file.name || "").toLowerCase();
+        const validExtension = /\.(jpe?g|png)$/.test(fileName);
+        const validType = allowedTypes.includes((file.type || "").toLowerCase());
+
+        if (file.size > maxBytes || !validType || !validExtension) {
+            cropReady = false;
+            modalClose();
+
+            if (sourceUrl) {
+                URL.revokeObjectURL(sourceUrl);
+                sourceUrl = null;
+            }
+
+            // Do not clear imageInput.value: backend validation needs the selected file.
+            return;
+        }
+
+        cropError.textContent = "";
+        cropError.classList.add("hidden");
+        cropReady = false;
+        applyCrop.disabled = false;
+        applyCrop.classList.remove("opacity-50", "cursor-not-allowed");
+
+        if (sourceUrl) {
+            URL.revokeObjectURL(sourceUrl);
+            sourceUrl = null;
+        }
+
+        sourceFile = file;
+        sourceUrl = URL.createObjectURL(file);
+
+        cropImage.onload = function () {
+            if (!cropImage.naturalWidth || !cropImage.naturalHeight) {
+                cropReady = false;
+                modalClose();
+                imageStatus.textContent = "The image could not be loaded. Please choose another JPG or PNG image.";
+                imageStatus.className = "image-help text-rose-400";
+                return;
+            }
+
+            cropReady = true;
+            // Show the modal before measuring it; hidden modal dimensions are zero.
+            modalOpen();
+            requestAnimationFrame(function () {
+                if (!cropModal.classList.contains("hidden") && cropReady) {
+                    drawLayout(true);
+                }
+            });
+        };
+
+        cropImage.onerror = function () {
+            cropReady = false;
+            modalClose();
+            imageStatus.textContent = "The image could not be loaded. Please choose another JPG or PNG image.";
+            imageStatus.className = "image-help text-rose-400";
+        };
+
+        cropImage.src = sourceUrl;
+    }
+    openCropper.addEventListener("click", function () {
+        // Always let the user choose a file. Valid images open the cropper on change;
+        // oversized/unsupported files remain selected for Django validation on Save.
+        imageInput.click();
+    });
+    imageInput.addEventListener("change", function () {
+        if (imageInput.files && imageInput.files[0]) openFile(imageInput.files[0]);
+    });
+    cropZoom.addEventListener("input", function () {
+        if (!cropReady) return;
+        const centreX = image.x + image.w/2, centreY = image.y + image.h/2;
+        zoom = Number(cropZoom.value);
+        image.w = cropImage.naturalWidth * baseScale * zoom;
+        image.h = cropImage.naturalHeight * baseScale * zoom;
+        image.x = centreX - image.w/2; image.y = centreY - image.h/2;
+        applyImageLayout();
+    });
+    cropStage.addEventListener("pointerdown", function (event) {
+        if (!cropReady) return;
+        dragging = true; last = {x:event.clientX,y:event.clientY};
+        cropStage.setPointerCapture(event.pointerId);
+    });
+    cropStage.addEventListener("pointermove", function (event) {
+        if (!dragging || !cropReady) return;
+        const dx = event.clientX-last.x, dy = event.clientY-last.y;
+        last = {x:event.clientX,y:event.clientY}; image.x += dx; image.y += dy; applyImageLayout();
+    });
+    cropStage.addEventListener("pointerup", function () { dragging = false; });
+    cropStage.addEventListener("pointercancel", function () { dragging = false; });
+    window.addEventListener("resize", function () { if (!cropModal.classList.contains("hidden") && cropReady) drawLayout(false); });
+    function closeCropperModal() { modalClose(); }
+    closeCropper.addEventListener("click", closeCropperModal);
+    cancelCrop.addEventListener("click", closeCropperModal);
+    cropModal.addEventListener("click", event => { if (event.target === cropModal) closeCropperModal(); });
+    document.addEventListener("keydown", event => { if (event.key === "Escape" && !cropModal.classList.contains("hidden")) closeCropperModal(); });
+
+    applyCrop.addEventListener("click", function () {
+        if (!cropReady || !crop.size) { showCropError("Please choose a valid image and wait for it to load."); return; }
+        const scaleX = cropImage.naturalWidth / image.w, scaleY = cropImage.naturalHeight / image.h;
+        const sx = clamp(Math.round((crop.x-image.x)*scaleX), 0, cropImage.naturalWidth-1);
+        const sy = clamp(Math.round((crop.y-image.y)*scaleY), 0, cropImage.naturalHeight-1);
+        const side = Math.max(1, Math.min(Math.round(crop.size*scaleX), Math.round(crop.size*scaleY), cropImage.naturalWidth-sx, cropImage.naturalHeight-sy));
+        const canvas = document.createElement("canvas"); canvas.width = 400; canvas.height = 400;
+        const context = canvas.getContext("2d");
+        if (!context) { showCropError("Unable to crop this image in your browser."); return; }
+        context.imageSmoothingEnabled = true; context.imageSmoothingQuality = "high";
+        context.drawImage(cropImage, sx, sy, side, side, 0, 0, 400, 400);
+        canvas.toBlob(function (blob) {
+            if (!blob) { showCropError("Unable to crop this image. Please try another file."); return; }
+            const croppedFile = new File([blob], "student-profile.png", {type:"image/png", lastModified:Date.now()});
+            const transfer = new DataTransfer(); transfer.items.add(croppedFile); imageInput.files = transfer.files;
+            const previewUrl = URL.createObjectURL(blob);
+            profilePreview.onload = function () { URL.revokeObjectURL(previewUrl); };
+            profilePreview.onerror = function () { URL.revokeObjectURL(previewUrl); };
+            profilePreview.src = previewUrl; profilePreview.classList.remove("hidden");
+            if (profilePlaceholder) profilePlaceholder.classList.add("hidden");
+            imageStatus.textContent = "Cropped photo ready. Save Changes to upload.";
+            imageStatus.className = "mt-2 text-xs font-semibold text-emerald-700";
+            removeSelected.classList.remove("hidden");
+            modalClose();
+        }, "image/png");
+    });
+    removeSelected.addEventListener("click", function () {
+        imageInput.value = ""; sourceFile = null;
+        if (profilePreview) {
+            {% if profile.profile_image %}
+            profilePreview.src = "{{ profile.profile_image|escapejs }}";
+            profilePreview.classList.remove("hidden");
+            {% else %}
+            profilePreview.src = ""; profilePreview.classList.add("hidden");
+            if (profilePlaceholder) profilePlaceholder.classList.remove("hidden");
+            {% endif %}
+        }
+        removeSelected.classList.add("hidden");
+        imageStatus.textContent = "Selected image cleared. Your saved profile photo will remain unchanged.";
+        imageStatus.className = "mt-2 text-xs text-slate-500";
+    });
+});
+</script>
+{% endblock %}
