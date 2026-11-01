@@ -22,7 +22,7 @@ from django.db import IntegrityError, transaction
 from django.views.decorators.http import require_POST
 from django.core.validators import validate_email
 from django.core.exceptions import ValidationError
-from django.db.models import Q, Count
+from django.db.models import Q, Count,Prefetch
 from django.db.models.deletion import ProtectedError
 from django.contrib.auth.models import User
 from django.core.paginator import Paginator
@@ -1116,410 +1116,918 @@ def delete_batch_view(request, batch_id):
 @cache_control(no_cache=True, must_revalidate=True, no_store=True)
 @admin_required
 def admin_subjects_view(request):
+    """
+    Admin subject listing.
+
+    Existing search and batch filtering are preserved.
+    Additional filters:
+    - Subject status: all / published / draft
+    - Teacher assignment: all / assigned / not_assigned
+
+    A subject is considered assigned only when it has at least one
+    valid active TeacherSubject assignment AND the teacher has active
+    access to that same batch through TeacherBatch.
+    """
+
+    # ======================================================
+    # SEARCH AND FILTER VALUES
+    # ======================================================
 
     search = request.GET.get("search", "").strip()
-    selected_batch = request.GET.get("batch", "")
-    batches = Batch.objects.order_by("batch_name")
-    subjects = Subject.objects.select_related("batch").all()
+    selected_batch = request.GET.get("batch", "").strip()
+    status_filter = request.GET.get("status", "all").strip().lower()
+    teacher_assignment_filter = request.GET.get(
+        "teacher_assignment", "all"
+    ).strip().lower()
 
-    # Search
+    # Accept only the supported filter values.
+    if status_filter not in {"all", "published", "draft"}:
+        status_filter = "all"
+
+    if teacher_assignment_filter not in {
+        "all", "assigned", "not_assigned"
+    }:
+        teacher_assignment_filter = "all"
+
+    batches = Batch.objects.order_by("batch_name")
+    selected_batch_obj = None
+
+    # Validate the selected batch.
+    if selected_batch:
+        if selected_batch.isdigit():
+            selected_batch_obj = batches.filter(
+                id=int(selected_batch)
+            ).first()
+
+        if selected_batch_obj is None:
+            selected_batch = ""
+
+    # ======================================================
+    # BASE SUBJECT QUERYSET
+    # ======================================================
+
+    subjects = Subject.objects.select_related(
+        "batch"
+    ).order_by(
+        "batch__batch_name",
+        "subject_name",
+    )
+
+    # Existing subject-name search.
     if search:
         subjects = subjects.filter(
             subject_name__icontains=search
         )
 
-    # Batch Filter
-    if selected_batch:
+    # Existing batch filter.
+    if selected_batch_obj:
         subjects = subjects.filter(
-            batch_id=selected_batch
+            batch=selected_batch_obj
         )
 
-    context = {
-        "subjects": subjects,
-        "batches": batches,
-        "selected_batch": selected_batch,
-        "search": search,
+    # Existing Draft / Published status field.
+    if status_filter in {"published", "draft"}:
+        subjects = subjects.filter(
+            subject_status=status_filter
+        )
+
+    # Convert to a list so valid teacher details can be attached.
+    subject_list = list(subjects)
+    subject_ids = [subject.id for subject in subject_list]
+
+    # ======================================================
+    # VALID ACTIVE TEACHER ASSIGNMENTS
+    # ======================================================
+
+    active_subject_assignments = TeacherSubject.objects.filter(
+        subject_id__in=subject_ids,
+        is_active=True,
+        teacher__is_blocked=False,
+        teacher__user__is_active=True,
+    ).select_related(
+        "teacher",
+        "batch",
+    ).order_by(
+        "teacher__full_name"
+    )
+
+    # Find active batch assignments for these teachers.
+    teacher_ids = {
+        assignment.teacher_id
+        for assignment in active_subject_assignments
+    }
+    batch_ids = {
+        assignment.batch_id
+        for assignment in active_subject_assignments
     }
 
-    return render(request,"admins/subjects/subjects.html",context)
+    active_batch_pairs = set(
+        TeacherBatch.objects.filter(
+            teacher_id__in=teacher_ids,
+            batch_id__in=batch_ids,
+            is_active=True,
+        ).values_list(
+            "teacher_id",
+            "batch_id",
+        )
+    )
 
+    # Group only valid teachers by subject.
+    teachers_by_subject = {}
+
+    for assignment in active_subject_assignments:
+        assignment_pair = (
+            assignment.teacher_id,
+            assignment.batch_id,
+        )
+
+        # Teacher must have both active subject and batch access.
+        if assignment_pair not in active_batch_pairs:
+            continue
+
+        teachers_by_subject.setdefault(
+            assignment.subject_id,
+            []
+        ).append(assignment.teacher)
+
+    # Attach teacher information and the valid teacher count.
+    for subject in subject_list:
+        card_teachers = teachers_by_subject.get(
+            subject.id,
+            []
+        )
+
+        subject.card_teachers = card_teachers
+        subject.card_teacher_count = len(card_teachers)
+
+    # ======================================================
+    # TEACHER ASSIGNMENT FILTER
+    # Apply this AFTER valid assignment counts are calculated.
+    # ======================================================
+
+    if teacher_assignment_filter == "assigned":
+        subject_list = [
+            subject for subject in subject_list
+            if subject.card_teacher_count > 0
+        ]
+
+    elif teacher_assignment_filter == "not_assigned":
+        subject_list = [
+            subject for subject in subject_list
+            if subject.card_teacher_count == 0
+        ]
+
+    # ======================================================
+    # SUBJECT STATISTICS
+    # Keep these global, exactly as before; filters do not
+    # change the dashboard statistic cards.
+    # ======================================================
+
+    total_subject_count = Subject.objects.count()
+
+    published_subject_count = Subject.objects.filter(
+        subject_status="published"
+    ).count()
+
+    draft_subject_count = Subject.objects.filter(
+        subject_status="draft"
+    ).count()
+
+    # ======================================================
+    # TOTAL ASSIGNED TEACHERS
+    # Preserve the existing global unique-teacher count.
+    # ======================================================
+
+    all_active_assignments = TeacherSubject.objects.filter(
+        is_active=True,
+        teacher__is_blocked=False,
+        teacher__user__is_active=True,
+    ).values_list(
+        "teacher_id",
+        "batch_id",
+    ).distinct()
+
+    all_assignment_pairs = list(all_active_assignments)
+
+    all_teacher_ids = {
+        teacher_id
+        for teacher_id, batch_id in all_assignment_pairs
+    }
+    all_batch_ids = {
+        batch_id
+        for teacher_id, batch_id in all_assignment_pairs
+    }
+
+    all_active_batch_pairs = set(
+        TeacherBatch.objects.filter(
+            teacher_id__in=all_teacher_ids,
+            batch_id__in=all_batch_ids,
+            is_active=True,
+        ).values_list(
+            "teacher_id",
+            "batch_id",
+        )
+    )
+
+    assigned_teacher_total = len({
+        teacher_id
+        for teacher_id, batch_id in all_assignment_pairs
+        if (teacher_id, batch_id) in all_active_batch_pairs
+    })
+
+    # ======================================================
+    # FILTERED RESULT COUNT AND CONTEXT
+    # ======================================================
+
+    subject_count = len(subject_list)
+
+    context = {
+        "subjects": subject_list,
+        "batches": batches,
+
+        "search": search,
+        "selected_batch": selected_batch,
+        "selected_batch_obj": selected_batch_obj,
+
+        "status_filter": status_filter,
+        "teacher_assignment_filter": teacher_assignment_filter,
+
+        "subject_count": subject_count,
+
+        "total_subject_count": total_subject_count,
+        "published_subject_count": published_subject_count,
+        "draft_subject_count": draft_subject_count,
+        "assigned_teacher_total": assigned_teacher_total,
+    }
+
+    return render(
+        request,
+        "admins/subjects/subjects.html",
+        context,
+    )
 
 # ==========================================================
+# CREATE SUBJECT
+# ==========================================================
+
+@cache_control(no_cache=True, must_revalidate=True, no_store=True)
+@admin_required
 def create_subject_view(request):
+    """
+    Create a subject from the main Subjects page or a specific
+    Batch > Subjects page.
 
+    A valid return_batch_id returns the admin to the same batch
+    after successful creation. All validation is performed server-side.
+    """
+    from django.db import IntegrityError, transaction
+    from PIL import Image, UnidentifiedImageError
+
+    template_name = "admins/subjects/create_subject.html"
     batches = Batch.objects.order_by("batch_name")
+    allowed_extensions = {"jpg", "jpeg", "png", "webp"}
+    extension_to_format = {
+        "jpg": "JPEG",
+        "jpeg": "JPEG",
+        "png": "PNG",
+        "webp": "WEBP",
+    }
+    maximum_file_size = 5 * 1024 * 1024
 
-    if request.method == "POST":
+    if request.method == "GET":
+        requested_batch_id = request.GET.get("batch", "").strip()
+        requested_return_batch_id = request.GET.get(
+            "return_batch_id", ""
+        ).strip()
 
-        batch_id = request.POST.get("batch", "").strip()
-        subject_name = request.POST.get("subject_name", "").strip()
-        subject_description = request.POST.get("subject_description", "").strip()
-        subject_status = request.POST.get("subject_status", "").strip()
-        subject_thumbnail = request.FILES.get("subject_thumbnail")
+        selected_batch_id = ""
+        return_batch_id = ""
+
+        if requested_batch_id:
+            try:
+                selected_batch = batches.get(pk=requested_batch_id)
+            except (Batch.DoesNotExist, ValueError, TypeError):
+                messages.error(request, "Selected batch does not exist.")
+                return redirect("admin_subjects")
+
+            selected_batch_id = str(selected_batch.pk)
+
+            if requested_return_batch_id == selected_batch_id:
+                return_batch_id = selected_batch_id
 
         context = {
             "batches": batches,
+            "selected_batch_id": selected_batch_id,
+            "return_batch_id": return_batch_id,
+            "form_data": {},
         }
+        return render(request, template_name, context)
 
-        # ---------------- Batch ----------------
+    if request.method != "POST":
+        return redirect("admin_subjects")
 
-        if not batch_id:
+    batch_id = request.POST.get("batch", "").strip()
+    posted_return_batch_id = request.POST.get(
+        "return_batch_id", ""
+    ).strip()
+    subject_name = request.POST.get("subject_name", "").strip()
+    subject_description = request.POST.get(
+        "subject_description", ""
+    ).strip()
+    subject_status = request.POST.get("subject_status", "").strip()
+    subject_thumbnail = request.FILES.get("subject_thumbnail")
 
-            messages.error(request, "Please select a batch.")
+    context = {
+        "batches": batches,
+        "selected_batch_id": batch_id,
+        "return_batch_id": "",
+        "form_data": request.POST,
+    }
 
-            return render(
-                request,
-                "admins/subjects/create_subject.html",
-                context,
-            )
+    def show_form_error(error_message, valid_batch_id=""):
+        messages.error(request, error_message)
+        context["selected_batch_id"] = valid_batch_id or batch_id
+        return render(request, template_name, context)
 
-        try:
+    # Batch validation
+    if not batch_id:
+        return show_form_error("Please select a batch.")
 
-            batch = Batch.objects.get(id=batch_id)
+    try:
+        batch = batches.get(pk=batch_id)
+    except (Batch.DoesNotExist, ValueError, TypeError):
+        return show_form_error("Selected batch does not exist.")
 
-        except Batch.DoesNotExist:
+    return_batch_id = (
+        str(batch.pk)
+        if posted_return_batch_id == str(batch.pk)
+        else ""
+    )
+    context["return_batch_id"] = return_batch_id
 
-            messages.error(request, "Selected batch does not exist.")
-
-            return render(
-                request,
-                "admins/subjects/create_subject.html",
-                context,
-            )
-
-        # ---------------- Subject Name ----------------
-
-        if not subject_name:
-
-            messages.error(request, "Subject name is required.")
-
-            return render(
-                request,
-                "admins/subjects/create_subject.html",
-                context,
-            )
-
-        # Duplicate inside same batch
-
-        if Subject.objects.filter(
-            batch=batch,
-            subject_name__iexact=subject_name
-        ).exists():
-
-            messages.error(
-                request,
-                "This subject already exists in the selected batch."
-            )
-
-            return render(
-                request,
-                "admins/subjects/create_subject.html",
-                context,
-            )
-
-        # ---------------- Description ----------------
-
-        if not subject_description:
-
-            messages.error(
-                request,
-                "Subject description is required."
-            )
-
-            return render(
-                request,
-                "admins/subjects/create_subject.html",
-                context,
-            )
-
-        # ---------------- Status ----------------
-
-        if subject_status not in ["draft", "published"]:
-
-            messages.error(
-                request,
-                "Invalid subject status."
-            )
-
-            return render(
-                request,
-                "admins/subjects/create_subject.html",
-                context,
-            )
-
-        # ---------------- Thumbnail ----------------
-
-        if not subject_thumbnail:
-
-            messages.error(
-                request,
-                "Subject thumbnail is required."
-            )
-
-            return render(
-                request,
-                "admins/subjects/create_subject.html",
-                context,
-            )
-
-        allowed_extensions = [
-            "jpg",
-            "jpeg",
-            "png",
-            "webp"
-        ]
-
-        extension = subject_thumbnail.name.split(".")[-1].lower()
-
-        if extension not in allowed_extensions:
-
-            messages.error(
-                request,
-                "Only JPG, JPEG, PNG and WEBP images are allowed."
-            )
-
-            return render(
-                request,
-                "admins/subjects/create_subject.html",
-                context,
-            )
-
-        if subject_thumbnail.size > 5 * 1024 * 1024:
-
-            messages.error(
-                request,
-                "Thumbnail must be less than 5 MB."
-            )
-
-            return render(
-                request,
-                "admins/subjects/create_subject.html",
-                context,
-            )
-
-        # ---------------- Save ----------------
-
-        Subject.objects.create(
-
-            batch=batch,
-
-            subject_name=subject_name,
-
-            subject_description=subject_description,
-
-            subject_thumbnail=subject_thumbnail,
-
-            subject_status=subject_status,
-
+    # Subject name validation
+    if not subject_name:
+        return show_form_error(
+            "Subject name is required.", str(batch.pk)
         )
 
-        messages.success(request,"Subject created successfully.")
+    name_max_length = Subject._meta.get_field("subject_name").max_length
+    if name_max_length and len(subject_name) > name_max_length:
+        return show_form_error(
+            f"Subject name cannot exceed {name_max_length} characters.",
+            str(batch.pk),
+        )
 
-        return redirect("admin_subjects")
-    context = {"batches": batches}
-    return render(request,"admins/subjects/create_subject.html",context)
+    if Subject.objects.filter(
+        batch=batch, subject_name__iexact=subject_name
+    ).exists():
+        return show_form_error(
+            "This subject already exists in the selected batch.",
+            str(batch.pk),
+        )
 
+    # Description validation
+    if not subject_description.strip():
+        return show_form_error(
+            "Subject description is required.", str(batch.pk)
+        )
+
+    description_max_length = Subject._meta.get_field(
+        "subject_description"
+    ).max_length
+    if (
+        description_max_length
+        and len(subject_description) > description_max_length
+    ):
+        return show_form_error(
+            f"Subject description cannot exceed {description_max_length} characters.",
+            str(batch.pk),
+        )
+
+    # Status validation
+    if subject_status not in {"draft", "published"}:
+        return show_form_error(
+            "Please select a valid publishing status.", str(batch.pk)
+        )
+
+    # Thumbnail is required when creating a subject
+    if not subject_thumbnail:
+        return show_form_error(
+            "Subject thumbnail is required.", str(batch.pk)
+        )
+
+    extension = (
+        subject_thumbnail.name.rsplit(".", 1)[-1].lower()
+        if "." in subject_thumbnail.name
+        else ""
+    )
+
+    if extension not in allowed_extensions:
+        return show_form_error(
+            "Only JPG, JPEG, PNG and WEBP images are allowed.",
+            str(batch.pk),
+        )
+
+    if subject_thumbnail.size > maximum_file_size:
+        return show_form_error(
+            "Subject thumbnail must not exceed 5 MB.",
+            str(batch.pk),
+        )
+
+    # Verify the actual file content and ensure its content matches
+    # the filename extension (e.g. a PNG cannot be renamed to .jpg).
+    try:
+        subject_thumbnail.seek(0)
+        with Image.open(subject_thumbnail) as uploaded_image:
+            actual_format = uploaded_image.format
+            expected_format = extension_to_format[extension]
+
+            if actual_format != expected_format:
+                raise ValueError("Image extension and content do not match.")
+
+            uploaded_image.verify()
+
+        subject_thumbnail.seek(0)
+    except (
+        UnidentifiedImageError,
+        OSError,
+        ValueError,
+        Image.DecompressionBombError,
+    ):
+        try:
+            subject_thumbnail.seek(0)
+        except (AttributeError, OSError):
+            pass
+
+        return show_form_error(
+            "Please upload a valid image. The selected file must match its "
+            "JPG, JPEG, PNG or WEBP extension.",
+            str(batch.pk),
+        )
+
+    subject_thumbnail.seek(0)
+
+    # Save safely and handle a duplicate submitted at the same time
+    try:
+        with transaction.atomic():
+            Subject.objects.create(
+                batch=batch,
+                subject_name=subject_name,
+                subject_description=subject_description,
+                subject_thumbnail=subject_thumbnail,
+                subject_status=subject_status,
+            )
+    except IntegrityError:
+        return show_form_error(
+            "This subject already exists in the selected batch.",
+            str(batch.pk),
+        )
+
+    messages.success(request, "Subject created successfully.")
+
+    if return_batch_id == str(batch.pk):
+        return redirect("batch_subjects", batch_id=batch.pk)
+
+    return redirect("admin_subjects")
+
+
+
+# ==========================================================
+# EDIT SUBJECT
+# ==========================================================
 
 @cache_control(no_cache=True, must_revalidate=True, no_store=True)
 @admin_required
 def edit_subject_view(request, subject_id):
+    """
+    Update a subject.
 
-    subject = get_object_or_404(
-        Subject,
-        id=subject_id
-    )
+    - Retains the existing thumbnail when no replacement is uploaded.
+    - Validates all subject fields on the backend.
+    - Returns to the originating batch's Subjects page when
+      Edit was opened from a batch.
+    - Returns to the main Subjects listing otherwise.
+    """
+
+    from django.db import IntegrityError, transaction
+    from PIL import Image, UnidentifiedImageError
+
+    subject = get_object_or_404(Subject, id=subject_id)
+
+    # Remember the batch from which this Edit page was opened.
+    original_batch_id = subject.batch_id
 
     batches = Batch.objects.order_by("batch_name")
+    template_name = "admins/subjects/edit_subject.html"
 
-    if request.method == "POST":
-        batch_id = request.POST.get("batch", "").strip()
-        subject_name = request.POST.get("subject_name", "").strip()
-        subject_description = request.POST.get("subject_description", "").strip()
-        subject_status = request.POST.get("subject_status", "").strip()
-        new_thumbnail = request.FILES.get("subject_thumbnail")
+    # ------------------------------------------------------
+    # RETURN LOCATION
+    # ------------------------------------------------------
 
-        context = {
-            "subject": subject,
-            "batches": batches,
-        }
+    requested_return_batch_id = (
+        request.POST.get(
+            "return_batch_id",
+            request.GET.get("return_batch_id", "")
+        ) or ""
+    ).strip()
 
-        # ---------------- Batch ----------------
+    return_to_batch = (
+        requested_return_batch_id == str(original_batch_id)
+    )
 
-        if not batch_id:
+    return_batch_id = (
+        original_batch_id if return_to_batch else ""
+    )
 
-            messages.error(request, "Please select a batch.")
+    allowed_extensions = {"jpg", "jpeg", "png", "webp"}
 
-            return render(
-                request,
-                "admins/subjects/edit_subject.html",
-                context,
+    extension_to_format = {
+        "jpg": "JPEG",
+        "jpeg": "JPEG",
+        "png": "PNG",
+        "webp": "WEBP",
+    }
+
+    maximum_file_size = 5 * 1024 * 1024
+
+    # ------------------------------------------------------
+    # INITIAL PAGE LOAD
+    # ------------------------------------------------------
+
+    if request.method != "POST":
+        return render(
+            request,
+            template_name,
+            {
+                "subject": subject,
+                "batches": batches,
+                "return_to_batch": return_to_batch,
+                "return_batch_id": return_batch_id,
+            },
+        )
+
+    # ------------------------------------------------------
+    # POST DATA
+    # ------------------------------------------------------
+
+    batch_id = request.POST.get("batch", "").strip()
+
+    subject_name = request.POST.get(
+        "subject_name", ""
+    ).strip()
+
+    subject_description = request.POST.get(
+        "subject_description", ""
+    ).strip()
+
+    subject_status = request.POST.get(
+        "subject_status", ""
+    ).strip()
+
+    new_thumbnail = request.FILES.get("subject_thumbnail")
+
+    context = {
+        "subject": subject,
+        "batches": batches,
+        "form_data": request.POST,
+        "selected_batch_id": batch_id,
+        "return_to_batch": return_to_batch,
+        "return_batch_id": return_batch_id,
+    }
+
+    def show_edit_error(error_message):
+        messages.error(request, error_message)
+
+        return render(
+            request,
+            template_name,
+            context,
+        )
+
+    # ------------------------------------------------------
+    # BATCH VALIDATION
+    # ------------------------------------------------------
+
+    if not batch_id:
+        return show_edit_error(
+            "Please select a batch."
+        )
+
+    try:
+        batch = batches.get(pk=batch_id)
+
+    except (Batch.DoesNotExist, ValueError, TypeError):
+        return show_edit_error(
+            "Selected batch does not exist."
+        )
+
+    # ------------------------------------------------------
+    # SUBJECT NAME VALIDATION
+    # ------------------------------------------------------
+
+    if not subject_name:
+        return show_edit_error(
+            "Subject name is required."
+        )
+
+    name_max_length = Subject._meta.get_field(
+        "subject_name"
+    ).max_length
+
+    if (
+        name_max_length
+        and len(subject_name) > name_max_length
+    ):
+        return show_edit_error(
+            f"Subject name cannot exceed "
+            f"{name_max_length} characters."
+        )
+
+    duplicate_exists = Subject.objects.filter(
+        batch=batch,
+        subject_name__iexact=subject_name,
+    ).exclude(
+        pk=subject.pk
+    ).exists()
+
+    if duplicate_exists:
+        return show_edit_error(
+            "A subject with this name already exists "
+            "in the selected batch."
+        )
+
+    # ------------------------------------------------------
+    # SUBJECT DESCRIPTION VALIDATION
+    # ------------------------------------------------------
+
+    if not subject_description:
+        return show_edit_error(
+            "Subject description is required."
+        )
+
+    description_max_length = Subject._meta.get_field(
+        "subject_description"
+    ).max_length
+
+    if (
+        description_max_length
+        and len(subject_description) > description_max_length
+    ):
+        return show_edit_error(
+            f"Subject description cannot exceed "
+            f"{description_max_length} characters."
+        )
+
+    # ------------------------------------------------------
+    # SUBJECT STATUS VALIDATION
+    # ------------------------------------------------------
+
+    if subject_status not in {"draft", "published"}:
+        return show_edit_error(
+            "Please select a valid publishing status."
+        )
+
+    # ------------------------------------------------------
+    # THUMBNAIL VALIDATION
+    # ------------------------------------------------------
+
+    # No replacement file means the existing thumbnail
+    # will remain unchanged.
+
+    if new_thumbnail:
+
+        extension = (
+            new_thumbnail.name.rsplit(".", 1)[-1].lower()
+            if "." in new_thumbnail.name
+            else ""
+        )
+
+        if extension not in allowed_extensions:
+            return show_edit_error(
+                "Only JPG, JPEG, PNG and WEBP images are allowed."
+            )
+
+        if new_thumbnail.size > maximum_file_size:
+            return show_edit_error(
+                "Subject thumbnail must not exceed 5 MB."
             )
 
         try:
+            new_thumbnail.seek(0)
 
-            batch = Batch.objects.get(id=batch_id)
+            with Image.open(new_thumbnail) as uploaded_image:
 
-        except Batch.DoesNotExist:
+                actual_format = uploaded_image.format
 
-            messages.error(request, "Invalid batch selected.")
+                expected_format = extension_to_format[extension]
 
-            return render(
-                request,
-                "admins/subjects/edit_subject.html",
-                context,
+                if actual_format != expected_format:
+                    raise ValueError(
+                        "Image extension and content do not match."
+                    )
+
+                uploaded_image.verify()
+
+            new_thumbnail.seek(0)
+
+        except (
+            UnidentifiedImageError,
+            OSError,
+            ValueError,
+            Image.DecompressionBombError,
+        ):
+
+            try:
+                new_thumbnail.seek(0)
+
+            except (AttributeError, OSError):
+                pass
+
+            return show_edit_error(
+                "Please upload a valid image. The selected file "
+                "must match its JPG, JPEG, PNG or WEBP extension."
             )
 
-        # ---------------- Subject Name ----------------
+        new_thumbnail.seek(0)
 
-        if not subject_name:
+    # ------------------------------------------------------
+    # SAVE SUBJECT
+    # ------------------------------------------------------
 
-            messages.error(request, "Subject name is required.")
+    try:
 
-            return render(
-                request,
-                "admins/subjects/edit_subject.html",
-                context,
-            )
+        with transaction.atomic():
 
-        duplicate = Subject.objects.filter(
-            batch=batch,
-            subject_name__iexact=subject_name
-        ).exclude(id=subject.id)
+            subject.batch = batch
+            subject.subject_name = subject_name
+            subject.subject_description = subject_description
+            subject.subject_status = subject_status
 
-        if duplicate.exists():
+            if new_thumbnail:
+                subject.subject_thumbnail = new_thumbnail
 
-            messages.error(
-                request,
-                "A subject with this name already exists in the selected batch."
-            )
+            subject.save()
 
-            return render(
-                request,
-                "admins/subjects/edit_subject.html",
-                context,
-            )
+    except IntegrityError:
+        return show_edit_error(
+            "A subject with this name already exists "
+            "in the selected batch."
+        )
 
-        # ---------------- Description ----------------
+    # ------------------------------------------------------
+    # SUCCESS MESSAGE AND REDIRECT
+    # ------------------------------------------------------
 
-        if not subject_description:
+    messages.success(
+        request,
+        "Subject updated successfully."
+    )
 
-            messages.error(
-                request,
-                "Description is required."
-            )
+    if return_to_batch:
+        return redirect(
+            "batch_subjects",
+            batch_id=batch.id
+        )
 
-            return render(
-                request,
-                "admins/subjects/edit_subject.html",
-                context,
-            )
-
-        # ---------------- Status ----------------
-
-        if subject_status not in ["draft", "published"]:
-
-            messages.error(
-                request,
-                "Invalid subject status."
-            )
-
-            return render(
-                request,
-                "admins/subjects/edit_subject.html",
-                context,
-            )
-
-        # ---------------- Thumbnail Validation ----------------
-
-        if new_thumbnail:
-
-            allowed_extensions = [
-                "jpg",
-                "jpeg",
-                "png",
-                "webp",
-            ]
-
-            extension = new_thumbnail.name.split(".")[-1].lower()
-
-            if extension not in allowed_extensions:
-
-                messages.error(
-                    request,
-                    "Only JPG, JPEG, PNG and WEBP images are allowed."
-                )
-
-                return render(
-                    request,
-                    "admins/subjects/edit_subject.html",
-                    context,
-                )
-
-            if new_thumbnail.size > 5 * 1024 * 1024:
-
-                messages.error(
-                    request,
-                    "Thumbnail must be less than 5 MB."
-                )
-
-                return render(
-                    request,
-                    "admins/subjects/edit_subject.html",
-                    context,
-                )
-
-            subject.subject_thumbnail = new_thumbnail
-
-        # ---------------- Update ----------------
-
-        subject.batch = batch
-        subject.subject_name = subject_name
-        subject.subject_description = subject_description
-        subject.subject_status = subject_status
-
-        subject.save()
-
-        messages.success(request,"Subject updated successfully.")
-
-        return redirect("admin_subjects")
-    context = {"subject": subject,"batches": batches,}
-    return render(request,"admins/subjects/edit_subject.html",context,)
+    return redirect("admin_subjects")
 
 
 @cache_control(no_cache=True, must_revalidate=True, no_store=True)
 @admin_required
 def delete_subject_view(request, subject_id):
 
+    # --------------------------------------------------
+    # GET SUBJECT
+    # --------------------------------------------------
+
     subject = get_object_or_404(
         Subject,
-        id=subject_id
+        id=subject_id,
     )
+
+    # --------------------------------------------------
+    # DETERMINE RETURN LOCATION
+    # --------------------------------------------------
+
+    requested_return_batch_id = (
+        request.POST.get("return_batch_id")
+        or request.GET.get("return_batch_id")
+        or ""
+    ).strip()
+
+    return_to_batch = (
+        requested_return_batch_id
+        and requested_return_batch_id == str(subject.batch_id)
+    )
+
+    return_batch_id = (
+        subject.batch_id if return_to_batch else ""
+    )
+
+    # --------------------------------------------------
+    # CHECK EXISTING CHAPTERS
+    # --------------------------------------------------
+
+    from courses.models import CourseChapter
+
+    chapter_count = CourseChapter.objects.filter(
+        subject=subject
+    ).count()
+
+    context = {
+        "subject": subject,
+        "chapter_count": chapter_count,
+        "has_chapters": chapter_count > 0,
+        "return_to_batch": bool(return_to_batch),
+        "return_batch_id": return_batch_id,
+    }
+
+    # --------------------------------------------------
+    # HANDLE DELETE REQUEST
+    # --------------------------------------------------
 
     if request.method == "POST":
 
+        # --------------------------------------------------
+        # BLOCK DELETION IF CHAPTERS EXIST
+        # --------------------------------------------------
+
+        if chapter_count > 0:
+
+            messages.error(
+                request,
+                (
+                    f'Cannot delete "{subject.subject_name}". '
+                    f'This subject contains {chapter_count} '
+                    'chapter(s). Delete all chapters first '
+                    'before deleting this subject.'
+                )
+            )
+
+            return render(
+                request,
+                "admins/subjects/delete_subject.html",
+                context,
+            )
+
+        # --------------------------------------------------
+        # CONFIRM SUBJECT NAME
+        # --------------------------------------------------
+
         confirm_name = request.POST.get(
             "confirm_name",
-            ""
+            "",
         ).strip()
-
-        # Subject name confirmation
 
         if confirm_name != subject.subject_name:
 
-            messages.error(request,"Subject name does not match.")
-            return render(request,"admins/subjects/delete_subject.html",{"subject": subject,},)
+            messages.error(
+                request,
+                "Subject name does not match. Please enter the exact subject name.",
+            )
 
-        # Delete Subject
+            return render(
+                request,
+                "admins/subjects/delete_subject.html",
+                context,
+            )
+
+        # --------------------------------------------------
+        # DELETE SUBJECT
+        # --------------------------------------------------
+
+        subject_name = subject.subject_name
+        subject_batch_id = subject.batch_id
 
         subject.delete()
 
-        messages.success(request,"Subject deleted successfully.")
+        messages.success(
+            request,
+            f'Subject "{subject_name}" deleted successfully.',
+        )
+
+        # --------------------------------------------------
+        # REDIRECT TO ORIGINAL LISTING
+        # --------------------------------------------------
+
+        if return_to_batch:
+
+            return redirect(
+                "batch_subjects",
+                batch_id=subject_batch_id,
+            )
 
         return redirect("admin_subjects")
 
-    return render(request,"admins/subjects/delete_subject.html",{"subject": subject})
+    # --------------------------------------------------
+    # DISPLAY DELETE CONFIRMATION PAGE
+    # --------------------------------------------------
 
-
+    return render(
+        request,
+        "admins/subjects/delete_subject.html",
+        context,
+    )
 
 
 @cache_control(

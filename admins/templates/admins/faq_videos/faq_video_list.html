@@ -1,161 +1,295 @@
 {% extends "admins/admin_base.html" %}
 {% load static %}
 
-{% block title %}FAQ & Help Videos | NeoLearn Admin{% endblock %}
+{% block title %}FAQ &amp; Help Videos | NeoLearn Admin{% endblock %}
 
 {% block admin_content %}
-<div class="mx-auto w-full max-w-7xl space-y-5 px-3 py-4 sm:px-5">
+<style>
+    /* NeoLearn FAQ cards: subtle lift, cyan edge and preview zoom. */
+    .faq-video-card {
+        position: relative;
+        isolation: isolate;
+        transform: translateZ(0);
+        transition:
+            transform 240ms cubic-bezier(.2,.75,.25,1),
+            border-color 240ms ease,
+            box-shadow 240ms ease,
+            background-color 240ms ease;
+    }
+
+    .faq-video-card:hover {
+        transform: translateY(-5px);
+        border-color: rgba(34, 211, 238, .58);
+        box-shadow:
+            0 18px 38px rgba(2, 8, 23, .42),
+            0 0 0 1px rgba(34, 211, 238, .10),
+            0 0 24px rgba(34, 211, 238, .07);
+    }
+
+    .faq-video-stage {
+        isolation: isolate;
+    }
+
+    .faq-video-stage [data-video-thumbnail] {
+        transition: transform 420ms cubic-bezier(.2,.75,.25,1);
+        will-change: transform;
+    }
+
+    .faq-video-card:hover .faq-video-stage [data-video-thumbnail] {
+        transform: scale(1.045);
+    }
+
+    .faq-video-card:focus-within {
+        border-color: rgba(34, 211, 238, .65);
+        box-shadow: 0 0 0 2px rgba(34, 211, 238, .16);
+    }
+
+    .faq-icon-action {
+        position: relative;
+        display: inline-flex;
+        width: 40px;
+        height: 40px;
+        flex: 0 0 40px;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid var(--faq-action-border);
+        border-radius: 11px;
+        background: var(--faq-action-bg);
+        color: var(--faq-action-color);
+        font-size: 17px;
+        line-height: 1;
+        cursor: pointer;
+        transition:
+            transform 160ms ease,
+            border-color 160ms ease,
+            background-color 160ms ease,
+            color 160ms ease,
+            box-shadow 160ms ease;
+    }
+
+    .faq-icon-action:hover {
+        transform: translateY(-2px);
+        border-color: var(--faq-action-hover-border);
+        background: var(--faq-action-hover-bg);
+        color: var(--faq-action-hover-color);
+        box-shadow: 0 7px 16px rgba(2, 8, 23, .24);
+    }
+
+    .faq-icon-action:active {
+        transform: translateY(0) scale(.96);
+    }
+
+    .faq-icon-action:focus-visible {
+        outline: 2px solid rgba(103, 232, 249, .9);
+        outline-offset: 3px;
+    }
+
+    /* Small labels appear when hovering/focusing icon-only actions. */
+    .faq-icon-action::after {
+        content: attr(data-tooltip);
+        position: absolute;
+        z-index: 50;
+        left: 50%;
+        bottom: calc(100% + 8px);
+        padding: 5px 8px;
+        border: 1px solid rgba(71, 85, 105, .9);
+        border-radius: 7px;
+        background: #020817;
+        color: #e2e8f0;
+        font-size: 10px;
+        font-weight: 700;
+        line-height: 1.2;
+        white-space: nowrap;
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+        transform: translate(-50%, 4px);
+        transition: opacity 140ms ease, transform 140ms ease, visibility 140ms ease;
+        box-shadow: 0 8px 18px rgba(0, 0, 0, .28);
+    }
+
+    .faq-icon-action:hover::after,
+    .faq-icon-action:focus-visible::after {
+        opacity: 1;
+        visibility: visible;
+        transform: translate(-50%, 0);
+    }
+
+    .faq-icon-edit {
+        --faq-action-border: rgba(56, 189, 248, .35);
+        --faq-action-bg: rgba(14, 165, 233, .07);
+        --faq-action-color: #7dd3fc;
+        --faq-action-hover-border: rgba(56, 189, 248, .75);
+        --faq-action-hover-bg: rgba(14, 165, 233, .19);
+        --faq-action-hover-color: #bae6fd;
+    }
+
+    .faq-icon-publish {
+        --faq-action-border: rgba(52, 211, 153, .35);
+        --faq-action-bg: rgba(16, 185, 129, .07);
+        --faq-action-color: #6ee7b7;
+        --faq-action-hover-border: rgba(52, 211, 153, .75);
+        --faq-action-hover-bg: rgba(16, 185, 129, .19);
+        --faq-action-hover-color: #a7f3d0;
+    }
+
+    .faq-icon-unpublish {
+        --faq-action-border: rgba(251, 191, 36, .35);
+        --faq-action-bg: rgba(245, 158, 11, .07);
+        --faq-action-color: #fcd34d;
+        --faq-action-hover-border: rgba(251, 191, 36, .75);
+        --faq-action-hover-bg: rgba(245, 158, 11, .18);
+        --faq-action-hover-color: #fef3c7;
+    }
+
+    .faq-icon-delete {
+        --faq-action-border: rgba(251, 113, 133, .35);
+        --faq-action-bg: rgba(244, 63, 94, .07);
+        --faq-action-color: #fda4af;
+        --faq-action-hover-border: rgba(251, 113, 133, .75);
+        --faq-action-hover-bg: rgba(244, 63, 94, .18);
+        --faq-action-hover-color: #ffe4e6;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .faq-video-card,
+        .faq-video-stage [data-video-thumbnail],
+        .faq-icon-action,
+        .faq-icon-action::after {
+            transition: none !important;
+        }
+        .faq-video-card:hover,
+        .faq-icon-action:hover,
+        .faq-icon-action:active {
+            transform: none;
+        }
+    }
+</style>
+
+<div class="mx-auto w-full max-w-[1500px] space-y-5 px-3 py-4 sm:px-5 2xl:px-6">
 
     <!-- PAGE HEADER -->
     <header class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-            <div class="mb-1 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-emerald-300">
+        <div class="min-w-0">
+            <div class="mb-1 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-cyan-300">
                 <i class="ri-customer-service-2-line text-base"></i>
                 Support Center
             </div>
-            <h1 class="text-2xl font-bold tracking-tight text-white sm:text-3xl">
-                FAQ & Help Videos
-            </h1>
-            <p class="mt-1 text-sm text-slate-400">
-                Manage and preview support videos for students and teachers.
-            </p>
+            <h1 class="text-2xl font-bold tracking-tight text-white sm:text-3xl">FAQ &amp; Help Videos</h1>
+            <p class="mt-1 text-sm text-slate-400">Manage support videos for students and teachers.</p>
         </div>
 
         <a href="{% url 'admin_faq_video_create' %}"
-           class="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-emerald-500 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-emerald-950/20 transition hover:bg-emerald-400">
+           class="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-cyan-400 px-5 py-3 text-sm font-bold text-slate-950 shadow-lg shadow-cyan-950/20 transition hover:bg-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-300 focus:ring-offset-2 focus:ring-offset-slate-950">
             <i class="ri-add-line text-lg"></i>
             Add Help Video
         </a>
     </header>
 
-    <!-- SUMMARY -->
+    <!-- SUMMARY: COUNTS ARE CALCULATED FROM THE CURRENT RESULT CARDS -->
     <section class="grid grid-cols-1 gap-3 sm:grid-cols-3">
-
-        <div class="rounded-xl border border-sky-500/20 bg-gradient-to-br from-sky-500/10 to-slate-900 p-4">
-            <div class="flex items-center justify-between">
+        <article class="rounded-2xl border border-sky-500/25 bg-gradient-to-br from-sky-500/10 to-slate-900/90 p-4">
+            <div class="flex items-center justify-between gap-3">
                 <div>
-                    <p class="text-xs font-medium text-slate-400">Videos in Results</p>
-                    <p class="mt-1 text-2xl font-bold text-white">{{ videos|length }}</p>
+                    <p class="text-xs font-medium text-slate-400">Total Videos</p>
+                    <p id="faqTotalVideos" class="mt-1 text-2xl font-bold tabular-nums text-white">{{ videos|length }}</p>
                 </div>
-                <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-sky-500/15 text-sky-300">
-                    <i class="ri-video-line text-2xl"></i>
+                <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-sky-500/15 text-sky-300">
+                    <i class="ri-play-circle-line text-2xl"></i>
                 </div>
             </div>
-        </div>
+        </article>
 
-        <div class="rounded-xl border border-emerald-500/20 bg-gradient-to-br from-emerald-500/10 to-slate-900 p-4">
-            <div class="flex items-center justify-between">
+        <article class="rounded-2xl border border-emerald-500/25 bg-gradient-to-br from-emerald-500/10 to-slate-900/90 p-4">
+            <div class="flex items-center justify-between gap-3">
                 <div>
                     <p class="text-xs font-medium text-slate-400">Published</p>
-                    <p class="mt-1 text-sm font-semibold text-emerald-300">Learner-ready content</p>
-                    <p class="mt-1 text-xs text-slate-500">Visible according to audience</p>
+                    <p id="faqPublishedCount" class="mt-1 text-2xl font-bold tabular-nums text-emerald-300">0</p>
                 </div>
-                <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-300">
+                <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-300">
                     <i class="ri-checkbox-circle-line text-2xl"></i>
                 </div>
             </div>
-        </div>
+        </article>
 
-        <div class="rounded-xl border border-amber-500/20 bg-gradient-to-br from-amber-500/10 to-slate-900 p-4">
-            <div class="flex items-center justify-between">
+        <article class="rounded-2xl border border-amber-500/25 bg-gradient-to-br from-amber-500/10 to-slate-900/90 p-4">
+            <div class="flex items-center justify-between gap-3">
                 <div>
-                    <p class="text-xs font-medium text-slate-400">Draft Content</p>
-                    <p class="mt-1 text-sm font-semibold text-amber-300">Not yet published</p>
-                    <p class="mt-1 text-xs text-slate-500">Only available to admins</p>
+                    <p class="text-xs font-medium text-slate-400">Drafts</p>
+                    <p id="faqDraftCount" class="mt-1 text-2xl font-bold tabular-nums text-amber-300">0</p>
                 </div>
-                <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-500/15 text-amber-300">
+                <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-amber-500/15 text-amber-300">
                     <i class="ri-draft-line text-2xl"></i>
                 </div>
             </div>
-        </div>
-
+        </article>
     </section>
 
     <!-- SEARCH AND FILTERS -->
-    <form method="get"
-          class="rounded-xl border border-slate-700 bg-slate-900 p-3 sm:p-4">
-
+    <form method="get" class="rounded-2xl border border-slate-700/80 bg-slate-900/80 p-3 shadow-lg shadow-black/10 sm:p-4">
         <div class="mb-3 flex items-center gap-2">
-            <i class="ri-filter-3-line text-emerald-300"></i>
+            <i class="ri-equalizer-2-line text-cyan-300"></i>
             <h2 class="text-sm font-semibold text-white">Search and filters</h2>
         </div>
 
-        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
-
+        <div class="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-5">
             <input type="search"
                    name="search"
                    value="{{ search }}"
-                   placeholder="Search help videos..."
-                   class="min-w-0 rounded-lg border border-slate-700 bg-slate-800 px-3 py-2.5 text-sm text-white placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none focus:ring-1 focus:ring-emerald-400/30">
+                   placeholder="Search video title or admin note..."
+                   aria-label="Search help videos"
+                   class="min-w-0 rounded-xl border border-slate-700 bg-slate-950/70 px-3.5 py-2.5 text-sm text-white placeholder:text-slate-500 outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/10">
 
-            <select name="category"
-                    class="min-w-0 rounded-lg border border-slate-700 bg-slate-800 px-3 py-2.5 text-sm text-white focus:border-emerald-400 focus:outline-none">
-                <option value="">All categories</option>
+            <select name="category" aria-label="Filter by category"
+                    class="min-w-0 rounded-xl border border-slate-700 bg-slate-950/70 px-3.5 py-2.5 text-sm text-white outline-none transition focus:border-cyan-400">
+                <option value="">All Categories</option>
                 {% for value, label in category_choices %}
-                <option value="{{ value }}" {% if selected_category == value %}selected{% endif %}>
-                    {{ label }}
-                </option>
+                <option value="{{ value }}" {% if selected_category == value %}selected{% endif %}>{{ label }}</option>
                 {% endfor %}
             </select>
 
-            <select name="audience"
-                    class="min-w-0 rounded-lg border border-slate-700 bg-slate-800 px-3 py-2.5 text-sm text-white focus:border-emerald-400 focus:outline-none">
-                <option value="">All audiences</option>
+            <select name="audience" aria-label="Filter by audience"
+                    class="min-w-0 rounded-xl border border-slate-700 bg-slate-950/70 px-3.5 py-2.5 text-sm text-white outline-none transition focus:border-cyan-400">
+                <option value="">All Audiences</option>
                 {% for value, label in audience_choices %}
-                <option value="{{ value }}" {% if selected_audience == value %}selected{% endif %}>
-                    {{ label }}
-                </option>
+                <option value="{{ value }}" {% if selected_audience == value %}selected{% endif %}>{{ label }}</option>
                 {% endfor %}
             </select>
 
-            <select name="status"
-                    class="min-w-0 rounded-lg border border-slate-700 bg-slate-800 px-3 py-2.5 text-sm text-white focus:border-emerald-400 focus:outline-none">
-                <option value="">All statuses</option>
+            <select name="status" aria-label="Filter by status"
+                    class="min-w-0 rounded-xl border border-slate-700 bg-slate-950/70 px-3.5 py-2.5 text-sm text-white outline-none transition focus:border-cyan-400">
+                <option value="">All Statuses</option>
                 {% for value, label in status_choices %}
-                <option value="{{ value }}" {% if selected_status == value %}selected{% endif %}>
-                    {{ label }}
-                </option>
+                <option value="{{ value }}" {% if selected_status == value %}selected{% endif %}>{{ label }}</option>
                 {% endfor %}
             </select>
 
             <div class="flex gap-2">
-                <button type="submit"
-                        class="inline-flex flex-1 items-center justify-center gap-2 rounded-lg bg-slate-700 px-3 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-600">
-                    <i class="ri-search-line"></i>
-                    Filter
+                <button type="submit" class="inline-flex min-h-10 flex-1 items-center justify-center gap-2 rounded-xl bg-cyan-400 px-4 py-2.5 text-sm font-bold text-slate-950 transition hover:bg-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-300">
+                    <i class="ri-search-line"></i> Search
                 </button>
-                <a href="{% url 'admin_faq_videos' %}"
-                   class="inline-flex items-center justify-center rounded-lg border border-slate-600 px-3 py-2.5 text-sm font-semibold text-slate-300 transition hover:bg-slate-800">
-                    Clear
-                </a>
+                <a href="{% url 'admin_faq_videos' %}" class="inline-flex min-h-10 items-center justify-center rounded-xl border border-slate-600 px-4 py-2.5 text-sm font-semibold text-slate-300 transition hover:border-slate-500 hover:bg-slate-800 hover:text-white">Clear</a>
             </div>
-
         </div>
     </form>
 
-    <!-- CARD LIBRARY HEADER -->
+    <!-- VIDEO LIBRARY -->
     <section>
-        <div class="mb-3 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+        <div class="mb-3 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
             <div>
                 <h2 class="text-lg font-bold text-white">Help Video Library</h2>
-                <p class="mt-1 text-xs text-slate-400">
-                    Select a video to play it. Use the card actions to manage it.
-                </p>
+                <p class="mt-1 text-xs text-slate-400">Play a video or manage its publishing status.</p>
             </div>
-            <span class="text-xs text-slate-500">
-                {{ videos|length }} result{{ videos|length|pluralize }}
-            </span>
+            <span class="text-xs font-medium text-slate-500">{{ videos|length }} result{{ videos|length|pluralize }}</span>
         </div>
 
-        <!-- RESPONSIVE VIDEO CARDS -->
-        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-
+        <div id="faqVideoGrid" class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {% for video in videos %}
-            <article class="group flex min-w-0 flex-col overflow-hidden rounded-2xl border border-slate-700 bg-slate-900 shadow-lg shadow-black/10 transition duration-200 hover:-translate-y-0.5 hover:border-slate-500 hover:shadow-xl">
+            <article class="faq-video-card group flex h-full min-w-0 flex-col overflow-hidden rounded-2xl border border-slate-700/90 bg-slate-900 shadow-lg shadow-black/15"
+                     data-video-status="{{ video.status }}">
 
-                <!-- VIDEO PREVIEW -->
-                <div class="relative aspect-video overflow-hidden bg-slate-950">
-
+                <!-- VIDEO PLAYER / PREVIEW -->
+                <div class="faq-video-stage relative aspect-video w-full overflow-hidden bg-black">
                     {% if video.video_file %}
                     <video class="faq-card-video h-full w-full bg-black object-contain"
                            controls
@@ -166,138 +300,102 @@
                         <source src="{{ video.video_file.url }}">
                         Your browser does not support video playback.
                     </video>
-
                     {% elif video.video_url %}
                     <div class="faq-external-placeholder relative flex h-full w-full flex-col items-center justify-center overflow-hidden bg-slate-950 text-center"
                          data-external-preview
                          data-video-src="{{ video.video_url }}"
                          data-video-title="{{ video.title }}">
-                        <!-- YouTube thumbnail is added by the script when the URL is recognized. -->
-                        <img data-video-thumbnail
-                             alt=""
-                             class="absolute inset-0 h-full w-full object-cover"
-                             loading="lazy"
-                             hidden>
-
-                        <div class="absolute inset-0 bg-gradient-to-t from-slate-950/95 via-slate-950/30 to-slate-950/20"></div>
-
-                        <div class="relative z-10 flex max-w-full flex-col items-center gap-2 p-3">
-                            <div class="flex h-11 w-11 items-center justify-center rounded-full border border-white/30 bg-emerald-500/95 text-white shadow-lg transition hover:scale-105">
-                                <i class="ri-play-fill text-2xl"></i>
-                            </div>
-                            <p class="line-clamp-2 text-xs font-bold text-white drop-shadow">
-                                {{ video.title }}
-                            </p>
-                            <button type="button"
-                                    data-inline-play
-                                    class="inline-flex items-center gap-1.5 rounded-lg border border-white/20 bg-slate-950/80 px-3 py-1.5 text-[11px] font-bold text-white transition hover:bg-emerald-500">
-                                <i class="ri-play-fill"></i>
-                                Play video
-                            </button>
-                        </div>
+                        <img data-video-thumbnail alt="" class="absolute inset-0 h-full w-full object-cover" loading="lazy" hidden>
+                        <div class="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/20 to-slate-950/20"></div>
+                        <button type="button" data-inline-play aria-label="Play {{ video.title }}"
+                                class="relative z-10 flex h-12 w-12 items-center justify-center rounded-full border border-white/30 bg-cyan-400 text-slate-950 shadow-xl transition hover:scale-105 hover:bg-cyan-300 focus:outline-none focus:ring-2 focus:ring-white">
+                            <i class="ri-play-fill text-3xl"></i>
+                        </button>
+                        <p class="relative z-10 mt-2 max-w-[90%] truncate px-2 text-xs font-semibold text-white drop-shadow">{{ video.title }}</p>
                     </div>
-
                     {% else %}
                     <div class="flex h-full flex-col items-center justify-center gap-2 text-slate-500">
                         <i class="ri-video-off-line text-4xl"></i>
-                        <span class="text-xs">No video source</span>
+                        <span class="text-xs">No video source available</span>
                     </div>
                     {% endif %}
 
                     <!-- STATUS BADGE -->
-                    <div class="pointer-events-none absolute left-3 top-3">
+                    <div class="pointer-events-none absolute left-3 top-3 z-20">
                         {% if video.status == "published" %}
-                        <span class="inline-flex items-center gap-1 rounded-full border border-emerald-400/20 bg-slate-950/85 px-2.5 py-1 text-[10px] font-bold text-emerald-300 shadow">
-                            <span class="h-1.5 w-1.5 rounded-full bg-emerald-400"></span>
-                            Published
+                        <span class="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/30 bg-slate-950/90 px-2.5 py-1 text-[10px] font-bold text-emerald-300 shadow-lg backdrop-blur">
+                            <span class="h-1.5 w-1.5 rounded-full bg-emerald-400"></span> Published
                         </span>
                         {% else %}
-                        <span class="inline-flex items-center gap-1 rounded-full border border-amber-400/20 bg-slate-950/85 px-2.5 py-1 text-[10px] font-bold text-amber-300 shadow">
-                            <span class="h-1.5 w-1.5 rounded-full bg-amber-400"></span>
-                            Draft
+                        <span class="inline-flex items-center gap-1.5 rounded-full border border-amber-400/30 bg-slate-950/90 px-2.5 py-1 text-[10px] font-bold text-amber-300 shadow-lg backdrop-blur">
+                            <span class="h-1.5 w-1.5 rounded-full bg-amber-400"></span> Draft
                         </span>
                         {% endif %}
                     </div>
-
-                    <div class="pointer-events-none absolute bottom-3 right-3">
-                        <span class="rounded-md bg-slate-950/80 px-2 py-1 text-[10px] font-medium text-slate-300">
-                            <i class="ri-volume-up-line mr-1"></i>
-                            Video & audio
-                        </span>
-                    </div>
-
                 </div>
 
-                <!-- CARD DETAILS -->
-                <div class="flex flex-1 flex-col p-4">
-
-                    <div class="flex items-start gap-3">
-                        <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sky-500/10 text-sky-300">
-                            <i class="ri-customer-service-2-line text-xl"></i>
+                <!-- CARD INFORMATION: NO DESCRIPTION IS DISPLAYED -->
+                <div class="flex flex-1 flex-col p-3.5">
+                    <div class="flex min-h-[58px] items-start gap-2.5">
+                        <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-cyan-400/15 bg-cyan-400/10 text-cyan-300">
+                            <i class="ri-customer-service-2-line text-lg"></i>
                         </div>
-
                         <div class="min-w-0 flex-1">
-                            <h3 class="break-words text-base font-bold leading-6 text-white">
-                                {{ video.title }}
-                            </h3>
-                            <p class="mt-1 text-xs text-slate-400">
-                                {{ video.get_category_display }}
-                            </p>
+                            <h3 class="line-clamp-2 break-words text-sm font-bold leading-5 text-white" title="{{ video.title }}">{{ video.title }}</h3>
+                            <p class="mt-1 truncate text-[11px] font-medium text-slate-400">{{ video.get_category_display }}</p>
                         </div>
                     </div>
 
-                    <p class="mt-3 line-clamp-3 min-h-[3.75rem] text-sm leading-5 text-slate-400">
-                        {{ video.description|default:"No description provided." }}
-                    </p>
-
-                    <!-- METADATA -->
-                    <div class="mt-3 flex flex-wrap gap-2">
-                        <span class="inline-flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-800/70 px-2.5 py-1.5 text-[11px] text-slate-300">
-                            <i class="ri-group-line text-sky-300"></i>
+                    <!-- AUDIENCE ONLY: CREATION DATE IS NOT SHOWN -->
+                    <div class="mt-3 flex flex-wrap items-center gap-1.5">
+                        <span class="inline-flex min-h-7 items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-800/80 px-2 py-1 text-[10px] font-medium text-slate-300">
+                            <i class="ri-group-line text-cyan-300"></i>
                             {{ video.get_audience_display }}
                         </span>
-
-                        <span class="inline-flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-800/70 px-2.5 py-1.5 text-[11px] text-slate-400">
-                            <i class="ri-calendar-line"></i>
-                            {{ video.created_at|date:"d M Y" }}
-                        </span>
                     </div>
 
-                    <!-- CARD ACTIONS -->
-                    <div class="mt-4 flex flex-wrap items-center gap-2 border-t border-slate-800 pt-3">
-
+                    <!-- ICON-ONLY ACTIONS: EDIT / PUBLISH OR UNPUBLISH / DELETE -->
+                    <div class="mt-auto flex items-center justify-end gap-2 pt-4">
                         <a href="{% url 'admin_faq_video_edit' video.id %}"
+                           class="faq-icon-action faq-icon-edit"
                            title="Edit help video"
-                           aria-label="Edit {{ video.title }}"
-                           class="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-sky-500/30 px-3 text-xs font-semibold text-sky-300 transition hover:bg-sky-500/10">
-                            <i class="ri-edit-line"></i>
-                            Edit
+                           data-tooltip="Edit"
+                           aria-label="Edit {{ video.title }}">
+                            <i class="ri-edit-2-line" aria-hidden="true"></i>
+                            <span class="sr-only">Edit</span>
                         </a>
 
-                        <form method="post"
-                              action="{% url 'admin_faq_video_toggle' video.id %}"
+                        <form method="post" action="{% url 'admin_faq_video_toggle' video.id %}"
+                              class="m-0"
                               data-confirm-form
-                              data-confirm-title="{% if video.status == 'published' %}Unpublish help video?{% else %}Publish help video?{% endif %}"
-                              data-confirm-message="{% if video.status == 'published' %}This video will no longer be visible to students or teachers.{% else %}This video will become visible to its selected audience.{% endif %}"
+                              data-confirm-title="{% if video.status == 'published' %}Unpublish this video?{% else %}Publish this video?{% endif %}"
+                              data-confirm-message="{% if video.status == 'published' %}This video will no longer be visible to its selected audience.{% else %}This video will become visible to its selected audience.{% endif %}"
                               data-confirm-action="{% if video.status == 'published' %}Unpublish{% else %}Publish{% endif %}"
-                              data-confirm-tone="amber">
+                              data-confirm-tone="{% if video.status == 'published' %}amber{% else %}emerald{% endif %}">
                             {% csrf_token %}
+                            {% if video.status == "published" %}
                             <button type="submit"
-                                    class="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-amber-500/30 px-3 text-xs font-semibold text-amber-300 transition hover:bg-amber-500/10">
-                                {% if video.status == "published" %}
-                                <i class="ri-eye-off-line"></i>
-                                Unpublish
-                                {% else %}
-                                <i class="ri-send-plane-line"></i>
-                                Publish
-                                {% endif %}
+                                    class="faq-icon-action faq-icon-unpublish"
+                                    title="Unpublish help video"
+                                    data-tooltip="Unpublish"
+                                    aria-label="Unpublish {{ video.title }}">
+                                <i class="ri-eye-off-line" aria-hidden="true"></i>
+                                <span class="sr-only">Unpublish</span>
                             </button>
+                            {% else %}
+                            <button type="submit"
+                                    class="faq-icon-action faq-icon-publish"
+                                    title="Publish help video"
+                                    data-tooltip="Publish"
+                                    aria-label="Publish {{ video.title }}">
+                                <i class="ri-send-plane-line" aria-hidden="true"></i>
+                                <span class="sr-only">Publish</span>
+                            </button>
+                            {% endif %}
                         </form>
 
-                        <div class="flex-1"></div>
-
-                        <form method="post"
-                              action="{% url 'admin_faq_video_delete' video.id %}"
+                        <form method="post" action="{% url 'admin_faq_video_delete' video.id %}"
+                              class="m-0"
                               data-confirm-form
                               data-confirm-title="Delete help video?"
                               data-confirm-message="This action cannot be undone. The help video will be removed from the library."
@@ -305,86 +403,52 @@
                               data-confirm-tone="rose">
                             {% csrf_token %}
                             <button type="submit"
+                                    class="faq-icon-action faq-icon-delete"
                                     title="Delete help video"
-                                    aria-label="Delete {{ video.title }}"
-                                    class="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-rose-500/30 text-rose-300 transition hover:bg-rose-500/10">
-                                <i class="ri-delete-bin-line text-base"></i>
+                                    data-tooltip="Delete"
+                                    aria-label="Delete {{ video.title }}">
+                                <i class="ri-delete-bin-line" aria-hidden="true"></i>
+                                <span class="sr-only">Delete</span>
                             </button>
                         </form>
-
                     </div>
-
                 </div>
             </article>
-
             {% empty %}
             <div class="col-span-full rounded-2xl border border-dashed border-slate-700 bg-slate-900/70 px-4 py-14 text-center">
                 <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-slate-700 bg-slate-800 text-slate-400">
                     <i class="ri-video-off-line text-3xl"></i>
                 </div>
                 <h3 class="mt-4 text-lg font-bold text-white">No help videos found</h3>
-                <p class="mx-auto mt-1 max-w-sm text-sm text-slate-400">
-                    Add a new help video or change the search and filters.
-                </p>
-                <a href="{% url 'admin_faq_video_create' %}"
-                   class="mt-5 inline-flex items-center gap-2 rounded-lg bg-emerald-500 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-emerald-400">
-                    <i class="ri-add-line"></i>
-                    Add Help Video
+                <p class="mx-auto mt-1 max-w-sm text-sm text-slate-400">Add a help video or adjust your search and filters.</p>
+                <a href="{% url 'admin_faq_video_create' %}" class="mt-5 inline-flex items-center gap-2 rounded-lg bg-cyan-400 px-4 py-2.5 text-sm font-bold text-slate-950 transition hover:bg-cyan-300">
+                    <i class="ri-add-line"></i> Add Help Video
                 </a>
             </div>
             {% endfor %}
-
         </div>
     </section>
-
 </div>
 
-<!-- CONFIRMATION MODAL -->
-<div id="faqConfirmModal"
-     class="fixed inset-0 z-[100] hidden items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm"
-     role="dialog"
-     aria-modal="true"
-     aria-labelledby="faqConfirmTitle">
-
+<!-- ACTION CONFIRMATION MODAL -->
+<div id="faqConfirmModal" class="fixed inset-0 z-[100] hidden items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="faqConfirmTitle">
     <div class="w-full max-w-md overflow-hidden rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl">
-
         <div class="flex items-start gap-3 border-b border-slate-700 p-5">
-            <div id="faqConfirmIcon"
-                 class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 text-amber-300">
+            <div id="faqConfirmIcon" class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 text-amber-300">
                 <i class="ri-question-line text-xl"></i>
             </div>
-
             <div class="min-w-0 flex-1">
-                <h2 id="faqConfirmTitle" class="text-lg font-bold text-white">
-                    Confirm action
-                </h2>
-                <p id="faqConfirmMessage" class="mt-1 text-sm leading-6 text-slate-400">
-                    Are you sure you want to continue?
-                </p>
+                <h2 id="faqConfirmTitle" class="text-lg font-bold text-white">Confirm action</h2>
+                <p id="faqConfirmMessage" class="mt-1 text-sm leading-6 text-slate-400">Are you sure you want to continue?</p>
             </div>
-
-            <button type="button"
-                    data-confirm-close
-                    aria-label="Close confirmation"
-                    class="rounded-lg p-1.5 text-slate-400 hover:bg-slate-800 hover:text-white">
+            <button type="button" data-confirm-close aria-label="Close confirmation" class="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-800 hover:text-white">
                 <i class="ri-close-line text-xl"></i>
             </button>
         </div>
-
         <div class="flex flex-col-reverse gap-2 bg-slate-950/30 p-4 sm:flex-row sm:justify-end">
-            <button type="button"
-                    data-confirm-close
-                    class="rounded-lg border border-slate-600 px-4 py-2.5 text-sm font-semibold text-slate-300 transition hover:bg-slate-800">
-                Cancel
-            </button>
-
-            <button id="faqConfirmProceed"
-                    type="button"
-                    class="rounded-lg bg-amber-400 px-4 py-2.5 text-sm font-bold text-slate-950 transition hover:bg-amber-300">
-                Continue
-            </button>
+            <button type="button" data-confirm-close class="rounded-lg border border-slate-600 px-4 py-2.5 text-sm font-semibold text-slate-300 transition hover:bg-slate-800">Cancel</button>
+            <button id="faqConfirmProceed" type="button" class="rounded-lg bg-amber-400 px-4 py-2.5 text-sm font-bold text-slate-950 transition hover:bg-amber-300">Continue</button>
         </div>
-
     </div>
 </div>
 
@@ -392,15 +456,24 @@
 (function () {
     "use strict";
 
-    // Stop other card videos when a different card starts playing.
-    const cardVideos = document.querySelectorAll(".faq-card-video");
+    // Build the status totals from the rendered result cards (no backend change).
+    const cards = Array.from(document.querySelectorAll(".faq-video-card"));
+    const publishedCount = cards.filter(card => card.dataset.videoStatus === "published").length;
+    const draftCount = cards.filter(card => card.dataset.videoStatus === "draft").length;
+    const publishedNode = document.getElementById("faqPublishedCount");
+    const draftNode = document.getElementById("faqDraftCount");
+    const totalNode = document.getElementById("faqTotalVideos");
 
+    if (publishedNode) publishedNode.textContent = String(publishedCount);
+    if (draftNode) draftNode.textContent = String(draftCount);
+    if (totalNode) totalNode.textContent = String(cards.length);
+
+    // Pause other uploaded videos when one begins playing.
+    const cardVideos = document.querySelectorAll(".faq-card-video");
     cardVideos.forEach(function (video) {
         video.addEventListener("play", function () {
             cardVideos.forEach(function (otherVideo) {
-                if (otherVideo !== video) {
-                    otherVideo.pause();
-                }
+                if (otherVideo !== video) otherVideo.pause();
             });
         });
     });
@@ -411,10 +484,10 @@
     const confirmMessage = document.getElementById("faqConfirmMessage");
     const confirmProceed = document.getElementById("faqConfirmProceed");
     const confirmIcon = document.getElementById("faqConfirmIcon");
-
     let pendingForm = null;
 
     function closeConfirmModal() {
+        if (!confirmModal) return;
         confirmModal.classList.add("hidden");
         confirmModal.classList.remove("flex");
         pendingForm = null;
@@ -423,25 +496,33 @@
     document.querySelectorAll("[data-confirm-form]").forEach(function (form) {
         form.addEventListener("submit", function (event) {
             event.preventDefault();
+            if (!confirmModal) {
+                HTMLFormElement.prototype.submit.call(form);
+                return;
+            }
 
             pendingForm = form;
             confirmTitle.textContent = form.dataset.confirmTitle || "Confirm action";
             confirmMessage.textContent = form.dataset.confirmMessage || "Are you sure?";
             confirmProceed.textContent = form.dataset.confirmAction || "Continue";
 
-            const isDelete = form.dataset.confirmTone === "rose";
+            const tone = form.dataset.confirmTone || "amber";
+            const isDelete = tone === "rose";
+            const isPublish = tone === "emerald";
 
-            confirmProceed.className = isDelete
-                ? "rounded-lg bg-rose-500 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-rose-400"
-                : "rounded-lg bg-amber-400 px-4 py-2.5 text-sm font-bold text-slate-950 transition hover:bg-amber-300";
-
-            confirmIcon.className = isDelete
-                ? "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-rose-500/10 text-rose-300"
-                : "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 text-amber-300";
-
-            confirmIcon.innerHTML = isDelete
-                ? '<i class="ri-delete-bin-line text-xl"></i>'
-                : '<i class="ri-question-line text-xl"></i>';
+            if (isDelete) {
+                confirmProceed.className = "rounded-lg bg-rose-500 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-rose-400";
+                confirmIcon.className = "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-rose-500/10 text-rose-300";
+                confirmIcon.innerHTML = '<i class="ri-delete-bin-line text-xl"></i>';
+            } else if (isPublish) {
+                confirmProceed.className = "rounded-lg bg-emerald-400 px-4 py-2.5 text-sm font-bold text-slate-950 transition hover:bg-emerald-300";
+                confirmIcon.className = "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-300";
+                confirmIcon.innerHTML = '<i class="ri-send-plane-line text-xl"></i>';
+            } else {
+                confirmProceed.className = "rounded-lg bg-amber-400 px-4 py-2.5 text-sm font-bold text-slate-950 transition hover:bg-amber-300";
+                confirmIcon.className = "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 text-amber-300";
+                confirmIcon.innerHTML = '<i class="ri-eye-off-line text-xl"></i>';
+            }
 
             confirmModal.classList.remove("hidden");
             confirmModal.classList.add("flex");
@@ -449,40 +530,35 @@
         });
     });
 
-    confirmProceed.addEventListener("click", function () {
-        if (!pendingForm) return;
+    if (confirmProceed) {
+        confirmProceed.addEventListener("click", function () {
+            if (!pendingForm) return;
+            const formToSubmit = pendingForm;
+            pendingForm = null;
+            closeConfirmModal();
+            HTMLFormElement.prototype.submit.call(formToSubmit);
+        });
+    }
 
-        const formToSubmit = pendingForm;
-        pendingForm = null;
+    if (confirmModal) {
+        confirmModal.querySelectorAll("[data-confirm-close]").forEach(function (button) {
+            button.addEventListener("click", closeConfirmModal);
+        });
+        confirmModal.addEventListener("click", function (event) {
+            if (event.target === confirmModal) closeConfirmModal();
+        });
+    }
 
-        confirmModal.classList.add("hidden");
-        confirmModal.classList.remove("flex");
-
-        HTMLFormElement.prototype.submit.call(formToSubmit);
-    });
-
-    confirmModal.querySelectorAll("[data-confirm-close]").forEach(function (button) {
-        button.addEventListener("click", closeConfirmModal);
-    });
-
-    confirmModal.addEventListener("click", function (event) {
-        if (event.target === confirmModal) closeConfirmModal();
-    });
-
-    // External links: show a real thumbnail where available and play inline.
+    // Parse supported external video providers and direct video URLs.
     function parseVideoUrl(rawUrl) {
         let parsed;
-
         try {
             parsed = new URL(rawUrl, window.location.origin);
         } catch (error) {
             return null;
         }
 
-        if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
-            return null;
-        }
-
+        if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return null;
         const host = parsed.hostname.toLowerCase().replace(/^www\./, "");
 
         if (host === "youtu.be") {
@@ -490,20 +566,14 @@
             return id ? { type: "youtube", id: id } : null;
         }
 
-        if (
-            host === "youtube.com" ||
-            host === "m.youtube.com" ||
-            host === "youtube-nocookie.com"
-        ) {
+        if (host === "youtube.com" || host === "m.youtube.com" || host === "youtube-nocookie.com") {
             let id = null;
-
             if (parsed.pathname === "/watch") {
                 id = parsed.searchParams.get("v");
             } else {
                 const match = parsed.pathname.match(/^\/(?:embed|shorts|live)\/([^/]+)/);
                 if (match) id = match[1];
             }
-
             return id ? { type: "youtube", id: id } : null;
         }
 
@@ -520,7 +590,6 @@
         if (/\.(mp4|webm|mov|m4v|ogv)(?:$|[?#])/i.test(parsed.href)) {
             return { type: "direct", url: parsed.href };
         }
-
         return { type: "other", url: parsed.href };
     }
 
@@ -530,10 +599,7 @@
 
         if (info.type === "youtube") {
             const iframe = document.createElement("iframe");
-            iframe.src =
-                "https://www.youtube-nocookie.com/embed/" +
-                encodeURIComponent(info.id) +
-                "?autoplay=1&rel=0";
+            iframe.src = "https://www.youtube-nocookie.com/embed/" + encodeURIComponent(info.id) + "?autoplay=1&rel=0";
             iframe.title = title || "Help video";
             iframe.className = "h-full w-full border-0 bg-black";
             iframe.allow = "autoplay; encrypted-media; picture-in-picture; fullscreen";
@@ -566,7 +632,6 @@
             return player;
         }
 
-        // Unknown providers may allow iframe embedding, but some block it.
         const iframe = document.createElement("iframe");
         iframe.src = info.url;
         iframe.title = title || "Help video";
@@ -583,24 +648,16 @@
         const thumbnail = placeholder.querySelector("[data-video-thumbnail]");
         const playButton = placeholder.querySelector("[data-inline-play]");
 
-        // YouTube provides a public thumbnail URL; fall back if max resolution is unavailable.
         if (info && info.type === "youtube" && thumbnail) {
             thumbnail.hidden = false;
             thumbnail.src = "https://img.youtube.com/vi/" + encodeURIComponent(info.id) + "/hqdefault.jpg";
-            thumbnail.addEventListener("error", function () {
-                thumbnail.hidden = true;
-            }, { once: true });
-        } else if (info && info.type === "vimeo" && thumbnail) {
-            // Vimeo thumbnails are not guaranteed without the owner's API/OEmbed access.
-            thumbnail.hidden = true;
+            thumbnail.addEventListener("error", function () { thumbnail.hidden = true; }, { once: true });
         }
 
         if (!playButton) return;
-
         playButton.addEventListener("click", function () {
             const title = placeholder.dataset.videoTitle || "Help video";
             const player = makeInlinePlayer(rawUrl, title);
-
             if (!player) {
                 const message = document.createElement("p");
                 message.className = "px-3 text-center text-xs text-rose-300";
@@ -609,27 +666,21 @@
                 return;
             }
 
-            // Stop any uploaded video playing elsewhere; keep card status badges intact.
-            document.querySelectorAll(".faq-card-video").forEach(function (video) {
-                video.pause();
-            });
-
+            document.querySelectorAll(".faq-card-video").forEach(function (video) { video.pause(); });
             placeholder.replaceWith(player);
 
             if (player.tagName === "VIDEO") {
                 const playPromise = player.play();
                 if (playPromise && typeof playPromise.catch === "function") {
-                    playPromise.catch(function () {
-                        // Browser autoplay policies may require the user to press Play.
-                    });
+                    playPromise.catch(function () { /* Browser may require a manual play click. */ });
                 }
             }
         });
     });
 
-    // Escape closes the confirmation modal.
+    // Escape closes the confirmation dialog.
     document.addEventListener("keydown", function (event) {
-        if (event.key === "Escape" && !confirmModal.classList.contains("hidden")) {
+        if (event.key === "Escape" && confirmModal && !confirmModal.classList.contains("hidden")) {
             closeConfirmModal();
         }
     });

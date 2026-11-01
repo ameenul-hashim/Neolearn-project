@@ -1,1097 +1,684 @@
 {% load static %}
-
 <!DOCTYPE html>
-
 <html lang="en">
-
 <head>
-
     <meta charset="UTF-8">
-
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}NeoLearn Admin{% endblock %}</title>
 
-    <title>
-
-        {% block title %}
-
-            NeoLearn Admin
-
-        {% endblock %}
-
-    </title>
-
-    <!-- TAILWIND -->
-
+    <!-- Same base libraries and typography as the Student shell -->
     <script src="https://cdn.tailwindcss.com"></script>
-
-    <!-- REMIX ICON -->
-
-    <link
-
-        rel="stylesheet"
-
-        href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/4.2.0/remixicon.min.css"
-
-    >
-
-    <!-- TOAST MESSAGES CSS -->
-
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/4.2.0/remixicon.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{% static 'toast-messages.css' %}">
 
     <style>
-
-        * {
-
-            box-sizing: border-box;
-
-            scrollbar-width: none;
-
-        }
-
-        *::-webkit-scrollbar {
-
-            width: 0;
-
-            height: 0;
-
-        }
-
-        html {
-
-            scroll-behavior: smooth;
-
-        }
-
+        * { box-sizing: border-box; font-family: 'Inter', sans-serif; scrollbar-width: none; }
+        *::-webkit-scrollbar { display: none; width: 0; height: 0; }
+        html { scroll-behavior: smooth; }
         body {
-
             margin: 0;
-
             min-height: 100vh;
-
+            overflow: hidden;
+            overflow-x: hidden;
+            background: #020817;
+            color: #fff;
         }
 
-        /* Fixed toast messages */
-
-        .message-container {
-
-            position: fixed;
-
-            top: 90px;
-
-            right: 25px;
-
-            z-index: 9999;
-
-            display: flex;
-
-            flex-direction: column;
-
-            gap: 12px;
-
-            width: min(400px, calc(100vw - 32px));
-
-            max-width: 400px;
-
+        .sidebar-bg { background: linear-gradient(180deg, #050B16 0%, #020617 100%); }
+        .navbar-bg { background: rgba(4, 9, 20, .94); backdrop-filter: blur(20px); }
+        .main-grid {
+            background-image:
+                linear-gradient(rgba(255,255,255,.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,.03) 1px, transparent 1px);
+            background-size: 42px 42px;
         }
 
-        /* Sidebar navigation */
-
+        .nav-label {
+            padding: 16px 16px 8px;
+            color: #475569;
+            font-size: 11px;
+            font-weight: 500;
+            letter-spacing: .6px;
+            line-height: 1.35;
+            text-transform: uppercase;
+        }
         .admin-nav-link {
-
             position: relative;
-
             display: flex;
-
+            min-width: 0;
+            min-height: 48px;
             align-items: center;
-
-            gap: 16px;
-
-            min-height: 52px;
-
-            padding: 12px 20px;
-
+            gap: 12px;
             border: 1px solid transparent;
-
-            border-radius: 16px;
-
+            border-radius: 14px;
+            padding: 0 16px;
             color: #94A3B8;
-
+            font-size: 14px;
+            font-weight: 600;
             text-decoration: none;
-
-            transition:
-
-                background-color 0.25s ease,
-
-                color 0.25s ease,
-
-                border-color 0.25s ease;
-
+            transition: background 180ms ease, color 180ms ease, border-color 180ms ease;
         }
-
-        .admin-nav-link:hover {
-
-            background-color: rgba(255, 255, 255, 0.05);
-
-            color: #FFFFFF;
-
-        }
-
+        .admin-nav-link:hover { background: rgba(255,255,255,.05); color: #fff; }
         .admin-nav-link.active {
-
-            background-color: rgba(34, 211, 238, 0.10);
-
-            border-color: rgba(34, 211, 238, 0.10);
-
-            color: #FFFFFF;
-
-        }
-
-        .admin-nav-link.active::before {
-
-            content: "";
-
-            position: absolute;
-
-            left: 0;
-
-            top: 50%;
-
-            width: 4px;
-
-            height: 30px;
-
-            border-radius: 0 999px 999px 0;
-
-            background: #00F5D4;
-
-            box-shadow: 0 0 14px #00F5D4;
-
-            transform: translateY(-50%);
-
-        }
-
-        .admin-nav-link.active .nav-icon {
-
+            border-color: rgba(0,245,212,.08);
+            background: linear-gradient(90deg, rgba(0,255,224,.14), rgba(0,255,224,.03));
             color: #00F5D4;
-
         }
-
-        /* Keep sidebar scroll position stable between page navigations */
-        #adminSidebarScroll {
-            overscroll-behavior: contain;
-            scroll-behavior: auto;
-        }
-
-        /* LIVE CLASSES DROPDOWN */
-        .admin-live-classes-dropdown > summary {
-            list-style: none;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 16px;
-        }
-
-        .admin-live-classes-dropdown > summary::-webkit-details-marker {
-            display: none;
-        }
-
-        .admin-live-classes-dropdown .live-classes-arrow {
-            margin-left: auto;
-            font-size: 18px;
-            color: #94A3B8;
-            transition: transform 0.2s ease;
-        }
-
-        .admin-live-classes-dropdown[open] .live-classes-arrow {
-            transform: rotate(180deg);
-        }
-
-        .admin-live-classes-submenu {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-            margin: 5px 0 10px 13px;
-            padding-left: 10px;
-            border-left: 2px solid rgba(34, 211, 238, 0.22);
-        }
-
-        .admin-live-classes-submenu .admin-live-sub-link {
-            min-height: 39px;
-            padding: 9px 10px;
-            gap: 10px;
-            border-radius: 10px;
-            font-size: 13px;
-        }
-
-        .admin-live-classes-submenu .admin-live-sub-link.active {
-            background: rgba(0, 245, 212, 0.12);
-            border-color: rgba(0, 245, 212, 0.12);
-            color: #67E8F9;
-        }
-
-        .admin-live-classes-submenu .admin-live-sub-link.active::before {
+        .admin-nav-link.active::before {
+            position: absolute;
+            top: 9px;
+            bottom: 9px;
+            left: 0;
             width: 3px;
-            height: 22px;
+            border-radius: 0 999px 999px 0;
             background: #00F5D4;
-            box-shadow: 0 0 10px rgba(0, 245, 212, 0.65);
+            content: '';
+        }
+        .admin-nav-link.active .nav-icon { color: #00F5D4; }
+        #adminSidebarScroll { overscroll-behavior: contain; scroll-behavior: auto; }
+        .sidebar-backdrop.backdrop-open { display: block; }
+        .admin-sidebar { width: 270px; }
+
+        /* Keep sidebar navigation clean while clicking or dragging through it.
+           This prevents accidental blue browser text-selection highlights. */
+        #adminSidebar,
+        #adminSidebar * {
+            -webkit-user-select: none;
+            user-select: none;
         }
 
-        .admin-live-classes-submenu .live-sub-disabled {
+        /* Live Classes links are displayed as ordinary sidebar items (no dropdown). */
+        .live-sub-disabled {
             cursor: not-allowed;
-            opacity: 0.55;
+            opacity: .48;
+            pointer-events: none;
         }
-
-        .admin-live-classes-submenu .live-sub-disabled:hover {
+        .live-sub-disabled:hover {
             background: transparent;
             color: #94A3B8;
         }
 
-        /* Mobile sidebar backdrop */
-
-        .sidebar-backdrop {
-
-            display: none;
-
+        .profile-avatar {
+            display: flex;
+            width: 42px;
+            height: 42px;
+            flex: 0 0 42px;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            border: 2px solid rgba(0,245,212,.22);
+            border-radius: 50%;
+            background: linear-gradient(135deg, rgba(0,245,212,.18), rgba(0,150,255,.12));
+            color: #67E8F9;
+            font-size: 16px;
+            font-weight: 800;
+            object-fit: cover;
         }
-
-        /* Responsive toast position */
-
-        @media (max-width: 640px) {
-
-            .message-container {
-
-                top: 82px;
-
-                right: 12px;
-
-                width: calc(100vw - 24px);
-
-                max-width: none;
-
-            }
-
+        .admin-profile-trigger {
+            display: flex;
+            max-width: 260px;
+            min-width: 0;
+            align-items: center;
+            gap: 10px;
+            border: 1px solid transparent;
+            border-radius: 14px;
+            padding: 5px 8px;
+            background: transparent;
+            color: inherit;
+            cursor: pointer;
+            text-align: left;
+            transition: background .18s ease, border-color .18s ease;
         }
-
-        /* Mobile sidebar */
+        .admin-profile-trigger:hover,
+        .admin-profile-trigger[aria-expanded="true"] {
+            border-color: rgba(34,211,238,.18);
+            background: rgba(15,23,42,.72);
+        }
+        .admin-top-dropdown {
+            position: absolute;
+            top: calc(100% + 12px);
+            right: 0;
+            z-index: 100;
+            width: min(290px, calc(100vw - 24px));
+            overflow: hidden;
+            border: 1px solid rgba(100,116,139,.28);
+            border-radius: 18px;
+            background: rgba(5,12,27,.98);
+            box-shadow: 0 24px 70px rgba(0,0,0,.48);
+            backdrop-filter: blur(22px);
+        }
+        .admin-top-dropdown[hidden], .quick-access-panel[hidden] { display: none !important; }
+        .admin-dropdown-row {
+            display: flex;
+            width: 100%;
+            min-width: 0;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 15px;
+            color: #CBD5E1;
+            font-size: 13px;
+            text-align: left;
+            text-decoration: none;
+            transition: background .18s ease, color .18s ease;
+        }
+        .admin-dropdown-row:hover, .admin-dropdown-row:focus-visible {
+            outline: none;
+            background: rgba(34,211,238,.08);
+            color: #fff;
+        }
+        .admin-dropdown-icon {
+            display: inline-flex;
+            width: 36px;
+            height: 36px;
+            flex: 0 0 36px;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid rgba(34,211,238,.15);
+            border-radius: 12px;
+            background: rgba(34,211,238,.09);
+            color: #67E8F9;
+            font-size: 17px;
+        }
+        .quick-access-wrap { position: relative; width: min(520px, 45vw); min-width: 180px; }
+        .quick-access-field {
+            display: flex;
+            height: 46px;
+            align-items: center;
+            gap: 11px;
+            border: 1px solid rgba(255,255,255,.10);
+            border-radius: 16px;
+            padding: 0 14px;
+            background: rgba(255,255,255,.035);
+            transition: border-color .18s ease, box-shadow .18s ease;
+        }
+        .quick-access-field:focus-within {
+            border-color: rgba(34,211,238,.55);
+            box-shadow: 0 0 0 3px rgba(34,211,238,.07);
+        }
+        .quick-access-field input {
+            width: 100%;
+            min-width: 0;
+            border: 0;
+            outline: none;
+            background: transparent;
+            color: white;
+            font-size: 13px;
+        }
+        .quick-access-field input::placeholder { color: #64748B; }
+        .quick-access-panel {
+            position: absolute;
+            top: calc(100% + 10px);
+            left: 0;
+            z-index: 100;
+            width: min(430px, calc(100vw - 24px));
+            max-height: min(430px, 65vh);
+            overflow-y: auto;
+            border: 1px solid rgba(100,116,139,.28);
+            border-radius: 18px;
+            background: rgba(5,12,27,.98);
+            box-shadow: 0 24px 70px rgba(0,0,0,.48);
+            backdrop-filter: blur(22px);
+        }
+        .quick-access-link {
+            display: flex;
+            min-height: 48px;
+            align-items: center;
+            gap: 12px;
+            padding: 9px 15px;
+            color: #CBD5E1;
+            font-size: 12px;
+            text-decoration: none;
+        }
+        .quick-access-link:hover, .quick-access-link:focus-visible {
+            outline: none;
+            background: rgba(34,211,238,.08);
+            color: #fff;
+        }
+        .quick-access-link[hidden] { display: none !important; }
+        .message-container {
+            position: fixed;
+            top: 92px;
+            right: 24px;
+            z-index: 9999;
+            display: flex;
+            width: min(400px, calc(100vw - 32px));
+            max-width: 400px;
+            flex-direction: column;
+            gap: 12px;
+        }
 
         @media (max-width: 1023px) {
-
             .admin-sidebar {
-
-                width: 270px;
-
-                max-width: calc(100vw - 48px);
-
+                max-width: 85vw;
                 transform: translateX(-100%);
-
-                transition: transform 0.25s ease;
-
+                transition: transform .25s ease;
             }
-
-            .admin-sidebar.sidebar-open {
-
-                transform: translateX(0);
-
-            }
-
-            .sidebar-backdrop.backdrop-open {
-
-                display: block;
-
-            }
-
-            .admin-navbar {
-
-                left: 0 !important;
-
-                padding-left: 16px !important;
-
-                padding-right: 16px !important;
-
-            }
-
-            .admin-main {
-
-                margin-left: 0 !important;
-
-            }
-
-            body.sidebar-is-open {
-
-                overflow: hidden;
-
-            }
-
+            .admin-sidebar.sidebar-open { transform: translateX(0); }
+            .sidebar-backdrop.backdrop-open { display: block; }
+            .admin-navbar { left: 0 !important; padding-right: 12px !important; padding-left: 12px !important; }
+            .admin-main { margin-left: 0 !important; }
+            body.sidebar-is-open { overflow: hidden; }
         }
-
         @media (min-width: 1024px) {
-
-            .admin-sidebar {
-
-                transform: translateX(0);
-
-            }
-
-            .sidebar-backdrop {
-
-                display: none !important;
-
-            }
-
-            .mobile-menu-button {
-
-                display: none !important;
-
-            }
-
+            .admin-sidebar { transform: translateX(0); }
+            .sidebar-backdrop { display: none !important; }
+            .mobile-menu-button { display: none !important; }
         }
-
+        @media (max-width: 767px) {
+            .quick-access-wrap { width: min(48vw, 300px); min-width: 120px; }
+            .quick-access-field { height: 40px; padding: 0 10px; }
+            .quick-access-field input { font-size: 11px; }
+            .admin-profile-trigger { gap: 4px; padding: 3px; }
+            .admin-profile-label { display: none; }
+            .profile-avatar { width: 36px; height: 36px; flex-basis: 36px; }
+            .message-container { top: 84px; right: 12px; width: calc(100vw - 24px); max-width: none; }
+        }
     </style>
 
     {% block extra_head %}{% endblock %}
-
 </head>
 
-<body class="bg-[#020617] overflow-hidden font-sans text-white">
-
-    <!-- BACKGROUND -->
-
-    <div class="fixed inset-0 bg-[#030712] z-0 pointer-events-none"></div>
-
-    <!-- CYAN GLOW -->
-
-    <div
-
-        class="fixed top-[-260px] left-[-200px] w-[600px] h-[600px]
-
-               rounded-full bg-cyan-400/10 blur-3xl z-0 pointer-events-none">
-
-    </div>
-
-    <!-- PURPLE GLOW -->
-
-    <div
-
-        class="fixed bottom-[-260px] right-[-220px] w-[650px] h-[650px]
-
-               rounded-full bg-violet-500/10 blur-3xl z-0 pointer-events-none">
-
-    </div>
-
-    <!-- GRID -->
-
-    <div
-
-        class="fixed inset-0 z-0 opacity-[0.14] pointer-events-none"
-
-        style="
-
-            background-image:
-
-                linear-gradient(rgba(255,255,255,0.06) 1px, transparent 1px),
-
-                linear-gradient(90deg, rgba(255,255,255,0.06) 1px, transparent 1px);
-
-            background-size: 40px 40px;
-
-        ">
-
-    </div>
-
-    <!-- MOBILE SIDEBAR BACKDROP -->
-
-    <div
-
-        id="sidebarBackdrop"
-
-        class="sidebar-backdrop fixed inset-0 z-40 bg-black/60 backdrop-blur-[2px]"
-
-        aria-hidden="true">
-
-    </div>
-
-    <!-- SIDEBAR -->
-
-    <aside
-
-        id="adminSidebar"
-
-        class="admin-sidebar fixed top-0 left-0 z-50 w-[270px] h-screen
-
-               bg-[#030712]/95 border-r border-white/5 backdrop-blur-[14px]
-
-               flex flex-col"
-
-        aria-label="Admin navigation">
-
-        <!-- LOGO -->
-
-        <div
-
-            class="h-[74px] min-h-[74px] border-b border-white/5
-
-                   flex items-center justify-between px-7">
-
-            <a href="{% url 'admin_dashboard' %}"
-
-               class="flex items-center gap-3 no-underline">
-
-                <i class="ri-flashlight-fill text-[#00F5D4] text-[24px]"></i>
-
-                <h1 class="text-[22px] font-extrabold tracking-wide text-white">
-
-                    NEO<span class="text-[#00F5D4]">LEARN</span>
-
-                </h1>
-
-            </a>
-
-            <!-- MOBILE CLOSE BUTTON -->
-
-            <button
-
-                type="button"
-
-                id="closeSidebarButton"
-
-                class="lg:hidden w-9 h-9 flex items-center justify-center
-
-                       rounded-xl text-[#94A3B8] hover:text-white
-
-                       hover:bg-white/5 transition"
-
-                aria-label="Close navigation menu">
-
-                <i class="ri-close-line text-[22px]"></i>
-
-            </button>
-
-        </div>
-
-        <!-- NAVIGATION -->
-
-        <div id="adminSidebarScroll" class="flex-1 min-h-0 overflow-y-auto px-4 py-6">
-
-            <p class="text-[#64748B] text-[11px] uppercase tracking-[2px]
-
-                      font-bold mb-5 px-3">
-
-                Admin Panel
-
-            </p>
-
-            <nav class="space-y-2">
-
-                <!-- DASHBOARD -->
-
-                <a
-
-                    href="{% url 'admin_dashboard' %}"
-
-                    class="admin-nav-link {% if request.resolver_match.url_name == 'admin_dashboard' %}active{% endif %}"
-
-                    {% if request.resolver_match.url_name == 'admin_dashboard' %}aria-current="page"{% endif %}>
-
-                    <i class="nav-icon ri-layout-grid-fill text-[18px]"></i>
-
-                    <span class="text-[15px] font-semibold">Dashboard</span>
-
+<body>
+    <!-- Background layers use the same dark/cyan visual language as Student base -->
+    <div class="fixed inset-0 z-0 pointer-events-none bg-[#020817]"></div>
+    <div class="fixed -left-[220px] -top-[260px] z-0 h-[600px] w-[600px] rounded-full bg-cyan-400/10 blur-3xl pointer-events-none"></div>
+    <div class="fixed -bottom-[280px] -right-[220px] z-0 h-[650px] w-[650px] rounded-full bg-violet-500/10 blur-3xl pointer-events-none"></div>
+
+    <!-- Mobile backdrop -->
+    <div id="sidebarBackdrop" class="sidebar-backdrop fixed inset-0 z-40 hidden bg-black/70 backdrop-blur-[2px] lg:hidden" aria-hidden="true"></div>
+
+    <div class="relative z-10 flex h-screen w-full min-w-0 overflow-hidden">
+        <!-- SIDEBAR -->
+        <aside id="adminSidebar" class="admin-sidebar sidebar-bg fixed left-0 top-0 z-50 flex h-screen w-[270px] flex-col border-r border-white/5" aria-label="Admin navigation">
+            <!-- Logo -->
+            <div class="flex h-[80px] shrink-0 items-center justify-between border-b border-white/5 px-5 sm:px-7">
+                <a href="{% url 'admin_dashboard' %}" class="flex min-w-0 items-center gap-3 no-underline" aria-label="NeoLearn Admin Dashboard">
+                    <span class="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-[15px] border border-cyan-400/20 bg-[#071224]">
+                        <span class="absolute inset-0 rounded-[15px] bg-cyan-400/15 blur-lg"></span>
+                        <span class="relative h-[21px] w-[21px] rotate-45 rounded-[5px] border-[3px] border-cyan-400"></span>
+                    </span>
+                    <span class="truncate text-[22px] font-extrabold tracking-[-1px] text-white">Neo<span class="text-cyan-400">Learn</span></span>
                 </a>
+                <button id="closeSidebarButton" type="button" class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-slate-400 transition hover:bg-white/5 hover:text-white lg:hidden" aria-label="Close navigation">
+                    <i class="ri-close-line text-[22px]"></i>
+                </button>
+            </div>
 
-                <!-- STUDENTS -->
+            <!-- Navigation -->
+            <div id="adminSidebarScroll" class="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-4 py-1">
+                <nav class="space-y-0.5" aria-label="Main admin navigation">
+                    <p class="nav-label">Overview</p>
+                    <a href="{% url 'admin_dashboard' %}" class="admin-nav-link {% if request.resolver_match.url_name == 'admin_dashboard' %}active{% endif %}" {% if request.resolver_match.url_name == 'admin_dashboard' %}aria-current="page"{% endif %}>
+                        <i class="nav-icon ri-layout-grid-fill shrink-0 text-[18px]"></i><span class="truncate">Dashboard</span>
+                    </a>
 
-                <a
+                    <p class="nav-label">People Management</p>
+                    <a href="{% url 'admin_students' %}" class="admin-nav-link {% if request.resolver_match.url_name == 'admin_students' %}active{% endif %}" {% if request.resolver_match.url_name == 'admin_students' %}aria-current="page"{% endif %}>
+                        <i class="nav-icon ri-team-line shrink-0 text-[18px]"></i><span class="truncate">Students</span>
+                    </a>
+                    <a href="{% url 'admin_teachers' %}" class="admin-nav-link {% if request.resolver_match.url_name == 'admin_teachers' %}active{% endif %}" {% if request.resolver_match.url_name == 'admin_teachers' %}aria-current="page"{% endif %}>
+                        <i class="nav-icon ri-user-star-line shrink-0 text-[18px]"></i><span class="truncate">Teachers</span>
+                    </a>
 
-                    href="{% url 'admin_students' %}"
+                    <p class="nav-label">Academic Management</p>
+                    <a href="{% url 'admin_batches' %}" class="admin-nav-link {% if 'batch' in request.resolver_match.url_name %}active{% endif %}" {% if 'batch' in request.resolver_match.url_name %}aria-current="page"{% endif %}>
+                        <i class="nav-icon ri-book-open-line shrink-0 text-[18px]"></i><span class="truncate">Batches</span>
+                    </a>
+                    <a href="{% url 'admin_subjects' %}" class="admin-nav-link {% if 'subject' in request.resolver_match.url_name %}active{% endif %}" {% if 'subject' in request.resolver_match.url_name %}aria-current="page"{% endif %}>
+                        <i class="nav-icon ri-stack-line shrink-0 text-[18px]"></i><span class="truncate">Subjects</span>
+                    </a>
 
-                    class="admin-nav-link {% if request.resolver_match.url_name == 'admin_students' %}active{% endif %}"
+                    <p class="nav-label">Class Operations</p>
+                    <a href="{% url 'live_classes:admin_live_schedule' %}" class="admin-nav-link {% if request.resolver_match.url_name == 'admin_live_schedule' %}active{% endif %}" {% if request.resolver_match.url_name == 'admin_live_schedule' %}aria-current="page"{% endif %}>
+                        <i class="nav-icon ri-calendar-schedule-line shrink-0 text-[18px]"></i><span class="truncate">Live Schedule</span>
+                    </a>
+                    <div class="admin-nav-link live-sub-disabled" aria-disabled="true" title="This page is not connected yet.">
+                        <i class="nav-icon ri-calendar-event-line shrink-0 text-[18px]"></i><span class="truncate">Upcoming Classes</span>
+                    </div>
+                    <div class="admin-nav-link live-sub-disabled" aria-disabled="true" title="This page is not connected yet.">
+                        <i class="nav-icon ri-broadcast-line shrink-0 text-[18px]"></i><span class="truncate">Live Now</span>
+                    </div>
+                    <div class="admin-nav-link live-sub-disabled" aria-disabled="true" title="This page is not connected yet.">
+                        <i class="nav-icon ri-calendar-close-line shrink-0 text-[18px]"></i><span class="truncate">Cancellation Requests</span>
+                    </div>
+                    <div class="admin-nav-link live-sub-disabled" aria-disabled="true" title="This page is not connected yet.">
+                        <i class="nav-icon ri-history-line shrink-0 text-[18px]"></i><span class="truncate">All Classes &amp; History</span>
+                    </div>
 
-                    {% if request.resolver_match.url_name == 'admin_students' %}aria-current="page"{% endif %}>
+                    <p class="nav-label">Orders &amp; Payments</p>
+                    <a href="{% url 'admin_orders' %}" class="admin-nav-link {% if 'order' in request.resolver_match.url_name %}active{% endif %}" {% if 'order' in request.resolver_match.url_name %}aria-current="page"{% endif %}>
+                        <i class="nav-icon ri-bank-card-line shrink-0 text-[18px]"></i><span class="truncate">Order Management</span>
+                    </a>
+                    <a href="{% url 'admin_refunds' %}" class="admin-nav-link {% if 'refund' in request.resolver_match.url_name %}active{% endif %}" {% if 'refund' in request.resolver_match.url_name %}aria-current="page"{% endif %}>
+                        <i class="nav-icon ri-refund-2-line shrink-0 text-[18px]"></i><span class="truncate">Refund Management</span>
+                    </a>
+                    <a href="{% url 'admin_coupons' %}" class="admin-nav-link {% if 'coupon' in request.resolver_match.url_name %}active{% endif %}" {% if 'coupon' in request.resolver_match.url_name %}aria-current="page"{% endif %}>
+                        <i class="nav-icon ri-coupon-3-line shrink-0 text-[18px]"></i><span class="truncate">Coupons</span>
+                    </a>
 
-                    <i class="nav-icon ri-team-line text-[18px]"></i>
+                    <p class="nav-label">Reports &amp; Support</p>
+                    <a href="{% url 'admin_analytics' %}" class="admin-nav-link {% if request.resolver_match.url_name == 'admin_analytics' %}active{% endif %}" {% if request.resolver_match.url_name == 'admin_analytics' %}aria-current="page"{% endif %}>
+                        <i class="nav-icon ri-line-chart-line shrink-0 text-[18px]"></i><span class="truncate">Analytics</span>
+                    </a>
+                    <a href="{% url 'admin_faq_videos' %}" class="admin-nav-link {% if 'faq_video' in request.resolver_match.url_name %}active{% endif %}" {% if 'faq_video' in request.resolver_match.url_name %}aria-current="page"{% endif %}>
+                        <i class="nav-icon ri-question-line shrink-0 text-[18px]"></i><span class="truncate">FAQ &amp; Help Videos</span>
+                    </a>
 
-                    <span class="text-[15px] font-medium">Students</span>
+                    <p class="nav-label">Account</p>
+                    <a href="{% url 'admin_settings' %}" class="admin-nav-link {% if request.resolver_match.url_name == 'admin_settings' %}active{% endif %}" {% if request.resolver_match.url_name == 'admin_settings' %}aria-current="page"{% endif %}>
+                        <i class="nav-icon ri-settings-3-line shrink-0 text-[18px]"></i><span class="truncate">Settings</span>
+                    </a>
+                </nav>
+            </div>
 
+            <!-- Logout stays available at the bottom, like the Student sidebar -->
+            <div class="shrink-0 border-t border-white/5 p-4">
+                <a href="{% url 'admin_logout' %}" class="flex h-[50px] items-center justify-center gap-3 rounded-[16px] border border-red-500/10 bg-red-500/10 font-semibold text-red-400 transition hover:bg-red-500/20">
+                    <i class="ri-logout-box-r-line text-[18px]"></i><span>Logout</span>
                 </a>
+            </div>
+        </aside>
 
-                <!-- TEACHERS -->
+        <!-- Main application column -->
+        <div class="flex min-w-0 flex-1 flex-col lg:ml-[270px]">
+            <!-- TOP BAR -->
+            <header class="admin-navbar navbar-bg fixed left-0 right-0 top-0 z-30 flex h-[80px] min-w-0 items-center justify-between gap-3 border-b border-white/5 px-3 sm:px-4 lg:left-[270px] lg:px-7">
+                <div class="flex min-w-0 flex-1 items-center gap-3 sm:gap-4">
+                    <button id="openSidebarButton" type="button" class="mobile-menu-button flex h-10 w-10 shrink-0 items-center justify-center rounded-[13px] border border-white/10 text-slate-300 transition hover:border-cyan-400/30 hover:text-white lg:hidden" aria-label="Open navigation" aria-controls="adminSidebar" aria-expanded="false">
+                        <i class="ri-menu-3-line text-[21px]"></i>
+                    </button>
 
-                <a
-
-                    href="{% url 'admin_teachers' %}"
-
-                    class="admin-nav-link {% if request.resolver_match.url_name == 'admin_teachers' %}active{% endif %}"
-
-                    {% if request.resolver_match.url_name == 'admin_teachers' %}aria-current="page"{% endif %}>
-
-                    <i class="nav-icon ri-team-line text-[18px]"></i>
-
-                    <span class="text-[15px] font-medium">Teachers</span>
-
-                </a>
-
-                <!-- BATCHES -->
-
-                <a
-
-                    href="{% url 'admin_batches' %}"
-
-                    class="admin-nav-link {% if 'batch' in request.resolver_match.url_name %}active{% endif %}"
-
-                    {% if 'batch' in request.resolver_match.url_name %}aria-current="page"{% endif %}>
-
-                    <i class="nav-icon ri-book-open-line text-[18px]"></i>
-
-                    <span class="text-[15px] font-medium">Batches</span>
-
-                </a>
-
-                <!-- SUBJECTS -->
-
-                <a
-
-                    href="{% url 'admin_subjects' %}"
-
-                    class="admin-nav-link {% if 'subject' in request.resolver_match.url_name %}active{% endif %}"
-
-                    {% if 'subject' in request.resolver_match.url_name %}aria-current="page"{% endif %}>
-
-                    <i class="nav-icon ri-stack-line text-[18px]"></i>
-
-                    <span class="text-[15px] font-medium">Subjects</span>
-
-                </a>
-
-                <!-- LIVE CLASSES: EXPANDABLE SUBMENU -->
-                <details
-                    class="admin-live-classes-dropdown"
-                    {% if 'live_class' in request.resolver_match.url_name or 'live_schedule' in request.resolver_match.url_name %}open{% endif %}>
-
-                    <summary
-                        class="admin-nav-link {% if 'live_class' in request.resolver_match.url_name or 'live_schedule' in request.resolver_match.url_name %}active{% endif %}"
-                        aria-label="Live Classes submenu">
-                        <i class="nav-icon ri-live-line text-[18px]"></i>
-                        <span class="text-[15px] font-medium flex-1">Live Classes</span>
-                        <i class="ri-arrow-down-s-line live-classes-arrow"></i>
-                    </summary>
-
-                    <div class="admin-live-classes-submenu">
-                        <a
-                            href="{% url 'live_classes:admin_live_schedule' %}"
-                            class="admin-nav-link admin-live-sub-link {% if request.resolver_match.url_name == 'admin_live_schedule' %}active{% endif %}"
-                            {% if request.resolver_match.url_name == 'admin_live_schedule' %}aria-current="page"{% endif %}>
-                            <i class="nav-icon ri-calendar-schedule-line text-[16px]"></i>
-                            <span>Live Schedule</span>
-                        </a>
-
-                        <div class="admin-nav-link admin-live-sub-link live-sub-disabled" aria-disabled="true" title="This page will be connected after the Live Schedule page.">
-                            <i class="nav-icon ri-calendar-event-line text-[16px]"></i>
-                            <span>Upcoming Classes</span>
+                    <!-- Local quick access to existing Admin pages; no backend search endpoint required -->
+                    <div class="quick-access-wrap" id="quickAccessRoot">
+                        <div class="quick-access-field">
+                            <i class="ri-search-line shrink-0 text-[18px] text-slate-500"></i>
+                            <input id="quickAccessInput" type="search" autocomplete="off" placeholder="Quick access: search admin pages..." aria-label="Quick access to Admin pages" aria-controls="quickAccessPanel" aria-expanded="false">
+                            <kbd class="hidden shrink-0 rounded-md border border-white/10 bg-white/[0.03] px-1.5 py-1 text-[10px] text-slate-500 md:inline-flex">Ctrl K</kbd>
                         </div>
-
-                        <div class="admin-nav-link admin-live-sub-link live-sub-disabled" aria-disabled="true" title="Connect after the Admin live-monitoring view and URL are implemented.">
-                            <i class="nav-icon ri-broadcast-line text-[16px]"></i>
-                            <span>Live Now</span>
-                        </div>
-
-                        <div class="admin-nav-link admin-live-sub-link live-sub-disabled" aria-disabled="true" title="This page will be connected after the Live Schedule page.">
-                            <i class="nav-icon ri-calendar-close-line text-[16px]"></i>
-                            <span>Cancellation Requests</span>
-                        </div>
-
-                        <div class="admin-nav-link admin-live-sub-link live-sub-disabled" aria-disabled="true" title="This page will be connected after the Live Schedule page.">
-                            <i class="nav-icon ri-history-line text-[16px]"></i>
-                            <span>All Classes &amp; History</span>
+                        <div id="quickAccessPanel" class="quick-access-panel" hidden>
+                            <div class="border-b border-white/[0.07] px-4 py-3">
+                                <p class="text-[12px] font-bold text-white">Quick Access</p>
+                                <p class="mt-1 text-[10px] text-slate-500">Jump directly to an Admin section</p>
+                            </div>
+                            <div class="py-2" id="quickAccessLinks">
+                                <a href="{% url 'admin_dashboard' %}" class="quick-access-link" data-quick-link="dashboard overview"><span class="admin-dropdown-icon"><i class="ri-layout-grid-line"></i></span><span class="flex-1">Dashboard</span><i class="ri-arrow-right-s-line text-slate-500"></i></a>
+                                <a href="{% url 'admin_students' %}" class="quick-access-link" data-quick-link="students student management"><span class="admin-dropdown-icon"><i class="ri-team-line"></i></span><span class="flex-1">Students</span><i class="ri-arrow-right-s-line text-slate-500"></i></a>
+                                <a href="{% url 'admin_teachers' %}" class="quick-access-link" data-quick-link="teachers faculty management"><span class="admin-dropdown-icon"><i class="ri-user-star-line"></i></span><span class="flex-1">Teachers</span><i class="ri-arrow-right-s-line text-slate-500"></i></a>
+                                <a href="{% url 'admin_batches' %}" class="quick-access-link" data-quick-link="batches batch management"><span class="admin-dropdown-icon"><i class="ri-book-open-line"></i></span><span class="flex-1">Batches</span><i class="ri-arrow-right-s-line text-slate-500"></i></a>
+                                <a href="{% url 'admin_subjects' %}" class="quick-access-link" data-quick-link="subjects subject management"><span class="admin-dropdown-icon"><i class="ri-stack-line"></i></span><span class="flex-1">Subjects</span><i class="ri-arrow-right-s-line text-slate-500"></i></a>
+                                <a href="{% url 'live_classes:admin_live_schedule' %}" class="quick-access-link" data-quick-link="live classes schedule timetable"><span class="admin-dropdown-icon"><i class="ri-live-line"></i></span><span class="flex-1">Live Schedule</span><i class="ri-arrow-right-s-line text-slate-500"></i></a>
+                                <a href="{% url 'admin_orders' %}" class="quick-access-link" data-quick-link="orders payments"><span class="admin-dropdown-icon"><i class="ri-bank-card-line"></i></span><span class="flex-1">Order Management</span><i class="ri-arrow-right-s-line text-slate-500"></i></a>
+                                <a href="{% url 'admin_refunds' %}" class="quick-access-link" data-quick-link="refund refunds"><span class="admin-dropdown-icon"><i class="ri-refund-2-line"></i></span><span class="flex-1">Refund Management</span><i class="ri-arrow-right-s-line text-slate-500"></i></a>
+                                <a href="{% url 'admin_coupons' %}" class="quick-access-link" data-quick-link="coupon coupons offers"><span class="admin-dropdown-icon"><i class="ri-coupon-3-line"></i></span><span class="flex-1">Coupons</span><i class="ri-arrow-right-s-line text-slate-500"></i></a>
+                                <a href="{% url 'admin_analytics' %}" class="quick-access-link" data-quick-link="analytics reports"><span class="admin-dropdown-icon"><i class="ri-line-chart-line"></i></span><span class="flex-1">Analytics</span><i class="ri-arrow-right-s-line text-slate-500"></i></a>
+                                <a href="{% url 'admin_faq_videos' %}" class="quick-access-link" data-quick-link="faq help support videos"><span class="admin-dropdown-icon"><i class="ri-question-line"></i></span><span class="flex-1">FAQ &amp; Help Videos</span><i class="ri-arrow-right-s-line text-slate-500"></i></a>
+                                <a href="{% url 'admin_settings' %}" class="quick-access-link" data-quick-link="settings profile account"><span class="admin-dropdown-icon"><i class="ri-settings-3-line"></i></span><span class="flex-1">Settings</span><i class="ri-arrow-right-s-line text-slate-500"></i></a>
+                            </div>
+                            <p id="quickAccessEmpty" class="hidden px-4 py-5 text-center text-[12px] text-slate-500">No matching Admin page found.</p>
                         </div>
                     </div>
-                </details>
-
-                <!-- ORDER MANAGEMENT -->
-
-                <a
-
-                    href="{% url 'admin_orders' %}"
-
-                    class="admin-nav-link {% if 'order' in request.resolver_match.url_name %}active{% endif %}"
-
-                    {% if 'order' in request.resolver_match.url_name %}aria-current="page"{% endif %}>
-
-                    <i class="nav-icon ri-bank-card-line text-[18px]"></i>
-
-                    <span class="text-[15px] font-medium">Order Management</span>
-
-                </a>
-
-                <!-- REFUND MANAGEMENT -->
-
-                <a
-
-                    href="{% url 'admin_refunds' %}"
-
-                    class="admin-nav-link {% if 'refund' in request.resolver_match.url_name %}active{% endif %}"
-
-                    {% if 'refund' in request.resolver_match.url_name %}aria-current="page"{% endif %}>
-
-                    <i class="nav-icon ri-refund-2-line text-[18px]"></i>
-
-                    <span class="text-[15px] font-medium">Refund Management</span>
-
-                </a>
-
-                <!-- COUPONS -->
-
-                <a
-
-                    href="{% url 'admin_coupons' %}"
-
-                    class="admin-nav-link {% if 'coupon' in request.resolver_match.url_name %}active{% endif %}"
-
-                    {% if 'coupon' in request.resolver_match.url_name %}aria-current="page"{% endif %}>
-
-                    <i class="nav-icon ri-coupon-3-line text-[18px]"></i>
-
-                    <span class="text-[15px] font-medium">Coupons</span>
-
-                </a>
-
-
-                <!-- FAQ / HELP VIDEOS -->
-
-                <a
-                    href="{% url 'admin_faq_videos' %}"
-                    class="admin-nav-link {% if 'faq_video' in request.resolver_match.url_name %}active{% endif %}"
-                    {% if 'faq_video' in request.resolver_match.url_name %}aria-current="page"{% endif %}>
-
-                    <i class="nav-icon ri-video-line text-[18px]"></i>
-
-                    <span class="text-[15px] font-medium">Faq &amp; Help Videos</span>
-
-                </a>
-
-                <!-- ANALYTICS -->
-                <a
-            href="{% url 'admin_analytics' %}"
-                class="admin-nav-link {% if request.resolver_match.url_name == 'admin_analytics' %}active{% endif %}"
-                {% if request.resolver_match.url_name == 'admin_analytics' %}aria-current="page"{% endif %}>
-            <i class="nav-icon ri-line-chart-line text-[18px]"></i>
-    <span class="text-[15px] font-medium">Analytics</span>
-</a>
-
-                <!-- SETTINGS -->
-                <a
-                    href="{% url 'admin_settings' %}"
-                    class="admin-nav-link {% if request.resolver_match.url_name == 'admin_settings' %}active{% endif %}"
-                    {% if request.resolver_match.url_name == 'admin_settings' %}aria-current="page"{% endif %}
-                    aria-label="Settings (page connection pending)">
-                    <i class="nav-icon ri-settings-3-line text-[18px]"></i>
-                    <span class="text-[15px] font-medium">Settings</span>
-                </a>
-
-            </nav>
-
-        </div>
-
-        <!-- LOGOUT -->
-
-        <div class="shrink-0 p-4 border-t border-white/5">
-
-            <a
-
-                href="{% url 'admin_logout' %}"
-
-                class="flex items-center justify-center gap-3 min-h-[50px]
-
-                       rounded-[16px] border border-red-500/10
-
-                       bg-red-500/10 text-red-400 hover:bg-red-500/20
-
-                       transition duration-300 font-semibold text-[14px]">
-
-                <i class="ri-logout-box-r-line text-[18px]"></i>
-
-                <span>Logout</span>
-
-            </a>
-
-        </div>
-
-    </aside>
-
-    <!-- NAVBAR -->
-
-    <header
-
-        class="admin-navbar fixed top-0 left-[270px] right-0 z-30
-
-               h-[74px] border-b border-white/5
-
-               bg-[#030712]/95 backdrop-blur-[14px]
-
-               flex items-center justify-between gap-4 px-7">
-
-        <!-- LEFT: MOBILE MENU + SEARCH -->
-
-        <div class="flex items-center gap-3 min-w-0 flex-1">
-
-            <!-- MOBILE MENU BUTTON -->
-
-            <button
-
-                type="button"
-
-                id="openSidebarButton"
-
-                class="mobile-menu-button shrink-0 w-10 h-10 rounded-xl
-
-                       border border-white/10 bg-[#0B1120]
-
-                       flex items-center justify-center text-[#94A3B8]
-
-                       hover:text-white hover:border-cyan-400/20 transition
-
-                       lg:hidden"
-
-                aria-label="Open navigation menu"
-
-                aria-controls="adminSidebar"
-
-                aria-expanded="false">
-
-                <i class="ri-menu-line text-[22px]"></i>
-
-            </button>
-
-            <!-- SEARCH -->
-
-            <div class="relative w-full max-w-[360px] min-w-0">
-
-                <input
-
-                    type="text"
-
-                    placeholder="Search anything..."
-
-                    aria-label="Search"
-
-                    class="w-full h-[46px] rounded-[15px]
-
-                           border border-white/10 bg-[#0B1120]
-
-                           pl-11 pr-4 text-[14px] text-white
-
-                           placeholder:text-[#64748B] outline-none
-
-                           focus:border-[#00F5D4] transition">
-
-                <i
-
-                    class="ri-search-line absolute left-4 top-1/2
-
-                           -translate-y-1/2 text-[#64748B] text-[18px]">
-
-                </i>
-
-            </div>
-
-        </div>
-
-        <!-- RIGHT: NOTIFICATION + PROFILE -->
-
-        <div class="flex items-center gap-3 sm:gap-5 shrink-0">
-
-            <!-- NOTIFICATION -->
-
-            <button
-
-                type="button"
-
-                class="relative w-[40px] h-[40px] sm:w-[42px] sm:h-[42px]
-
-                       rounded-full border border-white/10 bg-[#0B1120]
-
-                       flex items-center justify-center text-[#94A3B8]
-
-                       hover:text-white hover:border-cyan-400/20 transition"
-
-                aria-label="Notifications">
-
-                <i class="ri-notification-3-line text-[18px]"></i>
-
-                <span
-
-                    class="absolute top-[9px] right-[10px] w-[7px] h-[7px]
-
-                           rounded-full bg-pink-500
-
-                           shadow-[0_0_8px_#ec4899]">
-
-                </span>
-
-            </button>
-
-            <!-- PROFILE -->
-
-            <div class="flex items-center gap-3 min-w-0">
-
-                <img
-
-                    src="{% static 'admins/images/admin-profile.png' %}"
-
-                    alt="Admin profile"
-
-                    class="w-[38px] h-[38px] sm:w-[42px] sm:h-[42px]
-
-                           shrink-0 rounded-full border border-white/10
-
-                           object-cover">
-
-                <div class="hidden sm:block min-w-0">
-
-                    <h3 class="text-white text-[14px] font-semibold leading-tight">
-
-                        Admin User
-
-                    </h3>
-
-                    <p class="text-[#94A3B8] text-[12px]">
-
-                        Super Admin
-
-                    </p>
-
                 </div>
 
-            </div>
+                <!-- Dynamic Admin profile and account dropdown -->
+                <div class="relative shrink-0" id="adminProfileRoot">
+                    <button type="button" id="adminProfileButton" class="admin-profile-trigger" aria-haspopup="true" aria-expanded="false" aria-controls="adminProfilePanel">
+                        {% with admin_profile=request.user.admin_profile %}
+                            {% if admin_profile.profile_image %}
+                                <img src="{{ admin_profile.profile_image.url }}" alt="Admin profile" class="profile-avatar">
+                            {% else %}
+                                <span class="profile-avatar">{{ admin_profile.full_name|default:request.user.get_full_name|default:request.user.username|default:"A"|slice:":1"|upper }}</span>
+                            {% endif %}
+                            <span class="admin-profile-label hidden min-w-0 text-left sm:block">
+                                <span class="block max-w-[145px] truncate text-[13px] font-semibold leading-tight text-white">{{ admin_profile.full_name|default:request.user.get_full_name|default:request.user.username|default:"Admin" }}</span>
+                                <span class="mt-1 block text-[11px] text-slate-400">{% if request.user.is_superuser %}Super Admin{% elif request.user.is_staff %}Administrator{% else %}Admin{% endif %}</span>
+                            </span>
+                        {% endwith %}
+                        <i class="ri-arrow-down-s-line hidden text-[18px] text-slate-400 sm:block"></i>
+                    </button>
 
-        </div>
-
-    </header>
-
-    <!-- FIXED TOAST MESSAGES -->
-
-    {% if messages %}
-
-        <div class="message-container" id="messageContainer">
-
-            {% for message in messages %}
-
-                <div class="message-item {{ message.tags }}">
-
-                    <div class="message-header">
-
-                        <div class="message-left">
-
-                            <div class="message-icon">
-
-                                <i class="ri-{% if message.tags == 'success' %}check-line{% elif message.tags == 'error' %}close-circle-line{% elif message.tags == 'warning' %}alert-line{% else %}information-line{% endif %}"></i>
-
-                            </div>
-
-                            <div class="message-title">
-
-                                {% if message.tags == "success" %}
-
-                                    Success
-
-                                {% elif message.tags == "error" %}
-
-                                    Error
-
-                                {% elif message.tags == "warning" %}
-
-                                    Warning
-
+                    <div id="adminProfilePanel" class="admin-top-dropdown" hidden role="menu" aria-label="Admin account menu">
+                        <div class="flex items-center gap-3 border-b border-white/[0.08] px-4 py-4">
+                            {% with admin_profile=request.user.admin_profile %}
+                                {% if admin_profile.profile_image %}
+                                    <img src="{{ admin_profile.profile_image.url }}" alt="" class="profile-avatar">
                                 {% else %}
-
-                                    Information
-
+                                    <span class="profile-avatar">{{ admin_profile.full_name|default:request.user.get_full_name|default:request.user.username|default:"A"|slice:":1"|upper }}</span>
                                 {% endif %}
-
-                            </div>
-
+                                <div class="min-w-0 flex-1">
+                                    <p class="truncate text-[13px] font-bold text-white">{{ admin_profile.full_name|default:request.user.get_full_name|default:request.user.username|default:"Admin" }}</p>
+                                    <p class="mt-1 truncate text-[11px] text-slate-400">{{ request.user.email|default:"Admin account" }}</p>
+                                </div>
+                            {% endwith %}
                         </div>
-
-                        <button
-
-                            class="message-close"
-
-                            type="button"
-
-                            aria-label="Close message">
-
-                            <i class="ri-close-line"></i>
-
-                        </button>
-
+                        <div class="py-2">
+                            <a href="{% url 'admin_settings' %}" class="admin-dropdown-row" role="menuitem">
+                                <span class="admin-dropdown-icon"><i class="ri-user-settings-line"></i></span>
+                                <span class="min-w-0 flex-1">
+                                    <span class="block font-semibold">Profile</span>
+                                    <span class="mt-1 block text-[10px] text-slate-500">Your profile and account settings</span>
+                                </span>
+                                <i class="ri-arrow-right-s-line text-slate-500"></i>
+                            </a>
+                            <a href="{% url 'admin_faq_videos' %}" class="admin-dropdown-row" role="menuitem">
+                                <span class="admin-dropdown-icon"><i class="ri-question-line"></i></span>
+                                <span class="min-w-0 flex-1">
+                                    <span class="block font-semibold">Help &amp; Support</span>
+                                    <span class="mt-1 block text-[10px] text-slate-500">Guides and help videos</span>
+                                </span>
+                                <i class="ri-arrow-right-s-line text-slate-500"></i>
+                            </a>
+                        </div>
+                        <div class="border-t border-white/[0.08] p-2">
+                            <a href="{% url 'admin_logout' %}" class="admin-dropdown-row rounded-xl text-rose-300 hover:bg-rose-500/10" role="menuitem">
+                                <span class="admin-dropdown-icon !border-rose-400/20 !bg-rose-400/10 !text-rose-300"><i class="ri-logout-box-r-line"></i></span>
+                                <span class="min-w-0 flex-1">
+                                    <span class="block font-semibold">Logout</span>
+                                    <span class="mt-1 block text-[10px] text-rose-300/60">Sign out of your account</span>
+                                </span>
+                            </a>
+                        </div>
                     </div>
-
-                    <div class="message-text">{{ message }}</div>
-
                 </div>
+            </header>
 
-            {% endfor %}
+            <!-- Toast messages -->
+            {% if messages %}
+                <div class="message-container" id="messageContainer">
+                    {% for message in messages %}
+                        <div class="message-item {{ message.tags }}">
+                            <div class="message-header">
+                                <div class="message-left">
+                                    <div class="message-icon"><i class="ri-{% if message.tags == 'success' %}check-line{% elif message.tags == 'error' %}close-circle-line{% elif message.tags == 'warning' %}alert-line{% else %}information-line{% endif %}"></i></div>
+                                    <div class="message-title">{% if message.tags == "success" %}Success{% elif message.tags == "error" %}Error{% elif message.tags == "warning" %}Warning{% else %}Information{% endif %}</div>
+                                </div>
+                                <button class="message-close" type="button" aria-label="Close message"><i class="ri-close-line"></i></button>
+                            </div>
+                            <div class="message-text">{{ message }}</div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
 
+            <!-- Page content -->
+            <main class="admin-main main-grid mt-[80px] min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto p-4 md:p-6">
+                {% block admin_content %}{% endblock %}
+            </main>
         </div>
-
-    {% endif %}
-
-    <!-- MAIN CONTENT -->
-
-    <main
-
-        class="admin-main ml-[270px] pt-[74px] h-screen
-
-               overflow-y-auto relative z-10">
-
-        <div class="px-4 sm:px-6 pt-4 sm:pt-6 pb-3 sm:pb-4 min-w-0">
-
-            {% block admin_content %}
-
-            {% endblock %}
-
-        </div>
-
-    </main>
-
-    <!-- TOAST MESSAGES JS -->
+    </div>
 
     <script src="{% static 'toast-messages.js' %}"></script>
-
-    <!-- MOBILE SIDEBAR INTERACTION -->
-
     <script>
-
         (function () {
+            const sidebar = document.getElementById('adminSidebar');
+            const backdrop = document.getElementById('sidebarBackdrop');
+            const openButton = document.getElementById('openSidebarButton');
+            const closeButton = document.getElementById('closeSidebarButton');
+            const sidebarScroll = document.getElementById('adminSidebarScroll');
 
-            const sidebar = document.getElementById("adminSidebar");
+            // Keep the active navigation item at a consistent vertical anchor.
+            // This is intentionally different from merely keeping it barely visible:
+            // after every page navigation, the selected link moves to the same
+            // position in the sidebar so the user does not have to scroll manually.
+            function alignSidebarToActivePage() {
+                if (!sidebarScroll) return;
 
-            const backdrop = document.getElementById("sidebarBackdrop");
+                // Prefer the exact current page link. This also handles submenu
+                // pages such as Live Schedule before considering an active parent.
+                const activeNavItem =
+                    sidebarScroll.querySelector('.admin-nav-link[aria-current="page"]') ||
+                    sidebarScroll.querySelector('.admin-nav-link.active');
 
-            const openButton = document.getElementById("openSidebarButton");
-
-            const closeButton = document.getElementById("closeSidebarButton");
-            const sidebarScroll = document.getElementById("adminSidebarScroll");
-            const sidebarScrollStorageKey = "neolearn_admin_sidebar_scroll_top";
-
-            // Restore the previous sidebar position after a page navigation.
-            if (sidebarScroll) {
-                try {
-                    const savedScrollTop = sessionStorage.getItem(sidebarScrollStorageKey);
-                    if (savedScrollTop !== null) {
-                        sidebarScroll.scrollTop = Number(savedScrollTop) || 0;
-                    }
-                } catch (error) {
-                    // Continue normally if browser storage is unavailable.
-                }
-
-                const saveSidebarScroll = function () {
-                    try {
-                        sessionStorage.setItem(sidebarScrollStorageKey, String(sidebarScroll.scrollTop));
-                    } catch (error) {
-                        // Ignore storage restrictions.
-                    }
-                };
-
-                sidebarScroll.addEventListener("scroll", saveSidebarScroll, { passive: true });
-                window.addEventListener("pagehide", saveSidebarScroll);
-                sidebarScroll.querySelectorAll("a[href]").forEach(function (link) {
-                    link.addEventListener("click", saveSidebarScroll);
-                });
-            }
-
-
-            if (!sidebar || !backdrop || !openButton || !closeButton) {
-
-                return;
-
-            }
-
-            function isMobileLayout() {
-
-                return window.innerWidth < 1024;
-
-            }
-
-            function openSidebar() {
-
-                if (!isMobileLayout()) {
-
+                if (!activeNavItem) {
+                    sidebarScroll.scrollTop = 0;
                     return;
-
                 }
 
-                sidebar.classList.add("sidebar-open");
+                const containerRect = sidebarScroll.getBoundingClientRect();
+                const itemRect = activeNavItem.getBoundingClientRect();
+                const visibleHeight = sidebarScroll.clientHeight;
 
-                backdrop.classList.add("backdrop-open");
+                if (!visibleHeight) return;
 
-                document.body.classList.add("sidebar-is-open");
+                // Place the selected link at about 70% of the visible sidebar height.
+                // The section heading and nearby links remain visible above it.
+                const fixedAnchor = visibleHeight * 0.70;
+                const itemTop = itemRect.top - containerRect.top + sidebarScroll.scrollTop;
+                const itemCenter = itemTop + (activeNavItem.offsetHeight / 2);
 
-                openButton.setAttribute("aria-expanded", "true");
+                const maxScroll = Math.max(
+                    0,
+                    sidebarScroll.scrollHeight - visibleHeight
+                );
 
-                backdrop.setAttribute("aria-hidden", "false");
+                const targetScroll = itemCenter - fixedAnchor;
+                const clampedScroll = Math.max(0, Math.min(maxScroll, targetScroll));
 
+                // Use an immediate scroll on page load so the sidebar does not
+                // visibly animate from the previous page's old position.
+                sidebarScroll.scrollTo({
+                    top: clampedScroll,
+                    behavior: 'auto'
+                });
             }
 
-            function closeSidebar() {
-
-                sidebar.classList.remove("sidebar-open");
-
-                backdrop.classList.remove("backdrop-open");
-
-                document.body.classList.remove("sidebar-is-open");
-
-                openButton.setAttribute("aria-expanded", "false");
-
-                backdrop.setAttribute("aria-hidden", "true");
-
-            }
-
-            openButton.addEventListener("click", openSidebar);
-
-            closeButton.addEventListener("click", closeSidebar);
-
-            backdrop.addEventListener("click", closeSidebar);
-
-            document.addEventListener("keydown", function (event) {
-
-                if (event.key === "Escape") {
-
-                    closeSidebar();
-
-                }
-
-            });
-
-            sidebar.querySelectorAll("nav a").forEach(function (link) {
-
-                link.addEventListener("click", function () {
-
-                    if (isMobileLayout()) {
-
-                        closeSidebar();
-
-                    }
-
+            function scheduleSidebarAlignment() {
+                // Wait for the sidebar, fonts and responsive layout to settle.
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(alignSidebarToActivePage);
                 });
 
-            });
+                // Repeat after browser restoration has completed.
+                window.setTimeout(alignSidebarToActivePage, 120);
+                window.setTimeout(alignSidebarToActivePage, 320);
+            }
 
-            window.addEventListener("resize", function () {
+            scheduleSidebarAlignment();
+            window.addEventListener('load', scheduleSidebarAlignment);
+            window.addEventListener('pageshow', scheduleSidebarAlignment);
+            window.addEventListener('resize', scheduleSidebarAlignment);
 
-                if (!isMobileLayout()) {
+            function isMobile() { return window.innerWidth < 1024; }
+            function closeSidebar() {
+                if (!sidebar || !backdrop) return;
+                sidebar.classList.remove('sidebar-open');
+                backdrop.classList.remove('backdrop-open');
+                document.body.classList.remove('sidebar-is-open');
+                if (openButton) openButton.setAttribute('aria-expanded', 'false');
+                backdrop.setAttribute('aria-hidden', 'true');
+            }
+            function openSidebar() {
+                if (!sidebar || !backdrop || !isMobile()) return;
+                sidebar.classList.add('sidebar-open');
+                backdrop.classList.add('backdrop-open');
+                document.body.classList.add('sidebar-is-open');
+                if (openButton) openButton.setAttribute('aria-expanded', 'true');
+                backdrop.setAttribute('aria-hidden', 'false');
+            }
+            if (openButton) openButton.addEventListener('click', openSidebar);
+            if (closeButton) closeButton.addEventListener('click', closeSidebar);
+            if (backdrop) backdrop.addEventListener('click', closeSidebar);
+            if (sidebar) sidebar.querySelectorAll('nav a[href]').forEach(link => link.addEventListener('click', () => { if (isMobile()) closeSidebar(); }));
+            window.addEventListener('resize', () => { if (!isMobile()) closeSidebar(); });
 
+            // Profile dropdown: click, outside click and Escape support.
+            const profileRoot = document.getElementById('adminProfileRoot');
+            const profileButton = document.getElementById('adminProfileButton');
+            const profilePanel = document.getElementById('adminProfilePanel');
+            function setProfileOpen(open) {
+                if (!profileButton || !profilePanel) return;
+                profilePanel.hidden = !open;
+                profileButton.setAttribute('aria-expanded', open ? 'true' : 'false');
+            }
+            if (profileButton && profilePanel) {
+                profileButton.addEventListener('click', event => {
+                    event.stopPropagation();
+                    setProfileOpen(profilePanel.hidden);
+                });
+                document.addEventListener('click', event => {
+                    if (profileRoot && !profileRoot.contains(event.target)) setProfileOpen(false);
+                });
+            }
+
+            // Quick access filters existing admin routes only; no search backend or fake data.
+            const quickRoot = document.getElementById('quickAccessRoot');
+            const quickInput = document.getElementById('quickAccessInput');
+            const quickPanel = document.getElementById('quickAccessPanel');
+            const quickLinks = Array.from(document.querySelectorAll('.quick-access-link'));
+            const quickEmpty = document.getElementById('quickAccessEmpty');
+            function closeQuickAccess() {
+                if (!quickPanel || !quickInput) return;
+                quickPanel.hidden = true;
+                quickInput.setAttribute('aria-expanded', 'false');
+            }
+            function openQuickAccess() {
+                if (!quickPanel || !quickInput) return;
+                quickPanel.hidden = false;
+                quickInput.setAttribute('aria-expanded', 'true');
+                filterQuickAccess();
+            }
+            function filterQuickAccess() {
+                if (!quickInput) return;
+                const query = quickInput.value.trim().toLowerCase();
+                let visibleCount = 0;
+                quickLinks.forEach(link => {
+                    const searchable = (link.dataset.quickLink || link.textContent).toLowerCase();
+                    const visible = !query || searchable.includes(query);
+                    link.hidden = !visible;
+                    if (visible) visibleCount += 1;
+                });
+                if (quickEmpty) quickEmpty.classList.toggle('hidden', visibleCount !== 0);
+            }
+            if (quickInput && quickPanel) {
+                quickInput.addEventListener('focus', openQuickAccess);
+                quickInput.addEventListener('click', openQuickAccess);
+                quickInput.addEventListener('input', () => { openQuickAccess(); filterQuickAccess(); });
+                quickInput.addEventListener('keydown', event => {
+                    if (event.key === 'Escape') { closeQuickAccess(); quickInput.blur(); }
+                    if (event.key === 'Enter') {
+                        const firstVisible = quickLinks.find(link => !link.hidden);
+                        if (firstVisible) window.location.href = firstVisible.href;
+                    }
+                });
+                document.addEventListener('click', event => {
+                    if (quickRoot && !quickRoot.contains(event.target)) closeQuickAccess();
+                });
+            }
+            document.addEventListener('keydown', event => {
+                if (event.key === 'Escape') {
                     closeSidebar();
-
+                    setProfileOpen(false);
+                    closeQuickAccess();
                 }
-
+                if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+                    if (quickInput) {
+                        event.preventDefault();
+                        quickInput.focus();
+                    }
+                }
             });
-
         })();
-
     </script>
-
     {% block extra_js %}{% endblock %}
-
 </body>
-
 </html>

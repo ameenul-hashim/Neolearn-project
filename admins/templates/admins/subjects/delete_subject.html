@@ -6,192 +6,200 @@ Delete Subject
 
 {% block admin_content %}
 
-<div class="flex justify-center items-center">
+<div class="box-border flex min-h-[calc(100vh-180px)] w-full items-center justify-center px-3 py-2">
 
-    <div class="w-full max-w-[500px] overflow-hidden rounded-xl border border-slate-700 bg-[#0F172A] shadow-2xl">
+    <div class="relative w-full max-w-[680px] overflow-hidden rounded-2xl border border-cyan-500/60 bg-gradient-to-br from-[#071d31] via-[#101a35] to-[#21143d] shadow-[0_0_25px_rgba(6,182,212,0.12),0_0_30px_rgba(168,85,247,0.10)]">
+
+        <!-- Subtle gradient glow -->
+        <div class="pointer-events-none absolute -left-20 -top-20 h-40 w-40 rounded-full bg-cyan-500/10 blur-3xl"></div>
+        <div class="pointer-events-none absolute -bottom-20 -right-20 h-40 w-40 rounded-full bg-purple-500/15 blur-3xl"></div>
 
         <!-- Header -->
+        <div class="relative flex items-center justify-between border-b border-white/10 px-5 py-3">
 
-        <div class="flex items-center justify-between border-b border-slate-700 px-5 py-4">
+            <div class="flex items-center gap-3">
 
-            <h2 class="text-xl font-bold text-white">
+                <div class="flex h-10 w-10 items-center justify-center rounded-xl border border-red-400/40 bg-red-500/10">
+                    <svg xmlns="http://www.w3.org/2000/svg"
+                         class="h-5 w-5 text-red-400"
+                         fill="none"
+                         viewBox="0 0 24 24"
+                         stroke="currentColor">
+                        <path stroke-linecap="round"
+                              stroke-linejoin="round"
+                              stroke-width="2"
+                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3m-12 0h18"/>
+                    </svg>
+                </div>
 
-                Delete Subject
+                <div>
+                    <h2 class="text-lg font-bold tracking-tight text-white">
+                        Delete Subject
+                    </h2>
+                    <p class="mt-0.5 text-[11px] text-slate-400">
+                        Review the deletion information before continuing.
+                    </p>
+                </div>
 
-            </h2>
+            </div>
 
-            <a
-                href="{% url 'admin_subjects' %}"
-                class="text-3xl text-gray-400 transition hover:text-white">
-
-                ✕
-
+            <a href="{% if return_to_batch %}{% url 'batch_subjects' subject.batch_id %}{% else %}{% url 'admin_subjects' %}{% endif %}"
+               aria-label="Close"
+               class="flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-xl text-slate-300 transition hover:border-red-400/40 hover:bg-red-500/10 hover:text-red-400">
+                &times;
             </a>
 
         </div>
 
-        <!-- Body -->
-
-        <form method="POST">
-
+        <!-- Confirmation Form -->
+        <form method="POST" class="relative">
             {% csrf_token %}
 
-            <div class="space-y-5 p-6">
+            <input
+                type="hidden"
+                name="return_batch_id"
+                value="{% if return_to_batch %}{{ return_batch_id }}{% endif %}"
+            >
 
-                <!-- Warning Icon -->
+            <div class="space-y-3 px-5 py-4">
 
-                <div class="flex justify-center">
-
-                    <div class="flex h-16 w-16 items-center justify-center rounded-full bg-red-500/10">
-
-                        <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            class="h-9 w-9 text-red-500"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor">
-
-                            <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                stroke-width="2"
-                                d="M12 9v2m0 4h.01M5.07 19h13.86c1.54 0 2.5-1.67 1.73-3L13.73 4c-.77-1.33-2.69-1.33-3.46 0L3.34 16c-.77 1.33.19 3 1.73 3z"/>
-
-                        </svg>
-
-                    </div>
-
-                </div>
-
-                <!-- Title -->
-
+                <!-- Warning -->
                 <div class="text-center">
 
-                    <h3 class="text-2xl font-bold text-white">
+                    <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full border border-red-400/20 bg-red-500/10">
+                        <svg xmlns="http://www.w3.org/2000/svg"
+                             class="h-7 w-7 text-red-400"
+                             fill="none"
+                             viewBox="0 0 24 24"
+                             stroke="currentColor">
+                            <path stroke-linecap="round"
+                                  stroke-linejoin="round"
+                                  stroke-width="2"
+                                  d="M12 9v2m0 4h.01M5.07 19h13.86c1.54 0 2.5-1.67 1.73-3L13.73 4c-.77-1.33-2.69-1.33-3.46 0L3.34 16c-.77 1.33.19 3 1.73 3z"/>
+                        </svg>
+                    </div>
 
+                    <h3 class="mt-2 text-xl font-bold text-white">
                         Are you sure?
-
                     </h3>
 
-                    <p class="mt-3 text-gray-400 leading-7">
-
-                        You are about to permanently delete
-
-                        <span class="font-bold text-white">
-
-                            {{ subject.subject_name }}
-
-                        </span>.
-
-                        This action cannot be undone.
-
+                    <p class="mx-auto mt-1 max-w-lg text-[13px] leading-5 text-slate-300">
+                        You are attempting to permanently delete
+                        <span class="font-bold text-white">{{ subject.subject_name }}</span>
+                        from this batch.
                     </p>
 
                 </div>
 
-                <!-- Confirm Input -->
+                <!-- Deletion Rules -->
+                <div class="rounded-xl border border-red-400/30 bg-red-500/[0.07] p-3">
 
+                    <div class="flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg"
+                             class="h-4 w-4 shrink-0 text-red-400"
+                             fill="none"
+                             viewBox="0 0 24 24"
+                             stroke="currentColor">
+                            <path stroke-linecap="round"
+                                  stroke-linejoin="round"
+                                  stroke-width="2"
+                                  d="M12 8v4m0 4h.01M5.07 19h13.86c1.54 0 2.5-1.67 1.73-3L13.73 4c-.77-1.33-2.69-1.33-3.46 0L3.34 16c-.77 1.33.19 3 1.73 3z"/>
+                        </svg>
+
+                        <h4 class="text-xs font-bold text-red-300">
+                            Subject Deletion Rules
+                        </h4>
+                    </div>
+
+                    <div class="mt-2 space-y-2 text-[11px] leading-4 text-slate-300">
+
+                        <div class="flex gap-2">
+                            <span class="text-red-400">●</span>
+                            <p>
+                                <span class="font-semibold text-white">Subjects containing chapters cannot be deleted.</span>
+                                Delete all chapters under this subject first.
+                            </p>
+                        </div>
+
+                        <div class="flex gap-2">
+                            <span class="text-red-400">●</span>
+                            <p>
+                                <span class="font-semibold text-white">Want to hide this subject instead?</span>
+                                Change its status to
+                                <span class="font-bold text-amber-300">Draft</span>
+                                from the Edit Subject page.
+                            </p>
+                        </div>
+
+                        <div class="flex gap-2">
+                            <span class="text-red-400">●</span>
+                            <p>Permanent deletion cannot be undone.</p>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- Confirmation Input -->
                 <div>
-
-                    <label class="mb-2 block text-xs font-bold uppercase tracking-wider text-gray-400">
-
+                    <label for="confirm_name"
+                           class="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-slate-300">
                         Type the subject name to confirm
-
                     </label>
 
                     <input
+                        id="confirm_name"
                         type="text"
                         name="confirm_name"
                         placeholder="{{ subject.subject_name }}"
                         autocomplete="off"
-                        class="w-full rounded-xl border border-slate-700 bg-slate-800 px-4 py-3 text-white outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-500">
+                        class="w-full rounded-xl border border-slate-500/50 bg-slate-800/80 px-4 py-2.5 text-sm text-white placeholder-slate-400 outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20">
 
-                    <p class="mt-2 text-xs text-gray-500">
-
+                    <p class="mt-1.5 text-[11px] text-slate-400">
                         Enter
-
-                        <span class="font-semibold text-red-400">
-
-                            {{ subject.subject_name }}
-
-                        </span>
-
+                        <span class="font-bold text-red-400">{{ subject.subject_name }}</span>
                         exactly as shown above.
-
                     </p>
-
-                </div>
-                                <!-- Danger Box -->
-
-                <div class="rounded-xl border border-red-900 bg-red-500/10 p-4">
-
-                    <ul class="space-y-1 text-sm text-red-300">
-
-                        <li>
-
-                            • This action cannot be undone.
-
-                        </li>
-
-                        <li>
-
-                            • The subject will be permanently deleted.
-
-                        </li>
-
-                        <li>
-
-                            • Future chapters, lessons and resources linked to this subject may no longer be available.
-
-                        </li>
-
-                    </ul>
-
                 </div>
 
-                <!-- Messages -->
+            </div>
 
-                {% if messages %}
+            <!-- Footer -->
+            <div class="relative flex items-center justify-between gap-3 border-t border-white/10 bg-black/10 px-5 py-3">
 
-                    {% for message in messages %}
+                <p class="text-[10px] text-slate-400">
+                    Deletion is allowed only when no chapters exist.
+                </p>
 
-                        <div class="{% if message.tags == 'success' %}success-box{% else %}error-box{% endif %}">
+                <div class="flex shrink-0 items-center gap-2">
 
-                            {{ message }}
-
-                        </div>
-
-                    {% endfor %}
-
-                {% endif %}
-
-                <!-- Action Buttons -->
-
-                <div class="flex justify-end gap-3 pt-2">
-
-                    <a
-                        href="{% url 'admin_subjects' %}"
-                        class="rounded-xl border border-slate-700 bg-slate-800 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700">
-
+                    <a href="{% if return_to_batch %}{% url 'batch_subjects' subject.batch_id %}{% else %}{% url 'admin_subjects' %}{% endif %}"
+                       class="rounded-xl border border-slate-500/40 bg-slate-700/40 px-4 py-2 text-xs font-semibold text-white transition hover:bg-slate-600/60">
                         Cancel
-
                     </a>
 
                     <button
                         type="submit"
-                        class="rounded-xl bg-red-500 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-red-400">
-
-                        Delete Permanently
-
+                        class="rounded-xl bg-gradient-to-r from-red-500 to-rose-600 px-4 py-2 text-xs font-bold text-white shadow-lg shadow-red-900/20 transition hover:from-red-400 hover:to-rose-500 focus:outline-none focus:ring-2 focus:ring-red-400/40">
+                        <span class="inline-flex items-center gap-1.5">
+                            <svg xmlns="http://www.w3.org/2000/svg"
+                                 class="h-3.5 w-3.5"
+                                 fill="none"
+                                 viewBox="0 0 24 24"
+                                 stroke="currentColor">
+                                <path stroke-linecap="round"
+                                      stroke-linejoin="round"
+                                      stroke-width="2"
+                                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3m-12 0h18"/>
+                            </svg>
+                            Delete Permanently
+                        </span>
                     </button>
 
                 </div>
-                            </div>
+            </div>
 
         </form>
-
     </div>
-
 </div>
 
 {% endblock %}
