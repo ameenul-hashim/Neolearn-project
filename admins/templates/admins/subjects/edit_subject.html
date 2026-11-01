@@ -1,229 +1,339 @@
 {% extends "admins/admin_base.html" %}
 
-{% block title %}
-Edit Subject
-{% endblock %}
+{% block title %}Edit Subject{% endblock %}
 
 {% block admin_content %}
 
-<div class="flex justify-center">
+<style>
+    .subject-edit-stage {
+        min-height: calc(100vh - 180px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 12px 18px;
+        overflow: hidden;
+    }
+    .subject-edit-card {
+        width: min(100%, 970px);
+        max-height: calc(100vh - 210px);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        border: 1px solid rgba(34, 211, 238, .48);
+        border-radius: 20px;
+        background:
+            radial-gradient(ellipse at 0% 15%, rgba(6, 182, 212, .13), transparent 38%),
+            radial-gradient(ellipse at 100% 90%, rgba(168, 85, 247, .15), transparent 42%),
+            linear-gradient(115deg, rgba(12, 38, 67, .98), rgba(17, 28, 61, .98) 58%, rgba(32, 25, 67, .98));
+        box-shadow: 0 18px 55px rgba(0, 0, 0, .34), 0 0 28px rgba(34, 211, 238, .08);
+    }
+    .subject-edit-header {
+        min-height: 76px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+        padding: 12px 24px;
+        border-bottom: 1px solid rgba(148, 163, 184, .22);
+    }
+    .subject-edit-body { padding: 15px 24px 14px; overflow: hidden; }
+    .subject-edit-label {
+        display: block;
+        margin-bottom: 7px;
+        color: #dbeafe;
+        font-size: 12px;
+        line-height: 1.2;
+        font-weight: 800;
+        letter-spacing: .045em;
+        text-transform: uppercase;
+    }
+    .subject-edit-control {
+        width: 100%;
+        height: 43px;
+        border: 1px solid rgba(148, 163, 184, .30);
+        border-radius: 12px;
+        background: rgba(148, 163, 184, .13);
+        padding: 0 14px;
+        color: #f8fafc;
+        font-size: 14px;
+        outline: none;
+        transition: border-color .18s ease, box-shadow .18s ease, background .18s ease;
+    }
+    .subject-edit-control:focus {
+        border-color: #22d3ee;
+        background: rgba(148, 163, 184, .18);
+        box-shadow: 0 0 0 3px rgba(34, 211, 238, .12);
+    }
+    .subject-edit-control option { color: #f8fafc; background: #17243b; }
+    .subject-edit-description {
+        height: 72px;
+        min-height: 72px;
+        resize: none;
+        padding-top: 11px;
+        padding-bottom: 9px;
+        line-height: 1.45;
+    }
+    .subject-thumbnail-frame {
+        height: 128px;
+        width: 100%;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid rgba(103, 232, 249, .35);
+        border-radius: 13px;
+        background: #071426;
+    }
+    .subject-thumbnail-frame img {
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: center;
+    }
+    .subject-thumbnail-empty { color: #94a3b8; font-size: 13px; }
+    .subject-upload-zone {
+        height: 128px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px dashed rgba(103, 232, 249, .58);
+        border-radius: 13px;
+        background: linear-gradient(120deg, rgba(8, 145, 178, .10), rgba(124, 58, 237, .13));
+        transition: border-color .18s ease, background .18s ease;
+    }
+    .subject-upload-zone:hover {
+        border-color: #22d3ee;
+        background: linear-gradient(120deg, rgba(8, 145, 178, .17), rgba(124, 58, 237, .18));
+    }
+    .subject-edit-footer {
+        min-height: 64px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+        padding: 10px 24px;
+        border-top: 1px solid rgba(148, 163, 184, .22);
+        background: rgba(2, 8, 23, .16);
+    }
+    .subject-edit-button {
+        min-width: 116px;
+        height: 40px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 7px;
+        border-radius: 11px;
+        padding: 0 17px;
+        font-size: 13px;
+        font-weight: 800;
+        transition: transform .18s ease, filter .18s ease, background .18s ease;
+    }
+    .subject-edit-button:hover { transform: translateY(-1px); filter: brightness(1.08); }
 
-    <div class="w-full max-w-[470px] rounded-xl border border-slate-600 bg-[#0F172A] shadow-xl">
+    @media (max-width: 760px) {
+        .subject-edit-stage { min-height: auto; padding: 10px; overflow: visible; }
+        .subject-edit-card { max-height: none; overflow: visible; }
+        .subject-edit-header, .subject-edit-body, .subject-edit-footer {
+            padding-left: 15px; padding-right: 15px;
+        }
+        .subject-edit-body { overflow: visible; }
+        .subject-edit-footer { flex-wrap: wrap; }
+    }
+    @media (max-height: 760px) and (min-width: 761px) {
+        .subject-edit-stage { min-height: calc(100vh - 150px); padding-top: 6px; padding-bottom: 6px; }
+        .subject-edit-card { max-height: calc(100vh - 165px); }
+        .subject-edit-header { min-height: 66px; padding-top: 8px; padding-bottom: 8px; }
+        .subject-edit-body { padding-top: 10px; padding-bottom: 9px; }
+        .subject-thumbnail-frame, .subject-upload-zone { height: 108px; }
+        .subject-edit-description { height: 62px; min-height: 62px; }
+        .subject-edit-footer { min-height: 56px; padding-top: 7px; padding-bottom: 7px; }
+    }
+</style>
 
-        <!-- Header -->
+<div class="subject-edit-stage">
+    <section class="subject-edit-card">
 
-        <div class="flex items-center justify-between border-b border-slate-600 px-5 py-4">
-
-            <h2 class="text-lg font-semibold text-white">
-
-                Edit Subject
-
-            </h2>
-
-            <a
-                href="{% url 'admin_subjects' %}"
-                class="text-xl text-gray-400 transition hover:text-white">
-
-                ✕
-
-            </a>
-
+        <div class="subject-edit-header">
+            <div class="flex min-w-0 items-center gap-3">
+                <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-cyan-400/40 bg-cyan-400/10 text-cyan-300">
+                    <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                        <path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"/>
+                    </svg>
+                </div>
+                <div class="min-w-0">
+                    <h1 class="text-xl font-extrabold leading-tight text-white">Edit Subject</h1>
+                    <p class="mt-1 text-xs text-slate-300">Update subject details, thumbnail and publishing status.</p>
+                </div>
+            </div>
+            <a href="{% if return_to_batch %}{% url 'batch_subjects' subject.batch_id %}{% else %}{% url 'admin_subjects' %}{% endif %}" aria-label="Close"
+               class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-500/50 bg-slate-700/40 text-xl text-slate-200 transition hover:border-cyan-400 hover:bg-cyan-400/10 hover:text-white">&times;</a>
         </div>
 
-        <div class="p-5">
+        <form method="POST" enctype="multipart/form-data" class="flex min-h-0 flex-1 flex-col">
+            {% csrf_token %}
+            <input
+                type="hidden"
+                name="return_batch_id"
+                value="{% if return_to_batch %}{{ return_batch_id|default:subject.batch_id }}{% endif %}"
+            >
 
-            <form
-                method="POST"
-                enctype="multipart/form-data"
-                class="space-y-4">
-
-                {% csrf_token %}
-
-                <!-- Subject Name -->
-
-                <div>
-
-                    <label class="mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-400">
-
-                        Subject Name
-
-                    </label>
-
-                    <input
-                        type="text"
-                        name="subject_name"
-                        value="{{ subject.subject_name }}"
-                        placeholder="e.g. Physics"
-                        class="w-full rounded-lg border border-slate-700 bg-slate-800 px-4 py-2.5 text-white placeholder-gray-500 outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500">
-
+            <div class="subject-edit-body flex-1">
+                <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <div>
+                        <label for="subject_name" class="subject-edit-label">Subject Name <span class="text-rose-400">*</span></label>
+                        <input id="subject_name" type="text" name="subject_name"
+                               value="{{ subject.subject_name }}" placeholder="e.g. Physics" required
+                               class="subject-edit-control">
+                    </div>
+                    <div>
+                        <label for="batch" class="subject-edit-label">Batch <span class="text-rose-400">*</span></label>
+                        <select id="batch" name="batch" required class="subject-edit-control">
+                            {% for batch in batches %}
+                                <option value="{{ batch.id }}" {% if subject.batch.id == batch.id %}selected{% endif %}>{{ batch.batch_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
                 </div>
 
-                <!-- Batch -->
+                <div class="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <div class="min-w-0">
+                        <div class="mb-2 flex items-center justify-between">
+                            <label class="subject-edit-label mb-0">Current Thumbnail</label>
+                            <span class="rounded-full border border-cyan-400/30 bg-cyan-400/10 px-2.5 py-1 text-[10px] font-bold text-cyan-300">16:9</span>
+                        </div>
+                        <div class="subject-thumbnail-frame">
+                            {% if subject.subject_thumbnail %}
+                                <img id="subjectThumbnailPreview" src="{{ subject.subject_thumbnail.url }}" alt="{{ subject.subject_name }} thumbnail">
+                            {% else %}
+                                <div id="subjectThumbnailEmpty" class="subject-thumbnail-empty">No thumbnail uploaded</div>
+                                <img id="subjectThumbnailPreview" src="" alt="{{ subject.subject_name }} thumbnail" class="hidden">
+                            {% endif %}
+                        </div>
+                    </div>
 
-                <div>
-
-                    <label class="mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-400">
-
-                        Batch
-
-                    </label>
-
-                    <select
-                        name="batch"
-                        class="w-full rounded-lg border border-slate-700 bg-slate-800 px-4 py-2.5 text-white outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500">
-
-                        {% for batch in batches %}
-
-                            <option
-                                value="{{ batch.id }}"
-                                {% if subject.batch.id == batch.id %}selected{% endif %}>
-
-                                {{ batch.batch_name }}
-
-                            </option>
-
-                        {% endfor %}
-
-                    </select>
-
+                    <div class="min-w-0">
+                        <label for="subject_thumbnail" class="subject-edit-label">Replace Thumbnail</label>
+                        <label for="subject_thumbnail" id="subjectUploadZone" class="subject-upload-zone relative cursor-pointer overflow-hidden px-4 text-center">
+                            <span id="subjectUploadPrompt" class="flex flex-col items-center">
+                                <svg class="mb-2 h-6 w-6 text-cyan-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                                    <path d="M12 16V4m0 0L7.5 8.5M12 4l4.5 4.5"/><path d="M4 15.5v3A1.5 1.5 0 0 0 5.5 20h13a1.5 1.5 0 0 0 1.5-1.5v-3"/>
+                                </svg>
+                                <span class="text-sm font-bold text-white"><span class="text-cyan-300">Choose a file</span> or drag &amp; drop</span>
+                                <span class="mt-1 text-[10px] leading-4 text-slate-300">JPG, PNG or WEBP · Max 5 MB</span>
+                                <span class="text-[10px] leading-4 text-slate-400">Recommended: 1280 × 720 (16:9)</span>
+                                <span class="mt-1 text-[10px] text-cyan-200">Select an image to preview it here</span>
+                            </span>
+                            <img id="subjectReplacementPreview" class="absolute inset-0 hidden h-full w-full object-cover" alt="New thumbnail preview">
+                            <span id="subjectReplacementName" class="absolute inset-x-0 bottom-0 hidden truncate bg-slate-950/80 px-3 py-1.5 text-left text-[10px] font-medium text-cyan-100"></span>
+                        </label>
+                        <input id="subject_thumbnail" type="file" name="subject_thumbnail"
+                                class="hidden">
+                        <p class="mt-1.5 text-[11px] text-slate-400">Leave empty to keep the current thumbnail.</p>
+                    </div>
                 </div>
 
-                                <!-- Current Thumbnail -->
-
-                <div>
-
-                    <label class="mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-400">
-
-                        Current Thumbnail
-
-                    </label>
-
-                    <img
-                        src="{{ subject.subject_thumbnail.url }}"
-                        alt="{{ subject.subject_name }}"
-                        class="h-32 w-full rounded-lg border border-slate-700 object-cover">
-
+                <div class="mt-4">
+                    <label for="subject_description" class="subject-edit-label">Description</label>
+                    <textarea id="subject_description" name="subject_description" rows="2"
+                              placeholder="Brief description..."
+                              class="subject-edit-control subject-edit-description">{{ subject.subject_description }}</textarea>
                 </div>
 
-
-
-                <!-- Replace Thumbnail -->
-
-                <div>
-
-                    <label class="mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-400">
-
-                        Replace Thumbnail
-
-                    </label>
-
-                    <input
-                        type="file"
-                        name="subject_thumbnail"
-                        accept="image/*"
-                        class="block w-full rounded-lg border border-slate-700 bg-slate-800 text-sm text-gray-300
-                               file:mr-3
-                               file:border-0
-                               file:rounded-lg
-                               file:bg-cyan-500
-                               file:px-4
-                               file:py-2
-                               file:font-medium
-                               file:text-slate-900
-                               hover:file:bg-cyan-400">
-
-                    <p class="mt-2 text-xs text-gray-500">
-
-                        Leave empty to keep the current thumbnail.
-
-                    </p>
-
+                <div class="mt-4 grid grid-cols-1 items-end gap-4 md:grid-cols-[.9fr_1.1fr]">
+                    <div>
+                        <label for="subject_status" class="subject-edit-label">Status <span class="text-rose-400">*</span></label>
+                        <select id="subject_status" name="subject_status" required class="subject-edit-control">
+                            <option value="draft" {% if subject.subject_status == "draft" %}selected{% endif %}>Draft</option>
+                            <option value="published" {% if subject.subject_status == "published" %}selected{% endif %}>Published</option>
+                        </select>
+                    </div>
+                    <div class="flex min-h-[43px] items-center gap-2.5 rounded-xl border border-slate-500/30 bg-white/[0.035] px-3 py-2 text-[11px] leading-4 text-slate-300">
+                        <svg class="h-5 w-5 shrink-0 text-cyan-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                            <circle cx="12" cy="12" r="9"/><path d="M12 11v5m0-8h.01"/>
+                        </svg>
+                        <span>Review the subject information before saving your changes.</span>
+                    </div>
                 </div>
+            </div>
 
-
-
-                <!-- Description -->
-
-                <div>
-
-                    <label class="mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-400">
-
-                        Description
-
-                    </label>
-
-                    <textarea
-                        name="subject_description"
-                        rows="4"
-                        placeholder="Brief description..."
-                        class="w-full resize-none rounded-lg border border-slate-700 bg-slate-800 px-4 py-2.5 text-white placeholder-gray-500 outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500">{{ subject.subject_description }}</textarea>
-
-                </div>
-
-
-
-                <!-- Status -->
-
-                <div>
-
-                    <label class="mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-400">
-
-                        Status
-
-                    </label>
-
-                    <select
-                        name="subject_status"
-                        class="w-full rounded-lg border border-slate-700 bg-slate-800 px-4 py-2.5 text-white outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500">
-
-                        <option
-                            value="draft"
-                            {% if subject.subject_status == "draft" %}selected{% endif %}>
-
-                            Draft
-
-                        </option>
-
-                        <option
-                            value="published"
-                            {% if subject.subject_status == "published" %}selected{% endif %}>
-
-                            Published
-
-                        </option>
-
-                    </select>
-
-                </div>
-
-                                <!-- Action Buttons -->
-
-                <div class="flex justify-end gap-3 pt-2">
-
-                    <a
-                        href="{% url 'admin_subjects' %}"
-                        class="rounded-lg border border-slate-700 bg-slate-800 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-slate-700">
-
-                        Cancel
-
+            <div class="subject-edit-footer">
+                <p class="text-[11px] text-slate-400">Changes are saved when you select Update Subject.</p>
+                <div class="flex shrink-0 items-center justify-end gap-2.5">
+                    <a href="{% if return_to_batch %}{% url 'batch_subjects' subject.batch_id %}{% else %}{% url 'admin_subjects' %}{% endif %}"
+                       class="subject-edit-button border border-slate-500/50 bg-slate-700/40 text-slate-100 hover:bg-slate-600/50">
+                        <span aria-hidden="true">&times;</span> Cancel
                     </a>
-
-                    <button
-                        type="submit"
-                        class="rounded-lg bg-cyan-500 px-5 py-2.5 text-sm font-semibold text-slate-900 transition hover:bg-cyan-400">
-
-                        Update Subject
-
+                    <button type="submit"
+                            class="subject-edit-button bg-gradient-to-r from-cyan-400 via-cyan-300 to-violet-400 text-slate-950 shadow-lg shadow-cyan-950/25 hover:brightness-110">
+                        <span aria-hidden="true">✓</span> Update Subject
                     </button>
-
                 </div>
-
-            </form>
-
-        </div>
-
-    </div>
-
+            </div>
+        </form>
+    </section>
 </div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const fileInput = document.getElementById("subject_thumbnail");
+    const replacementPreview = document.getElementById("subjectReplacementPreview");
+    const uploadPrompt = document.getElementById("subjectUploadPrompt");
+    const replacementName = document.getElementById("subjectReplacementName");
+
+    if (!fileInput || !replacementPreview || !uploadPrompt) return;
+
+    let replacementPreviewUrl = null;
+
+    function releasePreviewUrl() {
+        if (replacementPreviewUrl) {
+            URL.revokeObjectURL(replacementPreviewUrl);
+            replacementPreviewUrl = null;
+        }
+    }
+
+    function resetPreviewOnly() {
+        releasePreviewUrl();
+        replacementPreview.removeAttribute("src");
+        replacementPreview.classList.add("hidden");
+        uploadPrompt.classList.remove("hidden");
+    }
+
+    fileInput.addEventListener("change", function () {
+        const file = this.files && this.files[0];
+
+        if (!file) {
+            resetPreviewOnly();
+            replacementName.textContent = "";
+            replacementName.classList.add("hidden");
+            return;
+        }
+
+        // Do not reject/reset files in JavaScript. Keep the file selected
+        // so Django receives PDFs/unsupported formats and returns its
+        // backend validation message on this form.
+        replacementName.textContent = file.name + " · selected";
+        replacementName.classList.remove("hidden");
+
+        resetPreviewOnly();
+        replacementPreviewUrl = URL.createObjectURL(file);
+        replacementPreview.onload = function () {
+            replacementPreview.classList.remove("hidden");
+            uploadPrompt.classList.add("hidden");
+        };
+
+        replacementPreview.onerror = function () {
+            // Unsupported files cannot be previewed, but remain selected.
+            resetPreviewOnly();
+            replacementName.textContent = file.name + " · format will be checked when submitted";
+            replacementName.classList.remove("hidden");
+        };
+
+        replacementPreview.src = replacementPreviewUrl;
+    });
+
+    window.addEventListener("beforeunload", releasePreviewUrl);
+});
+</script>
 
 {% endblock %}

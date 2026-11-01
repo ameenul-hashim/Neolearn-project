@@ -37,7 +37,7 @@
         </div>
 
         <a
-            href="{% url 'create_subject' %}?batch={{ batch.id }}"
+            href="{% url 'create_subject' %}?batch={{ batch.id }}&return_batch_id={{ batch.id }}"
             class="inline-flex items-center gap-2 rounded-xl bg-cyan-500 px-6 py-3 font-semibold text-slate-900 shadow-lg shadow-cyan-500/20 transition hover:bg-cyan-400">
 
             <svg
@@ -316,7 +316,7 @@
                         </a>
 
                         <a
-                            href="{% url 'delete_subject' subject.id %}"
+                            href="{% url 'delete_subject' subject.id %}?return_batch_id={{ batch.id }}"
                             class="text-slate-400 transition hover:text-red-500"
                             title="Delete Subject">
 
@@ -386,7 +386,7 @@
                 </p>
 
                 <a
-                    href="{% url 'create_subject' %}?batch={{ batch.id }}"
+                    href="{% url 'create_subject' %}?batch={{ batch.id }}&return_batch_id={{ batch.id }}"
                     class="mt-8 inline-flex items-center gap-2 rounded-xl bg-cyan-500 px-6 py-3 font-semibold text-slate-900 shadow-lg shadow-cyan-500/20 transition hover:bg-cyan-400">
 
                     <svg

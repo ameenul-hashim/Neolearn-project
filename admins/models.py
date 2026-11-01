@@ -790,39 +790,41 @@ class Batch(models.Model):
 
 class Subject(models.Model):
 
+    STATUS_CHOICES = [
+        ('draft', 'Draft'),
+        ('published', 'Published'),
+    ]
 
+    batch = models.ForeignKey(
+        Batch,
+        on_delete=models.CASCADE,
+        related_name='subjects'
+    )
 
-    STATUS_CHOICES = [('draft', 'Draft'),('published', 'Published'),('archived', 'Archived')]
+    subject_name = models.CharField(max_length=100)
 
-    batch = models.ForeignKey(Batch,on_delete=models.CASCADE,related_name='subjects')
-
-    subject_name = models.CharField(max_length=200)
-
-    subject_description = models.TextField()
+    subject_description = models.CharField(max_length=250)
 
     subject_thumbnail = CloudinaryField('subject_thumbnail')
 
-    subject_status = models.CharField(max_length=20,choices=STATUS_CHOICES,default='draft')
+    subject_status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='draft'
+    )
 
     created_at = models.DateTimeField(auto_now_add=True)
 
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-
         ordering = ['-created_at']
-
         unique_together = ['batch', 'subject_name']
-
         verbose_name = 'Subject'
-
         verbose_name_plural = 'Subjects'
 
     def __str__(self):
-
         return f"{self.batch.batch_name} - {self.subject_name}"
-
-
 
 class Teacher(models.Model):
 
