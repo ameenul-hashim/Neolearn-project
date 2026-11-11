@@ -1,702 +1,469 @@
 {% extends "students/base_student.html" %}
-
 {% load static %}
 
-{% block title %}
-    {{ batch.batch_name }} | My Learning | NeoLearn
-{% endblock %}
+{% block title %}Subjects | {{ batch.batch_name }} | My Learning{% endblock %}
 
 {% block student_content %}
 
-<!-- ============================================================
-     BATCH SUBJECTS
-     ============================================================ -->
-
 <div class="w-full max-w-[1800px] mx-auto">
 
-    <!-- ========================================================
-         PAGE HEADER
-         ======================================================== -->
+    <!-- BREADCRUMB: My Learning > Batch Name -->
+    <nav aria-label="Breadcrumb" class="mb-5 flex flex-wrap items-center gap-2 text-[12px]">
+        <a href="{% url 'my_learning' %}"
+           class="font-semibold text-slate-400 hover:text-cyan-400 transition-colors">
+            <i class="ri-home-5-line mr-1"></i> My Learning
+        </a>
 
-    <div class="mb-7">
+        <i class="ri-arrow-right-s-line text-slate-600 text-[16px]"></i>
 
-        <div class="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+        <span class="max-w-[260px] truncate font-semibold text-cyan-400">
+            {{ batch.batch_name }}
+        </span>
+    </nav>
 
-            <!-- LEFT -->
-
-            <div>
-
-                <div class="flex items-center gap-3 mb-2">
-
-                    <div
-                        class="
-                            w-10
-                            h-10
-                            rounded-[14px]
-                            bg-cyan-400/10
-                            border
-                            border-cyan-400/20
-                            flex
-                            items-center
-                            justify-center
-                            text-cyan-400
-                        "
-                    >
-                        <i class="ri-book-open-line text-[20px]"></i>
-                    </div>
-
-                    <div>
-
-                        <p
-                            class="
-                                text-[11px]
-                                uppercase
-                                tracking-[1.5px]
-                                text-cyan-400
-                                font-semibold
-                            "
-                        >
-                            My Learning
-                        </p>
-
-                        <h1
-                            class="
-                                text-[25px]
-                                sm:text-[28px]
-                                font-extrabold
-                                tracking-[-0.8px]
-                                text-white
-                            "
-                        >
-                            {{ batch.batch_name }}
-                        </h1>
-
-                    </div>
-
-                </div>
-
-                <p
-                    class="
-                        text-[13px]
-                        sm:text-[14px]
-                        text-[#94A3B8]
-                        max-w-[700px]
-                        leading-6
-                    "
-                >
-                    Choose a subject to continue your learning journey.
-                </p>
-
-            </div>
-
-
-            <!-- RIGHT -->
-
-            <a
-                href="{% url 'my_learning' %}"
-                class="
-                    inline-flex
-                    items-center
-                    justify-center
-                    gap-2
-                    self-start
-                    sm:self-auto
-                    px-4
-                    h-[40px]
-                    rounded-full
-                    bg-cyan-400/10
-                    border
-                    border-cyan-400/20
-                    text-cyan-300
-                    text-[12px]
-                    font-semibold
-                    hover:bg-cyan-400/15
-                    hover:border-cyan-400/30
-                    transition-all
-                "
-            >
-                <i class="ri-arrow-left-line text-[15px]"></i>
-                <span>My Learning</span>
-            </a>
-
+    <!-- PAGE HEADER -->
+    <div class="mb-7 flex items-center gap-3">
+        <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] border border-cyan-400/20 bg-cyan-400/10 text-cyan-400">
+            <i class="ri-book-open-line text-[20px]"></i>
         </div>
 
-    </div>
-
-
-    <!-- ========================================================
-         BATCH INFORMATION
-         ======================================================== -->
-
-    <div
-        class="
-            mb-7
-            rounded-[20px]
-            border
-            border-white/8
-            bg-[#071224]
-            overflow-hidden
-        "
-    >
-
-        <div
-            class="
-                flex
-                flex-col
-                lg:flex-row
-                lg:items-center
-                gap-5
-                p-5
-                sm:p-6
-            "
-        >
-
-            <!-- BATCH THUMBNAIL -->
-
-            <div
-                class="
-                    relative
-                    w-full
-                    lg:w-[220px]
-                    shrink-0
-                    aspect-[16/9]
-                    lg:aspect-auto
-                    lg:h-[124px]
-                    overflow-hidden
-                    rounded-[15px]
-                    bg-[#0B172A]
-                    border
-                    border-white/5
-                "
-            >
-
-                {% if batch.batch_thumbnail %}
-
-                    <img
-                        src="{{ batch.batch_thumbnail.url }}"
-                        alt="{{ batch.batch_name }}"
-                        loading="lazy"
-                        class="
-                            w-full
-                            h-full
-                            object-cover
-                        "
-                    >
-
-                {% else %}
-
-                    <div
-                        class="
-                            w-full
-                            h-full
-                            flex
-                            items-center
-                            justify-center
-                            bg-gradient-to-br
-                            from-cyan-500/10
-                            via-[#071224]
-                            to-blue-500/10
-                        "
-                    >
-                        <i
-                            class="
-                                ri-graduation-cap-line
-                                text-[44px]
-                                text-cyan-400/40
-                            "
-                        ></i>
-                    </div>
-
-                {% endif %}
-
-            </div>
-
-
-            <!-- BATCH DETAILS -->
-
-            <div class="min-w-0 flex-1">
-
-                <div class="flex items-center gap-2 mb-2">
-
-                    <span
-                        class="
-                            inline-flex
-                            items-center
-                            gap-1.5
-                            px-2.5
-                            h-[26px]
-                            rounded-full
-                            bg-emerald-400/10
-                            border
-                            border-emerald-400/20
-                            text-emerald-400
-                            text-[10px]
-                            font-bold
-                        "
-                    >
-                        <span
-                            class="
-                                w-[6px]
-                                h-[6px]
-                                rounded-full
-                                bg-emerald-400
-                            "
-                        ></span>
-
-                        Active Learning
-                    </span>
-
-                </div>
-
-
-                <h2
-                    class="
-                        text-[18px]
-                        sm:text-[20px]
-                        font-extrabold
-                        text-white
-                        tracking-[-0.3px]
-                        leading-[1.35]
-                    "
-                >
-                    {{ batch.batch_name }}
-                </h2>
-
-
-                {% if batch.batch_description %}
-
-                    <p
-                        class="
-                            mt-2
-                            text-[12px]
-                            sm:text-[13px]
-                            text-[#94A3B8]
-                            leading-6
-                            max-w-[850px]
-                        "
-                    >
-                        {{ batch.batch_description }}
-                    </p>
-
-                {% endif %}
-
-            </div>
-
-
-            <!-- SUBJECT COUNT -->
-
-            <div
-                class="
-                    shrink-0
-                    inline-flex
-                    items-center
-                    gap-2
-                    px-4
-                    h-[42px]
-                    rounded-[13px]
-                    bg-cyan-400/10
-                    border
-                    border-cyan-400/20
-                    text-cyan-300
-                "
-            >
-
-                <i class="ri-book-2-line text-[16px]"></i>
-
-                <span class="text-[12px] font-semibold">
-
-                    {{ subjects|length }}
-
-                    {% if subjects|length == 1 %}
-                        Subject
-                    {% else %}
-                        Subjects
-                    {% endif %}
-
-                </span>
-
-            </div>
-
+        <div>
+            <p class="text-[11px] font-semibold uppercase tracking-[1.5px] text-cyan-400">
+                My Learning
+            </p>
+            <h1 class="text-[25px] font-extrabold tracking-[-0.8px] text-white sm:text-[28px]">
+                Subjects
+            </h1>
         </div>
-
     </div>
 
-
-    <!-- ========================================================
-         SUBJECTS
-         ======================================================== -->
-
+    <!-- SUBJECT LIST -->
     {% if subjects %}
 
-        <div
-            class="
-                grid
-                grid-cols-1
-                sm:grid-cols-2
-                lg:grid-cols-3
-                xl:grid-cols-4
-                2xl:grid-cols-5
-                gap-5
-                sm:gap-6
-            "
-        >
+        <div class="grid grid-cols-1 items-stretch gap-5 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3 xl:grid-cols-4">
 
             {% for subject in subjects %}
 
-                <a
-                    href="{% url 'my_learning_subject' batch.id subject.id %}"
-                    class="
-                        group
-                        block
-                        min-w-0
-                        overflow-hidden
-                        rounded-[18px]
-                        bg-[#071224]
-                        border
-                        border-white/8
-                        hover:border-cyan-400/30
-                        hover:-translate-y-1
-                        hover:shadow-[0_18px_45px_rgba(0,0,0,0.30)]
-                        transition-all
-                        duration-300
-                    "
+                <article
+                    class="group flex h-full min-h-[360px] min-w-0 flex-col overflow-hidden rounded-[18px] border border-white/10 bg-[#071224] transition-all duration-300 hover:-translate-y-1 hover:border-cyan-400/40 hover:shadow-[0_18px_45px_rgba(0,0,0,0.30)]"
                 >
 
-                    <!-- =================================================
-                         SUBJECT THUMBNAIL
-                         ================================================= -->
-
-                    <div
-                        class="
-                            relative
-                            w-full
-                            aspect-[16/9]
-                            overflow-hidden
-                            bg-[#0B172A]
-                        "
+                    <!-- THUMBNAIL -->
+                    <a
+                        href="{% url 'my_learning_subject' batch.id subject.id %}"
+                        aria-label="Open {{ subject.subject_name }}"
+                        class="relative block aspect-[16/9] w-full shrink-0 overflow-hidden bg-[#0B172A]"
                     >
 
                         {% if subject.subject_thumbnail %}
-
                             <img
                                 src="{{ subject.subject_thumbnail.url }}"
                                 alt="{{ subject.subject_name }}"
                                 loading="lazy"
-                                class="
-                                    w-full
-                                    h-full
-                                    object-cover
-                                    group-hover:scale-[1.04]
-                                    transition-transform
-                                    duration-500
-                                "
+                                class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
                             >
-
                         {% else %}
-
-                            <div
-                                class="
-                                    w-full
-                                    h-full
-                                    flex
-                                    items-center
-                                    justify-center
-                                    bg-gradient-to-br
-                                    from-cyan-500/10
-                                    via-[#071224]
-                                    to-blue-500/10
-                                "
-                            >
-                                <i
-                                    class="
-                                        ri-book-open-line
-                                        text-[44px]
-                                        text-cyan-400/40
-                                    "
-                                ></i>
+                            <div class="flex h-full w-full items-center justify-center bg-gradient-to-br from-cyan-500/10 via-[#071224] to-blue-500/10">
+                                <i class="ri-book-open-line text-[44px] text-cyan-400/40"></i>
                             </div>
-
                         {% endif %}
 
+                        {% if subject.subject_status == "published" %}
+                            <div class="absolute left-3 top-3 inline-flex h-[27px] items-center gap-1.5 rounded-full bg-emerald-400 px-2.5 text-[10px] font-extrabold text-[#02130D] shadow-lg">
+                                <i class="ri-check-line text-[13px]"></i>
+                                Published
+                            </div>
+                        {% endif %}
 
-                        <!-- PUBLISHED BADGE -->
-
-                        <div
-                            class="
-                                absolute
-                                top-3
-                                left-3
-                                inline-flex
-                                items-center
-                                gap-1.5
-                                px-2.5
-                                h-[27px]
-                                rounded-full
-                                bg-emerald-400
-                                text-[#02130D]
-                                text-[10px]
-                                font-extrabold
-                                shadow-lg
-                            "
-                        >
-
-                            <i class="ri-check-line text-[13px]"></i>
-
-                            Published
-
-                        </div>
-
-
-                        <!-- HOVER ARROW -->
-
-                        <div
-                            class="
-                                absolute
-                                top-3
-                                right-3
-                                w-[32px]
-                                h-[32px]
-                                rounded-full
-                                bg-black/45
-                                backdrop-blur-md
-                                border
-                                border-white/10
-                                flex
-                                items-center
-                                justify-center
-                                text-white
-                                opacity-0
-                                translate-y-1
-                                group-hover:opacity-100
-                                group-hover:translate-y-0
-                                transition-all
-                                duration-300
-                            "
-                        >
+                        <div class="absolute right-3 top-3 flex h-[32px] w-[32px] translate-y-1 items-center justify-center rounded-full border border-white/10 bg-black/45 text-white opacity-0 backdrop-blur-md transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100">
                             <i class="ri-arrow-right-up-line text-[16px]"></i>
                         </div>
+                    </a>
 
-                    </div>
+                    <!-- CARD CONTENT -->
+                    <div class="flex flex-1 flex-col p-4 sm:p-[17px]">
 
-
-                    <!-- =================================================
-                         CARD CONTENT
-                         ================================================= -->
-
-                    <div class="p-4 sm:p-[17px]">
-
-                        <!-- SUBJECT NAME -->
-
-                        <h2
-                            class="
-                                text-[15px]
-                                font-bold
-                                text-white
-                                leading-[1.35]
-                                line-clamp-2
-                                min-h-[40px]
-                                group-hover:text-cyan-300
-                                transition-colors
-                            "
+                        <a
+                            href="{% url 'my_learning_subject' batch.id subject.id %}"
+                            class="block"
                         >
-                            {{ subject.subject_name }}
-                        </h2>
+                            <h2 class="min-h-[40px] line-clamp-2 text-[15px] font-bold leading-[1.35] text-white transition-colors group-hover:text-cyan-300">
+                                {{ subject.subject_name }}
+                            </h2>
+                        </a>
 
-
-                        <!-- SUBJECT DESCRIPTION -->
-
-                        {% if subject.subject_description %}
-
-                            <p
-                                class="
-                                    mt-2
-                                    text-[11px]
-                                    text-[#94A3B8]
-                                    leading-5
-                                    line-clamp-2
-                                "
-                            >
+                        <p class="mt-2 min-h-[40px] line-clamp-2 text-[11px] leading-5 {% if subject.subject_description %}text-[#94A3B8]{% else %}text-slate-600{% endif %}">
+                            {% if subject.subject_description %}
                                 {{ subject.subject_description }}
-                            </p>
-
-                        {% else %}
-
-                            <p
-                                class="
-                                    mt-2
-                                    text-[11px]
-                                    text-slate-600
-                                    leading-5
-                                    line-clamp-2
-                                "
-                            >
+                            {% else %}
                                 Continue learning this subject.
-                            </p>
+                            {% endif %}
+                        </p>
 
-                        {% endif %}
+                        <!-- FOOTER: TEACHER AVATARS + OPEN SUBJECT -->
+                        <div class="mt-auto pt-4">
+                            <div class="flex min-h-[35px] items-center justify-between gap-2 border-t border-white/10 pt-3">
 
+                                <!-- ASSIGNED TEACHERS -->
+                                <div class="flex min-w-0 items-center">
 
-                        <!-- CARD FOOTER -->
+                                    {% if subject.card_teacher_count %}
 
-                        <div
-                            class="
-                                mt-4
-                                pt-3
-                                border-t
-                                border-white/5
-                                flex
-                                items-center
-                                justify-between
-                            "
-                        >
+                                        <button
+                                            type="button"
+                                            class="subject-teacher-trigger inline-flex min-w-0 items-center gap-2 rounded-full text-left outline-none transition hover:opacity-90 focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#071224]"
+                                            data-subject-teacher-modal="subjectTeachers{{ subject.id }}"
+                                            aria-label="View {{ subject.card_teacher_count }} assigned teachers for {{ subject.subject_name }}"
+                                            aria-haspopup="dialog"
+                                        >
+                                            <span class="flex items-center -space-x-2.5">
 
-                            <span
-                                class="
-                                    inline-flex
-                                    items-center
-                                    gap-1.5
-                                    text-[11px]
-                                    font-semibold
-                                    text-emerald-400
-                                "
-                            >
+                                                {% for teacher in subject.card_teacher_preview %}
+                                                    <span class="relative flex h-[34px] w-[34px] shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-[#071224] bg-[#12334A] text-[11px] font-extrabold text-cyan-300">
+                                                        {% if teacher.profile_image %}
+                                                            <img
+                                                                src="{{ teacher.profile_image.url }}"
+                                                                alt="{{ teacher.full_name }}"
+                                                                loading="lazy"
+                                                                class="h-full w-full object-cover"
+                                                            >
+                                                        {% else %}
+                                                            {{ teacher.full_name|default:teacher.user.username|first|upper }}
+                                                        {% endif %}
+                                                    </span>
+                                                {% endfor %}
 
-                                <span
-                                    class="
-                                        w-[6px]
-                                        h-[6px]
-                                        rounded-full
-                                        bg-emerald-400
-                                    "
-                                ></span>
+                                                {% if subject.card_teacher_extra_count %}
+                                                    <span class="relative flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-full border-2 border-[#071224] bg-[#123B50] text-[10px] font-extrabold text-cyan-300">
+                                                        +{{ subject.card_teacher_extra_count }}
+                                                    </span>
+                                                {% endif %}
 
-                                Ready to Learn
+                                            </span>
 
-                            </span>
+                                            <span class="whitespace-nowrap text-[10px] font-semibold text-slate-400">
+                                                {{ subject.card_teacher_count }}
+                                                {% if subject.card_teacher_count == 1 %}assigned{% else %}assigned{% endif %}
+                                            </span>
+                                        </button>
 
+                                    {% else %}
 
-                            <span
-                                class="
-                                    text-[11px]
-                                    font-semibold
-                                    text-slate-500
-                                    group-hover:text-cyan-400
-                                    transition-colors
-                                "
-                            >
-                                Open Subject
-                            </span>
+                                        <span class="inline-flex items-center gap-1.5 text-[10px] font-semibold text-slate-500">
+                                            <i class="ri-user-unfollow-line text-[14px]"></i>
+                                            No teachers assigned
+                                        </span>
 
+                                    {% endif %}
+
+                                </div>
+
+                                <!-- OPEN SUBJECT -->
+                                <a
+                                    href="{% url 'my_learning_subject' batch.id subject.id %}"
+                                    class="shrink-0 whitespace-nowrap text-[11px] font-semibold text-slate-400 transition-colors hover:text-cyan-400"
+                                >
+                                    Open Subject
+                                </a>
+
+                            </div>
                         </div>
 
                     </div>
+                </article>
 
-                </a>
+                <!-- TEACHER MODAL: OUTSIDE THE CARD -->
+                {% if subject.card_teacher_count %}
+                    <div
+                        id="subjectTeachers{{ subject.id }}"
+                        class="subject-teacher-modal fixed inset-0 z-[100] hidden items-center justify-center bg-[#020817]/80 p-4 opacity-0 backdrop-blur-md transition-opacity duration-200"
+                        data-subject-modal
+                        aria-hidden="true"
+                    >
+                        <section
+                            role="dialog"
+                            aria-modal="true"
+                            aria-labelledby="subjectTeacherTitle{{ subject.id }}"
+                            class="subject-teacher-panel flex max-h-[min(680px,82vh)] w-full max-w-[700px] translate-y-3 flex-col overflow-hidden rounded-[22px] border border-cyan-400/40 bg-gradient-to-br from-[#12243B] to-[#071426] opacity-0 shadow-[0_25px_90px_rgba(0,0,0,0.65)] transition-all duration-200"
+                        >
+
+                            <!-- MODAL HEADER -->
+                            <div class="flex shrink-0 items-center justify-between gap-4 border-b border-white/10 px-5 py-4 sm:px-6">
+
+                                <div class="flex min-w-0 items-center gap-3">
+                                    <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-[13px] border border-cyan-400/20 bg-cyan-400/10 text-cyan-300">
+                                        <i class="ri-team-line text-[20px]"></i>
+                                    </div>
+
+                                    <div class="min-w-0">
+                                        <h2
+                                            id="subjectTeacherTitle{{ subject.id }}"
+                                            class="truncate text-[15px] font-extrabold text-white sm:text-[16px]"
+                                        >
+                                            Assigned Teachers — {{ subject.subject_name }}
+                                        </h2>
+                                        <p class="mt-0.5 truncate text-[11px] text-slate-400">
+                                            {{ batch.batch_name }}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <button
+                                    type="button"
+                                    class="subject-teacher-close flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-slate-400 transition hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
+                                    aria-label="Close assigned teachers"
+                                >
+                                    <i class="ri-close-line text-[22px]"></i>
+                                </button>
+                            </div>
+
+                            <!-- SCROLLABLE TEACHER LIST -->
+                            <div class="subject-teacher-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 sm:p-5">
+                                <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+
+                                    {% for teacher in subject.card_teachers %}
+                                        <div class="flex min-h-[94px] min-w-0 items-center gap-3 rounded-[15px] border border-white/10 bg-[#0D1A2D]/90 p-3 transition-colors hover:border-cyan-400/30">
+
+                                            <div class="flex h-[54px] w-[54px] shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-cyan-400/50 bg-[#12334A] text-[16px] font-extrabold text-cyan-300">
+                                                {% if teacher.profile_image %}
+                                                    <img
+                                                        src="{{ teacher.profile_image.url }}"
+                                                        alt="{{ teacher.full_name }}"
+                                                        loading="lazy"
+                                                        class="h-full w-full object-cover"
+                                                    >
+                                                {% else %}
+                                                    {{ teacher.full_name|default:teacher.user.username|first|upper }}
+                                                {% endif %}
+                                            </div>
+
+                                            <div class="min-w-0 flex-1">
+                                                <h3 class="truncate text-[13px] font-extrabold text-white">
+                                                    {{ teacher.full_name|default:teacher.user.username }}
+                                                </h3>
+
+                                                {% if teacher.qualification %}
+                                                    <p class="mt-1 flex items-start gap-1.5 text-[11px] leading-4 text-slate-300">
+                                                        <i class="ri-graduation-cap-line mt-0.5 shrink-0 text-cyan-400"></i>
+                                                        <span class="line-clamp-2">{{ teacher.qualification }}</span>
+                                                    </p>
+                                                {% endif %}
+
+                                                {% if teacher.specialization %}
+                                                    <p class="mt-1 flex items-start gap-1.5 text-[11px] leading-4 text-slate-400">
+                                                        <i class="ri-book-open-line mt-0.5 shrink-0 text-cyan-400"></i>
+                                                        <span class="line-clamp-2">{{ teacher.specialization }}</span>
+                                                    </p>
+                                                {% endif %}
+
+                                                <p class="mt-1 flex items-center gap-1.5 text-[11px] text-slate-400">
+                                                    <i class="ri-briefcase-line text-cyan-400"></i>
+                                                    {{ teacher.experience }} year{% if teacher.experience != 1 %}s{% endif %} experience
+                                                </p>
+                                            </div>
+
+                                        </div>
+                                    {% endfor %}
+
+                                </div>
+                            </div>
+
+                            <!-- MODAL FOOTER -->
+                            <div class="flex shrink-0 justify-end border-t border-white/10 px-5 py-3.5 sm:px-6">
+                                <button
+                                    type="button"
+                                    class="subject-teacher-done inline-flex h-[39px] items-center justify-center gap-2 rounded-[12px] bg-cyan-400 px-5 text-[12px] font-extrabold text-[#03111D] transition hover:bg-cyan-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200"
+                                >
+                                    <i class="ri-check-line text-[15px]"></i>
+                                    Done
+                                </button>
+                            </div>
+
+                        </section>
+                    </div>
+                {% endif %}
 
             {% endfor %}
 
         </div>
 
-
     {% else %}
 
-        <!-- ========================================================
-             EMPTY SUBJECT STATE
-             ======================================================== -->
-
-        <div
-            class="
-                min-h-[420px]
-                rounded-[24px]
-                border
-                border-white/8
-                bg-[#071224]
-                flex
-                items-center
-                justify-center
-                px-6
-                py-12
-            "
-        >
-
-            <div class="text-center max-w-[480px]">
-
-                <div
-                    class="
-                        mx-auto
-                        w-[82px]
-                        h-[82px]
-                        rounded-[24px]
-                        bg-cyan-400/10
-                        border
-                        border-cyan-400/20
-                        flex
-                        items-center
-                        justify-center
-                        text-cyan-400
-                    "
-                >
+        <!-- EMPTY STATE -->
+        <div class="flex min-h-[420px] items-center justify-center rounded-[24px] border border-white/10 bg-[#071224] px-6 py-12">
+            <div class="max-w-[480px] text-center">
+                <div class="mx-auto flex h-[82px] w-[82px] items-center justify-center rounded-[24px] border border-cyan-400/20 bg-cyan-400/10 text-cyan-400">
                     <i class="ri-book-open-line text-[38px]"></i>
                 </div>
 
-
-                <h2
-                    class="
-                        mt-6
-                        text-[22px]
-                        font-extrabold
-                        text-white
-                    "
-                >
+                <h2 class="mt-6 text-[22px] font-extrabold text-white">
                     No Subjects Available
                 </h2>
 
-
-                <p
-                    class="
-                        mt-2
-                        text-[13px]
-                        leading-6
-                        text-[#94A3B8]
-                    "
-                >
-                    There are currently no published subjects available
-                    in this batch. Please check again later.
+                <p class="mt-2 text-[13px] leading-6 text-[#94A3B8]">
+                    There are currently no published subjects available in this batch. Please check again later.
                 </p>
-
 
                 <a
                     href="{% url 'my_learning' %}"
-                    class="
-                        mt-6
-                        inline-flex
-                        items-center
-                        justify-center
-                        gap-2
-                        h-[46px]
-                        px-6
-                        rounded-[14px]
-                        bg-cyan-400
-                        text-[#02130D]
-                        text-[13px]
-                        font-extrabold
-                        hover:bg-cyan-300
-                        transition-all
-                    "
+                    class="mt-6 inline-flex h-[46px] items-center justify-center gap-2 rounded-[14px] bg-cyan-400 px-6 text-[13px] font-extrabold text-[#02130D] transition-all hover:bg-cyan-300"
                 >
-
                     <i class="ri-arrow-left-line text-[17px]"></i>
-
                     Back to My Learning
-
                 </a>
-
             </div>
-
         </div>
 
     {% endif %}
 
 </div>
+
+<style>
+    .subject-teacher-modal.is-open {
+        display: flex;
+        opacity: 1;
+    }
+
+    .subject-teacher-modal.is-open .subject-teacher-panel {
+        transform: translateY(0);
+        opacity: 1;
+    }
+
+    .subject-teacher-scroll {
+        scrollbar-width: thin;
+        scrollbar-color: rgba(34, 211, 238, 0.45) rgba(255, 255, 255, 0.04);
+    }
+
+    .subject-teacher-scroll::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .subject-teacher-scroll::-webkit-scrollbar-track {
+        background: rgba(255, 255, 255, 0.04);
+        border-radius: 20px;
+    }
+
+    .subject-teacher-scroll::-webkit-scrollbar-thumb {
+        background: rgba(34, 211, 238, 0.4);
+        border-radius: 20px;
+    }
+
+    body.subject-teacher-modal-open {
+        overflow: hidden;
+    }
+</style>
+
+<script>
+(function () {
+    if (window.__neoLearnSubjectTeacherPopupInitialized) {
+        return;
+    }
+
+    window.__neoLearnSubjectTeacherPopupInitialized = true;
+
+    let activeModal = null;
+    let previousFocus = null;
+
+    function openModal(modal) {
+        if (!modal) return;
+
+        if (activeModal && activeModal !== modal) {
+            closeModal(activeModal);
+        }
+
+        previousFocus = document.activeElement;
+        activeModal = modal;
+
+        modal.classList.remove("hidden");
+        modal.setAttribute("aria-hidden", "false");
+        document.body.classList.add("subject-teacher-modal-open");
+
+        requestAnimationFrame(function () {
+            modal.classList.add("is-open");
+
+            const closeButton = modal.querySelector(".subject-teacher-close");
+            if (closeButton) closeButton.focus();
+        });
+    }
+
+    function closeModal(modal) {
+        if (!modal) return;
+
+        modal.classList.remove("is-open");
+        modal.setAttribute("aria-hidden", "true");
+
+        window.setTimeout(function () {
+            modal.classList.add("hidden");
+        }, 220);
+
+        if (activeModal === modal) {
+            activeModal = null;
+            document.body.classList.remove("subject-teacher-modal-open");
+
+            if (previousFocus && document.contains(previousFocus)) {
+                previousFocus.focus();
+            }
+
+            previousFocus = null;
+        }
+    }
+
+    document.addEventListener("click", function (event) {
+        const trigger = event.target.closest("[data-subject-teacher-modal]");
+
+        if (trigger) {
+            event.preventDefault();
+            event.stopPropagation();
+
+            const modalId = trigger.getAttribute("data-subject-teacher-modal");
+            openModal(document.getElementById(modalId));
+            return;
+        }
+
+        if (!activeModal) return;
+
+        if (event.target === activeModal) {
+            closeModal(activeModal);
+            return;
+        }
+
+        if (
+            event.target.closest(".subject-teacher-close") ||
+            event.target.closest(".subject-teacher-done")
+        ) {
+            closeModal(activeModal);
+        }
+    });
+
+    document.addEventListener("keydown", function (event) {
+        if (!activeModal) return;
+
+        if (event.key === "Escape") {
+            event.preventDefault();
+            closeModal(activeModal);
+            return;
+        }
+
+        if (event.key === "Tab") {
+            const focusable = activeModal.querySelectorAll(
+                'button:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])'
+            );
+
+            if (!focusable.length) return;
+
+            const first = focusable[0];
+            const last = focusable[focusable.length - 1];
+
+            if (event.shiftKey && document.activeElement === first) {
+                event.preventDefault();
+                last.focus();
+            } else if (!event.shiftKey && document.activeElement === last) {
+                event.preventDefault();
+                first.focus();
+            }
+        }
+    });
+})();
+</script>
 
 {% endblock %}

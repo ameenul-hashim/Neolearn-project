@@ -1,545 +1,572 @@
 {% extends "students/base_student.html" %}
-
 {% load static %}
 
-{% block title %}
-    My Learning | NeoLearn
-{% endblock %}
-
+{% block title %}My Learning | NeoLearn{% endblock %}
 
 {% block student_content %}
 
-<!-- ============================================================
-     MY LEARNING
-     ============================================================ -->
+<style>
+    /* Teacher popup */
+    .learning-teacher-modal {
+        position: fixed;
+        inset: 0;
+        z-index: 150;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 18px;
+        background: rgba(2, 6, 23, .78);
+        backdrop-filter: blur(9px);
+    }
+
+    .learning-teacher-modal.is-open {
+        display: flex;
+    }
+
+    .learning-teacher-modal-panel {
+        display: flex;
+        flex-direction: column;
+        width: min(700px, 100%);
+        max-height: min(68vh, 460px);
+        overflow: hidden;
+        border: 1px solid rgba(34, 211, 238, .58);
+        border-radius: 18px;
+        background: linear-gradient(145deg, #13233a, #081426);
+        box-shadow: 0 25px 80px rgba(0,0,0,.58),
+                    0 0 28px rgba(34,211,238,.10);
+        animation: learningModalIn .18s ease-out;
+    }
+
+    @keyframes learningModalIn {
+        from {
+            opacity: 0;
+            transform: translateY(9px) scale(.985);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+    }
+
+    .learning-teacher-modal-header {
+        display: flex;
+        flex: 0 0 auto;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 13px 16px;
+        border-bottom: 1px solid rgba(71,85,105,.7);
+    }
+
+    .learning-teacher-modal-list {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        align-content: start;
+        gap: 9px;
+        min-height: 0;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        padding: 12px 14px 14px;
+        scrollbar-width: thin;
+        scrollbar-color: #155e75 #0f172a;
+    }
+
+    .learning-teacher-card {
+        display: flex;
+        align-items: center;
+        gap: 11px;
+        min-width: 0;
+        padding: 10px;
+        border: 1px solid rgba(71,85,105,.68);
+        border-radius: 13px;
+        background: rgba(15,23,42,.82);
+        transition: border-color .18s, background .18s, transform .18s;
+    }
+
+    .learning-teacher-card:hover {
+        transform: translateY(-2px);
+        border-color: rgba(34,211,238,.5);
+        background: rgba(15,35,57,.95);
+    }
+
+    .learning-teacher-photo {
+        display: flex;
+        flex: 0 0 48px;
+        width: 48px;
+        height: 48px;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        border: 2px solid rgba(34,211,238,.34);
+        border-radius: 50%;
+        background: #23344e;
+        color: #e2e8f0;
+        font-weight: 800;
+    }
+
+    .learning-teacher-photo img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .learning-teacher-meta {
+        min-width: 0;
+    }
+
+    .learning-teacher-meta p {
+        overflow-wrap: anywhere;
+    }
+
+    /* Compact overlapping teacher avatars, matching Admin Subjects */
+    .learning-batch-teacher-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        min-width: 0;
+    }
+
+    .learning-batch-avatar-stack {
+        display: flex;
+        align-items: center;
+        min-width: 0;
+        padding-left: 2px;
+    }
+
+    .learning-batch-avatar-button {
+        position: relative;
+        display: flex;
+        flex: 0 0 34px;
+        width: 34px;
+        height: 34px;
+        align-items: center;
+        justify-content: center;
+        margin-left: -4px;
+        overflow: hidden;
+        border: 2px solid #101b30;
+        border-radius: 50%;
+        background: #26364e;
+        color: #e2e8f0;
+        font-size: 10px;
+        font-weight: 800;
+        cursor: pointer;
+        transition: transform .18s, border-color .18s, box-shadow .18s;
+    }
+
+    .learning-batch-avatar-button:first-child {
+        margin-left: 0;
+    }
+
+    .learning-batch-avatar-button:hover,
+    .learning-batch-avatar-button:focus-visible {
+        z-index: 2;
+        transform: translateY(-3px) scale(1.08);
+        border-color: #22d3ee;
+        box-shadow: 0 0 0 2px rgba(34,211,238,.18);
+        outline: none;
+    }
+
+    .learning-batch-avatar-button img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .learning-batch-avatar-more {
+        border: 2px solid #101b30;
+        background: linear-gradient(135deg, #164e63, #1e293b);
+        color: #a5f3fc;
+        font-size: 10px;
+        font-weight: 900;
+    }
+
+    .learning-batch-teacher-count {
+        color: #94a3b8;
+        font-size: 11px;
+        font-weight: 700;
+        white-space: nowrap;
+    }
+
+    @media (max-width: 640px) {
+        .learning-teacher-modal {
+            padding: 12px;
+        }
+
+        .learning-teacher-modal-panel {
+            max-height: 72vh;
+        }
+
+        .learning-teacher-modal-list {
+            grid-template-columns: minmax(0, 1fr);
+            padding: 10px;
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .learning-teacher-card,
+        .learning-batch-avatar-button {
+            transition: none !important;
+        }
+    }
+</style>
 
 <div class="w-full max-w-[1800px] mx-auto">
 
-    <!-- ========================================================
-         PAGE HEADER
-         ======================================================== -->
-
+    <!-- PAGE HEADER -->
     <div class="mb-7">
-
         <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
 
-            <!-- LEFT -->
-
             <div>
-
                 <div class="flex items-center gap-3 mb-2">
-
-                    <div
-                        class="
-                            w-10
-                            h-10
-                            rounded-[14px]
-                            bg-cyan-400/10
-                            border
-                            border-cyan-400/20
-                            flex
-                            items-center
-                            justify-center
-                            text-cyan-400
-                        "
-                    >
+                    <div class="w-10 h-10 rounded-[14px] bg-cyan-400/10 border border-cyan-400/20 flex items-center justify-center text-cyan-400">
                         <i class="ri-book-open-line text-[20px]"></i>
                     </div>
 
                     <div>
-
-                        <p
-                            class="
-                                text-[11px]
-                                uppercase
-                                tracking-[1.5px]
-                                text-cyan-400
-                                font-semibold
-                            "
-                        >
+                        <p class="text-[11px] uppercase tracking-[1.5px] text-cyan-400 font-semibold">
                             Learning
                         </p>
-
-                        <h1
-                            class="
-                                text-[25px]
-                                sm:text-[28px]
-                                font-extrabold
-                                tracking-[-0.8px]
-                                text-white
-                            "
-                        >
+                        <h1 class="text-[25px] sm:text-[28px] font-extrabold tracking-[-0.8px] text-white">
                             My Learning
                         </h1>
-
                     </div>
-
                 </div>
 
-                <p
-                    class="
-                        text-[13px]
-                        sm:text-[14px]
-                        text-[#94A3B8]
-                        max-w-[650px]
-                    "
-                >
+                <p class="text-[13px] sm:text-[14px] text-[#94A3B8] max-w-[650px]">
                     Continue learning from the batches you have purchased.
                 </p>
-
             </div>
 
-
-            <!-- RIGHT -->
-
-            <div
-                class="
-                    inline-flex
-                    items-center
-                    gap-2
-                    self-start
-                    sm:self-auto
-                    px-4
-                    h-[40px]
-                    rounded-full
-                    bg-cyan-400/10
-                    border
-                    border-cyan-400/20
-                    text-cyan-300
-                    text-[12px]
-                    font-semibold
-                "
-            >
-
+            <!-- PURCHASED BATCH COUNT -->
+            <div class="inline-flex items-center gap-2 self-start sm:self-auto px-4 h-[40px] rounded-full bg-cyan-400/10 border border-cyan-400/20 text-cyan-300 text-[12px] font-semibold">
                 <i class="ri-graduation-cap-line text-[16px]"></i>
-
                 <span>
-
                     {{ purchased_batches|length }}
-
                     {% if purchased_batches|length == 1 %}
                         Batch
                     {% else %}
                         Batches
                     {% endif %}
-
                 </span>
-
             </div>
 
         </div>
-
     </div>
 
-
-    <!-- ========================================================
-         PURCHASED BATCHES
-         ======================================================== -->
-
+    <!-- PURCHASED BATCHES -->
     {% if purchased_batches %}
 
-        <div
-            class="
-                grid
-                grid-cols-1
-                sm:grid-cols-2
-                lg:grid-cols-3
-                xl:grid-cols-4
-                2xl:grid-cols-5
-                gap-5
-                sm:gap-6
-            "
-        >
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 sm:gap-6 items-stretch">
 
             {% for purchase in purchased_batches %}
 
-                <a
-                    href="{% url 'my_learning_batch' purchase.batch.id %}"
+                <!-- BATCH CARD -->
+                <article
                     class="
                         group
-                        block
+                        flex
+                        flex-col
+                        h-full
+                        min-h-[360px]
                         min-w-0
                         overflow-hidden
                         rounded-[18px]
                         bg-[#071224]
                         border
-                        border-white/8
-                        hover:border-cyan-400/30
+                        border-white/10
+                        hover:border-cyan-400/40
                         hover:-translate-y-1
                         hover:shadow-[0_18px_45px_rgba(0,0,0,0.30)]
                         transition-all
                         duration-300
+                        focus:outline-none
+                        focus-visible:ring-2
+                        focus-visible:ring-cyan-400
+                        focus-visible:ring-offset-2
+                        focus-visible:ring-offset-[#020817]
+                        cursor-pointer
                     "
+                    data-learning-card
+                    data-card-url="{% url 'my_learning_batch' purchase.batch.id %}"
+                    tabindex="0"
+                    role="link"
+                    aria-label="Open {{ purchase.batch.batch_name }}"
                 >
 
-                    <!-- =================================================
-                         THUMBNAIL
-                         ================================================= -->
-
-                    <div
-                        class="
-                            relative
-                            w-full
-                            aspect-[16/9]
-                            overflow-hidden
-                            bg-[#0B172A]
-                        "
-                    >
+                    <!-- THUMBNAIL -->
+                    <div class="relative w-full aspect-[16/9] shrink-0 overflow-hidden bg-[#0B172A]">
 
                         {% if purchase.batch.batch_thumbnail %}
-
                             <img
                                 src="{{ purchase.batch.batch_thumbnail.url }}"
                                 alt="{{ purchase.batch.batch_name }}"
                                 loading="lazy"
-                                class="
-                                    w-full
-                                    h-full
-                                    object-cover
-                                    group-hover:scale-[1.04]
-                                    transition-transform
-                                    duration-500
-                                "
+                                class="w-full h-full object-cover group-hover:scale-[1.04] transition-transform duration-500"
                             >
-
                         {% else %}
-
-                            <div
-                                class="
-                                    w-full
-                                    h-full
-                                    flex
-                                    items-center
-                                    justify-center
-                                    bg-gradient-to-br
-                                    from-cyan-500/10
-                                    via-[#071224]
-                                    to-blue-500/10
-                                "
-                            >
-
-                                <i
-                                    class="
-                                        ri-graduation-cap-line
-                                        text-[44px]
-                                        text-cyan-400/40
-                                    "
-                                ></i>
-
+                            <div class="w-full h-full flex items-center justify-center bg-gradient-to-br from-cyan-500/10 via-[#071224] to-blue-500/10">
+                                <i class="ri-graduation-cap-line text-[44px] text-cyan-400/40"></i>
                             </div>
-
                         {% endif %}
 
-
-                        <!-- =================================================
-                             PURCHASED BADGE
-                             ================================================= -->
-
-                        <div
-                            class="
-                                absolute
-                                top-3
-                                left-3
-                                inline-flex
-                                items-center
-                                gap-1.5
-                                px-2.5
-                                h-[27px]
-                                rounded-full
-                                bg-emerald-400
-                                text-[#02130D]
-                                text-[10px]
-                                font-extrabold
-                                shadow-lg
-                            "
-                        >
-
+                        <!-- PURCHASED BADGE -->
+                        <div class="absolute top-3 left-3 inline-flex items-center gap-1.5 px-2.5 h-[27px] rounded-full bg-emerald-400 text-[#02130D] text-[10px] font-extrabold shadow-lg">
                             <i class="ri-check-line text-[13px]"></i>
-
                             Purchased
-
                         </div>
 
-
-                        <!-- =================================================
-                             HOVER ARROW
-                             ================================================= -->
-
-                        <div
-                            class="
-                                absolute
-                                top-3
-                                right-3
-                                w-[32px]
-                                h-[32px]
-                                rounded-full
-                                bg-black/45
-                                backdrop-blur-md
-                                border
-                                border-white/10
-                                flex
-                                items-center
-                                justify-center
-                                text-white
-                                opacity-0
-                                translate-y-1
-                                group-hover:opacity-100
-                                group-hover:translate-y-0
-                                transition-all
-                                duration-300
-                            "
-                        >
-
+                        <!-- HOVER ARROW -->
+                        <div class="absolute top-3 right-3 w-[32px] h-[32px] rounded-full bg-black/45 backdrop-blur-md border border-white/10 flex items-center justify-center text-white opacity-0 translate-y-1 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300">
                             <i class="ri-arrow-right-up-line text-[16px]"></i>
-
                         </div>
 
                     </div>
 
-
-                    <!-- =================================================
-                         CARD CONTENT
-                         ================================================= -->
-
-                    <div class="p-4 sm:p-[17px]">
+                    <!-- CARD CONTENT -->
+                    <div class="p-4 sm:p-[17px] flex flex-col flex-1">
 
                         <!-- BATCH NAME -->
-
-                        <h2
-                            class="
-                                text-[15px]
-                                font-bold
-                                text-white
-                                leading-[1.35]
-                                line-clamp-2
-                                min-h-[40px]
-                                group-hover:text-cyan-300
-                                transition-colors
-                            "
-                        >
+                        <h2 class="text-[15px] font-bold text-white leading-[1.35] line-clamp-2 min-h-[40px] group-hover:text-cyan-300 transition-colors">
                             {{ purchase.batch.batch_name }}
                         </h2>
 
-
                         <!-- SUBJECT COUNT -->
-
-                        <div
-                            class="
-                                mt-3
-                                flex
-                                items-center
-                                gap-2
-                                text-[11px]
-                                text-[#94A3B8]
-                            "
-                        >
-
-                            <i
-                                class="
-                                    ri-book-2-line
-                                    text-cyan-400
-                                    text-[14px]
-                                "
-                            ></i>
-
+                        <div class="mt-3 flex items-center gap-2 text-[11px] text-[#94A3B8]">
+                            <i class="ri-book-2-line text-cyan-400 text-[14px]"></i>
                             <span>
-
                                 {% with subject_count=purchase.batch.subjects.count %}
-
                                     {{ subject_count }}
-
                                     {% if subject_count == 1 %}
                                         Subject
                                     {% else %}
                                         Subjects
                                     {% endif %}
-
                                 {% endwith %}
-
                             </span>
-
                         </div>
-
 
                         <!-- PURCHASE DATE -->
-
-                        <div
-                            class="
-                                mt-2
-                                flex
-                                items-center
-                                gap-2
-                                text-[10px]
-                                text-[#64748B]
-                            "
-                        >
-
+                        <div class="mt-2 flex items-center gap-2 text-[10px] text-[#64748B]">
                             <i class="ri-calendar-line text-[13px]"></i>
-
                             <span>
-                                Purchased {{ purchase.purchased_at|date:"d M Y" }}
+                                {% if purchase.purchased_at %}
+                                    Purchased {{ purchase.purchased_at|date:"d M Y" }}
+                                {% else %}
+                                    Purchase date unavailable
+                                {% endif %}
                             </span>
-
                         </div>
 
+                        <!-- FOOTER: TEACHER ICON REPLACES ACTIVE LEARNING -->
+                        <div class="mt-auto pt-4">
+                            <div class="pt-3 border-t border-white/10 flex items-center justify-between gap-3">
 
-                        <!-- =================================================
-                            CARD FOOTER
-                        ================================================= -->
+                                <div class="learning-batch-teacher-row flex-1">
 
-                        <div
-                            class="
-                                mt-4
-                                pt-3
-                                border-t
-                                border-white/5
-                                flex
-                                items-center
-                                justify-between
-                            "
-                        >
+                                    {% if purchase.batch_teacher_count %}
+                                        <div class="learning-batch-avatar-stack"
+                                             aria-label="{{ purchase.batch_teacher_count }} assigned teachers">
 
-                            <span
-                                class="
-                                    inline-flex
-                                    items-center
-                                    gap-1.5
-                                    text-[11px]
-                                    font-semibold
-                                    text-emerald-400
-                                "
-                            >
+                                            {% for teacher in purchase.batch_teachers|slice:":3" %}
+                                                <button
+                                                    type="button"
+                                                    class="learning-batch-avatar-button"
+                                                    data-open-batch-teachers="batchTeachers{{ purchase.batch.id }}"
+                                                    title="View {{ teacher.full_name }}"
+                                                    aria-label="View assigned teachers for {{ purchase.batch.batch_name }}"
+                                                >
+                                                    {% if teacher.profile_image %}
+                                                        <img
+                                                            src="{{ teacher.profile_image.url }}"
+                                                            alt="{{ teacher.full_name }}"
+                                                            loading="lazy"
+                                                        >
+                                                    {% else %}
+                                                        {{ teacher.full_name|first|upper }}
+                                                    {% endif %}
+                                                </button>
+                                            {% endfor %}
 
-                                <span
-                                    class="
-                                        w-[6px]
-                                        h-[6px]
-                                        rounded-full
-                                        bg-emerald-400
-                                    "
-                                ></span>
+                                            {% if purchase.batch_teacher_count > 3 %}
+                                                <button
+                                                    type="button"
+                                                    class="learning-batch-avatar-button learning-batch-avatar-more"
+                                                    data-open-batch-teachers="batchTeachers{{ purchase.batch.id }}"
+                                                    title="View all {{ purchase.batch_teacher_count }} assigned teachers"
+                                                    aria-label="View all {{ purchase.batch_teacher_count }} assigned teachers"
+                                                >
+                                                    +{{ purchase.batch_teacher_count|add:"-3" }}
+                                                </button>
+                                            {% endif %}
 
-                                Active Learning
+                                        </div>
+                                    {% else %}
+                                        <span class="text-[10px] text-slate-500 whitespace-nowrap">
+                                            No teachers assigned
+                                        </span>
+                                    {% endif %}
 
-                            </span>
+                                    {% if purchase.batch_teacher_count %}
+                                        <span class="learning-batch-teacher-count">
+                                            {{ purchase.batch_teacher_count }} assigned
+                                        </span>
+                                    {% endif %}
 
+                                </div>
 
-                            <span
-                                class="
-                                    text-[11px]
-                                    font-semibold
-                                    text-slate-500
-                                    group-hover:text-cyan-400
-                                    transition-colors
-                                "
-                            >
-                                View Subjects
-                            </span>
+                                <span class="text-[11px] font-semibold text-slate-400 group-hover:text-cyan-400 transition-colors whitespace-nowrap">
+                                    View Subjects
+                                </span>
 
+                            </div>
                         </div>
 
                     </div>
 
-                </a>
+                </article>
+
+                <!-- TEACHER DETAILS POPUP -->
+                <div
+                    id="batchTeachers{{ purchase.batch.id }}"
+                    class="learning-teacher-modal"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="batchTeachersTitle{{ purchase.batch.id }}"
+                    data-batch-teacher-modal
+                >
+                    <div class="learning-teacher-modal-panel">
+
+                        <!-- POPUP HEADER -->
+                        <div class="learning-teacher-modal-header">
+
+                            <div class="flex min-w-0 items-center gap-2.5">
+
+                                <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-cyan-500/15 text-lg text-cyan-300">
+                                    <i class="ri-team-line"></i>
+                                </span>
+
+                                <div class="min-w-0">
+                                    <h3
+                                        id="batchTeachersTitle{{ purchase.batch.id }}"
+                                        class="truncate text-base font-extrabold text-white"
+                                    >
+                                        Assigned Teachers — {{ purchase.batch.batch_name }}
+                                    </h3>
+
+                                    <p class="mt-0.5 truncate text-[11px] text-slate-400">
+                                        Batch teachers
+                                    </p>
+                                </div>
+
+                            </div>
+
+                            <button
+                                type="button"
+                                class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-800 hover:text-white"
+                                data-close-batch-teachers
+                                aria-label="Close teacher details"
+                            >
+                                <i class="ri-close-line text-xl"></i>
+                            </button>
+
+                        </div>
+
+                        <!-- TEACHER LIST -->
+                        <div class="learning-teacher-modal-list">
+
+                            {% for teacher in purchase.batch_teachers %}
+
+                                <article class="learning-teacher-card">
+
+                                    <div class="learning-teacher-photo">
+
+                                        {% if teacher.profile_image %}
+                                            <img
+                                                src="{{ teacher.profile_image.url }}"
+                                                alt="{{ teacher.full_name }}"
+                                                loading="lazy"
+                                            >
+                                        {% else %}
+                                            {{ teacher.full_name|first|upper }}
+                                        {% endif %}
+
+                                    </div>
+
+                                    <div class="learning-teacher-meta flex-1">
+
+                                        <h4 class="truncate text-sm font-extrabold text-white">
+                                            {{ teacher.full_name }}
+                                        </h4>
+
+                                        <p class="mt-1 truncate text-xs text-slate-300" title="{{ teacher.qualification|default:'Qualification not added' }}">
+                                            <i class="ri-graduation-cap-line mr-1 text-cyan-300"></i>
+                                            {{ teacher.qualification|default:"Qualification not added" }}
+                                        </p>
+
+                                        <p class="mt-1 text-xs text-slate-400">
+                                            <i class="ri-briefcase-3-line mr-1 text-cyan-300"></i>
+                                            {{ teacher.experience }}
+                                            year{{ teacher.experience|pluralize }} experience
+                                        </p>
+
+                                    </div>
+
+                                </article>
+
+                            {% empty %}
+
+                                <div class="col-span-full rounded-xl border border-dashed border-slate-700 p-8 text-center">
+
+                                    <i class="ri-user-search-line text-3xl text-slate-500"></i>
+
+                                    <p class="mt-3 text-sm font-semibold text-slate-300">
+                                        No teachers assigned
+                                    </p>
+
+                                    <p class="mt-1 text-xs text-slate-500">
+                                        There are currently no active teacher assignments for this batch.
+                                    </p>
+
+                                </div>
+
+                            {% endfor %}
+
+                        </div>
+
+                    </div>
+                </div>
 
             {% endfor %}
 
         </div>
 
-
     {% else %}
 
-        <!-- ========================================================
-             EMPTY STATE
-             ======================================================== -->
-
-        <div
-            class="
-                min-h-[420px]
-                rounded-[24px]
-                border
-                border-white/8
-                bg-[#071224]
-                flex
-                items-center
-                justify-center
-                px-6
-                py-12
-            "
-        >
+        <!-- EMPTY STATE -->
+        <div class="min-h-[420px] rounded-[24px] border border-white/10 bg-[#071224] flex items-center justify-center px-6 py-12">
 
             <div class="text-center max-w-[480px]">
 
-                <div
-                    class="
-                        mx-auto
-                        w-[82px]
-                        h-[82px]
-                        rounded-[24px]
-                        bg-cyan-400/10
-                        border
-                        border-cyan-400/20
-                        flex
-                        items-center
-                        justify-center
-                        text-cyan-400
-                    "
-                >
-
+                <div class="mx-auto w-[82px] h-[82px] rounded-[24px] bg-cyan-400/10 border border-cyan-400/20 flex items-center justify-center text-cyan-400">
                     <i class="ri-book-open-line text-[38px]"></i>
-
                 </div>
 
-
-                <h2
-                    class="
-                        mt-6
-                        text-[22px]
-                        font-extrabold
-                        text-white
-                    "
-                >
+                <h2 class="mt-6 text-[22px] font-extrabold text-white">
                     Your Learning Space Is Empty
                 </h2>
 
-
-                <p
-                    class="
-                        mt-2
-                        text-[13px]
-                        leading-6
-                        text-[#94A3B8]
-                    "
-                >
+                <p class="mt-2 text-[13px] leading-6 text-[#94A3B8]">
                     You haven't purchased any batches yet.
                     Explore the marketplace and start your learning journey.
                 </p>
 
-
                 <a
                     href="{% url 'marketplace' %}"
-                    class="
-                        mt-6
-                        inline-flex
-                        items-center
-                        justify-center
-                        gap-2
-                        h-[46px]
-                        px-6
-                        rounded-[14px]
-                        bg-cyan-400
-                        text-[#02130D]
-                        text-[13px]
-                        font-extrabold
-                        hover:bg-cyan-300
-                        transition-all
-                    "
+                    class="mt-6 inline-flex items-center justify-center gap-2 h-[46px] px-6 rounded-[14px] bg-cyan-400 text-[#02130D] text-[13px] font-extrabold hover:bg-cyan-300 transition-all"
                 >
-
                     <i class="ri-shopping-bag-3-line text-[17px]"></i>
-
                     Explore Marketplace
-
                 </a>
 
             </div>
@@ -549,5 +576,163 @@
     {% endif %}
 
 </div>
+
+<!-- TEACHER POPUP JAVASCRIPT -->
+<script>
+(function () {
+    "use strict";
+
+    // Prevent duplicate initialization.
+    if (window.__neoLearnBatchTeacherPopupInitialized) return;
+    window.__neoLearnBatchTeacherPopupInitialized = true;
+
+    let previouslyFocusedElement = null;
+    let activeModal = null;
+
+    function openTeacherModal(modal, trigger) {
+        if (!modal) return;
+
+        previouslyFocusedElement = trigger;
+        activeModal = modal;
+
+        modal.classList.add("is-open");
+        document.body.classList.add("overflow-hidden");
+
+        const closeButton = modal.querySelector("[data-close-batch-teachers]");
+
+        if (closeButton) {
+            closeButton.focus();
+        }
+    }
+
+    function closeTeacherModal(modal) {
+        if (!modal) return;
+
+        modal.classList.remove("is-open");
+
+        if (activeModal === modal) {
+            activeModal = null;
+            document.body.classList.remove("overflow-hidden");
+
+            if (
+                previouslyFocusedElement &&
+                document.contains(previouslyFocusedElement)
+            ) {
+                previouslyFocusedElement.focus();
+            }
+
+            previouslyFocusedElement = null;
+        }
+    }
+
+    // Open popup.
+    document.querySelectorAll("[data-open-batch-teachers]").forEach(function (button) {
+
+        button.addEventListener("click", function (event) {
+
+            event.preventDefault();
+            event.stopPropagation();
+
+            const modal = document.getElementById(
+                button.dataset.openBatchTeachers
+            );
+
+            openTeacherModal(modal, button);
+        });
+
+    });
+
+    // Close buttons and backdrop.
+    document.querySelectorAll("[data-batch-teacher-modal]").forEach(function (modal) {
+
+        modal.querySelectorAll("[data-close-batch-teachers]").forEach(function (button) {
+
+            button.addEventListener("click", function () {
+                closeTeacherModal(modal);
+            });
+
+        });
+
+        modal.addEventListener("click", function (event) {
+
+            if (event.target === modal) {
+                closeTeacherModal(modal);
+            }
+
+        });
+
+    });
+
+    // Escape key and basic keyboard focus containment.
+    document.addEventListener("keydown", function (event) {
+
+        if (!activeModal) return;
+
+        if (event.key === "Escape") {
+            closeTeacherModal(activeModal);
+            return;
+        }
+
+        if (event.key === "Tab") {
+
+            const focusableElements = activeModal.querySelectorAll(
+                'button:not([disabled]), a[href], input:not([disabled]), [tabindex]:not([tabindex="-1"])'
+            );
+
+            const firstElement = focusableElements[0];
+            const lastElement = focusableElements[focusableElements.length - 1];
+
+            if (!firstElement || !lastElement) return;
+
+            if (event.shiftKey && document.activeElement === firstElement) {
+                event.preventDefault();
+                lastElement.focus();
+            } else if (!event.shiftKey && document.activeElement === lastElement) {
+                event.preventDefault();
+                firstElement.focus();
+            }
+        }
+
+    });
+
+    // Keep the complete batch card clickable, except the teacher button.
+    document.querySelectorAll("[data-learning-card]").forEach(function (card) {
+
+        function openBatch() {
+            const url = card.dataset.cardUrl;
+
+            if (url) {
+                window.location.assign(url);
+            }
+        }
+
+        card.addEventListener("click", function (event) {
+
+            if (
+                event.target.closest(
+                    "button, a, input, select, textarea, [data-batch-teacher-modal]"
+                )
+            ) {
+                return;
+            }
+
+            openBatch();
+        });
+
+        card.addEventListener("keydown", function (event) {
+
+            if (event.target !== card) return;
+
+            if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                openBatch();
+            }
+
+        });
+
+    });
+
+})();
+</script>
 
 {% endblock %}
