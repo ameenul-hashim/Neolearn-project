@@ -29,6 +29,14 @@ from orders.models import (
     Refund,
 )
 
+from admins.models import (
+    Batch,
+    Subject,
+    Teacher,
+    TeacherBatch,
+    TeacherSubject,
+)
+
 from orders.helpers import (
     get_refundable_order_items,
 )
@@ -2158,46 +2166,130 @@ def remove_coupon_view(request, coupon_id):
 # MY LEARNING
 # ============================================================
 
-@login_required(login_url='signin')
+
+@login_required(login_url="signin")
 @cache_control(
     no_cache=True,
     must_revalidate=True,
-    no_store=True
+    no_store=True,
 )
 def my_learning_view(request):
 
     # ========================================================
-    # STUDENT ACCESS
+    # STUDENT ACCESS VALIDATION
     # ========================================================
 
     if not is_student_user(request.user):
-
         messages.error(
             request,
-            'Admin login is not allowed here. Please use the admin login area.'
+            "Admin login is not allowed here. Please use the admin login area."
         )
-
-        return redirect('signin')
+        return redirect("signin")
 
     # ========================================================
-    # PURCHASED BATCHES
+    # FETCH ACTIVE PURCHASED BATCHES
     # ========================================================
 
-    purchased_batches = (
-        StudentBatchPurchase.objects
-        .filter(
+    purchased_batches = list(
+        StudentBatchPurchase.objects.filter(
             student=request.user,
             status=StudentBatchPurchase.Status.ACTIVE,
         )
         .select_related(
-            'batch',
-            'order',
-            'order_item',
+            "batch",
+            "order",
+            "order_item",
         )
-        .order_by(
-            '-purchased_at'
-        )
+        .order_by("-purchased_at")
     )
+
+    # ========================================================
+    # GET PURCHASED BATCH IDS
+    # ========================================================
+
+    batch_ids = {
+        purchase.batch_id
+        for purchase in purchased_batches
+    }
+
+    # ========================================================
+    # ACTIVE TEACHER-BATCH ASSIGNMENTS
+    # ========================================================
+
+    active_batch_assignments = TeacherBatch.objects.filter(
+        batch_id__in=batch_ids,
+        is_active=True,
+        teacher__is_blocked=False,
+        teacher__user__is_active=True,
+    ).values_list(
+        "batch_id",
+        "teacher_id",
+    )
+
+    valid_batch_teacher_pairs = set(
+        active_batch_assignments
+    )
+
+    # ========================================================
+    # ACTIVE TEACHER-SUBJECT ASSIGNMENTS
+    # ========================================================
+
+    subject_assignments = (
+        TeacherSubject.objects.filter(
+            batch_id__in=batch_ids,
+            is_active=True,
+            teacher__is_blocked=False,
+            teacher__user__is_active=True,
+        )
+        .select_related("teacher")
+        .order_by("teacher__full_name")
+    )
+
+    # ========================================================
+    # GROUP UNIQUE TEACHERS BY BATCH
+    # ========================================================
+
+    teachers_by_batch = {}
+
+    for assignment in subject_assignments:
+
+        assignment_key = (
+            assignment.batch_id,
+            assignment.teacher_id,
+        )
+
+        # Teacher must also have an active batch assignment.
+        if assignment_key not in valid_batch_teacher_pairs:
+            continue
+
+        batch_teachers = teachers_by_batch.setdefault(
+            assignment.batch_id,
+            {},
+        )
+
+        # Prevent duplicate teachers appearing in the same batch.
+        batch_teachers[assignment.teacher_id] = (
+            assignment.teacher
+        )
+
+    # ========================================================
+    # ATTACH TEACHER DATA TO PURCHASED BATCHES
+    # ========================================================
+
+    for purchase in purchased_batches:
+
+        assigned_teachers = teachers_by_batch.get(
+            purchase.batch_id,
+            {},
+        )
+
+        purchase.batch_teachers = list(
+            assigned_teachers.values()
+        )
+
+        purchase.batch_teacher_count = len(
+            purchase.batch_teachers
+        )
 
     # ========================================================
     # RENDER MY LEARNING
@@ -2205,11 +2297,12 @@ def my_learning_view(request):
 
     return render(
         request,
-        'students/my_learning/my_learning.html',
+        "students/my_learning/my_learning.html",
         {
-            'purchased_batches': purchased_batches,
+            "purchased_batches": purchased_batches,
         },
     )
+
 
 # ============================================================
 # MY LEARNING - BATCH SUBJECTS
@@ -2230,10 +2323,9 @@ def my_learning_batch_view(request, batch_id):
         )
         return redirect('signin')
 
+    # A student can open this page only when the batch has an active purchase.
     purchase = get_object_or_404(
-        StudentBatchPurchase.objects.select_related(
-            'batch'
-        ),
+        StudentBatchPurchase.objects.select_related('batch'),
         student=request.user,
         batch_id=batch_id,
         status=StudentBatchPurchase.Status.ACTIVE,
@@ -2241,16 +2333,87 @@ def my_learning_batch_view(request, batch_id):
 
     batch = purchase.batch
 
-    subjects = (
-        Subject.objects
-        .filter(
+    # Only published subjects belonging to this purchased batch.
+    subjects = list(
+        Subject.objects.filter(
             batch=batch,
             subject_status='published',
-        )
-        .order_by(
-            'subject_name'
+        ).order_by('subject_name')
+    )
+
+    subject_ids = [subject.pk for subject in subjects]
+
+    # First collect teachers who still have an active assignment to this batch.
+    active_batch_teacher_pairs = set(
+        TeacherBatch.objects.filter(
+            batch=batch,
+            is_active=True,
+            teacher__is_blocked=False,
+            teacher__user__is_active=True,
+        ).values_list(
+            'batch_id',
+            'teacher_id',
         )
     )
+
+    # Then fetch active teacher-to-subject assignments for these subjects.
+    subject_assignments = (
+        TeacherSubject.objects.filter(
+            batch=batch,
+            subject_id__in=subject_ids,
+            is_active=True,
+            teacher__is_blocked=False,
+            teacher__user__is_active=True,
+        )
+        .select_related('teacher', 'teacher__user', 'subject')
+        .order_by('teacher__full_name', 'teacher_id')
+    )
+
+    # Group unique, valid teachers by subject.
+    teachers_by_subject = {}
+
+    for assignment in subject_assignments:
+
+        # The teacher must also have an active TeacherBatch assignment
+        # for this exact batch.
+        if (
+            assignment.batch_id,
+            assignment.teacher_id,
+        ) not in active_batch_teacher_pairs:
+            continue
+
+        subject_teachers = teachers_by_subject.setdefault(
+            assignment.subject_id,
+            {},
+        )
+
+        # A teacher assigned through multiple records must appear once.
+        subject_teachers[assignment.teacher_id] = assignment.teacher
+
+    # Attach display values to each subject for the template.
+    for subject in subjects:
+
+        assigned_teachers = teachers_by_subject.get(
+            subject.pk,
+            {},
+        )
+
+        subject.card_teachers = list(
+            assigned_teachers.values()
+        )
+
+        subject.card_teacher_count = len(
+            subject.card_teachers
+        )
+
+        # The card displays at most three overlapping avatars.
+        subject.card_teacher_preview = subject.card_teachers[:3]
+
+        # The +N avatar is shown only when there are more than three.
+        subject.card_teacher_extra_count = max(
+            subject.card_teacher_count - 3,
+            0,
+        )
 
     return render(
         request,
@@ -2260,7 +2423,6 @@ def my_learning_batch_view(request, batch_id):
             'subjects': subjects,
         },
     )
-
 
 # ============================================================
 # MY LEARNING - SUBJECT CHAPTERS

@@ -322,12 +322,21 @@
                     </a>
 
                     <p class="nav-label">Academic Management</p>
-                    <a href="{% url 'admin_batches' %}" class="admin-nav-link {% if 'batch' in request.resolver_match.url_name %}active{% endif %}" {% if 'batch' in request.resolver_match.url_name %}aria-current="page"{% endif %}>
-                        <i class="nav-icon ri-book-open-line shrink-0 text-[18px]"></i><span class="truncate">Batches</span>
+
+                    <a href="{% url 'admin_batches' %}"
+                    class="admin-nav-link {% if 'batch' in request.resolver_match.url_name %}active{% endif %}"
+                    {% if 'batch' in request.resolver_match.url_name %}aria-current="page"{% endif %}>
+                    <i class="nav-icon ri-book-open-line shrink-0 text-[18px]"></i>
+                    <span class="truncate">Batches</span>
                     </a>
-                    <a href="{% url 'admin_subjects' %}" class="admin-nav-link {% if 'subject' in request.resolver_match.url_name %}active{% endif %}" {% if 'subject' in request.resolver_match.url_name %}aria-current="page"{% endif %}>
-                        <i class="nav-icon ri-stack-line shrink-0 text-[18px]"></i><span class="truncate">Subjects</span>
+
+                    <a href="{% url 'admin_subjects' %}"
+                    class="admin-nav-link {% if 'subject' in request.resolver_match.url_name and request.resolver_match.url_name != 'batch_subjects' %}active{% endif %}"
+                    {% if 'subject' in request.resolver_match.url_name and request.resolver_match.url_name != 'batch_subjects' %}aria-current="page"{% endif %}>
+                    <i class="nav-icon ri-stack-line shrink-0 text-[18px]"></i>
+                    <span class="truncate">Subjects</span>
                     </a>
+
 
                     <p class="nav-label">Class Operations</p>
                     <a href="{% url 'live_classes:admin_live_schedule' %}" class="admin-nav-link {% if request.resolver_match.url_name == 'admin_live_schedule' %}active{% endif %}" {% if request.resolver_match.url_name == 'admin_live_schedule' %}aria-current="page"{% endif %}>

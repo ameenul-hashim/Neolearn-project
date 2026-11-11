@@ -1,421 +1,355 @@
 {% extends "admins/admin_base.html" %}
 
-{% block title %}
-{{ batch.batch_name }} Subjects
-{% endblock %}
+{% block title %}{{ batch.batch_name }} | Subjects{% endblock %}
 
 {% block admin_content %}
+<style>
+    .batch-subjects-page { color:#e2e8f0; }
+    .batch-subjects-stat { min-width:0; border:1px solid rgba(71,85,105,.55); border-radius:16px; padding:13px 15px; background:linear-gradient(135deg,rgba(15,31,55,.96),rgba(8,17,34,.96)); }
+    .batch-subjects-panel { border:1px solid rgba(71,85,105,.62); border-radius:18px; background:rgba(15,23,42,.88); }
+    .batch-subjects-input { width:100%; min-width:0; border:1px solid #334155; border-radius:12px; background:#071225; color:#f8fafc; padding:11px 14px 11px 42px; outline:none; transition:border-color .18s,box-shadow .18s; }
+    .batch-subjects-input:focus { border-color:#22d3ee; box-shadow:0 0 0 3px rgba(34,211,238,.10); }
+    .batch-subjects-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:14px; }
+    .batch-subject-card { position:relative; display:flex; min-width:0; flex-direction:column; overflow:hidden; border:1px solid rgba(71,85,105,.68); border-radius:18px; background:linear-gradient(155deg,#111d33 0%,#0b1427 100%); box-shadow:0 12px 28px rgba(0,0,0,.20); cursor:pointer; outline:none; transition:transform .22s,border-color .22s,box-shadow .22s; }
+    .batch-subject-card:hover,.batch-subject-card:focus-visible { transform:translateY(-3px); border-color:rgba(34,211,238,.72); box-shadow:0 18px 34px rgba(0,0,0,.34),0 0 22px rgba(34,211,238,.08); }
+    .batch-subject-media { position:relative; height:145px; overflow:hidden; background:linear-gradient(135deg,#0e7490,#172554); }
+    .batch-subject-media img { width:100%; height:100%; object-fit:cover; transition:transform .4s; }
+    .batch-subject-card:hover .batch-subject-media img { transform:scale(1.04); }
+    .batch-subject-media:after { content:""; position:absolute; inset:auto 0 0; height:38px; background:linear-gradient(transparent,rgba(4,11,24,.55)); pointer-events:none; }
+    .batch-subject-status { position:absolute; z-index:3; left:10px; top:10px; display:inline-flex; align-items:center; gap:6px; border-radius:999px; padding:5px 9px; font-size:10px; line-height:1; font-weight:800; backdrop-filter:blur(8px); }
+    .batch-status-published { color:#6ee7b7; border:1px solid rgba(52,211,153,.42); background:rgba(2,20,25,.9); }
+    .batch-status-draft { color:#fcd34d; border:1px solid rgba(251,191,36,.42); background:rgba(30,23,6,.92); }
+    .batch-status-archived { color:#cbd5e1; border:1px solid rgba(148,163,184,.35); background:rgba(15,23,42,.92); }
+    .batch-subject-tools { position:absolute; z-index:5; right:9px; top:8px; display:flex; gap:6px; }
+    .batch-subject-tool { display:flex; width:30px; height:30px; align-items:center; justify-content:center; border:1px solid rgba(71,85,105,.9); border-radius:9px; background:rgba(2,8,23,.88); color:#cbd5e1; font-size:14px; backdrop-filter:blur(8px); transition:transform .16s,border-color .16s,background .16s; }
+    .batch-subject-tool:hover { transform:translateY(-2px); }
+    .batch-subject-tool.edit { color:#7dd3fc; border-color:rgba(56,189,248,.42); }
+    .batch-subject-tool.delete { color:#fda4af; border-color:rgba(251,113,133,.38); }
+    .batch-subject-body { display:flex; flex:1; flex-direction:column; padding:12px; }
+    .batch-subject-title-row { display:flex; min-width:0; align-items:center; gap:9px; }
+    .batch-subject-symbol { display:flex; width:36px; height:36px; flex:0 0 36px; align-items:center; justify-content:center; border:1px solid rgba(34,211,238,.24); border-radius:11px; background:rgba(6,182,212,.12); color:#67e8f9; font-size:18px; }
+    .batch-subject-title { min-width:0; overflow:hidden; color:#f8fafc; font-size:14px; font-weight:800; text-overflow:ellipsis; white-space:nowrap; }
+    .batch-subject-description { min-height:42px; margin-top:9px; color:#94a3b8; font-size:11px; line-height:1.55; overflow-wrap:anywhere; }
+    .batch-subject-teachers { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:auto; padding-top:12px; }
+    .batch-teacher-stack { display:flex; align-items:center; padding-left:2px; }
+    .batch-teacher-avatar { display:flex; width:32px; height:32px; flex:0 0 32px; margin-left:-4px; align-items:center; justify-content:center; overflow:hidden; border:2px solid #101b30; border-radius:50%; background:#26364e; color:#e2e8f0; font-size:10px; font-weight:800; cursor:pointer; transition:transform .18s,border-color .18s; }
+    .batch-teacher-avatar:first-child { margin-left:0; }
+    .batch-teacher-avatar:hover,.batch-teacher-avatar:focus-visible { z-index:2; transform:translateY(-3px) scale(1.08); border-color:#22d3ee; outline:none; }
+    .batch-teacher-avatar img { width:100%; height:100%; object-fit:cover; }
+    .batch-teacher-more { border-color:#164e63; background:linear-gradient(135deg,#164e63,#1e293b); color:#a5f3fc; }
+    .batch-teacher-count { color:#94a3b8; font-size:10px; font-weight:700; white-space:nowrap; }
+    .batch-teacher-modal { position:fixed; inset:0; z-index:150; display:none; align-items:center; justify-content:center; padding:16px; background:rgba(2,6,23,.78); backdrop-filter:blur(9px); }
+    .batch-teacher-modal.open { display:flex; }
+    .batch-teacher-modal-panel { display:flex; width:min(650px,100%); max-height:min(72vh,580px); flex-direction:column; overflow:hidden; border:1px solid rgba(34,211,238,.58); border-radius:18px; background:linear-gradient(145deg,#13233a,#081426); box-shadow:0 25px 80px rgba(0,0,0,.58); }
+    .batch-teacher-modal-head { display:flex; flex:0 0 auto; align-items:center; justify-content:space-between; gap:12px; padding:13px 16px; border-bottom:1px solid rgba(71,85,105,.7); }
+    .batch-teacher-modal-list { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); align-content:start; gap:9px; min-height:0; overflow-y:auto; padding:12px 14px 14px; }
+    .batch-teacher-detail { display:flex; min-width:0; align-items:center; gap:10px; padding:10px; border:1px solid rgba(71,85,105,.68); border-radius:13px; background:rgba(15,23,42,.82); }
+    .batch-teacher-photo { display:flex; width:46px; height:46px; flex:0 0 46px; align-items:center; justify-content:center; overflow:hidden; border:2px solid rgba(34,211,238,.34); border-radius:50%; background:#23344e; color:#e2e8f0; font-weight:800; }
+    .batch-teacher-photo img { width:100%; height:100%; object-fit:cover; }
+    @media(max-width:1350px){.batch-subjects-grid{grid-template-columns:repeat(3,minmax(0,1fr));}}
+    @media(max-width:1024px){.batch-subjects-grid{grid-template-columns:repeat(2,minmax(0,1fr));}}
+    @media(max-width:640px){.batch-subjects-grid{grid-template-columns:minmax(0,1fr);}.batch-subject-media{height:175px;}.batch-teacher-modal{padding:10px}.batch-teacher-modal-list{grid-template-columns:minmax(0,1fr);}}
+</style>
 
-<div class="space-y-8">
-
-    <!-- ================= HEADER ================= -->
-
-    <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-
-        <div>
-
-            <a
-                href="{% url 'admin_batches' %}"
-                class="inline-flex items-center gap-2 text-sm text-cyan-400 transition hover:text-cyan-300">
-
-                ← Back to Batches
-
-            </a>
-
-            <h1 class="mt-3 text-4xl font-bold text-white">
-
-                {{ batch.batch_name }}
-
-            </h1>
-
-            <p class="mt-2 text-slate-400">
-
-                Manage all subjects available in this batch.
-
-            </p>
-
+<div class="batch-subjects-page mx-auto w-full max-w-[1600px] space-y-5 pb-5">
+    <!-- Header: breadcrumb, existing Batch Management label and description -->
+    <header class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div class="min-w-0">
+            <nav aria-label="Breadcrumb" class="mb-3 flex min-w-0 flex-wrap items-center gap-2 text-xs font-semibold">
+                <a href="{% url 'admin_batches' %}" class="shrink-0 text-cyan-300 transition hover:text-cyan-100">Batches</a>
+                <i class="ri-arrow-right-s-line shrink-0 text-slate-500"></i>
+                <span class="max-w-[42vw] truncate text-slate-400" title="{{ batch.batch_name }}">{{ batch.batch_name }}</span>
+                <i class="ri-arrow-right-s-line shrink-0 text-slate-500"></i>
+                <span class="shrink-0 text-white" aria-current="page">Subjects</span>
+            </nav>
+            <div class="mb-1 flex items-center gap-2 text-[11px] font-bold uppercase tracking-[.17em] text-cyan-300">
+                <i class="ri-stack-line text-base"></i> Batch Management
+            </div>
+            <p class="mt-1 text-sm text-slate-400">Manage subjects, view assigned teachers and open the Course Builder.</p>
         </div>
-
-        <a
-            href="{% url 'create_subject' %}?batch={{ batch.id }}&return_batch_id={{ batch.id }}"
-            class="inline-flex items-center gap-2 rounded-xl bg-cyan-500 px-6 py-3 font-semibold text-slate-900 shadow-lg shadow-cyan-500/20 transition hover:bg-cyan-400">
-
-            <svg
-                xmlns="http://www.w3.org/2000/svg"
-                class="h-5 w-5"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor">
-
-                <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M12 4v16m8-8H4"/>
-
-            </svg>
-
-            Create Subject
-
-        </a>
-
-    </div>
-
-
-
-    <!-- ================= BATCH INFO ================= -->
-
-    <div class="rounded-2xl border border-slate-700 bg-[#0F172A] p-6">
-
-        <div class="flex flex-col lg:flex-row lg:items-center gap-6">
-
-            <img
-                src="{{ batch.batch_thumbnail.url }}"
-                alt="{{ batch.batch_name }}"
-                class="h-40 w-full rounded-xl object-cover lg:w-72">
-
-            <div class="flex-1">
-
-                <h2 class="text-3xl font-bold text-white">
-
-                    {{ batch.batch_name }}
-
-                </h2>
-
-                <p class="mt-3 text-slate-400">
-
-                    {{ batch.batch_description }}
-
-                </p>
-
-                <div class="mt-6 flex flex-wrap gap-5">
-
-                    <div>
-
-                        <p class="text-xs uppercase tracking-wide text-slate-500">
-
-                            Price
-
-                        </p>
-
-                        <p class="mt-1 text-2xl font-bold text-cyan-400">
-
-                            ₹{{ batch.batch_price }}
-
-                        </p>
-
-                    </div>
-
-                    <div>
-
-                        <p class="text-xs uppercase tracking-wide text-slate-500">
-
-                            Subjects
-
-                        </p>
-
-                        <p class="mt-1 text-2xl font-bold text-white">
-
-                            {{ subjects.count }}
-
-                        </p>
-
-                    </div>
-
-                    <div>
-
-                        <p class="text-xs uppercase tracking-wide text-slate-500">
-
-                            Status
-
-                        </p>
-
-                        {% if batch.batch_status == "published" %}
-
-                            <span class="mt-2 inline-flex rounded-full bg-green-500 px-3 py-1 text-xs font-semibold text-white">
-
-                                Published
-
-                            </span>
-
-                        {% else %}
-
-                            <span class="mt-2 inline-flex rounded-full bg-yellow-500 px-3 py-1 text-xs font-semibold text-slate-900">
-
-                                Draft
-
-                            </span>
-
-                        {% endif %}
-
-                    </div>
-
+        <div class="flex w-full shrink-0 flex-col gap-2 sm:w-auto sm:flex-row sm:items-center sm:justify-end">
+            <form method="get" action="{% url 'batch_subjects' batch.id %}"
+                  class="batch-subjects-panel flex w-full min-w-0 flex-col gap-2 p-2 sm:w-[min(520px,42vw)] sm:flex-row sm:items-center">
+                <label class="relative block min-w-0 flex-1">
+                    <span class="sr-only">Search subjects</span>
+                    <i class="ri-search-line pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-base text-slate-500"></i>
+                    <input type="search" name="search" value="{{ search|default:'' }}" placeholder="Search subjects..." class="batch-subjects-input" autocomplete="off">
+                </label>
+                <div class="flex shrink-0 items-center gap-2">
+                    <button type="submit" class="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-extrabold text-white transition hover:bg-blue-700">
+                        <i class="ri-search-line"></i> Search
+                    </button>
+                    <a href="{% url 'batch_subjects' batch.id %}" class="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-slate-600 bg-slate-800 px-3 py-2.5 text-xs font-bold text-slate-300 transition hover:border-cyan-400 hover:text-cyan-200" title="Refresh subject list">
+                        <i class="ri-refresh-line"></i> Refresh
+                    </a>
                 </div>
-
-            </div>
-
-        </div>
-
-    </div>
-
-
-
-    <!-- ================= SEARCH BAR ================= -->
-
-    <form method="GET">
-
-        <div class="flex flex-col md:flex-row gap-4">
-
-            <div class="relative flex-1">
-
-                <input
-                    type="text"
-                    name="search"
-                    value="{{ search }}"
-                    placeholder="Search subject..."
-                    class="w-full rounded-xl border border-slate-700 bg-slate-800 py-3 pl-11 pr-4 text-white placeholder-slate-500 outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500">
-
-                <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    class="absolute left-4 top-3.5 h-5 w-5 text-slate-500"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor">
-
-                    <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M21 21l-4.3-4.3m1.3-5.2a7 7 0 11-14 0 7 7 0 0114 0z"/>
-
-                </svg>
-
-            </div>
-
-            <button
-                type="submit"
-                class="rounded-xl bg-cyan-500 px-6 py-3 font-semibold text-slate-900 transition hover:bg-cyan-400">
-
-                Search
-
-            </button>
-
-            <a
-                href="{% url 'batch_subjects' batch.id %}"
-                class="rounded-xl border border-slate-700 bg-slate-800 px-6 py-3 text-center font-semibold text-white transition hover:border-cyan-500 hover:text-cyan-400">
-
-                Refresh
-
+            </form>
+            <a href="{% url 'create_subject' %}?batch={{ batch.id }}&return_batch_id={{ batch.id }}"
+               class="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-400 to-cyan-300 px-4 py-2.5 text-sm font-extrabold text-slate-950 shadow-lg shadow-cyan-950/30 transition hover:-translate-y-0.5 hover:from-cyan-300 hover:to-teal-300">
+                <i class="ri-add-line text-lg"></i> Create Subject
             </a>
+        </div>
+    </header>
 
+    <!-- Batch summary -->
+    <section class="overflow-hidden rounded-[18px] border border-cyan-400/50 bg-white shadow-[0_12px_35px_rgba(0,0,0,.2)]">
+        <div class="h-1.5 bg-gradient-to-r from-cyan-400 via-sky-400 to-cyan-200"></div>
+        <div class="grid gap-5 p-4 sm:p-5 lg:grid-cols-[minmax(0,1.45fr)_minmax(300px,1fr)] lg:items-center">
+            <div class="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-center">
+                <div class="h-36 w-full shrink-0 overflow-hidden rounded-xl bg-slate-100 sm:w-52">
+                    {% if batch.batch_thumbnail %}
+                        <img src="{{ batch.batch_thumbnail.url }}" alt="{{ batch.batch_name }}" class="h-full w-full object-cover">
+                    {% else %}
+                        <div class="flex h-full items-center justify-center text-4xl text-slate-300"><i class="ri-image-line"></i></div>
+                    {% endif %}
+                </div>
+                <div class="min-w-0 flex-1">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <h2 class="text-xl font-extrabold text-slate-900">{{ batch.batch_name }}</h2>
+                        {% if batch.batch_status == "published" %}
+                            <span class="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[10px] font-bold text-emerald-700">● Published</span>
+                        {% elif batch.batch_status == "archived" %}
+                            <span class="rounded-full border border-slate-200 bg-slate-100 px-2.5 py-1 text-[10px] font-bold text-slate-600">● Archived</span>
+                        {% else %}
+                            <span class="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[10px] font-bold text-amber-700">● Draft</span>
+                        {% endif %}
+                    </div>
+                    <p class="mt-2 text-xs leading-5 text-slate-500">
+                        {% if batch.batch_description %}{{ batch.batch_description|truncatechars:180 }}{% else %}No batch description has been added.{% endif %}
+                    </p>
+                    <div class="mt-3 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                        {% if batch.original_price %}
+                            <span class="text-xs text-slate-400 line-through">₹{{ batch.original_price }}</span>
+                        {% endif %}
+                        <span class="text-xl font-extrabold text-blue-700">₹{{ batch.final_price|default:batch.original_price|default:"0.00" }}</span>
+                        <span class="text-[10px] font-medium text-slate-400">Batch price</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-3 gap-2">
+                <article class="rounded-xl border border-blue-100 bg-blue-50/80 p-3">
+                    <p class="text-[9px] font-extrabold uppercase tracking-wide text-blue-600">Total Subjects</p>
+                    <p class="mt-1 text-2xl font-extrabold text-slate-900">{{ total_subject_count }}</p>
+                    <p class="mt-1 text-[9px] text-slate-500">In this batch</p>
+                </article>
+                <article class="rounded-xl border border-emerald-100 bg-emerald-50/80 p-3">
+                    <p class="text-[9px] font-extrabold uppercase tracking-wide text-emerald-700">Published</p>
+                    <p class="mt-1 text-2xl font-extrabold text-slate-900">{{ published_subject_count }}</p>
+                    <p class="mt-1 text-[9px] text-slate-500">Subjects live</p>
+                </article>
+                <article class="rounded-xl border border-sky-100 bg-sky-50/80 p-3">
+                    <p class="text-[9px] font-extrabold uppercase tracking-wide text-sky-700">Active Teachers</p>
+                    <p class="mt-1 text-2xl font-extrabold text-slate-900">{{ batch_teacher_count }}</p>
+                    <p class="mt-1 text-[9px] text-slate-500">Assigned to batch</p>
+                </article>
+            </div>
+        </div>
+    </section>
+
+    <!-- Search -->
+    <section>
+        <div class="mb-3 flex items-end justify-between gap-3">
+            <div>
+                <h2 class="text-lg font-extrabold text-white">Subject Library</h2>
+                <p class="mt-0.5 text-xs text-slate-400">Click a subject card to open its Course Builder. Click a teacher photo to view assigned teacher details.</p>
+            </div>
+            <span class="whitespace-nowrap text-xs font-medium text-slate-500">{{ subjects|length }} result{{ subjects|length|pluralize }}</span>
         </div>
 
-    </form>
+    </section>
 
-
-
-    <!-- ================= SUBJECT GRID ================= -->
-
-    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-
-                {% for subject in subjects %}
-
-        <div class="overflow-hidden rounded-2xl border border-slate-700 bg-[#111827] transition duration-300 hover:-translate-y-1 hover:border-cyan-500 hover:shadow-xl hover:shadow-cyan-500/10">
-
-            <!-- ================= Thumbnail ================= -->
-
-            <div class="relative">
-
-                <img
-                    src="{{ subject.subject_thumbnail.url }}"
-                    alt="{{ subject.subject_name }}"
-                    class="h-48 w-full object-cover">
-
-                {% if subject.subject_status == "published" %}
-
-                    <span class="absolute right-3 top-3 rounded-full bg-green-500 px-3 py-1 text-xs font-semibold text-white">
-
-                        ● Published
-
-                    </span>
-
+    <!-- Subject cards -->
+    <section class="batch-subjects-grid">
+        {% for subject in subjects %}
+        <article class="batch-subject-card" role="link" tabindex="0"
+                 aria-label="Open Course Builder for {{ subject.subject_name }}"
+                 data-course-url="{% url 'admin_course_builder_entry' batch.id subject.id %}">
+            <div class="batch-subject-media">
+                {% if subject.subject_thumbnail %}
+                    <img src="{{ subject.subject_thumbnail.url }}" alt="{{ subject.subject_name }} thumbnail" loading="lazy">
                 {% else %}
-
-                    <span class="absolute right-3 top-3 rounded-full bg-yellow-500 px-3 py-1 text-xs font-semibold text-slate-900">
-
-                        ● Draft
-
-                    </span>
-
+                    <div class="flex h-full items-center justify-center bg-slate-900 text-5xl text-cyan-300"><i class="ri-book-open-line"></i></div>
                 {% endif %}
 
+                {% if subject.subject_status == "published" %}
+                    <span class="batch-subject-status batch-status-published"><span class="h-1.5 w-1.5 rounded-full bg-emerald-400"></span> Published</span>
+                {% elif subject.subject_status == "archived" %}
+                    <span class="batch-subject-status batch-status-archived"><span class="h-1.5 w-1.5 rounded-full bg-slate-400"></span> Archived</span>
+                {% else %}
+                    <span class="batch-subject-status batch-status-draft"><span class="h-1.5 w-1.5 rounded-full bg-amber-400"></span> Draft</span>
+                {% endif %}
+
+                <div class="batch-subject-tools" data-no-card-nav>
+                    <a href="{% url 'edit_subject' subject.id %}?return_batch_id={{ batch.id }}" class="batch-subject-tool edit" title="Edit subject" aria-label="Edit {{ subject.subject_name }}"><i class="ri-edit-2-line"></i></a>
+                    <a href="{% url 'delete_subject' subject.id %}?return_batch_id={{ batch.id }}" class="batch-subject-tool delete" title="Delete subject" aria-label="Delete {{ subject.subject_name }}"><i class="ri-delete-bin-line"></i></a>
+                </div>
             </div>
 
-            <!-- ================= Card Body ================= -->
+            <div class="batch-subject-body">
+                <div class="batch-subject-title-row">
+                    <span class="batch-subject-symbol"><i class="ri-book-2-line"></i></span>
+                    <h3 class="batch-subject-title" title="{{ subject.subject_name }}">{{ subject.subject_name }}</h3>
+                </div>
 
-            <div class="p-5">
-
-                <h2 class="truncate text-2xl font-bold text-white">
-
-                    {{ subject.subject_name }}
-
-                </h2>
-
-                <p class="mt-3 h-10 overflow-hidden text-sm leading-6 text-slate-400">
-
-                    {{ subject.subject_description|truncatechars:80 }}
-
+                <p class="batch-subject-description">
+                    {% if subject.subject_description %}
+                        {{ subject.subject_description|truncatechars:100 }}
+                    {% else %}
+                        No subject description has been added.
+                    {% endif %}
                 </p>
 
-                <!-- Teacher Section -->
+                <div class="batch-subject-teachers" data-no-card-nav>
+                    <div class="batch-teacher-stack" aria-label="Assigned teachers">
+                        {% for teacher in subject.card_teachers|slice:":3" %}
+                            <button type="button" class="batch-teacher-avatar"
+                                    data-open-teachers="batchSubjectTeachers{{ subject.id }}"
+                                    title="View {{ teacher.full_name }}"
+                                    aria-label="View assigned teachers for {{ subject.subject_name }}">
+                                {% if teacher.profile_image %}
+                                    <img src="{{ teacher.profile_image.url }}" alt="{{ teacher.full_name }}" loading="lazy">
+                                {% else %}
+                                    {{ teacher.full_name|default:teacher.user.username|first|upper }}
+                                {% endif %}
+                            </button>
+                        {% empty %}
+                            <span class="text-[10px] text-slate-500">No teachers assigned</span>
+                        {% endfor %}
 
-                <div class="mt-5 flex items-center justify-between">
+                        {% if subject.card_teacher_count > 3 %}
+                            <button type="button" class="batch-teacher-avatar batch-teacher-more"
+                                    data-open-teachers="batchSubjectTeachers{{ subject.id }}"
+                                    title="View all {{ subject.card_teacher_count }} assigned teachers">
+                                +{{ subject.card_teacher_count|add:"-3" }}
+                            </button>
+                        {% endif %}
+                    </div>
 
-                    <div>
+                    {% if subject.card_teacher_count %}
+                        <span class="batch-teacher-count">{{ subject.card_teacher_count }} assigned</span>
+                    {% endif %}
+                </div>
 
-                        <p class="text-xs uppercase tracking-wide text-slate-500">
+                <div class="mt-3 border-t border-slate-700/70 pt-2 text-[10px] text-slate-500">
+                    <i class="ri-cursor-line mr-1 text-cyan-300"></i> Open course content
+                </div>
+            </div>
+        </article>
 
-                            Assigned Teachers
-
-                        </p>
-
-                        <div class="mt-2 flex items-center gap-2">
-
-                            <span class="flex h-8 w-8 items-center justify-center rounded-full bg-slate-700 text-xs font-bold text-white">
-
-                                {{ subject.teachers.count|default:"0" }}
-
-                            </span>
-
-                            <!-- Assign Teacher -->
-
-                            <a
-                                href="#"
-                                class="flex h-8 w-8 items-center justify-center rounded-full bg-cyan-500 text-lg font-bold text-slate-900 transition hover:bg-cyan-400"
-                                title="Assign Teacher">
-
-                                +
-
-                            </a>
-
+        <!-- Teacher details popup for this subject -->
+        <div id="batchSubjectTeachers{{ subject.id }}" class="batch-teacher-modal" role="dialog" aria-modal="true"
+             aria-labelledby="batchSubjectTeachersTitle{{ subject.id }}" data-batch-teacher-modal>
+            <div class="batch-teacher-modal-panel">
+                <div class="batch-teacher-modal-head">
+                    <div class="flex min-w-0 items-center gap-2.5">
+                        <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-cyan-500/15 text-lg text-cyan-300"><i class="ri-team-line"></i></span>
+                        <div class="min-w-0">
+                            <h3 id="batchSubjectTeachersTitle{{ subject.id }}" class="truncate text-sm font-extrabold text-white">Assigned Teachers — {{ subject.subject_name }}</h3>
+                            <p class="mt-0.5 text-[11px] text-slate-400">{{ batch.batch_name }}</p>
                         </div>
-
                     </div>
-
-                    <!-- Edit / Delete -->
-
-                    <div class="flex items-center gap-4">
-
-                        <a
-                            href="{% url 'edit_subject' subject.id %}"
-                            class="text-slate-400 transition hover:text-cyan-400"
-                            title="Edit Subject">
-
-                            ✏️
-
-                        </a>
-
-                        <a
-                            href="{% url 'delete_subject' subject.id %}?return_batch_id={{ batch.id }}"
-                            class="text-slate-400 transition hover:text-red-500"
-                            title="Delete Subject">
-
-                            🗑️
-
-                        </a>
-
-                    </div>
-
+                    <button type="button" data-close-teachers class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-800 hover:text-white" aria-label="Close teacher details"><i class="ri-close-line text-xl"></i></button>
                 </div>
-
-              <!-- Bottom Button -->
-
-<div class="mt-6">
-
-    <a
-        href="{% url 'admin_course_builder_entry' batch.id subject.id %}"
-        class="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-700 bg-slate-800 px-4 py-3 text-sm font-semibold text-white transition hover:border-cyan-500 hover:text-cyan-400">
-
-        <span class="text-base">👁</span>
-        <span>View Subject Content</span>
-
-    </a>
-
-</div>
-
+                <div class="batch-teacher-modal-list">
+                    {% for teacher in subject.card_teachers %}
+                        <article class="batch-teacher-detail">
+                            <div class="batch-teacher-photo">
+                                {% if teacher.profile_image %}
+                                    <img src="{{ teacher.profile_image.url }}" alt="{{ teacher.full_name }}">
+                                {% else %}
+                                    {{ teacher.full_name|default:teacher.user.username|first|upper }}
+                                {% endif %}
+                            </div>
+                            <div class="min-w-0 flex-1">
+                                <h4 class="truncate text-sm font-extrabold text-white">{{ teacher.full_name|default:teacher.user.username }}</h4>
+                                <p class="mt-1 truncate text-[11px] text-slate-300"><i class="ri-graduation-cap-line mr-1 text-cyan-300"></i>{{ teacher.qualification|default:"Qualification not added" }}</p>
+                                <p class="mt-1 text-[11px] text-slate-400"><i class="ri-briefcase-3-line mr-1 text-cyan-300"></i>{{ teacher.experience|default:0 }} year{{ teacher.experience|pluralize }} experience</p>
+                            </div>
+                        </article>
+                    {% empty %}
+                        <div class="col-span-full rounded-xl border border-dashed border-slate-700 p-7 text-center text-sm text-slate-400">No active teachers are assigned to this subject.</div>
+                    {% endfor %}
+                </div>
             </div>
-
         </div>
-
         {% empty %}
-
-                <div class="col-span-full">
-
-            <div class="rounded-2xl border-2 border-dashed border-slate-700 bg-[#111827] px-10 py-16 text-center">
-
-                <div class="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-slate-800">
-
-                    <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        class="h-10 w-10 text-cyan-400"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor">
-
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M12 4v16m8-8H4"/>
-
-                    </svg>
-
-                </div>
-
-                <h2 class="mt-6 text-2xl font-bold text-white">
-
-                    No Subjects Found
-
-                </h2>
-
-                <p class="mt-3 text-slate-400">
-
-                    This batch doesn't have any subjects yet.
-                    Create your first subject to begin managing course content.
-
-                </p>
-
-                <a
-                    href="{% url 'create_subject' %}?batch={{ batch.id }}&return_batch_id={{ batch.id }}"
-                    class="mt-8 inline-flex items-center gap-2 rounded-xl bg-cyan-500 px-6 py-3 font-semibold text-slate-900 shadow-lg shadow-cyan-500/20 transition hover:bg-cyan-400">
-
-                    <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        class="h-5 w-5"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor">
-
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M12 4v16m8-8H4"/>
-
-                    </svg>
-
-                    Create First Subject
-
-                </a>
-
-            </div>
-
+        <div class="col-span-full rounded-2xl border border-dashed border-slate-700 bg-slate-900/70 px-5 py-14 text-center">
+            <span class="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-cyan-500/10 text-3xl text-cyan-300"><i class="ri-book-open-line"></i></span>
+            {% if search %}
+                <h3 class="mt-4 text-lg font-extrabold text-white">No matching subjects</h3>
+                <p class="mt-1 text-sm text-slate-400">No subjects match “{{ search }}”. Try another search or clear the search.</p>
+                <a href="{% url 'batch_subjects' batch.id %}" class="mt-4 inline-flex items-center gap-2 rounded-xl border border-slate-600 bg-slate-800 px-4 py-2.5 text-sm font-bold text-slate-200 transition hover:border-cyan-400 hover:text-cyan-200"><i class="ri-refresh-line"></i> Clear Search</a>
+            {% else %}
+                <h3 class="mt-4 text-lg font-extrabold text-white">No subjects added yet</h3>
+                <p class="mt-1 text-sm text-slate-400">Create the first subject for this batch to start organising chapters and course content.</p>
+                <a href="{% url 'create_subject' %}?batch={{ batch.id }}&return_batch_id={{ batch.id }}" class="mt-4 inline-flex items-center gap-2 rounded-xl bg-cyan-400 px-4 py-2.5 text-sm font-bold text-slate-950 transition hover:bg-cyan-300"><i class="ri-add-line"></i> Create First Subject</a>
+            {% endif %}
         </div>
-
         {% endfor %}
-
-    </div>
-
+    </section>
 </div>
 
+<script>
+(function () {
+    "use strict";
+
+    // Open the Course Builder when a subject card itself is clicked.
+    document.querySelectorAll(".batch-subject-card[data-course-url]").forEach(function (card) {
+        function openCourseBuilder() {
+            window.location.assign(card.dataset.courseUrl);
+        }
+
+        card.addEventListener("click", function (event) {
+            if (event.target.closest("a,button,[data-no-card-nav]")) return;
+            openCourseBuilder();
+        });
+
+        card.addEventListener("keydown", function (event) {
+            if ((event.key === "Enter" || event.key === " ") && event.target === card) {
+                event.preventDefault();
+                openCourseBuilder();
+            }
+        });
+    });
+
+    // Each subject's teacher photos (and +N button) open that subject's teacher list.
+    function closeTeacherModal(modal) {
+        if (!modal) return;
+        modal.classList.remove("open");
+        document.body.classList.remove("overflow-hidden");
+    }
+
+    document.querySelectorAll("[data-open-teachers]").forEach(function (button) {
+        button.addEventListener("click", function (event) {
+            event.preventDefault();
+            event.stopPropagation();
+            const modal = document.getElementById(button.dataset.openTeachers);
+            if (!modal) return;
+            modal.classList.add("open");
+            document.body.classList.add("overflow-hidden");
+            const closeButton = modal.querySelector("[data-close-teachers]");
+            if (closeButton) closeButton.focus();
+        });
+    });
+
+    document.querySelectorAll("[data-batch-teacher-modal]").forEach(function (modal) {
+        modal.querySelectorAll("[data-close-teachers]").forEach(function (button) {
+            button.addEventListener("click", function () {
+                closeTeacherModal(modal);
+            });
+        });
+
+        modal.addEventListener("click", function (event) {
+            if (event.target === modal) closeTeacherModal(modal);
+        });
+    });
+
+    document.addEventListener("keydown", function (event) {
+        if (event.key === "Escape") {
+            document.querySelectorAll("[data-batch-teacher-modal].open").forEach(closeTeacherModal);
+        }
+    });
+})();
+</script>
 {% endblock %}

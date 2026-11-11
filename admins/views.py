@@ -957,37 +957,199 @@ def edit_batch_view(request, batch_id):
         context,
     )
 
+
 @cache_control(no_cache=True, must_revalidate=True, no_store=True)
 @admin_required
 def batch_subjects(request, batch_id):
+    """
+    Display subjects belonging to a specific batch.
+
+    Features:
+    - Fetch the selected batch.
+    - Search subjects within that batch.
+    - Calculate total and published subject counts.
+    - Display only valid, active assigned teachers.
+    - Prevent duplicate teachers from appearing.
+    - Calculate the unique active teacher count for the batch.
+    """
+
+    # --------------------------------------------------
+    # GET BATCH
+    # --------------------------------------------------
 
     batch = get_object_or_404(
         Batch,
         id=batch_id
     )
 
+    # --------------------------------------------------
+    # SEARCH
+    # --------------------------------------------------
+
     search = request.GET.get("search", "").strip()
 
-    subjects = Subject.objects.filter(
+    # --------------------------------------------------
+    # SUBJECT QUERYSET
+    # --------------------------------------------------
+
+    subject_queryset = Subject.objects.filter(
         batch=batch
-    ).order_by("subject_name")
+    ).order_by(
+        "subject_name"
+    )
+
+    # Batch-wide subject statistics.
+    # These counts should not change when searching.
+
+    total_subject_count = subject_queryset.count()
+
+    published_subject_count = subject_queryset.filter(
+        subject_status="published"
+    ).count()
+
+    # Apply search only to the displayed subjects.
 
     if search:
-
-        subjects = subjects.filter(
+        subject_queryset = subject_queryset.filter(
             subject_name__icontains=search
         )
 
-    context = {
+    subjects = list(subject_queryset)
 
+    subject_ids = [
+        subject.id for subject in subjects
+    ]
+
+    # --------------------------------------------------
+    # ACTIVE SUBJECT TEACHER ASSIGNMENTS
+    # --------------------------------------------------
+
+    active_assignments = (
+        TeacherSubject.objects.filter(
+            subject_id__in=subject_ids,
+            batch=batch,
+            is_active=True,
+            teacher__is_blocked=False,
+            teacher__user__is_active=True,
+        )
+        .select_related(
+            "teacher",
+            "subject",
+        )
+        .order_by(
+            "teacher__full_name"
+        )
+    )
+
+    # --------------------------------------------------
+    # ACTIVE BATCH TEACHER ASSIGNMENTS
+    # --------------------------------------------------
+
+    active_teacher_ids = {
+        assignment.teacher_id
+        for assignment in active_assignments
+    }
+
+    active_batch_teacher_ids = set(
+        TeacherBatch.objects.filter(
+            batch=batch,
+            teacher_id__in=active_teacher_ids,
+            is_active=True,
+            teacher__is_blocked=False,
+            teacher__user__is_active=True,
+        ).values_list(
+            "teacher_id",
+            flat=True,
+        )
+    )
+
+    # --------------------------------------------------
+    # GROUP VALID TEACHERS BY SUBJECT
+    # --------------------------------------------------
+
+    teachers_by_subject = {}
+
+    for assignment in active_assignments:
+
+        # Teacher must have active access to this batch.
+
+        if assignment.teacher_id not in active_batch_teacher_ids:
+            continue
+
+        # Use teacher ID as dictionary key to prevent duplicates.
+
+        subject_teachers = teachers_by_subject.setdefault(
+            assignment.subject_id,
+            {}
+        )
+
+        subject_teachers[assignment.teacher_id] = (
+            assignment.teacher
+        )
+
+    # --------------------------------------------------
+    # ATTACH TEACHER DETAILS TO SUBJECTS
+    # --------------------------------------------------
+
+    for subject in subjects:
+
+        assigned_teachers = list(
+            teachers_by_subject.get(
+                subject.id,
+                {}
+            ).values()
+        )
+
+        subject.card_teachers = assigned_teachers
+
+        subject.card_teacher_count = len(
+            assigned_teachers
+        )
+
+    # --------------------------------------------------
+    # TOTAL ACTIVE TEACHERS IN THIS BATCH
+    # --------------------------------------------------
+
+    batch_teacher_count = (
+        TeacherBatch.objects.filter(
+            batch=batch,
+            is_active=True,
+            teacher__is_blocked=False,
+            teacher__user__is_active=True,
+        )
+        .values(
+            "teacher_id"
+        )
+        .distinct()
+        .count()
+    )
+
+    # --------------------------------------------------
+    # CONTEXT
+    # --------------------------------------------------
+
+    context = {
         "batch": batch,
         "subjects": subjects,
         "search": search,
 
+        # Subject statistics
+        "total_subject_count": total_subject_count,
+        "published_subject_count": published_subject_count,
+
+        # Teacher statistics
+        "batch_teacher_count": batch_teacher_count,
     }
 
-    return render(request,"admins/subjects/batch_subjects.html",context)
+    # --------------------------------------------------
+    # RENDER
+    # --------------------------------------------------
 
+    return render(
+        request,
+        "admins/subjects/batch_subjects.html",
+        context
+    )
 
 
 @cache_control(no_cache=True, must_revalidate=True, no_store=True)
