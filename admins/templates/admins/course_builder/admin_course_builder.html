@@ -248,10 +248,6 @@
             display: flex;
         }
 
-        .discussion-panel {
-            min-height: 210px;
-        }
-
         @media (max-width: 1200px) {
             .video-main-grid {
                 grid-template-columns: minmax(0, 1fr);
@@ -1770,6 +1766,540 @@
             color: #334155 !important;
         }
 
+        /* =====================================================
+        ADMIN COURSE BUILDER LOCAL TOASTS
+        Isolated to this page; does not modify shared dashboard
+        notification CSS or JavaScript.
+        ===================================================== */
+        .admin-course-toast-container {
+            position: fixed;
+            top: 90px;
+            right: 20px;
+            z-index: 10050;
+            display: flex;
+            width: 380px;
+            max-width: calc(100vw - 40px);
+            flex-direction: column;
+            gap: 12px;
+            pointer-events: none;
+        }
+        .admin-course-toast {
+            position: relative;
+            width: 100%;
+            overflow: hidden;
+            padding: 16px;
+            border: 1px solid rgba(255,255,255,.08);
+            border-radius: 16px;
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+            box-shadow: 0 10px 35px rgba(0,0,0,.45);
+            pointer-events: auto;
+            animation: adminCourseToastIn .35s ease;
+            transition: opacity .35s ease, transform .35s ease, max-height .35s ease, margin .35s ease, padding .35s ease;
+        }
+        .admin-course-toast.success {
+            background: rgba(6, 78, 59, .97);
+            border-color: rgba(52, 211, 153, .70);
+            color: #ffffff;
+        }
+        .admin-course-toast.success .admin-course-toast-icon {
+            background: rgba(16, 185, 129, .24);
+            color: #ffffff;
+        }
+        .admin-course-toast.success .admin-course-toast-title {
+            color: #ffffff;
+        }
+        .admin-course-toast.success .admin-course-toast-text {
+            color: #f0fdf4;
+        }
+        .admin-course-toast.error { background: rgba(239,68,68,.15); border-color: rgba(239,68,68,.35); }
+        .admin-course-toast.warning { background: rgba(251,191,36,.15); border-color: rgba(251,191,36,.35); }
+        .admin-course-toast.info { background: rgba(59,130,246,.15); border-color: rgba(59,130,246,.35); }
+        .admin-course-toast-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+        .admin-course-toast-left { display: flex; min-width: 0; align-items: center; gap: 10px; }
+        .admin-course-toast-icon {
+            display: flex;
+            width: 32px;
+            height: 32px;
+            flex: 0 0 32px;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background: rgba(255,255,255,.08);
+            color: #ffffff;
+        }
+        .admin-course-toast-icon i { font-size: 16px; }
+        .admin-course-toast-title {
+            display: flex;
+            min-height: 32px;
+            align-items: center;
+            color: #ffffff;
+            font-size: 14px;
+            font-weight: 700;
+        }
+        .admin-course-toast-text {
+            padding-left: 42px;
+            color: #E2E8F0;
+            font-size: 13px;
+            line-height: 1.5;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+        }
+        .admin-course-toast-close {
+            display: flex;
+            width: 28px;
+            height: 28px;
+            flex: 0 0 28px;
+            align-items: center;
+            justify-content: center;
+            border: 0;
+            border-radius: 50%;
+            outline: none;
+            background: transparent;
+            color: #CBD5E1;
+            cursor: pointer;
+            transition: all .25s ease;
+        }
+        .admin-course-toast-close i { font-size: 18px; }
+        .admin-course-toast-close:hover {
+            transform: rotate(90deg);
+            background: rgba(255,255,255,.08);
+            color: #ffffff;
+        }
+        .admin-course-toast.is-hiding {
+            opacity: 0;
+            transform: translateX(40px);
+            max-height: 0;
+            margin: 0;
+            padding-top: 0;
+            padding-bottom: 0;
+        }
+        @keyframes adminCourseToastIn {
+            from { opacity: 0; transform: translateX(40px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        @media (max-width: 768px) {
+            .admin-course-toast-container { top: 80px; left: 15px; right: 15px; width: auto; max-width: none; }
+            .admin-course-toast { padding: 15px; }
+            .admin-course-toast-title { font-size: 13px; }
+            .admin-course-toast-text { padding-left: 42px; font-size: 12px; }
+        }
+        @media (max-width: 480px) {
+            .admin-course-toast-container { top: 70px; left: 10px; right: 10px; }
+            .admin-course-toast { padding: 14px; border-radius: 14px; }
+            .admin-course-toast-title { font-size: 13px; }
+            .admin-course-toast-text { padding-left: 42px; font-size: 12px; }
+        }
+
+        /* =====================================================
+           ADMIN CHAPTER DISCUSSION
+           Student-equivalent layout: scrolling thread + docked composer.
+        ===================================================== */
+        .admin-discussion-panel {
+            height: 100%;
+            min-height: 0;
+            color: #0f172a;
+        }
+        .admin-discussion-panel .discussion-shell {
+            display: flex;
+            flex: 1 1 auto;
+            flex-direction: column;
+            width: 100%;
+            min-width: 0;
+            min-height: 0;
+            height: 100%;
+            overflow: hidden;
+        }
+        .admin-discussion-panel .discussion-scroll-area {
+            flex: 1 1 auto;
+            min-width: 0;
+            min-height: 0;
+            overflow-y: auto;
+            overscroll-behavior: contain;
+            padding: 18px 20px 10px;
+            scrollbar-width: thin;
+            scrollbar-color: #cbd5e1 transparent;
+        }
+        .admin-discussion-panel .discussion-heading {
+            display: flex;
+            flex: 0 0 auto;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 14px;
+        }
+        .admin-discussion-panel .discussion-heading h2 {
+            margin: 0;
+            color: #0f172a;
+            font-size: 16px;
+            font-weight: 800;
+        }
+        .admin-discussion-panel .discussion-heading p {
+            margin: 4px 0 0;
+            color: #64748b;
+            font-size: 12px;
+        }
+        #discussion-status {
+            flex: 0 0 auto;
+            border: 1px solid #bae6fd;
+            border-radius: 999px;
+            background: #ecfeff;
+            padding: 6px 11px;
+            color: #0e7490;
+            font-size: 11px;
+            font-weight: 800;
+            font-variant-numeric: tabular-nums;
+        }
+        #discussion-loading,
+        #discussion-empty {
+            min-height: 150px;
+            padding: 42px 16px;
+            text-align: center;
+            color: #64748b;
+            font-size: 13px;
+        }
+        #discussion-loading i {
+            margin-right: 7px;
+            color: #0891b2;
+        }
+        #discussion-empty .discussion-empty-icon {
+            display: flex;
+            width: 48px;
+            height: 48px;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto;
+            border-radius: 50%;
+            background: #ecfeff;
+            color: #0891b2;
+            font-size: 23px;
+        }
+        #discussion-empty h3 {
+            margin: 12px 0 0;
+            color: #0f172a;
+            font-size: 13px;
+            font-weight: 800;
+        }
+        #discussion-empty p {
+            margin: 5px 0 0;
+            color: #64748b;
+            font-size: 12px;
+        }
+        #discussion-comments {
+            display: flex;
+            flex-direction: column;
+        }
+        .discussion-comment {
+            border-bottom: 1px solid #e2e8f0;
+            padding: 16px 0;
+        }
+        .discussion-comment-main {
+            display: flex;
+            min-width: 0;
+            align-items: flex-start;
+            gap: 11px;
+        }
+        .discussion-avatar {
+            display: flex;
+            width: 36px;
+            height: 36px;
+            flex: 0 0 36px;
+            overflow: hidden;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background: #cffafe;
+            color: #0e7490;
+            font-size: 12px;
+            font-weight: 800;
+            text-transform: uppercase;
+        }
+        .discussion-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .discussion-author-line {
+            display: flex;
+            min-width: 0;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 6px 8px;
+        }
+        .discussion-author-name {
+            color: #0f172a;
+            font-size: 12px;
+            font-weight: 800;
+            overflow-wrap: anywhere;
+        }
+        .discussion-role {
+            border-radius: 5px;
+            background: #f1f5f9;
+            padding: 2px 6px;
+            color: #475569;
+            font-size: 9px;
+            font-weight: 800;
+        }
+        .discussion-role.teacher {
+            background: #ecfeff;
+            color: #0e7490;
+        }
+        .discussion-role.admin {
+            background: #f3e8ff;
+            color: #7e22ce;
+        }
+        .discussion-meta {
+            color: #94a3b8;
+            font-size: 10px;
+        }
+        .discussion-content {
+            margin-top: 7px;
+            color: #334155;
+            font-size: 13px;
+            line-height: 1.7;
+            white-space: pre-wrap;
+            overflow-wrap: anywhere;
+        }
+        .discussion-deleted {
+            color: #94a3b8;
+            font-size: 12px;
+            font-style: italic;
+        }
+        .discussion-actions {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 5px 13px;
+            margin-top: 9px;
+        }
+        .discussion-action {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            color: #64748b;
+            font-size: 10px;
+            font-weight: 700;
+        }
+        .discussion-action:hover,
+        .discussion-action.active-like {
+            color: #0891b2;
+        }
+        .discussion-action.active-dislike {
+            color: #e11d48;
+        }
+        .discussion-thread-children {
+            margin: 13px 0 0 17px;
+            border-left: 1px solid #cbd5e1;
+            padding-left: 16px;
+        }
+        .discussion-thread-children > .discussion-comment {
+            border-bottom: 0;
+            padding: 12px 0;
+        }
+        .discussion-thread-toggle {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            margin-top: 10px;
+            color: #0891b2;
+            font-size: 10px;
+            font-weight: 800;
+        }
+        .discussion-thread-toggle:hover {
+            color: #0e7490;
+        }
+        .discussion-inline-form {
+            margin: 12px 0 4px 47px;
+        }
+        .discussion-inline-form .discussion-textarea {
+            min-height: 68px;
+        }
+        .discussion-edit-form {
+            margin-top: 10px;
+        }
+        .discussion-textarea {
+            display: block;
+            width: 100%;
+            min-width: 0;
+            min-height: 44px;
+            height: 44px;
+            max-height: 44px;
+            resize: none;
+            border: 1px solid #cbd5e1;
+            border-radius: 9px;
+            background: #ffffff;
+            padding: 10px 13px;
+            color: #0f172a;
+            font-size: 13px;
+            line-height: 1.45;
+            outline: none;
+            transition: border-color .16s ease, box-shadow .16s ease;
+        }
+        .discussion-textarea::placeholder {
+            color: #94a3b8;
+        }
+        .discussion-textarea:focus {
+            border-color: #06b6d4;
+            box-shadow: 0 0 0 3px rgba(6, 182, 212, .10);
+        }
+        .discussion-primary-button,
+        .discussion-quiet-button,
+        .discussion-danger-button {
+            display: inline-flex;
+            min-height: 38px;
+            align-items: center;
+            justify-content: center;
+            gap: 7px;
+            border-radius: 9px;
+            padding: 8px 13px;
+            font-size: 11px;
+            font-weight: 800;
+            transition: background .15s ease, color .15s ease;
+        }
+        .discussion-primary-button {
+            flex: 0 0 auto;
+            min-height: 44px;
+            background: #0891b2;
+            color: #ffffff;
+            padding: 8px 16px;
+            white-space: nowrap;
+        }
+        .discussion-primary-button:hover {
+            background: #0e7490;
+        }
+        .discussion-primary-button:disabled {
+            cursor: wait;
+            opacity: .55;
+        }
+        .discussion-quiet-button {
+            background: #f1f5f9;
+            color: #475569;
+        }
+        .discussion-quiet-button:hover {
+            background: #e2e8f0;
+            color: #0f172a;
+        }
+        .discussion-danger-button {
+            background: #e11d48;
+            color: #ffffff;
+        }
+        .discussion-danger-button:hover {
+            background: #be123c;
+        }
+        .discussion-composer-dock {
+            position: relative;
+            z-index: 5;
+            flex: 0 0 auto;
+            margin-top: 6px;
+            border-top: 1px solid #e2e8f0;
+            background: #ffffff;
+            padding: 12px 20px 10px;
+            box-shadow: 0 -8px 18px rgba(15, 23, 42, .04);
+        }
+        .discussion-composer-row {
+            display: flex;
+            width: 100%;
+            align-items: stretch;
+            gap: 12px;
+        }
+        .discussion-composer-row .discussion-textarea {
+            flex: 1 1 auto;
+            width: 0;
+        }
+        .discussion-composer-count {
+            min-height: 17px;
+            padding-top: 4px;
+            text-align: right;
+            color: #94a3b8;
+            font-size: 10px;
+            font-variant-numeric: tabular-nums;
+        }
+        .discussion-modal {
+            position: fixed;
+            z-index: 1100;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 18px;
+            background: rgba(15, 23, 42, .55);
+            backdrop-filter: blur(5px);
+        }
+        .discussion-modal.hidden {
+            display: none !important;
+        }
+        .discussion-modal-card {
+            width: 100%;
+            max-width: 390px;
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+            background: #ffffff;
+            padding: 22px;
+            box-shadow: 0 22px 70px rgba(15, 23, 42, .20);
+        }
+        .discussion-modal-card h3 {
+            margin: 0;
+            color: #0f172a;
+            font-size: 16px;
+            font-weight: 800;
+        }
+        .discussion-modal-card p {
+            margin: 8px 0 0;
+            color: #64748b;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+        .discussion-modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            margin-top: 20px;
+        }
+        .admin-discussion-panel button:focus-visible,
+        .admin-discussion-panel textarea:focus-visible {
+            outline: 2px solid #0891b2;
+            outline-offset: 2px;
+        }
+        @media (max-width: 640px) {
+            .admin-discussion-panel .discussion-scroll-area {
+                padding: 14px 12px 8px;
+            }
+            .discussion-composer-dock {
+                padding: 10px 12px 8px;
+            }
+            .discussion-composer-row {
+                gap: 7px;
+            }
+            .discussion-primary-button {
+                padding: 8px 10px;
+                font-size: 10px;
+            }
+            .discussion-inline-form {
+                margin-left: 0;
+            }
+            .discussion-thread-children {
+                margin-left: 8px;
+                padding-left: 11px;
+            }
+            .discussion-avatar {
+                width: 32px;
+                height: 32px;
+                flex-basis: 32px;
+            }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .admin-discussion-panel * {
+                transition: none !important;
+                animation: none !important;
+            }
+        }
+
     </style>
 
 </head>
@@ -1799,90 +2329,65 @@
     <!-- TOP HEADER -->
     <!-- ===================================================== -->
 
-    <header class="shrink-0 border-b border-slate-200 bg-white">
+    <header class="shrink-0 border-b border-slate-800 bg-[#050914]">
 
-        <div class="mx-auto max-w-[1600px] px-4 py-2.5 sm:px-5 lg:px-6">
+        <div class="mx-auto flex w-full max-w-[1600px] flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-5 lg:px-6">
 
-            <div class="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+            <!-- LEFT: PAGE TITLE -->
 
-                <div class="flex min-w-0 items-center gap-3">
+            <div class="flex min-w-0 items-center gap-3">
 
-                    <a
-                        href="{% url 'admin_subjects' %}"
-                        title="Back to Subjects"
-                        aria-label="Back to Subjects"
-                        class="builder-back-button inline-flex shrink-0 items-center gap-2 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm font-bold text-white transition hover:border-cyan-400 hover:bg-slate-800 hover:text-cyan-300">
+                <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-cyan-600 text-xl text-white shadow-sm">
+                    <i class="ri-book-open-line"></i>
+                </div>
 
-                        <i class="ri-arrow-left-line"></i>
+                <div class="min-w-0">
 
-                        <span class="builder-back-label">
-                            Back to Subjects
-                        </span>
+                    <h1 class="truncate text-xl font-black tracking-tight text-slate-100 sm:text-2xl">
+                        Course Content Builder
+                    </h1>
 
-                    </a>
-
-
-                    <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-xl text-white shadow-sm">
-
-                        <i class="ri-book-open-line"></i>
-
-                    </div>
-
-
-                    <div class="min-w-0">
-
-                        <h1 class="truncate text-xl font-black tracking-tight text-slate-900 sm:text-2xl">
-
-                            Course Content Builder
-
-                        </h1>
-
-                        <p class="mt-0.5 text-xs text-slate-500 sm:text-sm">
-
-                            Create and manage complete curriculum for this subject.
-
-                        </p>
-
-                    </div>
+                    <p class="mt-0.5 text-xs text-slate-400 sm:text-sm">
+                        Create and manage complete curriculum for this subject.
+                    </p>
 
                 </div>
 
-
-                <div class="flex flex-wrap items-center gap-2">
-
-                    <button
-                        type="button"
-                        class="inline-flex items-center gap-2 rounded-lg border border-red-300 bg-white px-3 py-2 text-xs font-bold text-red-600 transition hover:bg-red-50">
-
-                        <i class="ri-delete-bin-line"></i>
-
-                        Delete Management
-
-                    </button>
+            </div>
 
 
-                    <a
-                        href="{% url 'courses:admin_deletion_audit_list' %}"
-                        class="inline-flex items-center gap-2 rounded-lg border border-amber-300 bg-white px-3 py-2 text-xs font-bold text-amber-700 transition hover:bg-amber-50">
+            <!-- RIGHT: HEADER ACTIONS -->
 
-                        <i class="ri-file-history-line"></i>
+            <div class="flex flex-wrap items-center justify-end gap-2">
 
-                        Delete Audit
+                <button
+                    type="button"
+                    class="inline-flex items-center gap-2 rounded-lg border border-red-900 bg-[#160b11] px-3 py-2 text-xs font-bold text-red-400 transition hover:bg-red-950">
 
-                    </a>
+                    <i class="ri-delete-bin-line"></i>
+                    Delete Management
+
+                </button>
 
 
-                    <button
-                        type="button"
-                        class="inline-flex items-center gap-2 rounded-lg border border-violet-300 bg-white px-3 py-2 text-xs font-bold text-violet-700 transition hover:bg-violet-50">
+                <a
+                    href="{% url 'courses:admin_deletion_audit_list' %}"
+                    class="inline-flex items-center gap-2 rounded-lg border border-amber-900 bg-[#171006] px-3 py-2 text-xs font-bold text-amber-400 transition hover:bg-amber-950">
 
-                        <i class="ri-group-line"></i>
+                    <i class="ri-file-history-line"></i>
+                    Delete Audit
 
-                        View Students
+                </a>
 
-                    </button>
 
-                </div>
+                <button
+                    type="button"
+                    class="inline-flex items-center gap-2 rounded-lg border border-violet-900 bg-[#110b1c] px-3 py-2 text-xs font-bold text-violet-400 transition hover:bg-violet-950">
+
+                    <i class="ri-group-line"></i>
+                    View Students
+
+                </button>
 
             </div>
 
@@ -1892,194 +2397,44 @@
 
 
     <!-- ===================================================== -->
-    <!-- SUMMARY CARDS -->
-    <!-- ===================================================== -->
-
-    <section class="shrink-0 border-b border-slate-200 bg-white">
-
-        <div class="mx-auto max-w-[1600px] px-4 py-2.5 sm:px-5 lg:px-6">
-
-            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
-
-
-                <!-- SUBJECT -->
-
-                <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-
-                    <div class="flex items-center gap-3">
-
-                        <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-xl text-blue-600">
-
-                            <i class="ri-book-2-line"></i>
-
-                        </div>
-
-                        <div class="min-w-0">
-
-                            <p class="text-sm font-black text-slate-900">
-
-                                {{ subject.subject_name }}
-
-                            </p>
-
-                            <p class="text-xs text-slate-500">
-
-                                Subject
-
-                            </p>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-
-                <!-- BATCH -->
-
-                <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-
-                    <div class="flex items-center gap-3">
-
-                        <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-violet-50 text-xl text-violet-600">
-
-                            <i class="ri-calendar-line"></i>
-
-                        </div>
-
-                        <div class="min-w-0">
-
-                            <p class="truncate text-sm font-black text-slate-900">
-
-                                {{ batch.batch_name }}
-
-                            </p>
-
-                            <p class="text-xs text-slate-500">
-
-                                Batch
-
-                            </p>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-
-                <!-- TEACHERS -->
-
-                <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-
-                    <div class="flex items-center gap-3">
-
-                        <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-xl text-emerald-600">
-
-                            <i class="ri-team-line"></i>
-
-                        </div>
-
-                        <div>
-
-                            <p class="text-sm font-black text-slate-900">
-
-                                {{ assigned_teachers|length|default:"0" }}
-
-                            </p>
-
-                            <p class="text-xs text-slate-500">
-
-                                Assigned Teachers
-
-                            </p>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-
-                <!-- CHAPTERS -->
-
-                <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-
-                    <div class="flex items-center gap-3">
-
-                        <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-violet-50 text-xl text-violet-600">
-
-                            <i class="ri-book-3-line"></i>
-
-                        </div>
-
-                        <div>
-
-                            <p class="text-sm font-black text-slate-900">
-
-                                {{ chapter_count|default:"0" }}
-
-                            </p>
-
-                            <p class="text-xs text-slate-500">
-
-                                Total Chapters
-
-                            </p>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-
-                <!-- STATUS -->
-
-                <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-
-                    <div class="flex items-center justify-between gap-3">
-
-                        <div class="flex items-center gap-3">
-
-                            <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-xl text-emerald-600">
-
-                                <i class="ri-checkbox-circle-fill"></i>
-
-                            </div>
-
-                            <div>
-
-                                <p class="text-sm font-black text-slate-900">
-
-                                    {{ subject.get_subject_status_display }}
-
-                                </p>
-
-                                <p class="text-xs text-slate-500">
-
-                                    Subject Status
-
-                                </p>
-
-                            </div>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-        </div>
-
-    </section>
-
-
-    <!-- ===================================================== -->
     <!-- BUILDER -->
     <!-- ===================================================== -->
 
     <main class="mx-auto flex min-h-0 w-full max-w-[1600px] flex-1 flex-col overflow-hidden px-3 py-3 sm:px-4 lg:px-5">
+
+        <!-- BREADCRUMB -->
+        <nav aria-label="Breadcrumb"
+             class="mb-3 flex min-w-0 shrink-0 items-center gap-2 overflow-hidden rounded-xl border border-slate-800 bg-[#0b1220] px-3 py-2.5 text-xs sm:px-4">
+            <a href="{% url 'admin_batches' %}"
+               class="shrink-0 font-semibold text-slate-400 transition hover:text-cyan-300">
+                Batches
+            </a>
+
+            <i class="ri-arrow-right-s-line shrink-0 text-slate-600"></i>
+
+            <a href="{% url 'batch_subjects' batch.id %}"
+               class="min-w-0 max-w-[22%] truncate font-semibold text-slate-400 transition hover:text-cyan-300">
+                {{ batch.batch_name }}
+            </a>
+
+            <i class="ri-arrow-right-s-line shrink-0 text-slate-600"></i>
+
+            <a href="{% url 'courses:course_builder' batch.id subject.id %}{% if selected_chapter %}?chapter={{ selected_chapter.id }}&view={{ selected_content }}{% endif %}"
+               class="min-w-0 max-w-[30%] truncate font-semibold text-slate-300 transition hover:text-cyan-300">
+                {{ subject.subject_name }}
+            </a>
+
+            <i class="ri-arrow-right-s-line shrink-0 text-slate-600"></i>
+
+            <span class="min-w-0 truncate font-bold text-cyan-300"
+                  aria-current="page">
+                {% if selected_chapter %}
+                    {{ selected_chapter.chapter_name }}
+                {% else %}
+                    No Chapter Selected
+                {% endif %}
+            </span>
+        </nav>
 
         <div class="builder-layout grid min-h-0 flex-1 grid-cols-[minmax(360px,30%)_minmax(0,70%)] gap-3">
 
@@ -2376,109 +2731,45 @@
 
                     <div class="shrink-0 border-b border-slate-200 px-3 py-2">
 
-                        <div class="grid grid-cols-2 gap-2 lg:grid-cols-4">
+                        <div class="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-5">
 
-
-                            <a
-                                href="{% url 'courses:course_builder' batch.id subject.id %}?chapter={{ selected_chapter.id }}&view=videos"
-                                class="workspace-tab flex items-center justify-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2.5 text-xs font-bold
-                                {% if selected_content == 'videos' or selected_content == 'video_timeline' %}
-                                    active
-                                {% else %}
-                                    text-slate-600
-                                {% endif %}">
-
+                            <a href="{% url 'courses:course_builder' batch.id subject.id %}?chapter={{ selected_chapter.id }}&view=videos"
+                               class="workspace-tab flex items-center justify-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2.5 text-xs font-bold {% if selected_content == 'videos' or selected_content == 'video_timeline' %}active{% else %}text-slate-600{% endif %}">
                                 <i class="ri-video-line text-lg"></i>
-
-                                Videos
-
-                                <span
-                                    class="rounded-full px-2 py-0.5 text-[11px]
-                                    {% if selected_content == 'videos' or selected_content == 'video_timeline' %}
-                                        bg-white/20 text-white
-                                    {% else %}
-                                        bg-slate-100 text-slate-500
-                                    {% endif %}">
-
+                                <span>Video</span>
+                                <span class="rounded-full px-2 py-0.5 text-[11px] {% if selected_content == 'videos' or selected_content == 'video_timeline' %}bg-white/20 text-white{% else %}bg-slate-100 text-slate-500{% endif %}">
                                     {{ video_count|default:"0" }}
-
                                 </span>
-
                             </a>
 
-
-                            <a
-                                href="{% url 'courses:course_builder' batch.id subject.id %}?chapter={{ selected_chapter.id }}&view=pdfs"
-                                class="workspace-tab flex items-center justify-center gap-2 rounded-lg border border-slate-200 px-4 py-3 text-sm font-bold
-                                {% if selected_content == 'pdfs' or selected_content == 'pdf_timeline' %}
-                                    active
-                                {% else %}
-                                    text-slate-600
-                                {% endif %}">
-
+                            <a href="{% url 'courses:course_builder' batch.id subject.id %}?chapter={{ selected_chapter.id }}&view=pdfs"
+                               class="workspace-tab flex items-center justify-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2.5 text-xs font-bold {% if selected_content == 'pdfs' or selected_content == 'pdf_timeline' %}active{% else %}text-slate-600{% endif %}">
                                 <i class="ri-file-text-line text-lg"></i>
-
-                                PDFs
-
-                                <span
-                                    class="rounded-full px-2 py-0.5 text-[11px]
-                                    {% if selected_content == 'pdfs' or selected_content == 'pdf_timeline' %}
-                                        bg-white/20 text-white
-                                    {% else %}
-                                        bg-slate-100 text-slate-500
-                                    {% endif %}">
-
+                                <span>PDF</span>
+                                <span class="rounded-full px-2 py-0.5 text-[11px] {% if selected_content == 'pdfs' or selected_content == 'pdf_timeline' %}bg-white/20 text-white{% else %}bg-slate-100 text-slate-500{% endif %}">
                                     {{ pdf_count|default:"0" }}
-
                                 </span>
-
                             </a>
 
-
-
-
-
-                            <a
-                                href="{% url 'courses:course_builder' batch.id subject.id %}?chapter={{ selected_chapter.id }}&view=live"
-                                class="workspace-tab flex items-center justify-center gap-2 rounded-lg border border-slate-200 px-4 py-3 text-sm font-bold
-                                {% if selected_content == 'live' %}
-                                    active
-                                {% else %}
-                                    text-slate-600
-                                {% endif %}">
-
-                                <i class="ri-broadcast-line text-lg"></i>
-
-                                Live Session
-
-                            </a>
-
-
-                            <a
-                                href="{% url 'courses:course_builder' batch.id subject.id %}?chapter={{ selected_chapter.id }}&view=quizzes"
-                                class="workspace-tab flex items-center justify-center gap-2 rounded-lg border border-slate-200 px-4 py-3 text-sm font-bold
-                                {% if selected_content == 'quizzes' or selected_content == 'quiz_timeline' %}
-                                    active
-                                {% else %}
-                                    text-slate-600
-                                {% endif %}">
-
+                            <a href="{% url 'courses:course_builder' batch.id subject.id %}?chapter={{ selected_chapter.id }}&view=quizzes"
+                               class="workspace-tab flex items-center justify-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2.5 text-xs font-bold {% if selected_content == 'quizzes' or selected_content == 'quiz_timeline' %}active{% else %}text-slate-600{% endif %}">
                                 <i class="ri-question-line text-lg"></i>
-
-                                Quizzes
-
-                                <span
-                                    class="rounded-full px-2 py-0.5 text-[11px]
-                                    {% if selected_content == 'quizzes' or selected_content == 'quiz_timeline' %}
-                                        bg-white/20 text-white
-                                    {% else %}
-                                        bg-slate-100 text-slate-500
-                                    {% endif %}">
-
+                                <span>Quiz</span>
+                                <span class="rounded-full px-2 py-0.5 text-[11px] {% if selected_content == 'quizzes' or selected_content == 'quiz_timeline' %}bg-white/20 text-white{% else %}bg-slate-100 text-slate-500{% endif %}">
                                     {{ quiz_count|default:"0" }}
-
                                 </span>
+                            </a>
 
+                            <a href="{% url 'courses:course_builder' batch.id subject.id %}?chapter={{ selected_chapter.id }}&view=live"
+                               class="workspace-tab flex items-center justify-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2.5 text-xs font-bold {% if selected_content == 'live' %}active{% else %}text-slate-600{% endif %}">
+                                <i class="ri-broadcast-line text-lg"></i>
+                                <span>Live</span>
+                            </a>
+
+                            <a href="{% url 'courses:course_builder' batch.id subject.id %}?chapter={{ selected_chapter.id }}&view=comments"
+                               class="workspace-tab flex items-center justify-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2.5 text-xs font-bold {% if selected_content == 'comments' %}active{% else %}text-slate-600{% endif %}">
+                                <i class="ri-chat-3-line text-lg"></i>
+                                <span>Comment</span>
                             </a>
 
                         </div>
@@ -2930,67 +3221,7 @@
                                     </section>
 
 
-                                    <!-- STUDENT DISCUSSION PLACEHOLDER -->
 
-                                    <section class="discussion-panel rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
-
-                                        <div class="flex items-center justify-between gap-3">
-
-                                            <div class="flex min-w-0 items-center gap-2">
-
-                                                <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-violet-50 text-violet-600">
-
-                                                    <i class="ri-chat-3-line"></i>
-
-                                                </div>
-
-                                                <div class="min-w-0">
-
-                                                    <h3 class="text-sm font-black text-slate-900">
-                                                        Student Discussion
-                                                    </h3>
-
-                                                    <p class="mt-0.5 text-[10px] text-slate-500">
-                                                        Questions and discussions for this video will appear here.
-                                                    </p>
-
-                                                </div>
-
-                                            </div>
-
-
-                                            <button
-                                                type="button"
-                                                class="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[10px] font-bold text-slate-400"
-                                                disabled>
-
-                                                <i class="ri-add-line"></i>
-                                                Add Comment
-
-                                            </button>
-
-                                        </div>
-
-
-                                        <div class="mt-2 flex min-h-[105px] items-center justify-center rounded-lg border border-dashed border-slate-200 bg-slate-50/60 px-4 text-center">
-
-                                            <div>
-
-                                                <i class="ri-chat-3-line text-2xl text-slate-300"></i>
-
-                                                <p class="mt-1 text-[11px] font-bold text-slate-500">
-                                                    No student discussion yet.
-                                                </p>
-
-                                                <p class="mt-0.5 text-[9px] text-slate-400">
-                                                    The student discussion feature will be connected here when the student-side discussion area is implemented.
-                                                </p>
-
-                                            </div>
-
-                                        </div>
-
-                                    </section>
 
                                 {% else %}
 
@@ -3033,6 +3264,93 @@
                         <!-- ===================================== -->
                         <!-- PDF -->
                         <!-- ===================================== -->
+                        {% elif selected_content == 'comments' %}
+
+                            <section
+                                id="panel-comments"
+                                class="admin-discussion-panel flex min-h-0 w-full flex-1 flex-col overflow-hidden bg-white"
+                                aria-label="Chapter comments"
+                            >
+                                <div class="discussion-shell">
+                                    <div class="discussion-scroll-area" id="discussion-scroll-area">
+                                        <div class="discussion-heading" aria-live="polite">
+                                            <div class="min-w-0">
+                                                <h2>Chapter discussion</h2>
+                                                <p>Questions, comments and replies for this chapter</p>
+                                            </div>
+                                            <span id="discussion-status">Loading…</span>
+                                        </div>
+
+                                        <div id="discussion-loading">
+                                            <i class="ri-loader-4-line ri-spin"></i>
+                                            Loading chapter discussion…
+                                        </div>
+
+                                        <div id="discussion-empty" class="hidden">
+                                            <div class="discussion-empty-icon">
+                                                <i class="ri-chat-new-line"></i>
+                                            </div>
+                                            <h3>No comments yet</h3>
+                                            <p>Start the conversation by posting the first comment.</p>
+                                        </div>
+
+                                        <div id="discussion-comments" class="discussion-list" aria-live="polite"></div>
+                                    </div>
+
+                                    <div class="discussion-composer-dock">
+                                        <form id="discussion-main-form" class="discussion-composer">
+                                            {% csrf_token %}
+                                            <div class="discussion-composer-row">
+                                                <textarea
+                                                    id="discussion-main-input"
+                                                    name="content"
+                                                    rows="1"
+                                                    maxlength="2500"
+                                                    placeholder="Write a new question or comment about this chapter…"
+                                                    class="discussion-textarea"
+                                                    required
+                                                ></textarea>
+                                                <button type="submit" class="discussion-primary-button">
+                                                    <i class="ri-send-plane-line"></i>
+                                                    <span>Post comment</span>
+                                                </button>
+                                            </div>
+                                            <div class="discussion-composer-count">
+                                                <span data-character-count="discussion-main-input">0 / 2500</span>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+
+                                <div
+                                    id="discussion-confirm"
+                                    class="discussion-modal hidden"
+                                    role="dialog"
+                                    aria-modal="true"
+                                    aria-labelledby="discussion-confirm-title"
+                                >
+                                    <div class="discussion-modal-card">
+                                        <h3 id="discussion-confirm-title">Delete this comment?</h3>
+                                        <p>This comment will be removed from the discussion. Any existing replies will remain visible.</p>
+                                        <div class="discussion-modal-actions">
+                                            <button type="button" id="discussion-delete-cancel" class="discussion-quiet-button">Cancel</button>
+                                            <button type="button" id="discussion-delete-confirm" class="discussion-danger-button">Delete comment</button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div
+                                    id="discussion-api-config"
+                                    hidden
+                                    data-chapter-id="{{ selected_chapter.id }}"
+                                    data-list-url="{% url 'discussions:chapter_discussion' selected_chapter.id %}"
+                                    data-create-url="{% url 'discussions:create_comment' selected_chapter.id %}"
+                                    data-edit-url-template="{% url 'discussions:edit_comment' 0 %}"
+                                    data-delete-url-template="{% url 'discussions:delete_comment' 0 %}"
+                                    data-reaction-url-template="{% url 'discussions:toggle_reaction' 0 %}"
+                                ></div>
+                            </section>
+
 
                         {% elif selected_content == 'pdfs' %}
 
@@ -9295,6 +9613,502 @@
 
 
     <script src="{% static 'courses/js/course_builder.js' %}"></script>
+
+
+<script>
+(function () {
+    "use strict";
+    const workspace = document;
+
+// Chapter-wide discussion API integration with nested collapse and automatic updates.
+    const discussionConfig = workspace.querySelector("#discussion-api-config");
+    if (discussionConfig) {
+        const discussionList = workspace.querySelector("#discussion-comments");
+        const discussionLoading = workspace.querySelector("#discussion-loading");
+        const discussionEmpty = workspace.querySelector("#discussion-empty");
+        const discussionStatus = workspace.querySelector("#discussion-status");
+        const mainDiscussionForm = workspace.querySelector("#discussion-main-form");
+        const mainDiscussionInput = workspace.querySelector("#discussion-main-input");
+        const deleteModal = workspace.querySelector("#discussion-confirm");
+        const deleteConfirmButton = workspace.querySelector("#discussion-delete-confirm");
+        const deleteCancelButton = workspace.querySelector("#discussion-delete-cancel");
+
+        const discussionState = {
+            comments: [], maxLength: 2500, replyingTo: null, editingId: null,
+            deletingId: null, busy: false,
+            expanded: new Set(), lastPayload: "", polling: null, loading: false,
+            pendingRefresh: false
+        };
+
+        // Course Builder-local toast notifications. This deliberately uses
+        // page-scoped classes and a unique container so other dashboards and
+        // the existing Video/PDF/Quiz/Live scripts are not affected.
+        function showBaseMessage(message, level) {
+            if (!message) return;
+
+            let container = document.getElementById("adminCourseBuilderToastContainer");
+            if (!container) {
+                container = document.createElement("div");
+                container.className = "admin-course-toast-container";
+                container.id = "adminCourseBuilderToastContainer";
+                container.setAttribute("aria-live", "polite");
+                container.setAttribute("aria-atomic", "false");
+                document.body.appendChild(container);
+            }
+
+            const allowedTypes = ["success", "error", "warning", "info"];
+            const type = allowedTypes.includes(level) ? level : "success";
+            const titles = {
+                success: "Success",
+                error: "Error",
+                warning: "Warning",
+                info: "Information"
+            };
+            const icons = {
+                success: "ri-check-line",
+                error: "ri-close-circle-line",
+                warning: "ri-alert-line",
+                info: "ri-information-line"
+            };
+
+            const item = document.createElement("div");
+            item.className = "admin-course-toast " + type;
+            item.setAttribute("role", type === "error" || type === "warning" ? "alert" : "status");
+
+            const header = document.createElement("div");
+            header.className = "admin-course-toast-header";
+
+            const left = document.createElement("div");
+            left.className = "admin-course-toast-left";
+
+            const iconWrap = document.createElement("span");
+            iconWrap.className = "admin-course-toast-icon";
+
+            const icon = document.createElement("i");
+            icon.className = icons[type];
+            iconWrap.appendChild(icon);
+
+            const title = document.createElement("span");
+            title.className = "admin-course-toast-title";
+            title.textContent = titles[type];
+            left.append(iconWrap, title);
+
+            const close = document.createElement("button");
+            close.className = "admin-course-toast-close";
+            close.type = "button";
+            close.setAttribute("aria-label", "Close notification");
+            close.innerHTML = '<i class="ri-close-line"></i>';
+
+            const body = document.createElement("div");
+            body.className = "admin-course-toast-text";
+            body.textContent = String(message);
+
+            item.append(header, body);
+            header.append(left, close);
+            container.appendChild(item);
+
+            let removed = false;
+            function dismissToast() {
+                if (removed) return;
+                removed = true;
+                item.classList.add("is-hiding");
+                window.setTimeout(function () {
+                    if (item.parentNode) item.parentNode.removeChild(item);
+                    if (container.isConnected && !container.children.length) {
+                        container.parentNode.removeChild(container);
+                    }
+                }, 350);
+            }
+
+            const timer = window.setTimeout(dismissToast, 5000);
+            close.addEventListener("click", function () {
+                window.clearTimeout(timer);
+                dismissToast();
+            });
+        }
+
+        const endpoint = function (template, id) {
+            return template.replace(/\/0(?=\/)/, "/" + String(id));
+        };
+        function discussionCsrfToken() {
+            const token = mainDiscussionForm.querySelector('input[name="csrfmiddlewaretoken"]');
+            return token ? token.value : "";
+        }
+        async function discussionRequest(url, method, formData) {
+            const response = await fetch(url, {
+                method: method || "GET", body: formData || undefined,
+                credentials: "same-origin",
+                headers: {
+                    "X-Requested-With": "XMLHttpRequest",
+                    ...(method && method !== "GET" ? { "X-CSRFToken": discussionCsrfToken() } : {})
+                }
+            });
+            const responseText = await response.text();
+            let payload;
+            try {
+                payload = responseText ? JSON.parse(responseText) : null;
+            } catch (_) {
+                const contentType = response.headers.get("content-type") || "unknown content type";
+                const isHtml = /text\/html/i.test(contentType) || /^\s*<!doctype html|^\s*<html/i.test(responseText);
+                if (isHtml) {
+                    throw new Error("The server returned an HTML error page instead of discussion JSON (HTTP " + response.status + "). Check the Django terminal for the error from this request.");
+                }
+                throw new Error("The server response was not valid JSON (HTTP " + response.status + "). Check the Django terminal and browser Network response.");
+            }
+            if (!payload || typeof payload !== "object") {
+                throw new Error("The server returned an empty or invalid response (HTTP " + response.status + ").");
+            }
+            if (!response.ok || !payload.success) {
+                throw new Error(payload.message || ("The request failed (HTTP " + response.status + ")."));
+            }
+            return payload;
+        }
+        function makeElement(tag, className, text) {
+            const node = document.createElement(tag);
+            if (className) node.className = className;
+            if (text !== undefined && text !== null) node.textContent = String(text);
+            return node;
+        }
+        function formatDiscussionDate(value) {
+            if (!value) return "";
+
+            const date = new Date(value);
+
+            if (Number.isNaN(date.getTime())) {
+                return "";
+            }
+
+            return new Intl.DateTimeFormat("en-IN", {
+                timeZone: "Asia/Kolkata",
+                day: "2-digit",
+                month: "short",
+                year: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+                hour12: true
+            }).format(date);
+        }
+        function makeAvatar(author) {
+            const avatar = makeElement("div", "discussion-avatar");
+            const fallback = ((author && author.name) || "U").trim().charAt(0).toUpperCase();
+            if (author && author.avatar) {
+                const image = document.createElement("img");
+                image.src = author.avatar; image.alt = ""; image.loading = "lazy";
+                image.onerror = function () { image.remove(); avatar.textContent = fallback; };
+                avatar.appendChild(image);
+            } else avatar.textContent = fallback;
+            return avatar;
+        }
+        function actionButton(label, icon, action, commentId, extraClass) {
+            const button = makeElement("button", "discussion-action " + (extraClass || ""), label);
+            button.type = "button"; button.dataset.discussionAction = action; button.dataset.commentId = commentId;
+            const iconNode = document.createElement("i"); iconNode.className = icon; button.prepend(iconNode);
+            return button;
+        }
+        function createInlineComposer(parentId) {
+            const wrapper = makeElement("form", "discussion-inline-form");
+            wrapper.dataset.discussionForm = "reply"; wrapper.dataset.parentId = parentId;
+            const textarea = makeElement("textarea", "discussion-textarea");
+            textarea.name = "content"; textarea.rows = 2; textarea.maxLength = discussionState.maxLength;
+            textarea.required = true; textarea.placeholder = "Write a reply to this comment…";
+            wrapper.appendChild(textarea);
+            const footer = makeElement("div", "mt-2 flex items-center justify-between gap-2");
+            const count = makeElement("span", "text-[10px] text-slate-500", "0 / " + discussionState.maxLength);
+            const buttons = makeElement("div", "flex items-center gap-2");
+            const cancel = makeElement("button", "discussion-quiet-button", "Cancel");
+            cancel.type = "button"; cancel.dataset.discussionAction = "cancel-reply";
+            const submit = makeElement("button", "discussion-primary-button", "Reply");
+            submit.type = "submit"; submit.innerHTML = '<i class="ri-send-plane-line"></i> Reply';
+            buttons.append(cancel, submit); footer.append(count, buttons); wrapper.appendChild(footer);
+            textarea.addEventListener("input", function () { count.textContent = textarea.value.length + " / " + discussionState.maxLength; });
+            return wrapper;
+        }
+        function createEditComposer(comment) {
+            const wrapper = makeElement("form", "discussion-edit-form");
+            wrapper.dataset.discussionForm = "edit"; wrapper.dataset.commentId = comment.id;
+            const textarea = makeElement("textarea", "discussion-textarea");
+            textarea.name = "content"; textarea.rows = 3; textarea.maxLength = discussionState.maxLength;
+            textarea.required = true; textarea.value = comment.content || ""; wrapper.appendChild(textarea);
+            const footer = makeElement("div", "mt-2 flex justify-end gap-2");
+            const cancel = makeElement("button", "discussion-quiet-button", "Cancel");
+            cancel.type = "button"; cancel.dataset.discussionAction = "cancel-edit";
+            const submit = makeElement("button", "discussion-primary-button", "Save changes");
+            submit.type = "submit"; footer.append(cancel, submit); wrapper.appendChild(footer);
+            return wrapper;
+        }
+        function countAllReplies(comment) {
+            const replies = Array.isArray(comment.replies) ? comment.replies : [];
+            return replies.reduce(function (total, reply) { return total + 1 + countAllReplies(reply); }, 0);
+        }
+        function renderComment(comment) {
+            const id = String(comment.id);
+            const replies = Array.isArray(comment.replies) ? comment.replies : [];
+
+            // Never render a deleted comment's identity, timestamp, content,
+            // actions, or placeholder. Preserve its replies by rendering them
+            // directly in its place, without an extra deleted-parent wrapper.
+            if (comment.is_deleted) {
+                const preservedReplies = document.createDocumentFragment();
+                replies.forEach(function (reply) {
+                    preservedReplies.appendChild(renderComment(reply));
+                });
+                return preservedReplies;
+            }
+
+            const article = makeElement("article", "discussion-comment");
+            article.dataset.commentId = id;
+            const main = makeElement("div", "discussion-comment-main");
+            main.appendChild(makeAvatar(comment.author || {}));
+            const body = makeElement("div", "min-w-0 flex-1");
+            const authorLine = makeElement("div", "discussion-author-line");
+            authorLine.appendChild(makeElement("span", "discussion-author-name", (comment.author && comment.author.name) || "User"));
+            const role = ((comment.author && comment.author.role) || "Student").toLowerCase();
+            authorLine.appendChild(makeElement("span", "discussion-role " + (role === "teacher" ? "teacher" : role === "admin" ? "admin" : ""), (comment.author && comment.author.role) || "Student"));
+            authorLine.appendChild(makeElement("time", "discussion-meta", formatDiscussionDate(comment.created_at)));
+            if (comment.is_edited) authorLine.appendChild(makeElement("span", "discussion-meta", "· edited"));
+            body.appendChild(authorLine);
+
+            if (comment.is_deleted) body.appendChild(makeElement("p", "discussion-content discussion-deleted", "This comment has been deleted."));
+            else if (discussionState.editingId === id) body.appendChild(createEditComposer(comment));
+            else body.appendChild(makeElement("p", "discussion-content", comment.content || ""));
+
+            const actions = makeElement("div", "discussion-actions");
+            if (!comment.is_deleted) {
+                const likes = Number((comment.reactions && comment.reactions.likes) || 0);
+                const dislikes = Number((comment.reactions && comment.reactions.dislikes) || 0);
+                const reaction = comment.reactions && comment.reactions.current_user_reaction;
+                actions.appendChild(actionButton(String(likes), "ri-thumb-up-line", "like", id, reaction === "like" ? "active-like" : ""));
+                actions.appendChild(actionButton(String(dislikes), "ri-thumb-down-line", "dislike", id, reaction === "dislike" ? "active-dislike" : ""));
+                actions.appendChild(actionButton("Reply", "ri-reply-line", "reply", id, ""));
+                if (comment.permissions && comment.permissions.can_edit) actions.appendChild(actionButton("Edit", "ri-edit-line", "edit", id, ""));
+                if (comment.permissions && comment.permissions.can_delete) actions.appendChild(actionButton("Delete", "ri-delete-bin-line", "delete", id, ""));
+            }
+            body.appendChild(actions);
+            if (replies.length) {
+                const isExpanded = discussionState.expanded.has(id);
+                const toggle = makeElement("button", "discussion-thread-toggle", (isExpanded ? "Hide" : "Show") + " " + replies.length + (replies.length === 1 ? " reply" : " replies"));
+                toggle.type = "button"; toggle.dataset.discussionAction = "toggle-replies"; toggle.dataset.commentId = id;
+                const chevron = document.createElement("i"); chevron.className = isExpanded ? "ri-arrow-up-s-line" : "ri-arrow-down-s-line"; toggle.prepend(chevron);
+                body.appendChild(toggle);
+            }
+            main.appendChild(body); article.appendChild(main);
+
+            if (discussionState.replyingTo === id && !comment.is_deleted) article.appendChild(createInlineComposer(id));
+            if (replies.length && discussionState.expanded.has(id)) {
+                const children = makeElement("div", "discussion-thread-children");
+                replies.forEach(function (reply) { children.appendChild(renderComment(reply)); });
+                article.appendChild(children);
+            }
+            return article;
+        }
+        function sortCommentsNewestFirst(comments) {
+            if (!Array.isArray(comments)) return [];
+            comments.forEach(function (comment) {
+                if (Array.isArray(comment.replies)) {
+                    comment.replies = sortCommentsNewestFirst(comment.replies);
+                }
+            });
+            return comments.sort(function (a, b) {
+                const aTime = new Date(a.created_at || 0).getTime();
+                const bTime = new Date(b.created_at || 0).getTime();
+                const safeATime = Number.isFinite(aTime) ? aTime : 0;
+                const safeBTime = Number.isFinite(bTime) ? bTime : 0;
+                return safeBTime - safeATime;
+            });
+        }
+        function countVisibleComments(comment) {
+            if (!comment) return 0;
+
+            const replies = Array.isArray(comment.replies) ? comment.replies : [];
+
+            // A deleted comment is not counted, but any still-visible
+            // descendants of an older soft-deleted comment are counted.
+            const ownCount = comment.is_deleted ? 0 : 1;
+
+            return ownCount + replies.reduce(function (total, reply) {
+                return total + countVisibleComments(reply);
+            }, 0);
+        }
+        function renderDiscussion() {
+            discussionList.replaceChildren();
+            const comments = sortCommentsNewestFirst(
+                Array.isArray(discussionState.comments) ? discussionState.comments : []
+            );
+            discussionState.comments = comments;
+            comments.forEach(function (comment) { discussionList.appendChild(renderComment(comment)); });
+            const totalComments = comments.reduce(function (total, comment) {
+                return total + countVisibleComments(comment);
+            }, 0);
+            discussionEmpty.classList.toggle("hidden", totalComments !== 0);
+            discussionStatus.textContent = totalComments + (totalComments === 1 ? " comment" : " comments");
+        }
+        async function loadDiscussion(showLoading, forceRender) {
+            /*
+             * A background poll can already be in flight when the learner clicks
+             * Like/Dislike or submits a reply. Queue the requested refresh instead
+             * of dropping it; otherwise the UI waits for the next 8-second poll.
+             */
+            if (discussionState.loading) {
+                if (forceRender) discussionState.pendingRefresh = true;
+                return;
+            }
+            discussionState.loading = true;
+            if (showLoading) {
+                discussionLoading.classList.remove("hidden"); discussionList.classList.add("hidden"); discussionEmpty.classList.add("hidden");
+            }
+            try {
+                const payload = await discussionRequest(discussionConfig.dataset.listUrl, "GET");
+                const data = payload.data || {};
+                const comments = Array.isArray(data.comments) ? data.comments : [];
+                const signature = JSON.stringify(comments);
+                discussionState.maxLength = Number(data.max_comment_length || 2500);
+                mainDiscussionInput.maxLength = discussionState.maxLength;
+                const active = document.activeElement;
+                const hasUnsavedDraft = active && active.matches && active.matches("#discussion-main-input, .discussion-inline-form textarea, .discussion-edit-form textarea");
+                if ((forceRender || signature !== discussionState.lastPayload) && !hasUnsavedDraft) {
+                    discussionState.comments = comments;
+                    discussionState.lastPayload = signature;
+                    renderDiscussion();
+                }
+                discussionLoading.classList.add("hidden"); discussionList.classList.remove("hidden");
+            } catch (error) {
+                discussionLoading.classList.add("hidden");
+            } finally {
+                discussionState.loading = false;
+                if (discussionState.pendingRefresh) {
+                    discussionState.pendingRefresh = false;
+                    loadDiscussion(false, true);
+                }
+            }
+        }
+        async function submitDiscussionForm(form) {
+            if (discussionState.busy) return;
+            const textarea = form.querySelector('textarea[name="content"]');
+            const content = textarea ? textarea.value.trim() : "";
+            if (!content) { if (textarea) textarea.focus(); return; }
+            if (content.length > discussionState.maxLength) {
+                showBaseMessage("Comments and replies cannot exceed " + discussionState.maxLength + " characters.", "error");
+                return;
+            }
+
+            const isEdit = form.dataset.discussionForm === "edit";
+            const isReply = form.dataset.discussionForm === "reply";
+            const formData = new FormData();
+            formData.append("content", content);
+            let url = discussionConfig.dataset.createUrl;
+            if (isReply) formData.append("parent_id", form.dataset.parentId);
+            if (isEdit) url = endpoint(discussionConfig.dataset.editUrlTemplate, form.dataset.commentId);
+
+            const submitButton = form.querySelector('button[type="submit"]');
+            discussionState.busy = true;
+            if (submitButton) submitButton.disabled = true;
+            if (textarea) textarea.disabled = true;
+            try {
+                const result = await discussionRequest(url, "POST", formData);
+                if (isReply) discussionState.expanded.add(String(form.dataset.parentId));
+                discussionState.replyingTo = null;
+                discussionState.editingId = null;
+
+                // Clear only after the server confirms success. This prevents the
+                // same text remaining in the composer and being posted twice.
+                if (form === mainDiscussionForm) {
+                    mainDiscussionInput.value = "";
+                    const count = workspace.querySelector('[data-character-count="discussion-main-input"]');
+                    if (count) count.textContent = "0 / " + discussionState.maxLength;
+                }
+                showBaseMessage((result && result.message) || (isEdit ? "Comment updated successfully." : isReply ? "Reply posted successfully." : "Comment posted successfully."), "success");
+                discussionState.lastPayload = "";
+                await loadDiscussion(false, true);
+            } catch (error) {
+                showBaseMessage(error.message || "Unable to submit your comment. Please try again.", "error");
+            } finally {
+                discussionState.busy = false;
+                if (textarea) textarea.disabled = false;
+                if (submitButton) submitButton.disabled = false;
+            }
+        }
+        mainDiscussionForm.addEventListener("submit", function (event) { event.preventDefault(); submitDiscussionForm(mainDiscussionForm); });
+        discussionList.addEventListener("submit", function (event) {
+            const form = event.target.closest("form[data-discussion-form]");
+            if (!form) return; event.preventDefault(); submitDiscussionForm(form);
+        });
+        discussionList.addEventListener("click", async function (event) {
+            const button = event.target.closest("[data-discussion-action]");
+            if (!button) return;
+            const action = button.dataset.discussionAction;
+            const id = String(button.dataset.commentId);
+            if (action === "toggle-replies") {
+                if (discussionState.expanded.has(id)) discussionState.expanded.delete(id);
+                else discussionState.expanded.add(id);
+                renderDiscussion(); return;
+            }
+            if (action === "cancel-reply") { discussionState.replyingTo = null; renderDiscussion(); return; }
+            if (action === "cancel-edit") { discussionState.editingId = null; renderDiscussion(); return; }
+            if (action === "reply") {
+                discussionState.replyingTo = id; discussionState.editingId = null;
+                renderDiscussion();
+                const form = discussionList.querySelector('form[data-parent-id="' + id + '"]');
+                if (form) form.querySelector("textarea").focus(); return;
+            }
+            if (action === "edit") {
+                discussionState.editingId = id; discussionState.replyingTo = null;
+                renderDiscussion();
+                const form = discussionList.querySelector('[data-comment-id="' + id + '"] .discussion-edit-form');
+                if (form) { const textarea = form.querySelector("textarea"); textarea.focus(); textarea.setSelectionRange(textarea.value.length, textarea.value.length); }
+                return;
+            }
+            if (action === "delete") { discussionState.deletingId = id; deleteModal.classList.remove("hidden"); return; }
+            if (action === "like" || action === "dislike") {
+                button.disabled = true; const formData = new FormData(); formData.append("reaction_type", action);
+                try {
+                    await discussionRequest(endpoint(discussionConfig.dataset.reactionUrlTemplate, id), "POST", formData);
+                    // Reactions update quietly. Do not create repeated success toasts
+                    // when a learner likes/unlikes or changes reactions frequently.
+                    discussionState.lastPayload = ""; await loadDiscussion(false, true);
+                } catch (error) {
+                    showBaseMessage(error.message || "Unable to update reaction.", "error");
+                } finally { button.disabled = false; }
+            }
+        });
+        async function confirmDiscussionDelete() {
+            if (!discussionState.deletingId) return;
+            deleteConfirmButton.disabled = true;
+            try {
+                const result = await discussionRequest(endpoint(discussionConfig.dataset.deleteUrlTemplate, discussionState.deletingId), "POST", new FormData());
+                discussionState.deletingId = null; discussionState.replyingTo = null; discussionState.editingId = null;
+                deleteModal.classList.add("hidden");
+                showBaseMessage((result && result.message) || "Comment deleted successfully.", "success");
+                discussionState.lastPayload = "";
+                await loadDiscussion(false, true);
+            } catch (error) {
+                deleteModal.classList.add("hidden");
+                showBaseMessage(error.message || "Unable to delete comment.", "error");
+            }
+            finally { deleteConfirmButton.disabled = false; }
+        }
+        deleteConfirmButton.addEventListener("click", confirmDiscussionDelete);
+        deleteCancelButton.addEventListener("click", function () { discussionState.deletingId = null; deleteModal.classList.add("hidden"); });
+        deleteModal.addEventListener("click", function (event) {
+            if (event.target === deleteModal) { discussionState.deletingId = null; deleteModal.classList.add("hidden"); }
+        });
+        mainDiscussionInput.addEventListener("input", function () {
+            const count = workspace.querySelector('[data-character-count="discussion-main-input"]');
+            if (count) count.textContent = mainDiscussionInput.value.length + " / " + discussionState.maxLength;
+        });
+
+        // Lightweight polling keeps the page current even without a WebSocket connection.
+        // It does not depend on Redis; no full-page reload is performed.
+        loadDiscussion(true, true);
+        discussionState.polling = window.setInterval(function () {
+            if (!document.hidden && !discussionState.busy) loadDiscussion(false, false);
+        }, 8000);
+        document.addEventListener("visibilitychange", function () {
+            if (!document.hidden && !discussionState.busy) loadDiscussion(false, false);
+        });
+    }
+
+})();
+</script>
 
 </body>
 

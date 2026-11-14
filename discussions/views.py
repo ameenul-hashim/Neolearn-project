@@ -399,6 +399,10 @@ def create_discussion_comment_view(request, chapter_id):
 
     parent_id provided:
         Create a reply to that exact comment or reply.
+
+    When a reply is created, the parent comment is permanently marked
+    as having received a reply. This flag is not reset if the reply is
+    deleted later. The parent lock and reply creation are saved atomically.
     """
 
     chapter = get_object_or_404(
@@ -435,53 +439,70 @@ def create_discussion_comment_view(request, chapter_id):
         "",
     ).strip()
 
-    parent = None
+    comment = None
 
-    if parent_id:
+    # Lock the parent row while creating a reply. This prevents two
+    # simultaneous reply requests from racing while updating its lock flag.
+    with transaction.atomic():
+        parent = None
 
-        try:
-            parent = DiscussionComment.objects.get(
-                pk=parent_id,
-                chapter=chapter,
-                is_deleted=False,
-            )
+        if parent_id:
+            try:
+                parent = (
+                    DiscussionComment.objects
+                    .select_for_update()
+                    .get(
+                        pk=parent_id,
+                        chapter=chapter,
+                        is_deleted=False,
+                    )
+                )
 
-        except (
-            DiscussionComment.DoesNotExist,
-            ValueError,
-            TypeError,
-        ):
-            return error_response(
-                "The comment you are replying to does not exist or is unavailable.",
-                status=404,
-            )
+            except (
+                DiscussionComment.DoesNotExist,
+                ValueError,
+                TypeError,
+            ):
+                return error_response(
+                    "The comment you are replying to does not exist or is unavailable.",
+                    status=404,
+                )
 
-    comment = DiscussionComment(
-        chapter=chapter,
-        author=request.user,
-        parent=parent,
-        content=content,
-    )
-
-    comment.full_clean()
-    comment.save()
-
-    # Prepare the new comment for serialization.
-    comment.replies_list = []
-
-    # Broadcast only after successful creation.
-    transaction.on_commit(
-        lambda: _safe_broadcast_discussion_update(
-            chapter_id=comment.chapter_id,
-            event="comment_created",
-            comment_id=comment.pk,
+        comment = DiscussionComment(
+            chapter=chapter,
+            author=request.user,
+            parent=parent,
+            content=content,
         )
-    )
+
+        comment.full_clean()
+        comment.save()
+
+        if parent is not None and not parent.has_received_reply:
+            parent.has_received_reply = True
+            parent.save(
+                update_fields=[
+                    "has_received_reply",
+                    "updated_at",
+                ]
+            )
+
+        # Prepare the new comment for serialization.
+        comment.replies_list = []
+
+        # Broadcast only after the complete database transaction commits.
+        transaction.on_commit(
+            lambda: _safe_broadcast_discussion_update(
+                chapter_id=comment.chapter_id,
+                event="comment_created",
+                comment_id=comment.pk,
+            )
+        )
 
     return success_response(
         (
             "Reply posted successfully."
-            if parent
+            if parent_id
             else "Comment posted successfully."
         ),
         {
@@ -492,7 +513,6 @@ def create_discussion_comment_view(request, chapter_id):
         },
         status=201,
     )
-
 
 # ============================================================
 # EDIT COMMENT OR REPLY

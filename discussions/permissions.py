@@ -29,11 +29,9 @@ def get_discussion_role(user):
     if not user or not user.is_authenticated:
         return None
 
-    # Admin access
     if user.is_staff or user.is_superuser:
         return ROLE_ADMIN
 
-    # Teacher access
     teacher = Teacher.objects.filter(
         user=user,
         is_blocked=False,
@@ -42,19 +40,16 @@ def get_discussion_role(user):
     if teacher:
         return ROLE_TEACHER
 
-    # Normal student access
     return ROLE_STUDENT
 
 
 # ============================================================
-# GET TEACHER PROFILE
+# GET ACTIVE TEACHER PROFILE
 # ============================================================
 
 def get_active_teacher(user):
     """
     Return the active Teacher profile for the logged-in user.
-
-    Returns None when the user is not an active teacher.
     """
 
     if not user or not user.is_authenticated:
@@ -75,17 +70,8 @@ def get_active_teacher(user):
 
 def teacher_can_access_chapter(user, chapter):
     """
-    A teacher can access a chapter only when:
-
-    1. The teacher profile is active.
-    2. TeacherBatch assignment is active for the chapter's batch.
-    3. TeacherSubject assignment is active for the exact
-       same batch and subject.
-
-    Chapter creator is NOT checked.
-
-    Any actively assigned teacher can access the discussion,
-    regardless of who created the chapter.
+    Teacher must have active assignments for the exact
+    Batch + Subject combination of the chapter.
     """
 
     teacher = get_active_teacher(user)
@@ -99,7 +85,6 @@ def teacher_can_access_chapter(user, chapter):
     if not batch_id or not subject_id:
         return False
 
-    # Verify active batch assignment.
     has_batch_access = TeacherBatch.objects.filter(
         teacher=teacher,
         batch_id=batch_id,
@@ -109,16 +94,12 @@ def teacher_can_access_chapter(user, chapter):
     if not has_batch_access:
         return False
 
-    # Verify active assignment to this exact subject
-    # within this exact batch.
-    has_subject_access = TeacherSubject.objects.filter(
+    return TeacherSubject.objects.filter(
         teacher=teacher,
         batch_id=batch_id,
         subject_id=subject_id,
         is_active=True,
     ).exists()
-
-    return has_subject_access
 
 
 # ============================================================
@@ -127,8 +108,7 @@ def teacher_can_access_chapter(user, chapter):
 
 def student_can_access_chapter(user, chapter):
     """
-    A student can access a chapter only when an active
-    batch purchase exists for the chapter's batch.
+    Student must have an active purchase for the chapter's batch.
     """
 
     if not user or not user.is_authenticated:
@@ -153,17 +133,14 @@ def student_can_access_chapter(user, chapter):
 
 def can_access_chapter_discussion(user, chapter):
     """
-    Central permission function used by all discussion views.
-
     Admin:
-        Access to every chapter discussion.
+        All chapter discussions.
 
     Teacher:
-        Access to chapters under actively assigned
-        Batch + Subject combinations.
+        Assigned Batch + Subject discussions.
 
     Student:
-        Access to chapters under actively purchased batches.
+        Purchased batch discussions.
     """
 
     role = get_discussion_role(user)
@@ -190,11 +167,10 @@ def can_access_chapter_discussion(user, chapter):
 def can_moderate_comment(user, comment):
     """
     Admin:
-        Can moderate any comment or reply platform-wide.
+        Can moderate all discussions.
 
     Teacher:
-        Can moderate comments and replies inside assigned
-        Batch + Subject discussions.
+        Can moderate comments inside assigned discussions.
 
     Student:
         Cannot moderate other users' content.
@@ -218,23 +194,56 @@ def can_moderate_comment(user, comment):
 
 
 # ============================================================
+# COMMENT REPLY LOCK
+# ============================================================
+
+def is_comment_locked(user, comment):
+    """
+    Lock the original author's own comment/reply after it
+    receives at least one direct reply.
+
+    Applies to:
+        - Student's own comments and replies.
+        - Teacher's own comments and replies.
+
+    Does not apply to Admins.
+
+    This lock does not prevent Teachers from moderating
+    Student-authored content.
+    """
+
+    if not user or not user.is_authenticated or not comment:
+        return False
+
+    role = get_discussion_role(user)
+
+    if role not in (ROLE_STUDENT, ROLE_TEACHER):
+        return False
+
+    if comment.author_id != user.pk:
+        return False
+
+    return bool(comment.has_received_reply)
+
+
+# ============================================================
 # EDIT COMMENT PERMISSION
 # ============================================================
 
 def can_edit_comment(user, comment):
     """
-    Students:
-        Can edit only their own comments and replies.
+    Admin:
+        Can edit any comment/reply platform-wide.
 
-    Teachers:
-        Can edit their own comments and replies.
-        Can also moderate/edit other users' content
-        within their assigned Batch + Subject.
+    Teacher:
+        Can edit own content before receiving a reply.
+        Cannot edit own content after receiving a reply.
+        Can edit Student-authored content in assigned discussions,
+        regardless of whether it has received replies.
+        Cannot edit Admin-authored or other Teacher-authored content.
 
-    Admins:
-        Can edit their own comments and replies.
-        Can also moderate/edit other users' content
-        platform-wide.
+    Student:
+        Can edit only own content before receiving a reply.
     """
 
     if not user or not user.is_authenticated or not comment:
@@ -243,15 +252,49 @@ def can_edit_comment(user, comment):
     if comment.is_deleted:
         return False
 
-    # Every user can edit their own content.
-    if comment.author_id == user.pk:
+    role = get_discussion_role(user)
+
+    # Admin has unrestricted editing permission.
+    if role == ROLE_ADMIN:
+        return True
+
+    # Teacher permissions.
+    if role == ROLE_TEACHER:
+
+        if not teacher_can_access_chapter(
+            user,
+            comment.chapter,
+        ):
+            return False
+
+        # Teacher editing own content.
+        if comment.author_id == user.pk:
+            return not is_comment_locked(user, comment)
+
+        # Teacher can moderate Student-authored content only.
+        author_role = get_discussion_role(comment.author)
+
+        if author_role == ROLE_STUDENT:
+            return True
+
+        # Admin and other Teacher content are protected.
+        return False
+
+    # Student permissions.
+    if role == ROLE_STUDENT:
+
+        if comment.author_id != user.pk:
+            return False
+
+        if is_comment_locked(user, comment):
+            return False
+
         return can_access_chapter_discussion(
             user,
             comment.chapter,
         )
 
-    # Admin and Teacher can moderate other users' content.
-    return can_moderate_comment(user, comment)
+    return False
 
 
 # ============================================================
@@ -260,18 +303,18 @@ def can_edit_comment(user, comment):
 
 def can_delete_comment(user, comment):
     """
-    Students:
-        Can delete only their own comments and replies.
+    Admin:
+        Can delete any comment/reply platform-wide.
 
-    Teachers:
-        Can delete their own content and moderate other
-        users' content inside their assigned Batch + Subject.
+    Teacher:
+        Can delete own content before receiving a reply.
+        Cannot delete own content after receiving a reply.
+        Can delete Student-authored content in assigned discussions,
+        regardless of whether it has received replies.
+        Cannot delete Admin-authored or other Teacher-authored content.
 
-    Admins:
-        Can delete their own content and moderate any
-        other user's content platform-wide.
-
-    Deletion will be handled as a soft delete.
+    Student:
+        Can delete only own content before receiving a reply.
     """
 
     if not user or not user.is_authenticated or not comment:
@@ -280,15 +323,49 @@ def can_delete_comment(user, comment):
     if comment.is_deleted:
         return False
 
-    # Every user can delete their own content.
-    if comment.author_id == user.pk:
+    role = get_discussion_role(user)
+
+    # Admin has unrestricted deletion permission.
+    if role == ROLE_ADMIN:
+        return True
+
+    # Teacher permissions.
+    if role == ROLE_TEACHER:
+
+        if not teacher_can_access_chapter(
+            user,
+            comment.chapter,
+        ):
+            return False
+
+        # Teacher deleting own content.
+        if comment.author_id == user.pk:
+            return not is_comment_locked(user, comment)
+
+        # Teacher can delete Student-authored content only.
+        author_role = get_discussion_role(comment.author)
+
+        if author_role == ROLE_STUDENT:
+            return True
+
+        # Admin and other Teacher content are protected.
+        return False
+
+    # Student permissions.
+    if role == ROLE_STUDENT:
+
+        if comment.author_id != user.pk:
+            return False
+
+        if is_comment_locked(user, comment):
+            return False
+
         return can_access_chapter_discussion(
             user,
             comment.chapter,
         )
 
-    # Admin and Teacher can moderate other users' content.
-    return can_moderate_comment(user, comment)
+    return False
 
 
 # ============================================================

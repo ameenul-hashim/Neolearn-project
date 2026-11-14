@@ -14,6 +14,9 @@ class DiscussionComment(models.Model):
     parent = None       -> Main comment / question
     parent = comment    -> Reply to that exact comment or reply
 
+    A main comment becomes permanently locked for its author
+    after receiving its first reply.
+
     Deleting a comment permanently deletes its entire nested reply branch.
     """
 
@@ -39,6 +42,12 @@ class DiscussionComment(models.Model):
 
     content = models.TextField(
         max_length=2500,
+    )
+
+    # Permanently records whether this comment has received a reply.
+    # Once True, it must never be reset to False.
+    has_received_reply = models.BooleanField(
+        default=False,
     )
 
     # Retained for compatibility with existing database records.
