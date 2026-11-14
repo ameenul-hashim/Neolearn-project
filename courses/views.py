@@ -82,6 +82,7 @@ VALID_CONTENT_TYPES = {
 VALID_BUILDER_VIEWS = {
     "videos",
     "pdfs",
+    "comments",
     "quizzes",
     "live",
     "timeline",

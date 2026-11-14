@@ -28,6 +28,41 @@
 
     }
 
+    /* Main five-tab navigation: evenly fills the content column. */
+    .learning-tab-list {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        width: 100%;
+        gap: 4px;
+        overflow: hidden;
+    }
+
+    .learning-tab-list > .learning-tab {
+        min-width: 0;
+        justify-content: center;
+        padding-left: 8px;
+        padding-right: 8px;
+        white-space: nowrap;
+    }
+
+    /* Comments expands the main area and removes the chapter sidebar. */
+    .learning-workspace-layout.comments-active > aside {
+        display: none !important;
+    }
+
+    .learning-workspace-layout.comments-active > main {
+        width: 100%;
+        max-width: none;
+        flex: 1 1 100%;
+    }
+
+    @media (max-width: 640px) {
+        .learning-tab-list {
+            overflow-x: auto;
+            grid-template-columns: repeat(5, minmax(112px, 1fr));
+        }
+    }
+
     .learning-tab {
 
         color: #94a3b8;
@@ -334,14 +369,23 @@
 
     }
 
+    /* Keep the selected PDF preview full-width on its first render and after tab switches. */
+    .learning-pdf-preview {
+        position: relative;
+        display: flex;
+        width: 100%;
+        overflow: hidden;
+    }
+
     .learning-pdf-preview-image {
-
-        min-height: 220px;
-
-        object-fit: contain;
-
+        position: absolute;
+        inset: 0;
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: center;
         background: #020617;
-
     }
 
     @media (max-width: 639px) {
@@ -416,6 +460,50 @@
 
         font-size: 10px; font-weight: 800;
 
+    }
+
+    /*
+     * Shared main-media frame: the selected video and PDF preview use
+     * identical dimensions so switching tabs keeps the same preview size.
+     */
+    .learning-main-media-frame {
+        position: relative;
+        display: block;
+        width: 100%;
+        aspect-ratio: 16 / 9;
+        min-height: 220px;
+        max-height: calc(100dvh - 14rem);
+        overflow: hidden;
+        background: #000;
+    }
+
+    .learning-main-media-frame > video,
+    .learning-main-media-frame > img {
+        position: absolute;
+        inset: 0;
+        display: block;
+        width: 100%;
+        height: 100%;
+        min-height: 0;
+        max-height: none;
+    }
+
+    .learning-main-media-frame > video {
+        object-fit: contain;
+        background: #000;
+    }
+
+    .learning-main-media-frame > img {
+        object-fit: cover;
+        object-position: center;
+        background: #020617;
+    }
+
+    @media (max-width: 639px) {
+        .learning-main-media-frame {
+            min-height: 190px;
+            max-height: none;
+        }
     }
 
     .learning-media {
@@ -618,6 +706,141 @@
         .quiz-confirmation-dialog { animation: none; }
         .quiz-confirmation-actions button { transition: none; }
     }
+
+    /* Chapter discussion: clean rows and thread indentation, not nested cards. */
+    .discussion-shell { color: #e2e8f0; }
+    /* The chapter heading scrolls away with the discussion; the composer stays docked. */
+    #panel-comments { flex-direction: column; overflow: hidden !important; min-height: 0; }
+    #panel-comments:not([hidden]):not(.hidden) { display: flex !important; }
+    #panel-comments[hidden],
+    #panel-comments.hidden { display: none !important; }
+    #panel-comments .discussion-shell {
+        display: flex; flex-direction: column; flex: 1 1 auto;
+        width: 100%; max-width: none; min-width: 0; min-height: 0; height: 100%;
+        overflow: hidden;
+    }
+    #panel-comments .discussion-scroll-area {
+        flex: 1 1 auto; min-width: 0; min-height: 0;
+        overflow-y: auto; overscroll-behavior: contain;
+        scrollbar-width: thin; scrollbar-color: #334155 transparent;
+        padding-right: 3px;
+    }
+    #panel-comments .discussion-heading { flex: 0 0 auto; }
+    #panel-comments .discussion-thread-heading { flex: 0 0 auto; }
+    #panel-comments #discussion-loading,
+    #panel-comments #discussion-empty { min-height: 150px; }
+    #panel-comments #discussion-comments { display: flex; flex-direction: column; }
+    #panel-comments .discussion-composer-dock {
+        flex: 0 0 auto; position: relative; z-index: 5;
+        margin-top: 6px; padding: 9px 0 0;
+        border-top: 1px solid rgba(148,163,184,.13);
+        background: #0b1423;
+        box-shadow: 0 -8px 18px rgba(2,6,23,.14);
+    }
+    #panel-comments .discussion-composer-row {
+        display: flex; align-items: stretch; gap: 12px; width: 100%;
+    }
+    #panel-comments .discussion-composer-dock .discussion-textarea {
+        flex: 1 1 auto; width: 0; min-width: 0;
+        min-height: 44px; height: 44px; max-height: 44px; resize: none;
+        padding: 10px 13px; line-height: 1.45;
+    }
+    #panel-comments .discussion-composer-dock .discussion-primary-button {
+        flex: 0 0 auto; min-height: 44px; padding: 8px 16px; white-space: nowrap;
+    }
+    #panel-comments .discussion-composer-count { min-height: 17px; padding-top: 4px; }
+    #panel-comments .discussion-inline-form { margin-left: 47px; }
+    @media (max-width: 640px) {
+        #panel-comments { padding: 12px !important; }
+        #panel-comments .discussion-inline-form { margin-left: 0; }
+        #panel-comments .discussion-composer-row { gap: 7px; }
+        #panel-comments .discussion-composer-dock .discussion-primary-button { padding: 8px 10px; font-size: 10px; }
+    }
+    .discussion-textarea {
+        display: block; width: 100%; min-height: 88px; resize: vertical;
+        border: 1px solid rgba(148,163,184,.2); border-radius: 10px;
+        background: rgba(2,6,23,.55); color: #f8fafc; padding: 12px 13px;
+        font-size: 13px; line-height: 1.65; outline: none;
+        transition: border-color .16s ease, box-shadow .16s ease;
+    }
+    .discussion-textarea::placeholder { color: #64748b; }
+    .discussion-textarea:focus { border-color: rgba(34,211,238,.65); box-shadow: 0 0 0 3px rgba(34,211,238,.09); }
+    .discussion-primary-button, .discussion-quiet-button, .discussion-danger-button {
+        display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+        min-height: 35px; border-radius: 8px; padding: 8px 12px;
+        font-size: 11px; font-weight: 750; transition: background .15s ease, color .15s ease;
+    }
+    .discussion-primary-button { background: #22d3ee; color: #08202a; }
+    .discussion-primary-button:hover { background: #67e8f9; }
+    .discussion-primary-button:disabled { cursor: wait; opacity: .55; }
+    .discussion-quiet-button { color: #94a3b8; background: rgba(255,255,255,.045); }
+    .discussion-quiet-button:hover { color: #e2e8f0; background: rgba(255,255,255,.09); }
+    .discussion-danger-button { color: #fff; background: #e11d48; }
+    .discussion-danger-button:hover { background: #f43f5e; }
+    .discussion-list { display: flex; flex-direction: column; }
+    .discussion-comment { padding: 17px 0; border-bottom: 1px solid rgba(148,163,184,.12); }
+    .discussion-comment-main { display: flex; align-items: flex-start; gap: 11px; min-width: 0; }
+    .discussion-avatar {
+        display: flex; width: 36px; height: 36px; flex: 0 0 36px; overflow: hidden;
+        align-items: center; justify-content: center; border-radius: 50%;
+        background: rgba(34,211,238,.13); color: #67e8f9; font-size: 12px; font-weight: 800;
+        text-transform: uppercase;
+    }
+    .discussion-avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .discussion-author-line { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; min-width: 0; }
+    .discussion-author-name { color: #f1f5f9; font-size: 12px; font-weight: 750; overflow-wrap: anywhere; }
+    .discussion-role {
+        border-radius: 5px; padding: 2px 6px; background: rgba(148,163,184,.10);
+        color: #94a3b8; font-size: 9px; font-weight: 800; letter-spacing: .04em;
+    }
+    .discussion-role.teacher { background: rgba(34,211,238,.12); color: #67e8f9; }
+    .discussion-role.admin { background: rgba(167,139,250,.13); color: #c4b5fd; }
+    .discussion-meta { color: #64748b; font-size: 10px; }
+    .discussion-content { margin-top: 7px; color: #cbd5e1; font-size: 13px; line-height: 1.7; white-space: pre-wrap; overflow-wrap: anywhere; }
+    .discussion-deleted { color: #64748b; font-size: 12px; font-style: italic; }
+    .discussion-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 5px 13px; margin-top: 9px; }
+    .discussion-action {
+        display: inline-flex; align-items: center; gap: 5px; color: #8291a6;
+        font-size: 10px; font-weight: 650; transition: color .15s ease;
+    }
+    .discussion-action:hover { color: #67e8f9; }
+    .discussion-action.active-like { color: #67e8f9; }
+    .discussion-action.active-dislike { color: #fda4af; }
+    .discussion-thread-children {
+        margin: 13px 0 0 17px; padding-left: 16px;
+        border-left: 1px solid rgba(100,116,139,.35);
+    }
+    .discussion-thread-children > .discussion-comment { padding: 12px 0; border-bottom: 0; }
+    .discussion-thread-toggle {
+        display: inline-flex; align-items: center; gap: 6px; margin-top: 10px;
+        color: #67e8f9; font-size: 10px; font-weight: 750;
+    }
+    .discussion-thread-toggle:hover { color: #a5f3fc; }
+    .discussion-thread-toggle i { transition: transform .16s ease; }
+    .discussion-inline-form { margin: 12px 0 4px 47px; }
+    .discussion-inline-form .discussion-textarea { min-height: 68px; }
+    .discussion-edit-form { margin-top: 10px; }
+.discussion-modal {
+        position: fixed; inset: 0; z-index: 1100; display: flex;
+        align-items: center; justify-content: center; padding: 18px;
+        background: rgba(2,6,23,.76); backdrop-filter: blur(5px);
+    }
+    .discussion-modal-card {
+        width: 100%; max-width: 390px; border: 1px solid rgba(148,163,184,.2);
+        border-radius: 14px; background: #101b2c; padding: 22px;
+        box-shadow: 0 22px 70px rgba(0,0,0,.45);
+    }
+    .discussion-modal.hidden { display: none !important; }
+    .discussion-comment button:focus-visible, .discussion-primary-button:focus-visible,
+    .discussion-quiet-button:focus-visible, .discussion-danger-button:focus-visible {
+        outline: 2px solid #67e8f9; outline-offset: 3px;
+    }
+    @media (max-width: 520px) {
+        .discussion-thread-children { margin-left: 8px; padding-left: 11px; }
+        .discussion-inline-form { margin-left: 0; }
+        .discussion-avatar { width: 32px; height: 32px; flex-basis: 32px; }
+    }
+
 </style>
 
 <div
@@ -690,6 +913,8 @@
 
         class="
 
+            learning-workspace-layout
+
             flex
 
             min-h-0
@@ -749,6 +974,8 @@
             <div
 
                 class="
+
+                    learning-tab-list
 
                     learning-scroll
 
@@ -952,6 +1179,8 @@
 
                                 learning-media
 
+                                learning-main-media-frame
+
                                 overflow-hidden
 
                                 rounded-xl
@@ -966,21 +1195,7 @@
 
                                     id="learning-video-player"
 
-                                    class="
-
-                                        block
-
-                                        aspect-video
-
-                                        w-full
-
-                                        max-h-[calc(100dvh-14rem)]
-
-                                        bg-black
-
-                                        object-contain
-
-                                    "
+                                    class="learning-main-video-player"
 
                                     controls
 
@@ -1004,7 +1219,7 @@
 
                             {% else %}
 
-                                <div class="flex aspect-video items-center justify-center p-6 text-center">
+                                <div class="absolute inset-0 flex items-center justify-center p-6 text-center">
 
                                     <div>
 
@@ -1286,7 +1501,7 @@
 
                                 rel="noopener noreferrer"
 
-                                class="learning-pdf-preview group relative flex min-h-[220px] items-center justify-center overflow-hidden bg-slate-950 sm:min-h-[280px] lg:min-h-[320px]"
+                                class="learning-pdf-preview learning-main-media-frame group relative flex items-center justify-center overflow-hidden bg-slate-950"
 
                                 aria-label="Open {{ first_pdf.pdf_name }} in a new tab"
 
@@ -1300,11 +1515,11 @@
 
                                         alt="Preview of {{ first_pdf.pdf_name }}"
 
-                                        class="learning-pdf-preview-image block max-h-[min(58dvh,560px)] w-full object-contain"
+                                        class="learning-pdf-preview-image"
 
                                     >
 
-                                    <div id="learning-pdf-thumbnail-fallback" class="hidden min-h-[220px] w-full flex-col items-center justify-center gap-3 px-6 py-10 text-center">
+                                    <div id="learning-pdf-thumbnail-fallback" class="absolute inset-0 hidden w-full flex-col items-center justify-center gap-3 px-6 py-10 text-center">
 
                                         <i class="ri-file-pdf-line text-6xl text-rose-400"></i>
 
@@ -1813,65 +2028,82 @@
 
             ---------------------------------------------- -->
 
+
             <section
-
                 id="panel-comments"
-
-                class="learning-panel hidden min-h-0 min-w-0 flex-1 overflow-y-auto p-2 pb-6 sm:p-3 sm:pb-8 lg:p-4 lg:pb-8"
-
+                class="learning-panel hidden flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden p-3 sm:p-4 lg:p-5"
                 data-learning-panel="comments"
-
                 role="tabpanel"
-
                 hidden
-
             >
+                <div class="discussion-shell w-full">
+                    <div class="discussion-scroll-area" id="discussion-scroll-area">
+                        <div class="discussion-heading flex items-center justify-between gap-3 border-b border-white/[0.07] pb-3" aria-live="polite">
+                            <div class="min-w-0">
+                                <h2 class="text-base font-bold text-white">Chapter discussion</h2>
+                                <p class="mt-1 text-xs text-slate-500">Questions, comments and replies for this chapter</p>
+                            </div>
+                            <span id="discussion-status" class="shrink-0 rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1.5 text-xs font-bold tabular-nums text-cyan-300">Loading…</span>
+                        </div>
 
-                <div class="mb-5">
-
-                    <p class="text-xs font-semibold uppercase tracking-wider text-cyan-400">
-
-                        Learning discussion
-
-                    </p>
-
-                    <h2 class="mt-1 text-xl font-bold text-white">
-
-                        Questions and comments
-
-                    </h2>
-
-                    <p class="mt-2 text-sm leading-6 text-slate-400">
-
-                        A dedicated space for chapter-related questions and discussion.
-
-                    </p>
-
-                </div>
-
-                <div class="flex min-h-[260px] flex-col items-center justify-center px-5 py-12 text-center">
-
-                    <div class="flex h-16 w-16 items-center justify-center rounded-2xl bg-cyan-400/10 text-3xl text-cyan-400">
-
-                        <i class="ri-chat-3-line"></i>
-
+                        <div id="discussion-loading" class="py-12 text-center text-sm text-slate-400">
+                            <i class="ri-loader-4-line mr-2 animate-spin text-cyan-300"></i> Loading chapter discussion…
+                        </div>
+                        <div id="discussion-empty" class="hidden py-12 text-center">
+                            <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-cyan-400/10 text-2xl text-cyan-300">
+                                <i class="ri-chat-new-line"></i>
+                            </div>
+                            <h3 class="mt-3 text-sm font-bold text-white">No comments yet</h3>
+                            <p class="mt-1 text-xs text-slate-500">Start the conversation by posting the first comment.</p>
+                        </div>
+                        <div id="discussion-comments" class="discussion-list" aria-live="polite"></div>
                     </div>
 
-                    <h3 class="mt-5 text-base font-bold text-white">
-
-                        Discussion is not connected yet
-
-                    </h3>
-
-                    <p class="mt-2 max-w-md text-sm leading-6 text-slate-400">
-
-                        The comment and reply interface needs a Django model and server-side views to save discussions and enforce student access. No comments will be shown until that functionality is connected.
-
-                    </p>
-
+                    <div class="discussion-composer-dock">
+                        <form id="discussion-main-form" class="discussion-composer">
+                            {% csrf_token %}
+                            <div class="discussion-composer-row">
+                                <textarea id="discussion-main-input" name="content" rows="1" maxlength="2500"
+                                    placeholder="Write a new question or comment about this chapter…"
+                                    class="discussion-textarea" required></textarea>
+                                <button type="submit" class="discussion-primary-button"><i class="ri-send-plane-line"></i> Post comment</button>
+                            </div>
+                            <div class="discussion-composer-count">
+                                <span class="text-[10px] tabular-nums text-slate-500" data-character-count="discussion-main-input">0 / 2500</span>
+                            </div>
+                        </form>
+                    </div>
                 </div>
 
+                <div
+                    id="discussion-confirm"
+                    class="discussion-modal hidden"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="discussion-confirm-title"
+                >
+                    <div class="discussion-modal-card">
+                        <h3 id="discussion-confirm-title" class="text-base font-bold text-white">Delete this comment?</h3>
+                        <p class="mt-2 text-sm leading-6 text-slate-400">This comment will be removed from the discussion. Any existing replies will remain visible.</p>
+                        <div class="mt-5 flex justify-end gap-2">
+                            <button type="button" id="discussion-delete-cancel" class="discussion-quiet-button">Cancel</button>
+                            <button type="button" id="discussion-delete-confirm" class="discussion-danger-button">Delete comment</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div
+                    id="discussion-api-config"
+                    hidden
+                    data-chapter-id="{{ chapter.id }}"
+                    data-list-url="{% url 'discussions:chapter_discussion' chapter.id %}"
+                    data-create-url="{% url 'discussions:create_comment' chapter.id %}"
+                    data-edit-url-template="{% url 'discussions:edit_comment' 0 %}"
+                    data-delete-url-template="{% url 'discussions:delete_comment' 0 %}"
+                    data-reaction-url-template="{% url 'discussions:toggle_reaction' 0 %}"
+                ></div>
             </section>
+
 
         </main>
 
@@ -2389,7 +2621,27 @@
 
     const listPanels = workspace.querySelectorAll("[data-learning-list]");
 
-    function activateTab(tabName) {
+    const mainLearningArea = workspace.querySelector(".learning-workspace-layout > main");
+
+    let activeTabName = "videos";
+
+    // Persist the active learning tab and the selected media item without a reload.
+    function updateLearningUrl(tabName, itemType, itemKey) {
+        const url = new URL(window.location.href);
+        url.searchParams.set("tab", tabName);
+        if (tabName !== "videos") url.searchParams.delete("video");
+        if (tabName !== "pdfs") url.searchParams.delete("pdf");
+        if (itemType && itemKey) url.searchParams.set(itemType, String(itemKey));
+        else if (itemType) url.searchParams.delete(itemType);
+        window.history.replaceState({}, "", url.pathname + url.search + url.hash);
+    }
+
+    function activateTab(tabName, updateUrl) {
+
+        const tabChanged = activeTabName !== tabName;
+
+        activeTabName = tabName;
+        if (updateUrl !== false) updateLearningUrl(tabName, null, null);
 
         tabButtons.forEach(function (button) {
 
@@ -2423,6 +2675,41 @@
 
         });
 
+        const workspaceLayout = workspace.querySelector(".learning-workspace-layout");
+        if (workspaceLayout) {
+            workspaceLayout.classList.toggle("comments-active", tabName === "comments");
+        }
+
+        /*
+         * The learning area contains nested scroll containers. Reset both when
+         * changing content types so a previously hidden panel cannot reopen at
+         * an old scroll offset and leave an apparent blank area above its content.
+         */
+        if (tabChanged) {
+            if (mainLearningArea) {
+                mainLearningArea.scrollTop = 0;
+            }
+
+            const activePanel = workspace.querySelector(
+                '[data-learning-panel="' + tabName + '"]'
+            );
+
+            if (activePanel) {
+                activePanel.scrollTop = 0;
+
+                requestAnimationFrame(function () {
+                    activePanel.scrollTop = 0;
+
+                    if (mainLearningArea) {
+                        mainLearningArea.scrollTop = 0;
+                    }
+
+                    /* Force the newly visible panel to recalculate its layout. */
+                    activePanel.getBoundingClientRect();
+                });
+            }
+        }
+
     }
 
     tabButtons.forEach(function (button) {
@@ -2447,67 +2734,37 @@
 
     const videoDescription = workspace.querySelector("#learning-video-description");
 
-    workspace.querySelectorAll("[data-video-item]").forEach(function (item) {
+    function selectVideo(item, updateUrl) {
+        if (!item) return;
+        const videoUrl = item.dataset.videoUrl || "";
+        if (!videoPlayer || !videoUrl) return;
 
-        item.addEventListener("click", function () {
+        if (videoPlayer.currentSrc !== videoUrl) {
+            videoPlayer.pause();
+            videoPlayer.src = videoUrl;
+            videoPlayer.load();
+        }
+        if (videoTitle) videoTitle.textContent = item.dataset.videoName || "";
+        if (videoDescription) videoDescription.textContent = item.dataset.videoDescription || "";
 
-            const videoUrl = item.dataset.videoUrl || "";
-
-            if (!videoPlayer || !videoUrl) {
-
-                return;
-
-            }
-
-            if (videoPlayer.currentSrc !== videoUrl) {
-
-                videoPlayer.pause();
-
-                videoPlayer.src = videoUrl;
-
-                videoPlayer.load();
-
-            }
-
-            if (videoTitle) {
-
-                videoTitle.textContent = item.dataset.videoName || "";
-
-            }
-
-            if (videoDescription) {
-
-                videoDescription.textContent = item.dataset.videoDescription || "";
-
-            }
-
-            // Sync the carousel card and right sidebar row by database ID.
-
-            const selectedVideoKey = item.dataset.videoKey || "";
-
-            workspace.querySelectorAll("[data-video-item]").forEach(function (other) {
-
-                const active = selectedVideoKey
-
-                    ? other.dataset.videoKey === selectedVideoKey
-
-                    : other === item;
-
-                other.classList.toggle("active", active);
-
-                other.setAttribute("aria-pressed", String(active));
-
-            });
-
-            activateTab("videos");
-
+        const selectedVideoKey = item.dataset.videoKey || "";
+        workspace.querySelectorAll("[data-video-item]").forEach(function (other) {
+            const active = selectedVideoKey ? other.dataset.videoKey === selectedVideoKey : other === item;
+            other.classList.toggle("active", active);
+            other.setAttribute("aria-pressed", String(active));
         });
 
+        activateTab("videos", false);
+        if (updateUrl !== false) updateLearningUrl("videos", "video", selectedVideoKey);
+    }
+
+    workspace.querySelectorAll("[data-video-item]").forEach(function (item) {
+        item.addEventListener("click", function () { selectVideo(item, true); });
     });
 
     // ---------------------------------------------------------
 
-    // PDF SELECTION
+        // PDF SELECTION
 
     // Keep the preview, thumbnail, open/download links, and both selectors synchronized.
 
@@ -2643,7 +2900,8 @@
 
         });
 
-        activateTab("pdfs");
+        activateTab("pdfs", false);
+        updateLearningUrl("pdfs", "pdf", pdfKey);
 
     }
 
@@ -2714,11 +2972,45 @@
     });
 
 
-    // Open the requested workspace tab after a quiz start, resume, or result redirect.
+    // Start the initial learning panel at its true top after the first layout pass.
+    requestAnimationFrame(function () {
+        const initialPanel = workspace.querySelector(
+            '[data-learning-panel="videos"]'
+        );
+
+        if (initialPanel) {
+            initialPanel.scrollTop = 0;
+        }
+
+        if (mainLearningArea) {
+            mainLearningArea.scrollTop = 0;
+        }
+    });
+
+    // Restore the selected tab and the exact video/PDF after a browser refresh.
     const pageParams = new URLSearchParams(window.location.search);
     const requestedTab = pageParams.get("tab");
-    if (requestedTab && ["videos", "pdfs", "quizzes", "live", "comments"].includes(requestedTab)) {
-        activateTab(requestedTab);
+    const validTabs = ["videos", "pdfs", "quizzes", "live", "comments"];
+    const initialTab = validTabs.includes(requestedTab) ? requestedTab : "videos";
+
+    if (initialTab === "videos") {
+        const requestedVideo = pageParams.get("video");
+        const videoItems = Array.from(workspace.querySelectorAll("[data-video-item]"));
+        const selectedVideo = (requestedVideo && videoItems.find(function (item) {
+            return item.dataset.videoKey === requestedVideo;
+        })) || videoItems.find(function (item) { return item.classList.contains("active"); }) || videoItems[0];
+        if (selectedVideo) selectVideo(selectedVideo, false);
+        else activateTab("videos", false);
+    } else if (initialTab === "pdfs") {
+        const requestedPdf = pageParams.get("pdf");
+        const pdfItems = Array.from(workspace.querySelectorAll("[data-pdf-item]"));
+        const selectedPdf = (requestedPdf && pdfItems.find(function (item) {
+            return item.dataset.pdfKey === requestedPdf;
+        })) || pdfItems.find(function (item) { return item.classList.contains("active"); }) || pdfItems[0];
+        if (selectedPdf) selectPdf(selectedPdf);
+        else activateTab("pdfs", false);
+    } else {
+        activateTab(initialTab, false);
     }
 
     // Quiz UI: one question at a time, server-saved answers, and countdown.
@@ -3051,6 +3343,451 @@
             if (event.key === "Escape" && confirmationModal && !confirmationModal.hidden) {
                 closeSubmissionConfirmation();
             }
+        });
+    }
+
+
+    // Chapter-wide discussion API integration with nested collapse and automatic updates.
+    const discussionConfig = workspace.querySelector("#discussion-api-config");
+    if (discussionConfig) {
+        const discussionList = workspace.querySelector("#discussion-comments");
+        const discussionLoading = workspace.querySelector("#discussion-loading");
+        const discussionEmpty = workspace.querySelector("#discussion-empty");
+        const discussionStatus = workspace.querySelector("#discussion-status");
+        const mainDiscussionForm = workspace.querySelector("#discussion-main-form");
+        const mainDiscussionInput = workspace.querySelector("#discussion-main-input");
+        const deleteModal = workspace.querySelector("#discussion-confirm");
+        const deleteConfirmButton = workspace.querySelector("#discussion-delete-confirm");
+        const deleteCancelButton = workspace.querySelector("#discussion-delete-cancel");
+
+        const discussionState = {
+            comments: [], maxLength: 2500, replyingTo: null, editingId: null,
+            deletingId: null, busy: false,
+            expanded: new Set(), lastPayload: "", polling: null, loading: false,
+            pendingRefresh: false
+        };
+
+        // AJAX returns JSON, so display its message through the same global
+        // message markup/classes provided by the extended student base template.
+        function showBaseMessage(message, level) {
+            if (!message) return;
+            let container = document.getElementById("messageContainer");
+            if (!container) {
+                container = document.createElement("div");
+                container.className = "message-container";
+                container.id = "messageContainer";
+                document.body.insertBefore(container, document.body.firstChild);
+            }
+            const type = level === "error" ? "error" : "success";
+            const item = document.createElement("div");
+            item.className = "message-item " + type;
+            const header = document.createElement("div");
+            header.className = "message-header";
+            const left = document.createElement("div");
+            left.className = "message-left";
+            const iconWrap = document.createElement("div");
+            iconWrap.className = "message-icon";
+            const icon = document.createElement("i");
+            icon.className = type === "success" ? "ri-check-line" : "ri-close-circle-line";
+            iconWrap.appendChild(icon);
+            const title = document.createElement("div");
+            title.className = "message-title";
+            title.textContent = type === "success" ? "Success" : "Error";
+            left.append(iconWrap, title);
+            const close = document.createElement("button");
+            close.className = "message-close";
+            close.type = "button";
+            close.innerHTML = '<i class="ri-close-line"></i>';
+            close.addEventListener("click", function () { item.remove(); });
+            header.append(left, close);
+            const body = document.createElement("div");
+            body.className = "message-text";
+            body.textContent = String(message);
+            item.append(header, body);
+            container.appendChild(item);
+            window.setTimeout(function () {
+                if (item.isConnected) item.remove();
+                if (container.isConnected && !container.children.length) container.remove();
+            }, 5000);
+        }
+
+        const endpoint = function (template, id) {
+            return template.replace(/\/0(?=\/)/, "/" + String(id));
+        };
+        function discussionCsrfToken() {
+            const token = mainDiscussionForm.querySelector('input[name="csrfmiddlewaretoken"]');
+            return token ? token.value : "";
+        }
+        async function discussionRequest(url, method, formData) {
+            const response = await fetch(url, {
+                method: method || "GET", body: formData || undefined,
+                credentials: "same-origin",
+                headers: {
+                    "X-Requested-With": "XMLHttpRequest",
+                    ...(method && method !== "GET" ? { "X-CSRFToken": discussionCsrfToken() } : {})
+                }
+            });
+            const responseText = await response.text();
+            let payload;
+            try {
+                payload = responseText ? JSON.parse(responseText) : null;
+            } catch (_) {
+                const contentType = response.headers.get("content-type") || "unknown content type";
+                const isHtml = /text\/html/i.test(contentType) || /^\s*<!doctype html|^\s*<html/i.test(responseText);
+                if (isHtml) {
+                    throw new Error("The server returned an HTML error page instead of discussion JSON (HTTP " + response.status + "). Check the Django terminal for the error from this request.");
+                }
+                throw new Error("The server response was not valid JSON (HTTP " + response.status + "). Check the Django terminal and browser Network response.");
+            }
+            if (!payload || typeof payload !== "object") {
+                throw new Error("The server returned an empty or invalid response (HTTP " + response.status + ").");
+            }
+            if (!response.ok || !payload.success) {
+                throw new Error(payload.message || ("The request failed (HTTP " + response.status + ")."));
+            }
+            return payload;
+        }
+        function makeElement(tag, className, text) {
+            const node = document.createElement(tag);
+            if (className) node.className = className;
+            if (text !== undefined && text !== null) node.textContent = String(text);
+            return node;
+        }
+        function formatDiscussionDate(value) {
+            if (!value) return "";
+
+            const date = new Date(value);
+
+            if (Number.isNaN(date.getTime())) {
+                return "";
+            }
+
+            return new Intl.DateTimeFormat("en-IN", {
+                timeZone: "Asia/Kolkata",
+                day: "2-digit",
+                month: "short",
+                year: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+                hour12: true
+            }).format(date);
+        }
+        function makeAvatar(author) {
+            const avatar = makeElement("div", "discussion-avatar");
+            const fallback = ((author && author.name) || "U").trim().charAt(0).toUpperCase();
+            if (author && author.avatar) {
+                const image = document.createElement("img");
+                image.src = author.avatar; image.alt = ""; image.loading = "lazy";
+                image.onerror = function () { image.remove(); avatar.textContent = fallback; };
+                avatar.appendChild(image);
+            } else avatar.textContent = fallback;
+            return avatar;
+        }
+        function actionButton(label, icon, action, commentId, extraClass) {
+            const button = makeElement("button", "discussion-action " + (extraClass || ""), label);
+            button.type = "button"; button.dataset.discussionAction = action; button.dataset.commentId = commentId;
+            const iconNode = document.createElement("i"); iconNode.className = icon; button.prepend(iconNode);
+            return button;
+        }
+        function createInlineComposer(parentId) {
+            const wrapper = makeElement("form", "discussion-inline-form");
+            wrapper.dataset.discussionForm = "reply"; wrapper.dataset.parentId = parentId;
+            const textarea = makeElement("textarea", "discussion-textarea");
+            textarea.name = "content"; textarea.rows = 2; textarea.maxLength = discussionState.maxLength;
+            textarea.required = true; textarea.placeholder = "Write a reply to this comment…";
+            wrapper.appendChild(textarea);
+            const footer = makeElement("div", "mt-2 flex items-center justify-between gap-2");
+            const count = makeElement("span", "text-[10px] text-slate-500", "0 / " + discussionState.maxLength);
+            const buttons = makeElement("div", "flex items-center gap-2");
+            const cancel = makeElement("button", "discussion-quiet-button", "Cancel");
+            cancel.type = "button"; cancel.dataset.discussionAction = "cancel-reply";
+            const submit = makeElement("button", "discussion-primary-button", "Reply");
+            submit.type = "submit"; submit.innerHTML = '<i class="ri-send-plane-line"></i> Reply';
+            buttons.append(cancel, submit); footer.append(count, buttons); wrapper.appendChild(footer);
+            textarea.addEventListener("input", function () { count.textContent = textarea.value.length + " / " + discussionState.maxLength; });
+            return wrapper;
+        }
+        function createEditComposer(comment) {
+            const wrapper = makeElement("form", "discussion-edit-form");
+            wrapper.dataset.discussionForm = "edit"; wrapper.dataset.commentId = comment.id;
+            const textarea = makeElement("textarea", "discussion-textarea");
+            textarea.name = "content"; textarea.rows = 3; textarea.maxLength = discussionState.maxLength;
+            textarea.required = true; textarea.value = comment.content || ""; wrapper.appendChild(textarea);
+            const footer = makeElement("div", "mt-2 flex justify-end gap-2");
+            const cancel = makeElement("button", "discussion-quiet-button", "Cancel");
+            cancel.type = "button"; cancel.dataset.discussionAction = "cancel-edit";
+            const submit = makeElement("button", "discussion-primary-button", "Save changes");
+            submit.type = "submit"; footer.append(cancel, submit); wrapper.appendChild(footer);
+            return wrapper;
+        }
+        function countAllReplies(comment) {
+            const replies = Array.isArray(comment.replies) ? comment.replies : [];
+            return replies.reduce(function (total, reply) { return total + 1 + countAllReplies(reply); }, 0);
+        }
+        function renderComment(comment) {
+            const id = String(comment.id);
+            const replies = Array.isArray(comment.replies) ? comment.replies : [];
+
+            // Never render a deleted comment's identity, timestamp, content,
+            // actions, or placeholder. Preserve its replies by rendering them
+            // directly in its place, without an extra deleted-parent wrapper.
+            if (comment.is_deleted) {
+                const preservedReplies = document.createDocumentFragment();
+                replies.forEach(function (reply) {
+                    preservedReplies.appendChild(renderComment(reply));
+                });
+                return preservedReplies;
+            }
+
+            const article = makeElement("article", "discussion-comment");
+            article.dataset.commentId = id;
+            const main = makeElement("div", "discussion-comment-main");
+            main.appendChild(makeAvatar(comment.author || {}));
+            const body = makeElement("div", "min-w-0 flex-1");
+            const authorLine = makeElement("div", "discussion-author-line");
+            authorLine.appendChild(makeElement("span", "discussion-author-name", (comment.author && comment.author.name) || "User"));
+            const role = ((comment.author && comment.author.role) || "Student").toLowerCase();
+            authorLine.appendChild(makeElement("span", "discussion-role " + (role === "teacher" ? "teacher" : role === "admin" ? "admin" : ""), (comment.author && comment.author.role) || "Student"));
+            authorLine.appendChild(makeElement("time", "discussion-meta", formatDiscussionDate(comment.created_at)));
+            if (comment.is_edited) authorLine.appendChild(makeElement("span", "discussion-meta", "· edited"));
+            body.appendChild(authorLine);
+
+            if (comment.is_deleted) body.appendChild(makeElement("p", "discussion-content discussion-deleted", "This comment has been deleted."));
+            else if (discussionState.editingId === id) body.appendChild(createEditComposer(comment));
+            else body.appendChild(makeElement("p", "discussion-content", comment.content || ""));
+
+            const actions = makeElement("div", "discussion-actions");
+            if (!comment.is_deleted) {
+                const likes = Number((comment.reactions && comment.reactions.likes) || 0);
+                const dislikes = Number((comment.reactions && comment.reactions.dislikes) || 0);
+                const reaction = comment.reactions && comment.reactions.current_user_reaction;
+                actions.appendChild(actionButton(String(likes), "ri-thumb-up-line", "like", id, reaction === "like" ? "active-like" : ""));
+                actions.appendChild(actionButton(String(dislikes), "ri-thumb-down-line", "dislike", id, reaction === "dislike" ? "active-dislike" : ""));
+                actions.appendChild(actionButton("Reply", "ri-reply-line", "reply", id, ""));
+                if (comment.permissions && comment.permissions.can_edit) actions.appendChild(actionButton("Edit", "ri-edit-line", "edit", id, ""));
+                if (comment.permissions && comment.permissions.can_delete) actions.appendChild(actionButton("Delete", "ri-delete-bin-line", "delete", id, ""));
+            }
+            body.appendChild(actions);
+            if (replies.length) {
+                const isExpanded = discussionState.expanded.has(id);
+                const toggle = makeElement("button", "discussion-thread-toggle", (isExpanded ? "Hide" : "Show") + " " + replies.length + (replies.length === 1 ? " reply" : " replies"));
+                toggle.type = "button"; toggle.dataset.discussionAction = "toggle-replies"; toggle.dataset.commentId = id;
+                const chevron = document.createElement("i"); chevron.className = isExpanded ? "ri-arrow-up-s-line" : "ri-arrow-down-s-line"; toggle.prepend(chevron);
+                body.appendChild(toggle);
+            }
+            main.appendChild(body); article.appendChild(main);
+
+            if (discussionState.replyingTo === id && !comment.is_deleted) article.appendChild(createInlineComposer(id));
+            if (replies.length && discussionState.expanded.has(id)) {
+                const children = makeElement("div", "discussion-thread-children");
+                replies.forEach(function (reply) { children.appendChild(renderComment(reply)); });
+                article.appendChild(children);
+            }
+            return article;
+        }
+        function sortCommentsNewestFirst(comments) {
+            if (!Array.isArray(comments)) return [];
+            comments.forEach(function (comment) {
+                if (Array.isArray(comment.replies)) {
+                    comment.replies = sortCommentsNewestFirst(comment.replies);
+                }
+            });
+            return comments.sort(function (a, b) {
+                const aTime = new Date(a.created_at || 0).getTime();
+                const bTime = new Date(b.created_at || 0).getTime();
+                const safeATime = Number.isFinite(aTime) ? aTime : 0;
+                const safeBTime = Number.isFinite(bTime) ? bTime : 0;
+                return safeBTime - safeATime;
+            });
+        }
+        function countVisibleComments(comment) {
+            if (!comment) return 0;
+
+            const replies = Array.isArray(comment.replies) ? comment.replies : [];
+
+            // A deleted comment is not counted, but any still-visible
+            // descendants of an older soft-deleted comment are counted.
+            const ownCount = comment.is_deleted ? 0 : 1;
+
+            return ownCount + replies.reduce(function (total, reply) {
+                return total + countVisibleComments(reply);
+            }, 0);
+        }
+        function renderDiscussion() {
+            discussionList.replaceChildren();
+            const comments = sortCommentsNewestFirst(
+                Array.isArray(discussionState.comments) ? discussionState.comments : []
+            );
+            discussionState.comments = comments;
+            comments.forEach(function (comment) { discussionList.appendChild(renderComment(comment)); });
+            const totalComments = comments.reduce(function (total, comment) {
+                return total + countVisibleComments(comment);
+            }, 0);
+            discussionEmpty.classList.toggle("hidden", totalComments !== 0);
+            discussionStatus.textContent = totalComments + (totalComments === 1 ? " comment" : " comments");
+        }
+        async function loadDiscussion(showLoading, forceRender) {
+            /*
+             * A background poll can already be in flight when the learner clicks
+             * Like/Dislike or submits a reply. Queue the requested refresh instead
+             * of dropping it; otherwise the UI waits for the next 8-second poll.
+             */
+            if (discussionState.loading) {
+                if (forceRender) discussionState.pendingRefresh = true;
+                return;
+            }
+            discussionState.loading = true;
+            if (showLoading) {
+                discussionLoading.classList.remove("hidden"); discussionList.classList.add("hidden"); discussionEmpty.classList.add("hidden");
+            }
+            try {
+                const payload = await discussionRequest(discussionConfig.dataset.listUrl, "GET");
+                const data = payload.data || {};
+                const comments = Array.isArray(data.comments) ? data.comments : [];
+                const signature = JSON.stringify(comments);
+                discussionState.maxLength = Number(data.max_comment_length || 2500);
+                mainDiscussionInput.maxLength = discussionState.maxLength;
+                const active = document.activeElement;
+                const hasUnsavedDraft = active && active.matches && active.matches("#discussion-main-input, .discussion-inline-form textarea, .discussion-edit-form textarea");
+                if ((forceRender || signature !== discussionState.lastPayload) && !hasUnsavedDraft) {
+                    discussionState.comments = comments;
+                    discussionState.lastPayload = signature;
+                    renderDiscussion();
+                }
+                discussionLoading.classList.add("hidden"); discussionList.classList.remove("hidden");
+            } catch (error) {
+                discussionLoading.classList.add("hidden");
+            } finally {
+                discussionState.loading = false;
+                if (discussionState.pendingRefresh) {
+                    discussionState.pendingRefresh = false;
+                    loadDiscussion(false, true);
+                }
+            }
+        }
+        async function submitDiscussionForm(form) {
+            if (discussionState.busy) return;
+            const textarea = form.querySelector('textarea[name="content"]');
+            const content = textarea ? textarea.value.trim() : "";
+            if (!content) { if (textarea) textarea.focus(); return; }
+            if (content.length > discussionState.maxLength) {
+                showBaseMessage("Comments and replies cannot exceed " + discussionState.maxLength + " characters.", "error");
+                return;
+            }
+
+            const isEdit = form.dataset.discussionForm === "edit";
+            const isReply = form.dataset.discussionForm === "reply";
+            const formData = new FormData();
+            formData.append("content", content);
+            let url = discussionConfig.dataset.createUrl;
+            if (isReply) formData.append("parent_id", form.dataset.parentId);
+            if (isEdit) url = endpoint(discussionConfig.dataset.editUrlTemplate, form.dataset.commentId);
+
+            const submitButton = form.querySelector('button[type="submit"]');
+            discussionState.busy = true;
+            if (submitButton) submitButton.disabled = true;
+            if (textarea) textarea.disabled = true;
+            try {
+                const result = await discussionRequest(url, "POST", formData);
+                if (isReply) discussionState.expanded.add(String(form.dataset.parentId));
+                discussionState.replyingTo = null;
+                discussionState.editingId = null;
+
+                // Clear only after the server confirms success. This prevents the
+                // same text remaining in the composer and being posted twice.
+                if (form === mainDiscussionForm) {
+                    mainDiscussionInput.value = "";
+                    const count = workspace.querySelector('[data-character-count="discussion-main-input"]');
+                    if (count) count.textContent = "0 / " + discussionState.maxLength;
+                }
+                showBaseMessage((result && result.message) || (isEdit ? "Comment updated successfully." : isReply ? "Reply posted successfully." : "Comment posted successfully."), "success");
+                discussionState.lastPayload = "";
+                await loadDiscussion(false, true);
+            } catch (error) {
+                showBaseMessage(error.message || "Unable to submit your comment. Please try again.", "error");
+            } finally {
+                discussionState.busy = false;
+                if (textarea) textarea.disabled = false;
+                if (submitButton) submitButton.disabled = false;
+            }
+        }
+        mainDiscussionForm.addEventListener("submit", function (event) { event.preventDefault(); submitDiscussionForm(mainDiscussionForm); });
+        discussionList.addEventListener("submit", function (event) {
+            const form = event.target.closest("form[data-discussion-form]");
+            if (!form) return; event.preventDefault(); submitDiscussionForm(form);
+        });
+        discussionList.addEventListener("click", async function (event) {
+            const button = event.target.closest("[data-discussion-action]");
+            if (!button) return;
+            const action = button.dataset.discussionAction;
+            const id = String(button.dataset.commentId);
+            if (action === "toggle-replies") {
+                if (discussionState.expanded.has(id)) discussionState.expanded.delete(id);
+                else discussionState.expanded.add(id);
+                renderDiscussion(); return;
+            }
+            if (action === "cancel-reply") { discussionState.replyingTo = null; renderDiscussion(); return; }
+            if (action === "cancel-edit") { discussionState.editingId = null; renderDiscussion(); return; }
+            if (action === "reply") {
+                discussionState.replyingTo = id; discussionState.editingId = null;
+                renderDiscussion();
+                const form = discussionList.querySelector('form[data-parent-id="' + id + '"]');
+                if (form) form.querySelector("textarea").focus(); return;
+            }
+            if (action === "edit") {
+                discussionState.editingId = id; discussionState.replyingTo = null;
+                renderDiscussion();
+                const form = discussionList.querySelector('[data-comment-id="' + id + '"] .discussion-edit-form');
+                if (form) { const textarea = form.querySelector("textarea"); textarea.focus(); textarea.setSelectionRange(textarea.value.length, textarea.value.length); }
+                return;
+            }
+            if (action === "delete") { discussionState.deletingId = id; deleteModal.classList.remove("hidden"); return; }
+            if (action === "like" || action === "dislike") {
+                button.disabled = true; const formData = new FormData(); formData.append("reaction_type", action);
+                try {
+                    await discussionRequest(endpoint(discussionConfig.dataset.reactionUrlTemplate, id), "POST", formData);
+                    // Reactions update quietly. Do not create repeated success toasts
+                    // when a learner likes/unlikes or changes reactions frequently.
+                    discussionState.lastPayload = ""; await loadDiscussion(false, true);
+                } catch (error) {
+                    showBaseMessage(error.message || "Unable to update reaction.", "error");
+                } finally { button.disabled = false; }
+            }
+        });
+        async function confirmDiscussionDelete() {
+            if (!discussionState.deletingId) return;
+            deleteConfirmButton.disabled = true;
+            try {
+                const result = await discussionRequest(endpoint(discussionConfig.dataset.deleteUrlTemplate, discussionState.deletingId), "POST", new FormData());
+                discussionState.deletingId = null; discussionState.replyingTo = null; discussionState.editingId = null;
+                deleteModal.classList.add("hidden");
+                showBaseMessage((result && result.message) || "Comment deleted successfully.", "success");
+                discussionState.lastPayload = "";
+                await loadDiscussion(false, true);
+            } catch (error) {
+                deleteModal.classList.add("hidden");
+                showBaseMessage(error.message || "Unable to delete comment.", "error");
+            }
+            finally { deleteConfirmButton.disabled = false; }
+        }
+        deleteConfirmButton.addEventListener("click", confirmDiscussionDelete);
+        deleteCancelButton.addEventListener("click", function () { discussionState.deletingId = null; deleteModal.classList.add("hidden"); });
+        deleteModal.addEventListener("click", function (event) {
+            if (event.target === deleteModal) { discussionState.deletingId = null; deleteModal.classList.add("hidden"); }
+        });
+        mainDiscussionInput.addEventListener("input", function () {
+            const count = workspace.querySelector('[data-character-count="discussion-main-input"]');
+            if (count) count.textContent = mainDiscussionInput.value.length + " / " + discussionState.maxLength;
+        });
+
+        // Lightweight polling keeps the page current even without a WebSocket connection.
+        // It does not depend on Redis; no full-page reload is performed.
+        loadDiscussion(true, true);
+        discussionState.polling = window.setInterval(function () {
+            if (!document.hidden && !discussionState.busy) loadDiscussion(false, false);
+        }, 8000);
+        document.addEventListener("visibilitychange", function () {
+            if (!document.hidden && !discussionState.busy) loadDiscussion(false, false);
         });
     }
 

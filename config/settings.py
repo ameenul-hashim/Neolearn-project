@@ -52,6 +52,9 @@ INSTALLED_APPS = [
     'courses',
     'orders',
     'live_classes',
+    # REAL-TIME DISCUSSIONS
+    'channels',
+    'discussions',
 
     # DJANGO ALLAUTH
 
@@ -329,3 +332,18 @@ RAZORPAY_KEY_ID = config("RAZORPAY_KEY_ID", default="")
 RAZORPAY_KEY_SECRET = config("RAZORPAY_KEY_SECRET", default="")
 
 SECURE_CROSS_ORIGIN_OPENER_POLICY = "same-origin-allow-popups"
+
+# ============================================================
+# DJANGO CHANNELS - REAL-TIME DISCUSSIONS
+# ============================================================
+
+ASGI_APPLICATION = 'config.asgi.application'
+
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            'hosts': [('127.0.0.1', 6379)],
+        },
+    },
+}
