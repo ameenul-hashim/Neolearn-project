@@ -1,1666 +1,636 @@
 {% load static %}
-
 <!DOCTYPE html>
-
 <html lang="en">
-
 <head>
-
     <meta charset="UTF-8">
-
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
     <title>{% block title %}Teacher Panel | NeoLearn{% endblock %}</title>
 
-
-
-    <!-- Tailwind CSS -->
-
     <script src="https://cdn.tailwindcss.com"></script>
-
-
-
-    <!-- Remix Icons -->
-
-    <link rel="stylesheet"
-
-        href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/4.6.0/remixicon.min.css">
-
-
-
-    <!-- Existing Toast Messages CSS -->
-
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/4.6.0/remixicon.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{% static 'toast-messages.css' %}">
 
-
-
     <style>
-
-        :root {
-
-            --teacher-bg: #030712;
-
-            --teacher-sidebar: #0D1118;
-
-            --teacher-panel: #0b1120;
-
-            --teacher-border: rgba(255, 255, 255, 0.07);
-
-            --teacher-cyan: #67e8f9;
-
-            --teacher-blue: #38bdf8;
-
-            --teacher-muted: #94a3b8;
-
+        * { box-sizing: border-box; font-family: 'Inter', sans-serif; scrollbar-width: none; }
+        *::-webkit-scrollbar { display: none; width: 0; height: 0; }
+        html { scroll-behavior: smooth; }
+        body { margin: 0; min-height: 100vh; overflow: hidden; overflow-x: hidden; background: #020817; color: #fff; }
+        .teacher-sidebar-bg { background: linear-gradient(180deg, #0D1118 0%, #030712 100%); }
+        .teacher-navbar-bg { background: rgba(4, 9, 20, .94); backdrop-filter: blur(20px); }
+        .teacher-main-grid {
+            background-image: linear-gradient(rgba(255,255,255,.03) 1px, transparent 1px),
+                              linear-gradient(90deg, rgba(255,255,255,.03) 1px, transparent 1px);
+            background-size: 42px 42px;
         }
-
-
-
-        * {
-
-            box-sizing: border-box;
-
-            scrollbar-width: none;
-
+        .nav-label { padding: 16px 16px 8px; color: #FFFFFF; font-size: 11px; font-weight: 750; letter-spacing: .8px; line-height: 1.35; text-transform: uppercase; }
+        .admin-nav-link {
+            position: relative; display: flex; min-width: 0; min-height: 48px; align-items: center; gap: 12px;
+            border: 1px solid transparent; border-radius: 14px; padding: 0 16px; color: #94A3B8;
+            font-size: 14px; font-weight: 600; text-decoration: none;
+            transition: background 180ms ease, color 180ms ease, border-color 180ms ease;
         }
-
-
-
-        *::-webkit-scrollbar {
-
-            width: 0;
-
-            height: 0;
-
+        .admin-nav-link:hover { background: rgba(255,255,255,.05); color: #fff; }
+        .admin-nav-link.active {
+            border-color: rgba(167,139,250,.10);
+            background: linear-gradient(90deg, rgba(167,139,250,.14), rgba(124,58,237,.04));
+            color: #c4b5fd;
         }
-
-
-
-        html {
-
-            scroll-behavior: smooth;
-
+        .admin-nav-link.active::before {
+            position: absolute; top: 9px; bottom: 9px; left: 0; width: 3px;
+            border-radius: 0 999px 999px 0; background: #c4b5fd; content: '';
         }
-
-
-
-        html,
-
-        body {
-
-            width: 100%;
-
-            height: 100%;
-
-            margin: 0;
-
+        .admin-nav-link.active .nav-icon { color: #c4b5fd; }
+        #sidebarScroll { overscroll-behavior: contain; scroll-behavior: auto; }
+        #sidebar, #sidebar * { -webkit-user-select: none; user-select: none; }
+        .teacher-placeholder { cursor: not-allowed; opacity: .48; pointer-events: none; }
+        .teacher-coming-soon { margin-left: auto; border: 1px solid rgba(148,163,184,.12); border-radius: 6px; padding: 3px 6px; background: rgba(255,255,255,.03); color: #64748b; font-size: 9px; font-weight: 650; }
+        .teacher-profile-avatar {
+            display: flex; width: 42px; height: 42px; flex: 0 0 42px; align-items: center; justify-content: center;
+            overflow: hidden; border: 2px solid rgba(167,139,250,.22); border-radius: 50%;
+            background: linear-gradient(135deg, rgba(167,139,250,.18), rgba(124,58,237,.12));
+            color: #c4b5fd; font-size: 16px; font-weight: 800; object-fit: cover;
         }
-
-
-
-        body {
-
-            min-height: 100vh;
-
-            overflow: hidden;
-
-            background: var(--teacher-bg);
-
-            color: #fff;
-
-            font-family: Inter, ui-sans-serif, system-ui, -apple-system,
-
-                        BlinkMacSystemFont, "Segoe UI", sans-serif;
-
-            -webkit-font-smoothing: antialiased;
-
-        }
-
-
-
-        button,
-
-        a {
-
-            -webkit-tap-highlight-color: transparent;
-
-        }
-
-
-
-        button:focus-visible,
-
-        a:focus-visible {
-
-            outline: 2px solid var(--teacher-cyan);
-
-            outline-offset: 3px;
-
-        }
-
-
-
-        /* Background effects */
-
-        .teacher-background {
-
-            position: fixed;
-
-            inset: 0;
-
-            z-index: 0;
-
-            overflow: hidden;
-
-            pointer-events: none;
-
-            background: var(--teacher-bg);
-
-        }
-
-
-
-        .teacher-glow-cyan {
-
-            position: absolute;
-
-            top: -260px;
-
-            left: -200px;
-
-            width: 600px;
-
-            height: 600px;
-
-            border-radius: 50%;
-
-            background: rgb(56 189 248 / 8%);
-
-            filter: blur(120px);
-
-        }
-
-
-
-        .teacher-glow-purple {
-
-            position: absolute;
-
-            right: -220px;
-
-            bottom: -260px;
-
-            width: 650px;
-
-            height: 650px;
-
-            border-radius: 50%;
-
-            background: rgb(14 165 233 / 7%);
-
-            filter: blur(130px);
-
-        }
-
-
-
-        .teacher-grid {
-
-            position: absolute;
-
-            inset: 0;
-
-            opacity: .12;
-
-            background-image:
-
-                linear-gradient(
-
-                    rgb(255 255 255 / 5%) 1px,
-
-                    transparent 1px
-
-                ),
-
-                linear-gradient(
-
-                    90deg,
-
-                    rgb(255 255 255 / 5%) 1px,
-
-                    transparent 1px
-
-                );
-
-            background-size: 40px 40px;
-
-        }
-
-
-
-        /* Main application */
-
-        .teacher-app {
-
-            position: relative;
-
-            z-index: 1;
-
-            display: flex;
-
-            width: 100%;
-
-            height: 100vh;
-
-            height: 100dvh;
-
-            overflow: hidden;
-
-        }
-
-
-
-        /* Brand */
-
-        .teacher-brand {
-
-            display: flex;
-
-            align-items: center;
-
-            gap: 12px;
-
-            min-width: 0;
-
-            text-decoration: none;
-
-        }
-
-
-
-        .teacher-brand-icon {
-
-            position: relative;
-
-            display: flex;
-
-            width: 42px;
-
-            height: 42px;
-
-            flex-shrink: 0;
-
-            align-items: center;
-
-            justify-content: center;
-
-            overflow: hidden;
-
-            border: 1px solid rgb(103 232 249 / 25%);
-
-            border-radius: 13px;
-
-            background: linear-gradient(145deg, #164e63, #10233f);
-
-            color: var(--teacher-cyan);
-
-            box-shadow:
-
-                0 0 22px rgb(103 232 249 / 8%),
-
-                inset 0 1px rgb(255 255 255 / 5%);
-
-            transition: box-shadow .22s ease, transform .22s ease;
-
-        }
-
-
-
-        .teacher-brand:hover .teacher-brand-icon {
-
-            transform: translateY(-1px);
-
-            box-shadow: 0 0 25px rgb(103 232 249 / 20%);
-
-        }
-
-
-
-        .teacher-brand-icon i {
-
-            font-size: 25px;
-
-            filter: drop-shadow(0 0 5px rgb(103 232 249 / 15%));
-
-        }
-
-
-
-        .teacher-brand-name {
-
-            color: #fff;
-
-            font-size: 19px;
-
-            font-weight: 850;
-
-            letter-spacing: .065em;
-
-            line-height: 1;
-
-            white-space: nowrap;
-
-        }
-
-
-
-        .teacher-brand-name span {
-
-            color: var(--teacher-cyan);
-
-        }
-
-
-
-        /* Sidebar */
-
-        .teacher-sidebar {
-
-            position: relative;
-
-            z-index: 50;
-
-            display: flex;
-
-            width: 270px;
-
-            height: 100%;
-
-            flex-shrink: 0;
-
-            flex-direction: column;
-
-            border-right: 1px solid var(--teacher-border);
-
-            background: rgb(3 7 18 / 96%);
-
-            backdrop-filter: blur(14px);
-
-            -webkit-backdrop-filter: blur(14px);
-
-        }
-
-
-
-        .teacher-sidebar-header {
-
-            display: flex;
-
-            height: 74px;
-
-            min-height: 74px;
-
-            align-items: center;
-
-            justify-content: space-between;
-
-            padding: 0 22px;
-
-            border-bottom: 1px solid var(--teacher-border);
-
-        }
-
-
-
-        .teacher-sidebar-scroll {
-
-            min-height: 0;
-
-            flex: 1;
-
-            overflow-y: auto;
-
-            padding: 20px 13px 24px;
-
-            overscroll-behavior-y: contain;
-
-        }
-
-
-
-        .teacher-nav-heading {
-
-            margin: 20px 12px 9px;
-
-            color: #64748b;
-
-            font-size: 10px;
-
-            font-weight: 750;
-
-            letter-spacing: .16em;
-
-            line-height: 1.4;
-
-            text-transform: uppercase;
-
-        }
-
-
-
-        .teacher-nav-heading:first-child {
-
-            margin-top: 3px;
-
-        }
-
-
-
-        .teacher-nav-link {
-
-            position: relative;
-
-            display: flex;
-
-            min-height: 49px;
-
-            align-items: center;
-
-            gap: 14px;
-
-            margin: 3px 0;
-
-            padding: 11px 15px;
-
-            overflow: hidden;
-
-            border: 1px solid transparent;
-
-            border-radius: 14px;
-
-            color: #94a3b8;
-
-            font-size: 14px;
-
-            font-weight: 500;
-
-            letter-spacing: .005em;
-
-            text-decoration: none;
-
-            transition:
-
-                background-color .22s ease,
-
-                border-color .22s ease,
-
-                color .22s ease,
-
-                transform .22s ease,
-
-                box-shadow .22s ease;
-
-        }
-
-
-
-        .teacher-nav-link:hover {
-
-            transform: translateX(2px);
-
-            border-color: rgb(255 255 255 / 5%);
-
-            background: rgb(255 255 255 / 5%);
-
-            color: #fff;
-
-        }
-
-
-
-        .teacher-nav-link:active {
-
-            transform: scale(.99);
-
-        }
-
-
-
-        .teacher-nav-link.active {
-
-            border-color: rgb(103 232 249 / 10%);
-
-            background: linear-gradient(
-
-                100deg,
-
-                rgb(103 232 249 / 11%),
-
-                rgb(56 189 248 / 5%)
-
-            );
-
-            color: #fff;
-
-            box-shadow: inset 0 0 18px rgb(103 232 249 / 2%);
-
-        }
-
-
-
-        .teacher-nav-link.active::before {
-
-            position: absolute;
-
-            top: 50%;
-
-            left: 0;
-
-            width: 4px;
-
-            height: 27px;
-
-            border-radius: 0 999px 999px 0;
-
-            background: var(--teacher-cyan);
-
-            box-shadow: 0 0 13px rgb(103 232 249 / 65%);
-
-            content: "";
-
-            transform: translateY(-50%);
-
-        }
-
-
-
-        .teacher-nav-link .nav-icon {
-
-            display: inline-flex;
-
-            width: 23px;
-
-            flex-shrink: 0;
-
-            align-items: center;
-
-            justify-content: center;
-
-            color: #8291a5;
-
-            font-size: 19px;
-
-            transition: color .2s ease, transform .2s ease;
-
-        }
-
-
-
-        .teacher-nav-link:hover .nav-icon {
-
-            transform: scale(1.06);
-
-            color: #67e8f9;
-
-        }
-
-
-
-        .teacher-nav-link.active .nav-icon {
-
-            color: var(--teacher-cyan);
-
-            filter: drop-shadow(0 0 5px rgb(103 232 249 / 12%));
-
-        }
-
-
-
-        .teacher-nav-link .nav-label {
-
-            min-width: 0;
-
-            flex: 1;
-
-        }
-
-
-
-        .teacher-nav-link-placeholder {
-
-            cursor: default;
-
-            opacity: .8;
-
-        }
-
-
-
-        .teacher-live-group { margin: 3px 0; }
-
-        .teacher-live-group > summary { list-style: none; cursor: pointer; }
-
-        .teacher-live-group > summary::-webkit-details-marker { display: none; }
-
-        .teacher-live-group[open] .teacher-live-arrow { transform: rotate(180deg); }
-
-        .teacher-live-arrow { margin-left: auto; transition: transform .2s ease; }
-
-        .teacher-live-submenu {
-
-            display: flex; flex-direction: column; gap: 2px;
-
-            margin: 3px 0 8px 13px; padding-left: 9px;
-
-            border-left: 2px solid rgb(103 232 249 / 22%);
-
-        }
-
-        .teacher-live-submenu .teacher-nav-link {
-
-            min-height: 40px; margin: 1px 0; padding: 8px 10px;
-
-            gap: 10px; border-radius: 10px; font-size: 13px;
-
-        }
-
-        .teacher-live-submenu .nav-icon { width: 20px; font-size: 17px; }
-
-        .teacher-live-submenu .teacher-nav-link.active {
-
-            background: rgb(103 232 249 / 10%); color: var(--teacher-cyan);
-
-        }
-
-
-
-        .teacher-nav-link-placeholder:hover {
-
-            transform: none;
-
-            border-color: transparent;
-
-            background: rgb(255 255 255 / 2%);
-
-            color: #cbd5e1;
-
-        }
-
-
-
-        .teacher-nav-link-placeholder:hover .nav-icon {
-
-            transform: none;
-
-            color: #8291a5;
-
-        }
-
-
-
-        .teacher-coming-soon {
-
-            margin-left: auto;
-
-            padding: 3px 6px;
-
-            border: 1px solid rgb(148 163 184 / 12%);
-
-            border-radius: 6px;
-
-            background: rgb(255 255 255 / 3%);
-
-            color: #64748b;
-
-            font-size: 9px;
-
-            font-weight: 650;
-
-            white-space: nowrap;
-
-        }
-
-
-
-        .teacher-sidebar-footer {
-
-            flex-shrink: 0;
-
-            padding: 13px;
-
-            border-top: 1px solid var(--teacher-border);
-
-        }
-
-
-
-        .teacher-logout-link,
-
-        .teacher-logout-link .nav-icon {
-
-            color: #fb7185;
-
-        }
-
-
-
-        .teacher-logout-link:hover {
-
-            border-color: rgb(248 113 113 / 12%);
-
-            background: rgb(239 68 68 / 9%);
-
-            color: #fda4af;
-
-        }
-
-
-
-        /* Mobile sidebar buttons */
-
-        .teacher-mobile-button {
-
-            display: flex;
-
-            width: 42px;
-
-            height: 42px;
-
-            flex-shrink: 0;
-
-            align-items: center;
-
-            justify-content: center;
-
-            border: 1px solid rgb(255 255 255 / 9%);
-
-            border-radius: 12px;
-
-            background: #0b1120;
-
-            color: #94a3b8;
-
-            transition:
-
-                background .2s ease,
-
-                color .2s ease,
-
-                border-color .2s ease;
-
-        }
-
-
-
-        .teacher-mobile-button:hover {
-
-            border-color: rgb(103 232 249 / 18%);
-
-            background: rgb(255 255 255 / 5%);
-
-            color: var(--teacher-cyan);
-
-        }
-
-
-
-        /* Main area and navbar */
-
-        .teacher-main {
-
-            display: flex;
-
-            min-width: 0;
-
-            flex: 1;
-
-            flex-direction: column;
-
-            overflow: hidden;
-
-        }
-
-
-
-        .teacher-navbar {
-
-            position: relative;
-
-            z-index: 30;
-
-            display: flex;
-
-            height: 74px;
-
-            min-height: 74px;
-
-            align-items: center;
-
-            justify-content: space-between;
-
-            gap: 14px;
-
-            padding: 0 28px;
-
-            border-bottom: 1px solid var(--teacher-border);
-
-            background: rgb(3 7 18 / 93%);
-
-            backdrop-filter: blur(14px);
-
-            -webkit-backdrop-filter: blur(14px);
-
-        }
-
-
-
-        .teacher-navbar-left,
-
-        .teacher-navbar-right {
-
-            display: flex;
-
-            min-width: 0;
-
-            align-items: center;
-
-            gap: 13px;
-
-        }
-
-
-
-        .teacher-navbar-context {
-
-            min-width: 0;
-
-        }
-
-
-
-        .teacher-navbar-eyebrow {
-
-            margin-bottom: 4px;
-
-            color: #64748b;
-
-            font-size: 9px;
-
-            font-weight: 750;
-
-            letter-spacing: .16em;
-
-            text-transform: uppercase;
-
-        }
-
-
-
-        .teacher-navbar-heading {
-
-            overflow: hidden;
-
-            color: #f8fafc;
-
-            font-size: 14px;
-
-            font-weight: 650;
-
-            text-overflow: ellipsis;
-
-            white-space: nowrap;
-
-        }
-
-
-
-        .teacher-icon-button {
-
-            position: relative;
-
-            display: flex;
-
-            width: 42px;
-
-            height: 42px;
-
-            flex-shrink: 0;
-
-            align-items: center;
-
-            justify-content: center;
-
-            border: 1px solid rgb(255 255 255 / 8%);
-
-            border-radius: 13px;
-
-            background: #0b1120;
-
-            color: #94a3b8;
-
-            transition:
-
-                background .2s ease,
-
-                color .2s ease,
-
-                border-color .2s ease;
-
-        }
-
-
-
-        .teacher-icon-button:hover {
-
-            border-color: rgb(103 232 249 / 20%);
-
-            background: rgb(255 255 255 / 5%);
-
-            color: var(--teacher-cyan);
-
-        }
-
-
-
-        .teacher-icon-button i {
-
-            font-size: 19px;
-
-        }
-
-
-
-        .teacher-notification-dot {
-
-            position: absolute;
-
-            top: 9px;
-
-            right: 10px;
-
-            width: 7px;
-
-            height: 7px;
-
-            border-radius: 50%;
-
-            background: #ec4899;
-
-            box-shadow: 0 0 8px rgb(236 72 153 / 60%);
-
-        }
-
-
-
-        /* Profile image and dropdown */
-
         .teacher-profile-trigger {
-
-            display: flex;
-
-            width: 44px;
-
-            height: 44px;
-
-            flex-shrink: 0;
-
-            align-items: center;
-
-            justify-content: center;
-
-            border: 1px solid transparent;
-
-            border-radius: 50%;
-
-            background: transparent;
-
-            cursor: pointer;
-
-            transition: border-color .2s ease, box-shadow .2s ease;
-
+            display: flex; max-width: 280px; min-width: 0; align-items: center; gap: 10px;
+            border: 1px solid transparent; border-radius: 14px; padding: 5px 8px;
+            background: transparent; color: inherit; cursor: pointer; text-align: left;
+            transition: background .18s ease, border-color .18s ease;
         }
-
-
-
-        .teacher-profile-trigger:hover {
-
-            border-color: rgb(103 232 249 / 30%);
-
-            box-shadow: 0 0 0 3px rgb(103 232 249 / 5%);
-
+        .teacher-profile-trigger:hover, .teacher-profile-trigger[aria-expanded="true"] {
+            border-color: rgba(167,139,250,.28); background: rgba(15,23,42,.82);
+            box-shadow: 0 0 0 1px rgba(167,139,250,.05);
         }
-
-
-
-        .teacher-profile-image,
-
-        .teacher-profile-fallback {
-
-            display: flex;
-
-            width: 40px;
-
-            height: 40px;
-
-            flex-shrink: 0;
-
-            align-items: center;
-
-            justify-content: center;
-
-            border: 1px solid rgb(103 232 249 / 25%);
-
-            border-radius: 50%;
-
-        }
-
-
-
-        .teacher-profile-image {
-
-            object-fit: cover;
-
-        }
-
-
-
-        .teacher-profile-fallback {
-
-            background: linear-gradient(135deg, #a5f3fc, #38bdf8);
-
-            color: #020617;
-
-            font-size: 15px;
-
-            font-weight: 800;
-
-        }
-
-
-
         .teacher-profile-dropdown {
-
-            position: absolute;
-
-            top: calc(100% + 12px);
-
-            right: 0;
-
-            z-index: 60;
-
-            width: 255px;
-
-            overflow: hidden;
-
-            border: 1px solid rgb(255 255 255 / 9%);
-
-            border-radius: 17px;
-
-            background: #0b1120;
-
-            box-shadow: 0 20px 55px rgb(0 0 0 / 40%);
-
-            transform-origin: top right;
-
-            animation: teacher-dropdown-in .16s ease-out;
-
+            position: absolute; top: calc(100% + 12px); right: 0; z-index: 100;
+            width: min(290px, calc(100vw - 24px)); overflow: hidden;
+            border: 1px solid rgba(100,116,139,.28); border-radius: 18px;
+            background: rgba(5,12,27,.98); box-shadow: 0 24px 70px rgba(0,0,0,.48);
+            backdrop-filter: blur(22px);
         }
-
-
-
-        @keyframes teacher-dropdown-in {
-
-            from {
-
-                opacity: 0;
-
-                transform: translateY(-5px) scale(.99);
-
-            }
-
-            to {
-
-                opacity: 1;
-
-                transform: translateY(0) scale(1);
-
-            }
-
+        .teacher-profile-dropdown.hidden, .quick-access-panel[hidden] { display: none !important; }
+        .teacher-dropdown-row {
+            display: flex; width: 100%; min-width: 0; align-items: center; gap: 12px;
+            padding: 12px 15px; color: #CBD5E1; font-size: 13px; text-align: left;
+            text-decoration: none; transition: background .18s ease, color .18s ease;
         }
-
-
-
-        .teacher-dropdown-header {
-
-            padding: 17px;
-
-            border-bottom: 1px solid var(--teacher-border);
-
+        .teacher-dropdown-row:hover, .teacher-dropdown-row:focus-visible { outline: none; background: rgba(167,139,250,.08); color: #fff; }
+        .teacher-dropdown-icon {
+            display: inline-flex; width: 36px; height: 36px; flex: 0 0 36px; align-items: center; justify-content: center;
+            border: 1px solid rgba(167,139,250,.15); border-radius: 12px; background: rgba(167,139,250,.09);
+            color: #c4b5fd; font-size: 17px;
         }
-
-
-
-        .teacher-dropdown-link {
-
-            display: flex;
-
-            min-height: 45px;
-
-            align-items: center;
-
-            gap: 12px;
-
-            padding: 12px 17px;
-
-            color: #cbd5e1;
-
-            font-size: 13px;
-
-            text-decoration: none;
-
-            transition: background .18s ease, color .18s ease;
-
+        .quick-access-wrap { position: relative; width: min(520px, 45vw); min-width: 180px; }
+        .quick-access-field {
+            display: flex; height: 46px; align-items: center; gap: 11px;
+            border: 1px solid rgba(255,255,255,.10); border-radius: 16px; padding: 0 14px;
+            background: rgba(255,255,255,.035); transition: border-color .18s ease, box-shadow .18s ease;
         }
-
-
-
-        .teacher-dropdown-link:hover {
-
-            background: rgb(255 255 255 / 5%);
-
-            color: var(--teacher-cyan);
-
+        .quick-access-field:focus-within { border-color: rgba(167,139,250,.55); box-shadow: 0 0 0 3px rgba(167,139,250,.07); }
+        .quick-access-field input { width: 100%; min-width: 0; border: 0; outline: none; background: transparent; color: white; font-size: 13px; }
+        .quick-access-field input::placeholder { color: #64748B; }
+        .quick-access-panel {
+            position: absolute; top: calc(100% + 10px); left: 0; z-index: 100;
+            width: min(430px, calc(100vw - 24px)); max-height: min(430px, 65vh); overflow-y: auto;
+            border: 1px solid rgba(100,116,139,.28); border-radius: 18px;
+            background: rgba(5,12,27,.98); box-shadow: 0 24px 70px rgba(0,0,0,.48); backdrop-filter: blur(22px);
         }
-
-
-
-        .teacher-dropdown-link i {
-
-            font-size: 17px;
-
-        }
-
-
-
-        .teacher-dropdown-placeholder {
-
-            cursor: default;
-
-            opacity: .8;
-
-        }
-
-
-
-        .teacher-dropdown-placeholder:hover {
-
-            background: transparent;
-
-            color: #cbd5e1;
-
-        }
-
-
-
-        /* Main content scrolling */
-
-        .teacher-content {
-
-            position: relative;
-
-            z-index: 1;
-
-            min-height: 0;
-
-            flex: 1;
-
-            overflow-x: hidden;
-
-            overflow-y: auto;
-
-            padding: 25px 28px 36px;
-
-            overscroll-behavior-y: contain;
-
-            -webkit-overflow-scrolling: touch;
-
-        }
-
-
-
-        /* Django toast messages */
-
-        .message-container {
-
-            position: fixed;
-
-            top: 90px;
-
-            right: 25px;
-
-            z-index: 9999;
-
-            display: flex;
-
-            width: min(400px, calc(100vw - 32px));
-
-            max-width: 400px;
-
-            flex-direction: column;
-
-            gap: 12px;
-
-            pointer-events: none;
-
-        }
-
-
-
-        .message-item {
-
-            pointer-events: auto;
-
-        }
-
-
-
-        /* Mobile sidebar overlay */
-
-        .teacher-sidebar-overlay {
-
-            display: none;
-
-        }
-
-
-
+        .quick-access-link { display: flex; min-height: 48px; align-items: center; gap: 12px; padding: 9px 15px; color: #CBD5E1; font-size: 12px; text-decoration: none; }
+        .quick-access-link:hover, .quick-access-link:focus-visible { outline: none; background: rgba(167,139,250,.08); color: #fff; }
+        .quick-access-link[hidden] { display: none !important; }
+        .message-container { position: fixed; top: 92px; right: 24px; z-index: 9999; display: flex; width: min(400px, calc(100vw - 32px)); max-width: 400px; flex-direction: column; gap: 12px; pointer-events: none; }
+        .message-item { pointer-events: auto; }
+        .teacher-sidebar-overlay.overlay-open { display: block; }
         @media (max-width: 1023px) {
-
-            .teacher-sidebar {
-
-                position: fixed;
-
-                top: 0;
-
-                bottom: 0;
-
-                left: 0;
-
-                width: 270px;
-
-                max-width: calc(100vw - 48px);
-
-                height: 100vh;
-
-                height: 100dvh;
-
-                transform: translateX(-100%);
-
-                transition: transform .25s ease;
-
-            }
-
-
-
-            .teacher-sidebar.sidebar-open {
-
-                transform: translateX(0);
-
-            }
-
-
-
-            .teacher-sidebar-overlay {
-
-                position: fixed;
-
-                inset: 0;
-
-                z-index: 40;
-
-                display: block;
-
-                background: rgb(0 0 0 / 65%);
-
-                backdrop-filter: blur(3px);
-
-                -webkit-backdrop-filter: blur(3px);
-
-                opacity: 0;
-
-                visibility: hidden;
-
-                transition: opacity .25s ease, visibility .25s ease;
-
-            }
-
-
-
-            .teacher-sidebar-overlay.overlay-open {
-
-                opacity: 1;
-
-                visibility: visible;
-
-            }
-
-
-
-            body.teacher-sidebar-is-open {
-
-                overflow: hidden;
-
-            }
-
-
-
-            .teacher-navbar {
-
-                padding-right: 16px;
-
-                padding-left: 16px;
-
-            }
-
-
-
-            .teacher-content {
-
-                padding: 20px 16px 30px;
-
-            }
-
-
-
-            .message-container {
-
-                top: 82px;
-
-                right: 12px;
-
-                width: calc(100vw - 24px);
-
-                max-width: none;
-
-            }
-
+            #sidebar { max-width: 85vw; transform: translateX(-100%); transition: transform .25s ease; }
+            #sidebar.sidebar-open { transform: translateX(0); }
+            .teacher-sidebar-overlay.overlay-open { display: block; }
+            .teacher-navbar { left: 0 !important; padding-right: 12px !important; padding-left: 12px !important; }
+            body.teacher-sidebar-is-open { overflow: hidden; }
         }
-
-
-
         @media (min-width: 1024px) {
+            #sidebar { transform: translateX(0); }
+            .teacher-sidebar-overlay { display: none !important; }
+            #menuButton, #closeSidebar { display: none !important; }
+        }
+        @media (max-width: 767px) {
+            .quick-access-wrap { width: min(48vw, 300px); min-width: 120px; }
+            .quick-access-field { height: 40px; padding: 0 10px; }
+            .quick-access-field input { font-size: 11px; }
+            .teacher-profile-trigger { gap: 4px; padding: 3px; }
+            .teacher-profile-label { display: none; }
+            .teacher-profile-avatar { width: 36px; height: 36px; flex-basis: 36px; }
+            .message-container { top: 84px; right: 12px; width: calc(100vw - 24px); max-width: none; }
+        }
+    
 
-            .teacher-sidebar {
-
-                transform: translateX(0);
-
+        /* =====================================================
+           NEOLEARN TEACHER BASE — WHITE / VIOLET IDENTITY
+           Dark dashboard shell retained; cyan accents replaced
+           with a consistent violet accent system.
+           ===================================================== */
+        :root {
+            --teacher-accent: #a78bfa;
+            --teacher-accent-strong: #7c3aed;
+            --teacher-accent-deep: #5b21b6;
+            --teacher-accent-soft: rgba(167,139,250,.13);
+            --teacher-accent-border: rgba(196,181,253,.28);
+        }
+        .teacher-sidebar-bg {
+            background: linear-gradient(180deg,#11101b 0%,#070611 100%)!important;
+        }
+        .teacher-navbar-bg {
+            background: rgba(7,5,17,.96)!important;
+            border-color: rgba(196,181,253,.12)!important;
+        }
+        .teacher-main-grid {
+            background-color:#080716;
+            background-image:
+                linear-gradient(rgba(196,181,253,.035) 1px,transparent 1px),
+                linear-gradient(90deg,rgba(196,181,253,.035) 1px,transparent 1px);
+        }
+        .admin-nav-link {
+            border-radius:14px;
+            transition:background .22s ease,color .22s ease,border-color .22s ease,transform .22s ease;
+        }
+        .admin-nav-link:hover {
+            background:rgba(167,139,250,.09)!important;
+            border-color:rgba(196,181,253,.12)!important;
+            color:#fff!important;
+            transform:translateX(2px);
+        }
+        .admin-nav-link.active {
+            color:#ddd6fe!important;
+            border-color:rgba(196,181,253,.25)!important;
+            background:linear-gradient(100deg,rgba(124,58,237,.24),rgba(91,33,182,.08))!important;
+            box-shadow:inset 0 0 18px rgba(124,58,237,.07);
+        }
+        .admin-nav-link.active::before {background:#a78bfa!important}
+        .admin-nav-link.active .nav-icon {color:#c4b5fd!important}
+        .nav-label {color:#FFFFFF!important}
+        .teacher-profile-avatar {
+            border-color:rgba(196,181,253,.48)!important;
+            background:linear-gradient(135deg,rgba(167,139,250,.24),rgba(91,33,182,.20))!important;
+            color:#ddd6fe!important;
+            box-shadow:0 0 0 3px rgba(124,58,237,.08);
+        }
+        .teacher-profile-trigger:hover,
+        .teacher-profile-trigger[aria-expanded="true"] {
+            border-color:rgba(196,181,253,.35)!important;
+            background:rgba(124,58,237,.10)!important;
+            box-shadow:0 0 0 1px rgba(167,139,250,.08)!important;
+        }
+        .teacher-profile-dropdown,
+        .quick-access-panel {
+            border-color:rgba(196,181,253,.24)!important;
+            background:rgba(13,10,28,.985)!important;
+            box-shadow:0 24px 70px rgba(0,0,0,.52),0 0 24px rgba(124,58,237,.08)!important;
+        }
+        .teacher-dropdown-icon {
+            border-color:rgba(196,181,253,.22)!important;
+            background:rgba(124,58,237,.15)!important;
+            color:#c4b5fd!important;
+        }
+        .teacher-dropdown-row:hover,
+        .teacher-dropdown-row:focus-visible,
+        .quick-access-link:hover,
+        .quick-access-link:focus-visible {
+            background:rgba(124,58,237,.16)!important;
+            color:#fff!important;
+        }
+        .quick-access-field {
+            border-color:rgba(196,181,253,.15)!important;
+            background:rgba(255,255,255,.045)!important;
+            transition:border-color .22s ease,box-shadow .22s ease,background .22s ease;
+        }
+        .quick-access-field:focus-within {
+            border-color:rgba(167,139,250,.65)!important;
+            background:rgba(124,58,237,.07)!important;
+            box-shadow:0 0 0 3px rgba(139,92,246,.13)!important;
+        }
+        .quick-access-field input {color:#fff!important}
+        .quick-access-field input::placeholder {color:#9389a9!important}
+        #menuButton:hover,
+        #closeSidebar:hover {
+            border-color:rgba(196,181,253,.38)!important;
+            background:rgba(124,58,237,.13)!important;
+            color:#fff!important;
+        }
+        .teacher-coming-soon {
+            border-color:rgba(196,181,253,.12)!important;
+            background:rgba(167,139,250,.06)!important;
+            color:#9389a9!important;
+        }
+        .teacher-sidebar-overlay {
+            background:rgba(4,2,12,.76)!important;
+            backdrop-filter:blur(4px);
+        }
+        .message-container {z-index:9999}
+        :is(button,a,input,select,textarea,[tabindex]):focus-visible {
+            outline:2px solid #a78bfa;
+            outline-offset:3px;
+        }
+        @media (prefers-reduced-motion:reduce) {
+            *,*::before,*::after {
+                animation-duration:.01ms!important;
+                animation-iteration-count:1!important;
+                transition-duration:.01ms!important;
+                scroll-behavior:auto!important;
             }
-
-
-
-            .teacher-sidebar-overlay {
-
-                display: none !important;
-
-            }
-
-
-
-            #menuButton,
-
-            #closeSidebar {
-
-                display: none !important;
-
-            }
-
         }
 
 
 
-        @media (max-width: 480px) {
+        /* =========================================================
+           NEOLEARN TEACHER BASE — PREMIUM VIOLET POLISH
+           Keeps the existing layout, URLs, template blocks and JS.
+           Adds depth, visual hierarchy and refined interactions.
+           ========================================================= */
 
-            .teacher-navbar {
-
-                height: 66px;
-
-                min-height: 66px;
-
-                gap: 8px;
-
-                padding-right: 12px;
-
-                padding-left: 12px;
-
-            }
-
-
-
-            .teacher-navbar-eyebrow {
-
-                display: none;
-
-            }
-
-
-
-            .teacher-navbar-heading {
-
-                max-width: 155px;
-
-                font-size: 13px;
-
-            }
-
-
-
-            .teacher-navbar-left,
-
-            .teacher-navbar-right {
-
-                gap: 8px;
-
-            }
-
-
-
-            .teacher-icon-button {
-
-                width: 38px;
-
-                height: 38px;
-
-            }
-
-
-
-            .teacher-profile-trigger {
-
-                width: 40px;
-
-                height: 40px;
-
-            }
-
-
-
-            .teacher-profile-image,
-
-            .teacher-profile-fallback {
-
-                width: 36px;
-
-                height: 36px;
-
-            }
-
-
-
-            .teacher-content {
-
-                padding: 17px 12px 25px;
-
-            }
-
+        :root{
+            --tb-violet:#8b5cf6;
+            --tb-violet-bright:#a78bfa;
+            --tb-violet-pale:#ddd6fe;
+            --tb-violet-deep:#5b21b6;
+            --tb-shell:#080713;
+            --tb-shell-2:#100d20;
         }
 
-
-
-        @media (max-height: 650px) {
-
-            .teacher-nav-heading {
-
-                margin-top: 14px;
-
-            }
-
-
-
-            .teacher-nav-link {
-
-                min-height: 43px;
-
-                padding-top: 9px;
-
-                padding-bottom: 9px;
-
-            }
-
+        body{
+            background:
+                radial-gradient(ellipse at 12% 0%,rgba(124,58,237,.10),transparent 34%),
+                radial-gradient(ellipse at 95% 100%,rgba(91,33,182,.10),transparent 36%),
+                #080713!important;
         }
 
-
-
-        @media (prefers-reduced-motion: reduce) {
-
-            *,
-
-            *::before,
-
-            *::after {
-
-                scroll-behavior: auto !important;
-
-                animation-duration: .01ms !important;
-
-                animation-iteration-count: 1 !important;
-
-                transition-duration: .01ms !important;
-
-            }
-
+        /* Soft ambient background lighting */
+        body::before{
+            content:"";
+            position:fixed;
+            inset:0;
+            z-index:0;
+            pointer-events:none;
+            opacity:.34;
+            background:
+                radial-gradient(circle at 15% 18%,rgba(139,92,246,.11),transparent 25%),
+                radial-gradient(circle at 84% 78%,rgba(124,58,237,.10),transparent 29%);
         }
 
-    </style>
+        /* Sidebar: layered charcoal-violet surface */
+        .teacher-sidebar-bg{
+            background:
+                linear-gradient(180deg,#151222 0%,#0c0a17 46%,#080711 100%)!important;
+            border-right:1px solid rgba(196,181,253,.13)!important;
+            box-shadow:12px 0 42px rgba(0,0,0,.20),inset -1px 0 rgba(255,255,255,.018);
+        }
+        #sidebar > div:first-child{
+            position:relative;
+            border-bottom:1px solid rgba(196,181,253,.12)!important;
+            background:linear-gradient(90deg,rgba(139,92,246,.055),transparent 72%);
+        }
+        #sidebar > div:first-child::after{
+            content:"";
+            position:absolute;
+            right:18px;
+            bottom:-1px;
+            width:72px;
+            height:1px;
+            background:linear-gradient(90deg,transparent,#a78bfa,transparent);
+            opacity:.8;
+        }
+        #sidebar > div:first-child a > span:first-child{
+            border-color:rgba(196,181,253,.38)!important;
+            background:linear-gradient(145deg,#20153d,#100d20)!important;
+            box-shadow:0 0 0 4px rgba(139,92,246,.055),0 7px 22px rgba(91,33,182,.20),inset 0 1px rgba(255,255,255,.08);
+            transition:transform .28s ease,box-shadow .28s ease;
+        }
+        #sidebar > div:first-child a:hover > span:first-child{
+            transform:rotate(-7deg) scale(1.055);
+            box-shadow:0 0 0 5px rgba(139,92,246,.08),0 9px 26px rgba(91,33,182,.30);
+        }
+        #sidebar > div:first-child a > span:first-child > span:last-child{
+            border-color:#c4b5fd!important;
+            filter:drop-shadow(0 0 5px rgba(167,139,250,.55));
+        }
+        #sidebar > div:first-child a > span:last-child{
+            letter-spacing:-1.1px;
+            text-shadow:0 2px 12px rgba(139,92,246,.14);
+        }
 
+        /* Sidebar navigation: stronger hierarchy and tactile hover */
+        .teacher-sidebar-scroll{
+            min-height:0!important;
+            padding-top:9px!important;
+            padding-bottom:14px!important;
+            overflow-y:auto!important;
+            overflow-x:hidden!important;
+            scrollbar-width:none!important;
+            -ms-overflow-style:none!important;
+            overscroll-behavior-y:contain;
+            scroll-behavior:smooth;
+        }
+        .teacher-sidebar-scroll::-webkit-scrollbar{
+            display:none!important;
+            width:0!important;
+            height:0!important;
+        }
+        .nav-label{
+            padding:19px 16px 8px!important;
+            color:#FFFFFF!important;
+            font-size:10px!important;
+            font-weight:800!important;
+            letter-spacing:1.25px!important;
+            line-height:1.4!important;
+            text-shadow:0 1px 8px rgba(167,139,250,.16);
+        }
+        .admin-nav-link{
+            min-height:46px!important;
+            margin:2px 0!important;
+            padding-left:15px!important;
+            border:1px solid transparent!important;
+            border-radius:13px!important;
+            color:#aaa3bd!important;
+            font-size:12.5px!important;
+            font-weight:650!important;
+            letter-spacing:.05px;
+            transition:background .22s ease,color .22s ease,border-color .22s ease,transform .22s ease,box-shadow .22s ease!important;
+        }
+        .admin-nav-link .nav-icon{
+            width:18px;
+            flex:0 0 18px;
+            color:#8f86a8!important;
+            font-size:17px!important;
+            transition:color .22s ease,transform .22s ease;
+        }
+        .admin-nav-link:hover{
+            transform:translateX(3px)!important;
+            border-color:rgba(196,181,253,.14)!important;
+            background:linear-gradient(100deg,rgba(139,92,246,.15),rgba(139,92,246,.035))!important;
+            color:#fff!important;
+            box-shadow:inset 0 0 18px rgba(139,92,246,.035);
+        }
+        .admin-nav-link:hover .nav-icon{
+            color:#c4b5fd!important;
+            transform:scale(1.08);
+        }
+        .admin-nav-link.active{
+            overflow:hidden;
+            border-color:rgba(196,181,253,.25)!important;
+            background:linear-gradient(105deg,rgba(124,58,237,.27),rgba(91,33,182,.13) 62%,rgba(139,92,246,.055))!important;
+            color:#e9ddff!important;
+            box-shadow:0 5px 18px rgba(58,28,110,.18),inset 0 1px rgba(255,255,255,.045)!important;
+        }
+        .admin-nav-link.active::before{
+            top:8px!important;
+            bottom:8px!important;
+            width:3px!important;
+            border-radius:0 99px 99px 0!important;
+            background:linear-gradient(180deg,#ddd6fe,#8b5cf6)!important;
+            box-shadow:0 0 12px rgba(167,139,250,.65);
+        }
+        .admin-nav-link.active .nav-icon{
+            color:#d8bfff!important;
+            filter:drop-shadow(0 0 5px rgba(167,139,250,.28));
+        }
+        .teacher-placeholder{
+            border-color:transparent!important;
+            color:#777189!important;
+        }
+        .teacher-coming-soon{
+            border-color:rgba(196,181,253,.13)!important;
+            border-radius:7px!important;
+            background:rgba(167,139,250,.075)!important;
+            color:#9a8db8!important;
+            letter-spacing:.15px;
+        }
 
+        /* Sidebar logout: clear but balanced */
+        #sidebar > div:last-child{
+            border-color:rgba(196,181,253,.12)!important;
+            background:linear-gradient(180deg,rgba(10,8,20,.20),rgba(7,6,15,.72));
+        }
+        #sidebar > div:last-child a{
+            border:1px solid rgba(251,113,133,.18)!important;
+            background:linear-gradient(100deg,rgba(190,24,93,.14),rgba(127,29,29,.12))!important;
+            color:#fda4af!important;
+            transition:transform .22s ease,background .22s ease,border-color .22s ease,box-shadow .22s ease!important;
+        }
+        #sidebar > div:last-child a:hover{
+            transform:translateY(-2px);
+            border-color:rgba(251,113,133,.32)!important;
+            background:linear-gradient(100deg,rgba(190,24,93,.22),rgba(127,29,29,.19))!important;
+            box-shadow:0 8px 20px rgba(127,29,29,.15);
+        }
+
+        /* Navbar: glass surface with a subtle violet edge */
+        .teacher-navbar-bg{
+            background:rgba(8,7,19,.88)!important;
+            border-bottom:1px solid rgba(196,181,253,.13)!important;
+            box-shadow:0 8px 28px rgba(0,0,0,.16);
+            backdrop-filter:blur(22px) saturate(140%)!important;
+        }
+        .teacher-navbar::after{
+            content:"";
+            position:absolute;
+            left:0;
+            right:0;
+            bottom:-1px;
+            height:1px;
+            pointer-events:none;
+            background:linear-gradient(90deg,transparent,rgba(167,139,250,.28),transparent);
+        }
+
+        /* Quick access: premium compact search */
+        .quick-access-wrap{max-width:520px!important}
+        .quick-access-field{
+            height:46px!important;
+            border:1px solid rgba(196,181,253,.16)!important;
+            border-radius:15px!important;
+            background:linear-gradient(110deg,rgba(255,255,255,.055),rgba(124,58,237,.035))!important;
+            box-shadow:inset 0 1px rgba(255,255,255,.035),0 4px 16px rgba(0,0,0,.08);
+            transition:border-color .22s ease,background .22s ease,box-shadow .22s ease!important;
+        }
+        .quick-access-field:focus-within{
+            border-color:rgba(167,139,250,.66)!important;
+            background:rgba(124,58,237,.075)!important;
+            box-shadow:0 0 0 3px rgba(139,92,246,.12),0 7px 22px rgba(0,0,0,.14)!important;
+        }
+        .quick-access-field > i{color:#a99bc8!important}
+        .quick-access-field input{color:#f5f3ff!important}
+        .quick-access-field input::placeholder{color:#9389a9!important}
+        .quick-access-field kbd{
+            border-color:rgba(196,181,253,.18)!important;
+            background:rgba(167,139,250,.08)!important;
+            color:#b8a9d8!important;
+        }
+        .quick-access-panel{
+            border:1px solid rgba(196,181,253,.24)!important;
+            border-radius:17px!important;
+            background:rgba(15,11,31,.985)!important;
+            box-shadow:0 25px 65px rgba(0,0,0,.52),0 0 26px rgba(124,58,237,.09)!important;
+            animation:teacherPanelIn .18s ease-out both;
+        }
+        @keyframes teacherPanelIn{
+            from{opacity:0;transform:translateY(6px) scale(.99)}
+            to{opacity:1;transform:translateY(0) scale(1)}
+        }
+        .quick-access-panel > div:first-child{
+            border-color:rgba(196,181,253,.13)!important;
+            background:linear-gradient(100deg,rgba(124,58,237,.12),transparent);
+        }
+        .quick-access-link{
+            min-height:46px!important;
+            margin:2px 7px!important;
+            border-radius:10px!important;
+            color:#d5cee5!important;
+            transition:background .18s ease,color .18s ease,transform .18s ease!important;
+        }
+        .quick-access-link:hover{
+            transform:translateX(2px);
+            background:rgba(139,92,246,.15)!important;
+            color:#fff!important;
+        }
+
+        /* Profile control and dropdown */
+        .teacher-profile-trigger{
+            border:1px solid transparent!important;
+            border-radius:14px!important;
+            padding:5px 9px!important;
+            transition:background .2s ease,border-color .2s ease,box-shadow .2s ease!important;
+        }
+        .teacher-profile-trigger:hover,
+        .teacher-profile-trigger[aria-expanded="true"]{
+            border-color:rgba(196,181,253,.24)!important;
+            background:rgba(124,58,237,.095)!important;
+            box-shadow:0 4px 16px rgba(0,0,0,.12)!important;
+        }
+        .teacher-profile-avatar{
+            border:2px solid rgba(196,181,253,.55)!important;
+            box-shadow:0 0 0 3px rgba(124,58,237,.10),0 3px 12px rgba(0,0,0,.18);
+        }
+        .teacher-profile-dropdown{
+            border:1px solid rgba(196,181,253,.24)!important;
+            border-radius:17px!important;
+            background:rgba(15,11,31,.985)!important;
+            box-shadow:0 24px 70px rgba(0,0,0,.52),0 0 26px rgba(124,58,237,.09)!important;
+            animation:teacherPanelIn .18s ease-out both;
+        }
+        .teacher-profile-dropdown > div:first-child{
+            border-color:rgba(196,181,253,.14)!important;
+            background:linear-gradient(110deg,rgba(124,58,237,.14),transparent);
+        }
+        .teacher-dropdown-icon{
+            border:1px solid rgba(196,181,253,.19)!important;
+            border-radius:11px!important;
+            background:linear-gradient(145deg,rgba(139,92,246,.20),rgba(91,33,182,.12))!important;
+            color:#d3c3ff!important;
+            transition:transform .2s ease,background .2s ease!important;
+        }
+        .teacher-dropdown-row{
+            border-radius:10px;
+            color:#d6d0e5!important;
+        }
+        .teacher-dropdown-row:hover{
+            background:rgba(139,92,246,.14)!important;
+            color:#fff!important;
+        }
+        .teacher-dropdown-row:hover .teacher-dropdown-icon{
+            transform:translateY(-1px);
+            background:rgba(139,92,246,.26)!important;
+        }
+
+        /* Main page canvas: match the purple glass shell without overpowering
+           the individual white/lavender content pages. */
+        .teacher-main-grid{
+            background-color:#080716!important;
+            background-image:
+                linear-gradient(rgba(196,181,253,.035) 1px,transparent 1px),
+                linear-gradient(90deg,rgba(196,181,253,.035) 1px,transparent 1px)!important;
+            background-size:42px 42px!important;
+        }
+
+        /* Mobile sidebar and controls */
+        #menuButton,#closeSidebar{
+            border-color:rgba(196,181,253,.18)!important;
+            background:rgba(139,92,246,.055);
+            color:#d6cced!important;
+            transition:background .2s ease,border-color .2s ease,transform .2s ease!important;
+        }
+        #menuButton:hover,#closeSidebar:hover{
+            transform:translateY(-1px);
+            border-color:rgba(196,181,253,.40)!important;
+            background:rgba(139,92,246,.16)!important;
+            color:#fff!important;
+        }
+        .teacher-sidebar-overlay{
+            background:rgba(4,3,12,.76)!important;
+            backdrop-filter:blur(5px);
+        }
+
+        /* Toast messages remain readable above all overlays */
+        .message-container{z-index:9999!important}
+
+        /* Subtle focus treatment across the shared teacher workspace */
+        :is(a,button,input,select,textarea,[tabindex]):focus-visible{
+            outline:2px solid #a78bfa!important;
+            outline-offset:3px!important;
+        }
+
+        @media(max-width:767px){
+            .teacher-navbar-bg{background:rgba(8,7,19,.96)!important}
+            .teacher-profile-trigger{padding:3px!important}
+            .quick-access-field{border-radius:12px!important}
+        }
+        @media(prefers-reduced-motion:reduce){
+            *,*::before,*::after{
+                animation-duration:.01ms!important;
+                animation-iteration-count:1!important;
+                transition-duration:.01ms!important;
+                scroll-behavior:auto!important;
+            }
+        }
+
+</style>
 
     {% block extra_head %}{% endblock %}
-
 </head>
-
-
-
 <body>
+    <div class="fixed inset-0 z-0 pointer-events-none bg-[#020817]"></div>
+    <div class="fixed -left-[220px] -top-[260px] z-0 h-[600px] w-[600px] rounded-full bg-violet-400/10 blur-3xl pointer-events-none"></div>
+    <div class="fixed -bottom-[280px] -right-[220px] z-0 h-[650px] w-[650px] rounded-full bg-violet-500/10 blur-3xl pointer-events-none"></div>
 
-    <!-- Background effects -->
+    <div id="sidebarOverlay" class="teacher-sidebar-overlay fixed inset-0 z-40 hidden bg-black/70 backdrop-blur-[2px] lg:hidden" aria-hidden="true"></div>
 
-    <div class="teacher-background" aria-hidden="true">
-
-        <div class="teacher-glow-cyan"></div>
-
-        <div class="teacher-glow-purple"></div>
-
-        <div class="teacher-grid"></div>
-
-    </div>
-
-
-
-    <!-- Application -->
-
-    <div class="teacher-app">
-
-
-
-        <!-- Mobile sidebar overlay -->
-
-        <div
-
-            id="sidebarOverlay"
-
-            class="teacher-sidebar-overlay"
-
-            aria-hidden="true">
-
-        </div>
-
-
-
-        <!-- Sidebar -->
-
-        <aside id="sidebar" class="teacher-sidebar" aria-label="Teacher navigation">
-
-
-
-            <!-- Brand -->
-
-            <div class="teacher-sidebar-header">
-
-                <a href="{% url 'teacher_dashboard' %}"
-
-                class="teacher-brand"
-
-                aria-label="NeoLearn Teacher Dashboard">
-
-                    <span class="teacher-brand-icon">
-
-                        <i class="ri-flashlight-fill"></i>
-
+    <div class="relative z-10 flex h-screen w-full min-w-0 overflow-hidden">
+        <aside id="sidebar" class="teacher-sidebar teacher-sidebar-bg fixed left-0 top-0 z-50 flex h-screen w-[270px] flex-col border-r border-white/5" aria-label="Teacher navigation">
+            <div class="flex h-[80px] shrink-0 items-center justify-between border-b border-white/5 px-5 sm:px-7">
+                <a href="{% url 'teacher_dashboard' %}" class="flex min-w-0 items-center gap-3 no-underline" aria-label="NeoLearn Teacher Dashboard">
+                    <span class="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-[15px] border border-violet-300/20 bg-[#071224]">
+                        <span class="absolute inset-0 rounded-[15px] bg-violet-300/15 blur-lg"></span>
+                        <span class="relative h-[21px] w-[21px] rotate-45 rounded-[5px] border-[3px] border-violet-300"></span>
                     </span>
-
-                    <span class="teacher-brand-name">NEO<span>LEARN</span></span>
-
+                    <span class="truncate text-[22px] font-extrabold tracking-[-1px] text-white">Neo<span class="text-violet-300">Learn</span></span>
                 </a>
-
-
-
-                <button type="button"
-
-                        id="closeSidebar"
-
-                        class="teacher-mobile-button"
-
-                        aria-label="Close navigation menu">
-
-                    <i class="ri-close-line text-xl"></i>
-
+                <button id="closeSidebar" type="button" class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-slate-400 transition hover:bg-white/5 hover:text-white lg:hidden" aria-label="Close navigation">
+                    <i class="ri-close-line text-[22px]"></i>
                 </button>
-
             </div>
 
-
-
-            <!-- Navigation -->
-
-            <div class="teacher-sidebar-scroll">
-
-                <nav aria-label="Teacher menu">
-
-
-
-                    <p class="teacher-nav-heading">Workspace</p>
+            <div id="sidebarScroll" class="teacher-sidebar-scroll min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-4 py-1">
+                <nav class="space-y-0.5" aria-label="Main teacher navigation">
+                    <p class="nav-label">Workspace</p>
 
 
 
                     <a href="{% url 'teacher_dashboard' %}"
 
-                    class="teacher-nav-link {% if request.resolver_match.url_name == 'teacher_dashboard' %}active{% endif %}"
+                    class="admin-nav-link {% if request.resolver_match.url_name == 'teacher_dashboard' %}active{% endif %}"
 
                     {% if request.resolver_match.url_name == 'teacher_dashboard' %}aria-current="page"{% endif %}>
 
                         <i class="ri-dashboard-3-line nav-icon"></i>
 
-                        <span class="nav-label">Dashboard</span>
+                        <span class="truncate">Dashboard</span>
 
                     </a>
 
@@ -1668,97 +638,76 @@
 
                     <a href="{% url 'teacher_batches' %}"
 
-                    class="teacher-nav-link {% if request.resolver_match.url_name == 'teacher_batches' or request.resolver_match.url_name == 'teacher_subjects' or request.resolver_match.url_name == 'teacher_course_builder_entry' %}active{% endif %}"
+                    class="admin-nav-link {% if request.resolver_match.url_name == 'teacher_batches' or request.resolver_match.url_name == 'teacher_subjects' or request.resolver_match.url_name == 'teacher_course_builder_entry' %}active{% endif %}"
 
                     {% if request.resolver_match.url_name == 'teacher_batches' or request.resolver_match.url_name == 'teacher_subjects' or request.resolver_match.url_name == 'teacher_course_builder_entry' %}aria-current="page"{% endif %}>
 
                         <i class="ri-stack-line nav-icon"></i>
 
-                        <span class="nav-label">My Batches</span>
+                        <span class="truncate">My Batches</span>
 
                     </a>
 
 
 
-<details class="teacher-live-group"
+                    <p class="nav-label">Live Classes</p>
 
-    {% if request.resolver_match.url_name == 'teacher_live_classes' or request.resolver_match.url_name == 'teacher_reschedule_live_class' or request.resolver_match.url_name == 'teacher_request_cancellation' %}open{% endif %}>
+                    <a href="{% url 'live_classes:teacher_live_classes' %}"
+                       class="admin-nav-link {% if request.resolver_match.url_name == 'teacher_live_classes' %}active{% endif %}"
+                       {% if request.resolver_match.url_name == 'teacher_live_classes' %}aria-current="page"{% endif %}>
+                        <i class="ri-calendar-schedule-line nav-icon"></i>
+                        <span class="truncate">My Timetable</span>
+                    </a>
 
-    <summary class="teacher-nav-link {% if request.resolver_match.url_name == 'teacher_live_classes' or request.resolver_match.url_name == 'teacher_reschedule_live_class' or request.resolver_match.url_name == 'teacher_request_cancellation' %}active{% endif %}"
+                    <div class="admin-nav-link teacher-placeholder" aria-disabled="true"
+                         title="This page has not been connected yet">
+                        <i class="ri-calendar-event-line nav-icon"></i>
+                        <span class="truncate">Upcoming Classes</span>
+                        <span class="teacher-coming-soon">Soon</span>
+                    </div>
 
-        aria-label="Live Classes submenu">
+                    <div class="admin-nav-link teacher-placeholder" aria-disabled="true"
+                         title="This page has not been connected yet">
+                        <i class="ri-broadcast-line nav-icon"></i>
+                        <span class="truncate">Live Now</span>
+                        <span class="teacher-coming-soon">Soon</span>
+                    </div>
 
-        <i class="ri-live-line nav-icon"></i>
+                    <div class="admin-nav-link teacher-placeholder" aria-disabled="true"
+                         title="This page has not been connected yet">
+                        <i class="ri-close-circle-line nav-icon"></i>
+                        <span class="truncate">Cancellation Requests</span>
+                        <span class="teacher-coming-soon">Soon</span>
+                    </div>
 
-        <span class="nav-label">Live Classes</span>
-
-        <i class="ri-arrow-down-s-line teacher-live-arrow"></i>
-
-    </summary>
-
-    <div class="teacher-live-submenu">
-
-        <a href="{% url 'live_classes:teacher_live_classes' %}"
-
-            class="teacher-nav-link {% if request.resolver_match.url_name == 'teacher_live_classes' %}active{% endif %}"
-
-            {% if request.resolver_match.url_name == 'teacher_live_classes' %}aria-current="page"{% endif %}>
-
-            <i class="ri-calendar-schedule-line nav-icon"></i><span class="nav-label">My Timetable</span>
-
-        </a>
-
-        <div class="teacher-nav-link teacher-nav-link-placeholder" aria-disabled="true" title="Connect after the upcoming classes view is implemented">
-
-            <i class="ri-calendar-event-line nav-icon"></i><span class="nav-label">Upcoming Classes</span>
-
-        </div>
-
-        <div class="teacher-nav-link teacher-nav-link-placeholder" aria-disabled="true" title="Connect after the live room view is implemented">
-
-            <i class="ri-broadcast-line nav-icon"></i><span class="nav-label">Live Now</span>
-
-        </div>
-
-        <div class="teacher-nav-link teacher-nav-link-placeholder" aria-disabled="true" title="Connect after the cancellation requests page is implemented">
-
-            <i class="ri-close-circle-line nav-icon"></i><span class="nav-label">Cancellation Requests</span>
-
-        </div>
-
-        <div class="teacher-nav-link teacher-nav-link-placeholder" aria-disabled="true" title="Connect after the class history page is implemented">
-
-            <i class="ri-history-line nav-icon"></i><span class="nav-label">All Classes &amp; History</span>
-
-        </div>
-
-    </div>
-
-</details>
-
-
+                    <div class="admin-nav-link teacher-placeholder" aria-disabled="true"
+                         title="This page has not been connected yet">
+                        <i class="ri-history-line nav-icon"></i>
+                        <span class="truncate">All Classes &amp; History</span>
+                        <span class="teacher-coming-soon">Soon</span>
+                    </div>
 
 
 
 <a href="{% url 'teacher_analytics' %}"
 
-   class="teacher-nav-link {% if request.resolver_match.url_name == 'teacher_analytics' %}active{% endif %}"
+   class="admin-nav-link {% if request.resolver_match.url_name == 'teacher_analytics' %}active{% endif %}"
 
    {% if request.resolver_match.url_name == 'teacher_analytics' %}aria-current="page"{% endif %}>
 
     <i class="ri-line-chart-line nav-icon"></i>
 
-    <span class="nav-label">Analytics</span>
+    <span class="truncate">Analytics</span>
 
 </a>
 
 
 
-                    <p class="teacher-nav-heading">Communication</p>
+                    <p class="nav-label">Communication</p>
 
 
 
-                    <div class="teacher-nav-link teacher-nav-link-placeholder"
+                    <div class="admin-nav-link teacher-placeholder"
 
                         aria-disabled="true"
 
@@ -1766,7 +715,7 @@
 
                         <i class="ri-notification-3-line nav-icon"></i>
 
-                        <span class="nav-label">Notifications</span>
+                        <span class="truncate">Notifications</span>
 
                         <span class="teacher-coming-soon">Soon</span>
 
@@ -1778,31 +727,31 @@
 
                     <a href="{% url 'teacher_colleagues' %}"
 
-                                class="teacher-nav-link {% if request.resolver_match.url_name == 'teacher_colleagues' or request.resolver_match.url_name == 'teacher_colleague_detail' %}active{% endif %}"
+                                class="admin-nav-link {% if request.resolver_match.url_name == 'teacher_colleagues' or request.resolver_match.url_name == 'teacher_colleague_detail' %}active{% endif %}"
 
                             {% if request.resolver_match.url_name == 'teacher_colleagues' or request.resolver_match.url_name == 'teacher_colleague_detail' %}aria-current="page"{% endif %}>
 
                                         <i class="ri-team-line nav-icon"></i>
 
-                            <span class="nav-label">My Colleagues</span>
+                            <span class="truncate">My Colleagues</span>
 
                             </a>
 
 
 
-                    <p class="teacher-nav-heading">Account</p>
+                    <p class="nav-label">Account</p>
 
 
 
                     <a href="{% url 'teacher_my_profile' %}"
 
-                    class="teacher-nav-link {% if request.resolver_match.url_name == 'teacher_my_profile' %}active{% endif %}"
+                    class="admin-nav-link {% if request.resolver_match.url_name == 'teacher_my_profile' %}active{% endif %}"
 
                     {% if request.resolver_match.url_name == 'teacher_my_profile' %}aria-current="page"{% endif %}>
 
                         <i class="ri-user-3-line nav-icon"></i>
 
-                        <span class="nav-label">My Profile</span>
+                        <span class="truncate">My Profile</span>
 
                     </a>
 
@@ -1812,13 +761,13 @@
 
                     <a href="{% url 'teacher_settings' %}"
 
-                        class="teacher-nav-link {% if request.resolver_match.url_name == 'teacher_settings' %}active{% endif %}"
+                        class="admin-nav-link {% if request.resolver_match.url_name == 'teacher_settings' %}active{% endif %}"
 
                         {% if request.resolver_match.url_name == 'teacher_settings' %}aria-current="page"{% endif %}>
 
                             <i class="ri-settings-3-line nav-icon"></i>
 
-                            <span class="nav-label">Settings</span>
+                            <span class="truncate">Settings</span>
 
                     </a>
 
@@ -1826,7 +775,7 @@
 
 
 
-                    <p class="teacher-nav-heading">Help &amp; Support</p>
+                    <p class="nav-label">Help &amp; Support</p>
 
 
 
@@ -1834,684 +783,262 @@
 
                     <a href="{% url 'teacher_help_videos' %}"
 
-                            class="teacher-nav-link {% if request.resolver_match.url_name == 'teacher_help_videos' %}active{% endif %}"
+                            class="admin-nav-link {% if request.resolver_match.url_name == 'teacher_help_videos' %}active{% endif %}"
 
                             {% if request.resolver_match.url_name == 'teacher_help_videos' %}aria-current="page"{% endif %}>
 
                             <i class="ri-question-answer-line nav-icon"></i>
 
-                                <span class="nav-label">Help Videos</span>
+                                <span class="truncate">Help Videos</span>
 
                             </a>
+
 
 
 
                 </nav>
-
             </div>
 
-
-
-            <!-- Logout -->
-
-            <div class="teacher-sidebar-footer">
-
-                <a href="{% url 'teacher_logout' %}"
-
-                class="teacher-nav-link teacher-logout-link">
-
-                    <i class="ri-logout-box-r-line nav-icon"></i>
-
-                    <span class="nav-label">Logout</span>
-
+            <div class="shrink-0 border-t border-white/5 p-4">
+                <a href="{% url 'teacher_logout' %}" class="flex h-[50px] items-center justify-center gap-3 rounded-[16px] border border-red-500/10 bg-red-500/10 font-semibold text-red-400 transition hover:bg-red-500/20">
+                    <i class="ri-logout-box-r-line text-[18px]"></i><span>Logout</span>
                 </a>
-
             </div>
-
         </aside>
 
-
-
-        <!-- Main area -->
-
-        <div class="teacher-main">
-
-
-
-            <!-- Navbar -->
-
-            <header class="teacher-navbar">
-
-                <div class="teacher-navbar-left">
-
-
-
-                    <button type="button"
-
-                            id="menuButton"
-
-                            class="teacher-mobile-button"
-
-                            aria-label="Open navigation menu"
-
-                            aria-controls="sidebar"
-
-                            aria-expanded="false">
-
-                        <i class="ri-menu-line text-xl"></i>
-
+        <div class="flex min-w-0 flex-1 flex-col lg:ml-[270px]">
+            <header class="teacher-navbar teacher-navbar-bg fixed left-0 right-0 top-0 z-30 flex h-[80px] min-w-0 items-center justify-between gap-3 border-b border-white/5 px-3 sm:px-4 lg:left-[270px] lg:px-7">
+                <div class="flex min-w-0 flex-1 items-center gap-3 sm:gap-4">
+                    <button type="button" id="menuButton" class="flex h-10 w-10 shrink-0 items-center justify-center rounded-[13px] border border-white/10 text-slate-300 transition hover:border-violet-300/30 hover:text-white lg:hidden" aria-label="Open navigation" aria-controls="sidebar" aria-expanded="false">
+                        <i class="ri-menu-3-line text-[21px]"></i>
                     </button>
 
-
-
-                    <div class="teacher-navbar-context">
-
-                        <p class="teacher-navbar-eyebrow">
-
-                            NeoLearn / Teacher Portal
-
-                        </p>
-
-                        <h1 class="teacher-navbar-heading">
-
-                            {% block page_heading %}Teacher Workspace{% endblock %}
-
-                        </h1>
-
-                    </div>
-
-                </div>
-
-
-
-                <div class="teacher-navbar-right">
-
-
-
-                    <!-- Notifications -->
-
-                    <button type="button"
-
-                            id="notificationButton"
-
-                            class="teacher-icon-button"
-
-                            aria-label="Notifications"
-
-                            title="Notifications">
-
-                        <i class="ri-notification-3-line"></i>
-
-                        <span class="teacher-notification-dot" aria-hidden="true"></span>
-
-                    </button>
-
-
-
-                    <!-- Profile dropdown -->
-
-                    <div class="relative">
-
-                        <button type="button"
-
-                                id="profileButton"
-
-                                class="teacher-profile-trigger"
-
-                                aria-label="Open profile menu"
-
-                                aria-controls="profileDropdown"
-
-                                aria-expanded="false">
-
-
-
-                            {% if request.user.teacher_profile.profile_image %}
-
-                                <img
-
-                                    src="{{ request.user.teacher_profile.profile_image.url }}"
-
-                                    alt="Teacher profile"
-
-                                    class="teacher-profile-image"
-
-                                    onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-
-
-
-                                <span class="teacher-profile-fallback"
-
-                                    style="display:none;"
-
-                                    aria-label="Teacher initials">
-
-                                    {{ request.user.teacher_profile.full_name|default:request.user.username|first|upper }}
-
-                                </span>
-
-                            {% else %}
-
-                                <span class="teacher-profile-fallback"
-
-                                    aria-label="Teacher initials">
-
-                                    {{ request.user.teacher_profile.full_name|default:request.user.username|first|upper }}
-
-                                </span>
-
-                            {% endif %}
-
-                        </button>
-
-
-
-                        <!-- Dropdown -->
-
-                        <div id="profileDropdown"
-
-                            class="teacher-profile-dropdown hidden">
-
-
-
-                            <div class="teacher-dropdown-header">
-
-                                <p class="truncate text-sm font-semibold text-white">
-
-                                    {{ request.user.teacher_profile.full_name|default:request.user.username }}
-
-                                </p>
-
-
-
-                                <p class="mt-1 truncate text-xs text-slate-400">
-
-                                    {{ request.user.teacher_profile.email|default:request.user.email }}
-
-                                </p>
-
-
-
-                                <span class="mt-3 inline-flex items-center gap-1.5 rounded-md bg-sky-400/10 px-2 py-1 text-[10px] font-semibold text-sky-300">
-
-                                    <i class="ri-shield-user-line"></i>
-
-                                    Teacher Account
-
-                                </span>
-
-                            </div>
-
-
-
-                            <a href="{% url 'teacher_my_profile' %}"
-
-                            class="teacher-dropdown-link">
-
-                                <i class="ri-user-settings-line"></i>
-
-                                <span>My Profile</span>
-
-                            </a>
-
-
-
-
-
-                    <a href="{% url 'teacher_settings' %}"
-
-                        class="teacher-dropdown-link">
-
-                    <i class="ri-settings-3-line"></i>
-
-                    <span>Settings</span>
-
-                    </a>
-
-
-
-
-
-                            <div class="border-t border-white/5"></div>
-
-
-
-                            <a href="{% url 'teacher_logout' %}"
-
-                            class="teacher-dropdown-link text-red-400 hover:bg-red-500/10 hover:text-red-300">
-
-                                <i class="ri-logout-box-r-line"></i>
-
-                                <span>Logout</span>
-
-                            </a>
-
+                    <span class="sr-only">{% block page_heading %}Teacher Workspace{% endblock %}</span>
+                    <div class="quick-access-wrap" id="quickAccessRoot">
+                        <div class="quick-access-field">
+                            <i class="ri-search-line shrink-0 text-[18px] text-slate-500"></i>
+                            <input id="quickAccessInput" type="search" autocomplete="off" placeholder="Quick access: search teacher pages..." aria-label="Quick access to Teacher pages" aria-controls="quickAccessPanel" aria-expanded="false">
+                            <kbd class="hidden shrink-0 rounded-md border border-white/10 bg-white/[0.03] px-1.5 py-1 text-[10px] text-slate-500 md:inline-flex">Ctrl K</kbd>
                         </div>
-
+                        <div id="quickAccessPanel" class="quick-access-panel" hidden>
+                            <div class="border-b border-white/[0.07] px-4 py-3">
+                                <p class="text-[12px] font-bold text-white">Quick Access</p>
+                                <p class="mt-1 text-[10px] text-slate-500">Jump directly to a Teacher section</p>
+                            </div>
+                            <div class="py-2" id="quickAccessLinks">
+                                <a href="{% url 'teacher_dashboard' %}" class="quick-access-link" data-quick-link="dashboard workspace"><span class="teacher-dropdown-icon"><i class="ri-layout-grid-line"></i></span><span class="flex-1">Dashboard</span><i class="ri-arrow-right-s-line text-slate-500"></i></a>
+                                <a href="{% url 'teacher_batches' %}" class="quick-access-link" data-quick-link="my batches subjects courses course builder"><span class="teacher-dropdown-icon"><i class="ri-stack-line"></i></span><span class="flex-1">My Batches</span><i class="ri-arrow-right-s-line text-slate-500"></i></a>
+                                <a href="{% url 'live_classes:teacher_live_classes' %}" class="quick-access-link" data-quick-link="live classes timetable schedule"><span class="teacher-dropdown-icon"><i class="ri-calendar-schedule-line"></i></span><span class="flex-1">My Timetable</span><i class="ri-arrow-right-s-line text-slate-500"></i></a>
+                                <a href="{% url 'teacher_analytics' %}" class="quick-access-link" data-quick-link="analytics reports"><span class="teacher-dropdown-icon"><i class="ri-line-chart-line"></i></span><span class="flex-1">Analytics</span><i class="ri-arrow-right-s-line text-slate-500"></i></a>
+                                <a href="{% url 'teacher_colleagues' %}" class="quick-access-link" data-quick-link="colleagues teachers team"><span class="teacher-dropdown-icon"><i class="ri-team-line"></i></span><span class="flex-1">My Colleagues</span><i class="ri-arrow-right-s-line text-slate-500"></i></a>
+                                <a href="{% url 'teacher_my_profile' %}" class="quick-access-link" data-quick-link="profile account"><span class="teacher-dropdown-icon"><i class="ri-user-3-line"></i></span><span class="flex-1">My Profile</span><i class="ri-arrow-right-s-line text-slate-500"></i></a>
+                                <a href="{% url 'teacher_settings' %}" class="quick-access-link" data-quick-link="settings preferences"><span class="teacher-dropdown-icon"><i class="ri-settings-3-line"></i></span><span class="flex-1">Settings</span><i class="ri-arrow-right-s-line text-slate-500"></i></a>
+                                <a href="{% url 'teacher_help_videos' %}" class="quick-access-link" data-quick-link="help support videos"><span class="teacher-dropdown-icon"><i class="ri-question-line"></i></span><span class="flex-1">Help Videos</span><i class="ri-arrow-right-s-line text-slate-500"></i></a>
+                            </div>
+                            <p id="quickAccessEmpty" class="hidden px-4 py-5 text-center text-[12px] text-slate-500">No matching Teacher page found.</p>
+                        </div>
                     </div>
-
                 </div>
 
+                <div class="relative shrink-0" id="teacherProfileRoot">
+                    <button type="button" id="profileButton" class="teacher-profile-trigger" aria-haspopup="true" aria-expanded="false" aria-controls="profileDropdown" title="Open teacher account menu">
+                        {% with teacher_profile=request.user.teacher_profile %}
+                            {% if teacher_profile.profile_image %}
+                                <img src="{{ teacher_profile.profile_image.url }}" alt="Teacher profile" class="teacher-profile-avatar">
+                            {% else %}
+                                <span class="teacher-profile-avatar">{{ teacher_profile.full_name|default:request.user.get_full_name|default:request.user.username|default:"T"|slice:":1"|upper }}</span>
+                            {% endif %}
+                            <span class="teacher-profile-label hidden min-w-0 text-left sm:block">
+                                <span class="block max-w-[145px] truncate text-[13px] font-semibold leading-tight text-white">{{ teacher_profile.full_name|default:request.user.get_full_name|default:request.user.username|default:"Teacher" }}</span>
+                                <span class="mt-1 block text-[11px] font-medium text-slate-400">Teacher</span>
+                            </span>
+                        {% endwith %}
+                        <i class="ri-arrow-down-s-line hidden text-[18px] text-slate-400 sm:block"></i>
+                    </button>
+
+                    <div id="profileDropdown" class="teacher-profile-dropdown hidden" role="menu" aria-label="Teacher account menu">
+                        <div class="flex items-center gap-3 border-b border-white/[0.08] px-4 py-4">
+                            {% with teacher_profile=request.user.teacher_profile %}
+                                {% if teacher_profile.profile_image %}
+                                    <img src="{{ teacher_profile.profile_image.url }}" alt="" class="teacher-profile-avatar">
+                                {% else %}
+                                    <span class="teacher-profile-avatar">{{ teacher_profile.full_name|default:request.user.get_full_name|default:request.user.username|default:"T"|slice:":1"|upper }}</span>
+                                {% endif %}
+                                <div class="min-w-0 flex-1">
+                                    <p class="truncate text-[13px] font-bold text-white">{{ teacher_profile.full_name|default:request.user.get_full_name|default:request.user.username|default:"Teacher" }}</p>
+                                    <p class="mt-1 truncate text-[11px] text-slate-400">{{ teacher_profile.email|default:request.user.email|default:"Teacher account" }}</p>
+                                    <p class="mt-1 text-[10px] font-semibold uppercase tracking-wide text-violet-300">Teacher Account</p>
+                                </div>
+                            {% endwith %}
+                        </div>
+                        <div class="py-2">
+                            <a href="{% url 'teacher_my_profile' %}" class="teacher-dropdown-row" role="menuitem">
+                                <span class="teacher-dropdown-icon"><i class="ri-user-settings-line"></i></span>
+                                <span class="min-w-0 flex-1"><span class="block font-semibold">My Profile</span><span class="mt-1 block text-[10px] text-slate-500">View your teacher profile</span></span>
+                                <i class="ri-arrow-right-s-line text-slate-500"></i>
+                            </a>
+                            <a href="{% url 'teacher_settings' %}" class="teacher-dropdown-row" role="menuitem">
+                                <span class="teacher-dropdown-icon"><i class="ri-settings-3-line"></i></span>
+                                <span class="min-w-0 flex-1"><span class="block font-semibold">Settings</span><span class="mt-1 block text-[10px] text-slate-500">Account and preferences</span></span>
+                                <i class="ri-arrow-right-s-line text-slate-500"></i>
+                            </a>
+                            <a href="{% url 'teacher_help_videos' %}" class="teacher-dropdown-row" role="menuitem">
+                                <span class="teacher-dropdown-icon"><i class="ri-question-line"></i></span>
+                                <span class="min-w-0 flex-1"><span class="block font-semibold">Help &amp; Support</span><span class="mt-1 block text-[10px] text-slate-500">Guides and help videos</span></span>
+                                <i class="ri-arrow-right-s-line text-slate-500"></i>
+                            </a>
+                        </div>
+                        <div class="border-t border-white/[0.08] p-2">
+                            <a href="{% url 'teacher_logout' %}" class="teacher-dropdown-row rounded-xl text-rose-300 hover:bg-rose-500/10" role="menuitem">
+                                <span class="teacher-dropdown-icon !border-rose-400/20 !bg-rose-400/10 !text-rose-300"><i class="ri-logout-box-r-line"></i></span>
+                                <span class="min-w-0 flex-1"><span class="block font-semibold">Logout</span><span class="mt-1 block text-[10px] text-rose-300/60">Sign out of your account</span></span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
             </header>
 
-
-
-            <!-- Main content -->
-
-            <main class="teacher-content">
-
-
-
-                <!-- Django messages -->
-
+            <main class="teacher-content teacher-main-grid mt-[80px] min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto p-4 md:p-6">
                 {% if messages %}
-
                     <div class="message-container" id="messageContainer">
-
                         {% for message in messages %}
-
                             <div class="message-item {{ message.tags }}">
-
                                 <div class="message-header">
-
                                     <div class="message-left">
-
-                                        <div class="message-icon">
-
-                                            <i class="ri-{% if message.tags == 'success' %}check-line{% elif message.tags == 'error' %}close-circle-line{% elif message.tags == 'warning' %}alert-line{% else %}information-line{% endif %}"></i>
-
-                                        </div>
-
-
-
-                                        <div class="message-title">
-
-                                            {% if message.tags == "success" %}
-
-                                                Success
-
-                                            {% elif message.tags == "error" %}
-
-                                                Error
-
-                                            {% elif message.tags == "warning" %}
-
-                                                Warning
-
-                                            {% else %}
-
-                                                Information
-
-                                            {% endif %}
-
-                                        </div>
-
+                                        <div class="message-icon"><i class="ri-{% if message.tags == 'success' %}check-line{% elif message.tags == 'error' %}close-circle-line{% elif message.tags == 'warning' %}alert-line{% else %}information-line{% endif %}"></i></div>
+                                        <div class="message-title">{% if message.tags == "success" %}Success{% elif message.tags == "error" %}Error{% elif message.tags == "warning" %}Warning{% else %}Information{% endif %}</div>
                                     </div>
-
-
-
-                                    <button type="button"
-
-                                            class="message-close"
-
-                                            aria-label="Close message">
-
-                                        <i class="ri-close-line"></i>
-
-                                    </button>
-
+                                    <button type="button" class="message-close" aria-label="Close message"><i class="ri-close-line"></i></button>
                                 </div>
-
-
-
                                 <div class="message-text">{{ message }}</div>
-
                             </div>
-
                         {% endfor %}
-
                     </div>
-
                 {% endif %}
-
-
-
                 {% block teacher_content %}{% endblock %}
-
             </main>
-
         </div>
-
     </div>
 
-
-
-    <!-- Existing teacher JavaScript -->
-
     <script src="{% static 'teachers/js/teacher_base.js' %}"></script>
-
-
-
-    <!-- Preserve sidebar position when navigating between teacher pages -->
-
-    <script>
-
-    (() => {
-
-        "use strict";
-
-
-
-        const STORAGE_KEY = "neolearn_teacher_sidebar_scroll_top";
-
-
-
-        function initialiseSidebarScrollPosition() {
-
-            const sidebarScroll = document.querySelector(".teacher-sidebar-scroll");
-
-            const sidebar = document.getElementById("sidebar");
-
-
-
-            if (!sidebarScroll || !sidebar) return;
-
-
-
-            // Restore the previous sidebar position after the next page loads.
-
-            try {
-
-                const savedPosition = sessionStorage.getItem(STORAGE_KEY);
-
-                if (savedPosition !== null) {
-
-                    sidebarScroll.scrollTop = Number(savedPosition) || 0;
-
-                }
-
-            } catch (error) {
-
-                // Navigation remains usable if browser storage is unavailable.
-
-            }
-
-
-
-            // Save the position before a sidebar link navigates to another page.
-
-            sidebar.addEventListener("click", function (event) {
-
-                const link = event.target.closest("a[href]");
-
-                if (!link || link.classList.contains("teacher-brand")) return;
-
-
-
-                try {
-
-                    sessionStorage.setItem(STORAGE_KEY, String(sidebarScroll.scrollTop));
-
-                } catch (error) {
-
-                    // Do not block navigation if browser storage is unavailable.
-
-                }
-
-            }, true);
-
-
-
-            // Keep the stored value current when the user scrolls the sidebar.
-
-            sidebarScroll.addEventListener("scroll", function () {
-
-                try {
-
-                    sessionStorage.setItem(STORAGE_KEY, String(sidebarScroll.scrollTop));
-
-                } catch (error) {
-
-                    // Ignore storage restrictions.
-
-                }
-
-            }, { passive: true });
-
-        }
-
-
-
-        if (document.readyState === "loading") {
-
-            document.addEventListener("DOMContentLoaded", initialiseSidebarScrollPosition, { once: true });
-
-        } else {
-
-            initialiseSidebarScrollPosition();
-
-        }
-
-    })();
-
-    </script>
-
-
-
-    <!-- Responsive sidebar controller -->
-
-    <script>
-
-    (() => {
-
-        "use strict";
-
-
-
-        function initialiseTeacherSidebar() {
-
-            const sidebar = document.getElementById("sidebar");
-
-            const overlay = document.getElementById("sidebarOverlay");
-
-            const menuButton = document.getElementById("menuButton");
-
-            const closeButton = document.getElementById("closeSidebar");
-
-
-
-            if (!sidebar || !overlay || !menuButton || !closeButton) return;
-
-
-
-            const mobileQuery = window.matchMedia("(max-width: 1023px)");
-
-
-
-            function setSidebarOpen(shouldOpen) {
-
-                const isMobile = mobileQuery.matches;
-
-                const open = Boolean(shouldOpen && isMobile);
-
-
-
-                sidebar.classList.toggle("sidebar-open", open);
-
-                overlay.classList.toggle("overlay-open", open);
-
-                document.body.classList.toggle("teacher-sidebar-is-open", open);
-
-
-
-                menuButton.setAttribute("aria-expanded", String(open));
-
-                menuButton.setAttribute(
-
-                    "aria-label",
-
-                    open ? "Close navigation menu" : "Open navigation menu"
-
-                );
-
-
-
-                overlay.setAttribute("aria-hidden", String(!open));
-
-                sidebar.setAttribute("aria-hidden", String(isMobile && !open));
-
-
-
-                if (open) {
-
-                    closeButton.focus({ preventScroll: true });
-
-                } else if (isMobile && document.activeElement === closeButton) {
-
-                    menuButton.focus({ preventScroll: true });
-
-                }
-
-            }
-
-
-
-            menuButton.addEventListener("click", function (event) {
-
-                event.preventDefault();
-
-                event.stopImmediatePropagation();
-
-                setSidebarOpen(!sidebar.classList.contains("sidebar-open"));
-
-            }, true);
-
-
-
-            closeButton.addEventListener("click", function (event) {
-
-                event.preventDefault();
-
-                event.stopImmediatePropagation();
-
-                setSidebarOpen(false);
-
-            }, true);
-
-
-
-            overlay.addEventListener("click", function (event) {
-
-                event.preventDefault();
-
-                event.stopImmediatePropagation();
-
-                setSidebarOpen(false);
-
-            }, true);
-
-
-
-            sidebar.addEventListener("click", function (event) {
-
-                const link = event.target.closest("a[href]");
-
-
-
-                if (link && !link.classList.contains("teacher-brand") && mobileQuery.matches) {
-
-                    setSidebarOpen(false);
-
-                }
-
-            });
-
-
-
-            document.addEventListener("keydown", function (event) {
-
-                if (event.key === "Escape" && sidebar.classList.contains("sidebar-open")) {
-
-                    setSidebarOpen(false);
-
-                }
-
-            });
-
-
-
-            function handleBreakpointChange() {
-
-                setSidebarOpen(false);
-
-
-
-                if (!mobileQuery.matches) {
-
-                    sidebar.removeAttribute("aria-hidden");
-
-                    overlay.setAttribute("aria-hidden", "true");
-
-                }
-
-            }
-
-
-
-            if (typeof mobileQuery.addEventListener === "function") {
-
-                mobileQuery.addEventListener("change", handleBreakpointChange);
-
-            } else {
-
-                mobileQuery.addListener(handleBreakpointChange);
-
-            }
-
-
-
-            setSidebarOpen(false);
-
-
-
-            if (!mobileQuery.matches) {
-
-                sidebar.removeAttribute("aria-hidden");
-
-                overlay.setAttribute("aria-hidden", "true");
-
-            }
-
-        }
-
-
-
-        if (document.readyState === "loading") {
-
-            document.addEventListener("DOMContentLoaded", initialiseTeacherSidebar, { once: true });
-
-        } else {
-
-            initialiseTeacherSidebar();
-
-        }
-
-    })();
-
-    </script>
-
-
-
-    <!-- Existing toast JavaScript -->
-
     <script src="{% static 'toast-messages.js' %}"></script>
+    <script>
+    (() => {
+        const sidebar = document.getElementById('sidebar');
+        const backdrop = document.getElementById('sidebarOverlay');
+        const openButton = document.getElementById('menuButton');
+        const closeButton = document.getElementById('closeSidebar');
+        const sidebarScroll = document.getElementById('sidebarScroll');
+        const mobile = () => window.innerWidth < 1024;
 
+        function closeSidebar() {
+            if (!sidebar || !backdrop) return;
+            sidebar.classList.remove('sidebar-open');
+            backdrop.classList.remove('overlay-open');
+            document.body.classList.remove('teacher-sidebar-is-open');
+            if (openButton) openButton.setAttribute('aria-expanded', 'false');
+            backdrop.setAttribute('aria-hidden', 'true');
+        }
+        function openSidebar() {
+            if (!sidebar || !backdrop || !mobile()) return;
+            sidebar.classList.add('sidebar-open');
+            backdrop.classList.add('overlay-open');
+            document.body.classList.add('teacher-sidebar-is-open');
+            if (openButton) openButton.setAttribute('aria-expanded', 'true');
+            backdrop.setAttribute('aria-hidden', 'false');
+        }
+        if (openButton) openButton.addEventListener('click', openSidebar);
+        if (closeButton) closeButton.addEventListener('click', closeSidebar);
+        if (backdrop) backdrop.addEventListener('click', closeSidebar);
+        if (sidebar) sidebar.querySelectorAll('nav a[href]').forEach(link => link.addEventListener('click', () => { if (mobile()) closeSidebar(); }));
+        window.addEventListener('resize', () => { if (!mobile()) closeSidebar(); });
 
+        // Keep the active navigation position consistent between teacher pages.
+        function alignSidebarToActivePage() {
+            if (!sidebarScroll) return;
+            const active = sidebarScroll.querySelector('.admin-nav-link[aria-current="page"]') ||
+                           sidebarScroll.querySelector('.admin-nav-link.active');
+            if (!active) return;
 
-    <!-- Child template JavaScript -->
+            const container = sidebarScroll.getBoundingClientRect();
+            const item = active.getBoundingClientRect();
+            const topLimit = container.top + 12;
+            const bottomLimit = container.bottom - 12;
 
+            // Leave the user's current sidebar position alone when the active
+            // item is already visible. Only reveal it when it is out of view.
+            if (item.top >= topLimit && item.bottom <= bottomLimit) return;
+
+            const target = item.top - container.top + sidebarScroll.scrollTop
+                - (sidebarScroll.clientHeight * 0.35);
+            const maxScroll = Math.max(0, sidebarScroll.scrollHeight - sidebarScroll.clientHeight);
+
+            sidebarScroll.scrollTo({
+                top: Math.max(0, Math.min(maxScroll, target)),
+                behavior: 'smooth'
+            });
+        }
+        const scheduleAlignment = () => {
+            requestAnimationFrame(() => requestAnimationFrame(alignSidebarToActivePage));
+        };
+        scheduleAlignment();
+        window.addEventListener('load', scheduleAlignment);
+        window.addEventListener('pageshow', scheduleAlignment);
+        window.addEventListener('resize', scheduleAlignment);
+
+        // Profile dropdown is handled only by teacher_base.js to avoid duplicate click handlers.
+
+        // Search filters only the real Teacher routes listed above.
+        const quickRoot = document.getElementById('quickAccessRoot');
+        const quickInput = document.getElementById('quickAccessInput');
+        const quickPanel = document.getElementById('quickAccessPanel');
+        const quickLinks = Array.from(document.querySelectorAll('.quick-access-link'));
+        const quickEmpty = document.getElementById('quickAccessEmpty');
+        function closeQuickAccess() {
+            if (!quickPanel || !quickInput) return;
+            quickPanel.hidden = true;
+            quickInput.setAttribute('aria-expanded', 'false');
+        }
+        function filterQuickAccess() {
+            if (!quickInput) return;
+            const query = quickInput.value.trim().toLowerCase();
+            let count = 0;
+            quickLinks.forEach(link => {
+                const visible = !(query) || (link.dataset.quickLink || link.textContent).toLowerCase().includes(query);
+                link.hidden = !visible;
+                if (visible) count++;
+            });
+            if (quickEmpty) quickEmpty.classList.toggle('hidden', count !== 0);
+        }
+        function openQuickAccess() {
+            if (!quickPanel || !quickInput) return;
+            quickPanel.hidden = false;
+            quickInput.setAttribute('aria-expanded', 'true');
+            filterQuickAccess();
+        }
+        if (quickInput && quickPanel) {
+            quickInput.addEventListener('focus', openQuickAccess);
+            quickInput.addEventListener('click', openQuickAccess);
+            quickInput.addEventListener('input', openQuickAccess);
+            quickInput.addEventListener('keydown', event => {
+                if (event.key === 'Escape') { closeQuickAccess(); quickInput.blur(); }
+                if (event.key === 'Enter') {
+                    const first = quickLinks.find(link => !link.hidden);
+                    if (first) window.location.href = first.href;
+                }
+            });
+            document.addEventListener('click', event => {
+                if (quickRoot && !quickRoot.contains(event.target)) closeQuickAccess();
+            });
+        }
+        document.addEventListener('keydown', event => {
+            if (event.key === 'Escape') { closeSidebar(); closeQuickAccess(); }
+            if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+                if (quickInput) { event.preventDefault(); quickInput.focus(); }
+            }
+        });
+    })();
+    </script>
     {% block extra_js %}{% endblock %}
-
 </body>
-
 </html>

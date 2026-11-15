@@ -1,16 +1,12 @@
-from django.shortcuts import (
-    render,
-    redirect,
-    get_object_or_404,
-)
+from django.shortcuts import (render,redirect,get_object_or_404,)
+from django.db.models import (Count,Q,Prefetch,OuterRef,Subquery,IntegerField,Value,)
+from django.db.models.functions import Coalesce
+from orders.models import StudentBatchPurchase
 from django.core.paginator import Paginator
 from django.contrib import messages
-from django.contrib.auth import (
-    authenticate,
-    login,
-    logout,
-    update_session_auth_hash)
+from django.contrib.auth import (authenticate,login,logout,update_session_auth_hash)
 from datetime import date
+from django.utils import timezone
 from django.core.validators import validate_email
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
@@ -19,17 +15,8 @@ from PIL import Image, UnidentifiedImageError
 from django.core.exceptions import ValidationError
 import re
 from django.db import transaction
-from admins.models import (
-    Batch,
-    Subject,
-    FAQVideo,
-)
-
-from teachers.models import (
-    Teacher,
-    TeacherBatch,
-    TeacherSubject,
-)
+from admins.models import (Batch,Subject,FAQVideo,CouponBatchRule,)
+from teachers.models import (Teacher,TeacherBatch,TeacherSubject,)
 
 
 # ============================================================
@@ -397,7 +384,6 @@ def teacher_logout_view(request):
 # ============================================================
 # TEACHER BATCHES
 # ============================================================
-
 @login_required(login_url="teacher_login")
 @cache_control(
     no_cache=True,
@@ -405,77 +391,164 @@ def teacher_logout_view(request):
     no_store=True,
 )
 def teacher_batches_view(request):
+    """
+    My Batches page.
 
-    if not hasattr(
-        request.user,
-        "teacher_profile",
-    ):
-
-        messages.error(
-            request,
-            "Access denied.",
-        )
-
+    Search, status filters and all sorting are handled by database queries.
+    Teacher avatar count, +N count and Most teachers sorting all use the
+    same active TeacherBatch records for each batch.
+    """
+    if not hasattr(request.user, "teacher_profile"):
+        messages.error(request, "Access denied.")
         return redirect("teacher_login")
 
     teacher = request.user.teacher_profile
 
-    assigned_batches = (
+    # Correlated counts avoid multiplying teacher rows by student purchase rows.
+    active_teacher_count = (
         TeacherBatch.objects
+        .filter(batch_id=OuterRef("pk"), is_active=True)
+        .order_by()
+        .values("batch_id")
+        .annotate(total=Count("pk"))
+        .values("total")[:1]
+    )
+
+    active_student_count = (
+        StudentBatchPurchase.objects
+        .filter(batch_id=OuterRef("pk"), status="active")
+        .order_by()
+        .values("batch_id")
+        .annotate(total=Count("student_id", distinct=True))
+        .values("total")[:1]
+    )
+
+    # Only batches actively assigned to the logged-in teacher are included.
+    assigned_batches = (
+        Batch.objects
         .filter(
-            teacher=teacher,
-            is_active=True,
+            assigned_teachers__teacher_id=teacher.pk,
+            assigned_teachers__is_active=True,
         )
-        .select_related("batch")
-        .order_by("batch__batch_name")
+        .annotate(
+            teacher_count=Coalesce(
+                Subquery(active_teacher_count, output_field=IntegerField()),
+                Value(0),
+            ),
+            student_count=Coalesce(
+                Subquery(active_student_count, output_field=IntegerField()),
+                Value(0),
+            ),
+        )
+        .distinct()
+    )
+
+    # Total assigned count is not affected by search or selected filters.
+    batch_count = assigned_batches.count()
+
+    # Read and validate filters.
+    search_query = request.GET.get("q", "").strip()
+    selected_status = request.GET.get("status", "all").strip().lower()
+    selected_sort = request.GET.get("sort", "name").strip().lower()
+
+    allowed_statuses = {"all", "published", "draft", "archived"}
+    allowed_sorts = {
+        "name",
+        "name_desc",
+        "students",
+        "teachers",
+        "recent",
+    }
+
+    if selected_status not in allowed_statuses:
+        selected_status = "all"
+
+    if selected_sort not in allowed_sorts:
+        selected_sort = "name"
+
+    # Search batch name and description.
+    if search_query:
+        assigned_batches = assigned_batches.filter(
+            Q(batch_name__icontains=search_query)
+            | Q(batch_description__icontains=search_query)
+        )
+
+    # Status filtering.
+    if selected_status != "all":
+        assigned_batches = assigned_batches.filter(
+            batch_status=selected_status
+        )
+
+    # Sorting: Most teachers uses the correlated active teacher count.
+    sort_fields = {
+        "name": ("batch_name", "pk"),
+        "name_desc": ("-batch_name", "pk"),
+        "students": ("-student_count", "batch_name", "pk"),
+        "teachers": ("-teacher_count", "batch_name", "pk"),
+        "recent": ("-published_at", "batch_name", "pk"),
+    }
+    assigned_batches = assigned_batches.order_by(*sort_fields[selected_sort])
+
+    # Load the active teacher assignments for the avatar stack and popup.
+    active_teacher_assignments = (
+        TeacherBatch.objects
+        .filter(is_active=True)
+        .select_related("teacher")
+        .order_by("teacher__full_name", "teacher_id")
+    )
+
+    assigned_batches = assigned_batches.prefetch_related(
+        Prefetch(
+            "assigned_teachers",
+            queryset=active_teacher_assignments,
+            to_attr="active_teacher_assignments",
+        )
     )
 
     batch_cards = []
 
-    for assignment in assigned_batches:
+    for batch in assigned_batches:
+        # Use this exact list as the source of truth for:
+        # 1) displayed teacher total,
+        # 2) first three avatars,
+        # 3) +N remaining-teacher avatar,
+        # 4) teacher popup data.
+        assigned_teachers = [
+            assignment.teacher
+            for assignment in batch.active_teacher_assignments
+        ]
 
-        batch = assignment.batch
+        actual_teacher_count = len(assigned_teachers)
 
-        subject_count = (
-            TeacherSubject.objects
-            .filter(
-                teacher=teacher,
-                batch=batch,
-                is_active=True,
-            )
-            .count()
-        )
-
-        teacher_count = (
-            TeacherBatch.objects
-            .filter(
-                batch=batch,
-                is_active=True,
-            )
-            .count()
-        )
-
-        batch_cards.append(
-            {
-                "assignment": assignment,
-                "batch": batch,
-                "subject_count": subject_count,
-                "teacher_count": teacher_count,
-            }
-        )
+        batch_cards.append({
+            "batch": batch,
+            "assigned_teachers": assigned_teachers,
+            "teacher_count": actual_teacher_count,
+            "extra_teacher_count": max(actual_teacher_count - 3, 0),
+            "student_count": batch.student_count,
+        })
 
     context = {
         "teacher": teacher,
         "batch_cards": batch_cards,
-        "batch_count": len(batch_cards),
+        "batch_count": batch_count,
+        "filtered_batch_count": len(batch_cards),
+        "search_query": search_query,
+        "selected_status": selected_status,
+        "selected_sort": selected_sort,
     }
 
-    return render(
+    response = render(
         request,
         "teachers/batches/batches.html",
         context,
     )
 
+    response["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    response["Pragma"] = "no-cache"
+    response["Expires"] = "0"
+
+    return response
 
 # ============================================================
 # TEACHER SUBJECTS
@@ -487,29 +560,43 @@ def teacher_batches_view(request):
     must_revalidate=True,
     no_store=True,
 )
-def teacher_subjects_view(
-    request,
-    batch_id,
-):
+def teacher_subjects_view(request, batch_id):
+    """
+    Teacher My Subjects page.
 
-    if not hasattr(
-        request.user,
-        "teacher_profile",
-    ):
+    Shows only active subjects assigned to the logged-in teacher.
+    Batch-wide subject and teacher counts are shown separately.
+    The teacher icon on each subject card opens the active teacher
+    details for that subject.
+    """
 
-        messages.error(
-            request,
-            "Access denied.",
-        )
-
+    if not hasattr(request.user, "teacher_profile"):
+        messages.error(request, "Access denied.")
         return redirect("teacher_login")
 
     teacher = request.user.teacher_profile
 
+    if teacher.is_blocked:
+        logout(request)
+        messages.error(
+            request,
+            "Your teacher account has been blocked.",
+        )
+        return redirect("teacher_login")
+
+    if teacher.is_first_login:
+        return redirect("teacher_change_password")
+
+    # The teacher must still have an active assignment to this batch.
     batch = get_object_or_404(
         Batch,
         id=batch_id,
+        assigned_teachers__teacher=teacher,
+        assigned_teachers__is_active=True,
     )
+
+    # Search is restricted to subjects actively assigned to this teacher.
+    search = request.GET.get("search", "").strip()
 
     assigned_subjects = (
         TeacherSubject.objects
@@ -517,57 +604,189 @@ def teacher_subjects_view(
             teacher=teacher,
             batch=batch,
             is_active=True,
+            subject__batch=batch,
         )
         .select_related(
             "subject",
             "batch",
         )
-        .order_by(
-            "subject__subject_name"
-        )
+        .order_by("subject__subject_name")
     )
 
-    # ========================================================
-    # TEACHER COUNT FOR EACH SUBJECT
-    # ========================================================
-
-    for assignment in assigned_subjects:
-
-        assignment.teacher_count = (
-            TeacherSubject.objects
-            .filter(
-                subject=assignment.subject,
-                is_active=True,
-            )
-            .count()
+    if search:
+        assigned_subjects = assigned_subjects.filter(
+            Q(subject__subject_name__icontains=search)
+            | Q(subject__subject_description__icontains=search)
         )
 
-    # ========================================================
-    # TOTAL TEACHERS IN BATCH
-    # ========================================================
+    # Keep the unfiltered count separate from the current search results.
+    subject_count = (
+        TeacherSubject.objects
+        .filter(
+            teacher=teacher,
+            batch=batch,
+            is_active=True,
+            subject__batch=batch,
+        )
+        .values("subject_id")
+        .distinct()
+        .count()
+    )
 
-    batch_teacher_count = (
+    total_batch_subject_count = Subject.objects.filter(
+        batch=batch,
+    ).count()
+
+    # Active teachers must have both an active batch assignment and
+    # an active teacher account. This avoids showing stale assignments.
+    active_batch_teacher_ids = (
         TeacherBatch.objects
         .filter(
             batch=batch,
             is_active=True,
+            teacher__is_blocked=False,
+            teacher__user__is_active=True,
         )
-        .count()
+        .values_list("teacher_id", flat=True)
+        .distinct()
     )
+
+    batch_teacher_count = len(set(active_batch_teacher_ids))
+
+    # Load active teacher assignments for the subjects displayed.
+    active_subject_assignments = (
+        TeacherSubject.objects
+        .filter(
+            batch=batch,
+            is_active=True,
+            teacher_id__in=active_batch_teacher_ids,
+            teacher__is_blocked=False,
+            teacher__user__is_active=True,
+        )
+        .select_related("teacher", "subject")
+        .order_by("teacher__full_name", "teacher_id")
+    )
+
+    # Build one teacher list per subject. The logged-in teacher is
+    # included when they have an active assignment to that subject.
+    teachers_by_subject = {}
+
+    for subject_assignment in active_subject_assignments:
+        teacher_list = teachers_by_subject.setdefault(
+            subject_assignment.subject_id,
+            {},
+        )
+        teacher_list[subject_assignment.teacher_id] = (
+            subject_assignment.teacher
+        )
+
+    for assignment in assigned_subjects:
+        subject_teachers = list(
+            teachers_by_subject.get(
+                assignment.subject_id,
+                {},
+            ).values()
+        )
+
+        assignment.card_teachers = subject_teachers
+        assignment.card_teacher_count = len(subject_teachers)
+
+    # Batch offer status is taken from the Batch model's existing
+    # is_offer_active property; no date calculation is duplicated here.
+
+    # Batch-linked coupons: include linked rows so the popup can show
+    # active, upcoming, expired, disabled and usage-limit states.
+    now = timezone.now()
+
+    coupon_rules = (
+        CouponBatchRule.objects
+        .filter(batch=batch)
+        .select_related("coupon")
+        .order_by("-created_at")
+    )
+
+    batch_coupon_items = []
+    coupon_active_count = 0
+    coupon_upcoming_count = 0
+    coupon_expired_count = 0
+
+    for rule in coupon_rules:
+        coupon = rule.coupon
+
+        usage_limit_reached = (
+            coupon.usage_limit is not None
+            and coupon.used_count >= coupon.usage_limit
+        )
+
+        if (
+            not rule.is_enabled
+            or coupon.status != "active"
+            or not coupon.is_active
+        ):
+            status_key = "inactive"
+            status_label = "Inactive"
+
+        elif coupon.valid_until and now > coupon.valid_until:
+            status_key = "expired"
+            status_label = "Expired"
+            coupon_expired_count += 1
+
+        elif coupon.valid_from and now < coupon.valid_from:
+            status_key = "upcoming"
+            status_label = "Upcoming"
+            coupon_upcoming_count += 1
+
+        elif usage_limit_reached:
+            status_key = "inactive"
+            status_label = "Limit reached"
+
+        else:
+            status_key = "active"
+            status_label = "Active"
+            coupon_active_count += 1
+
+        if coupon.discount_type == "percentage":
+            discount_label = f"{coupon.discount_value:g}% OFF"
+        else:
+            discount_label = f"₹{coupon.discount_value:,.0f} OFF"
+
+        batch_coupon_items.append({
+            "coupon": coupon,
+            "status_key": status_key,
+            "status_label": status_label,
+            "discount_label": discount_label,
+        })
 
     context = {
         "teacher": teacher,
         "batch": batch,
         "assigned_subjects": assigned_subjects,
-        "subject_count": assigned_subjects.count(),
+        "search": search,
+
+        # Teacher-specific and batch-wide statistics.
+        "subject_count": subject_count,
+        "total_batch_subject_count": total_batch_subject_count,
         "batch_teacher_count": batch_teacher_count,
+
+        # Read-only batch coupon details.
+        "batch_coupon_items": batch_coupon_items,
+        "coupon_total_count": len(batch_coupon_items),
+        "coupon_active_count": coupon_active_count,
+        "coupon_upcoming_count": coupon_upcoming_count,
+        "coupon_expired_count": coupon_expired_count,
     }
 
-    return render(
+    response = render(
         request,
         "teachers/batches/subjects.html",
         context,
     )
+
+    response["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    response["Pragma"] = "no-cache"
+    response["Expires"] = "0"
+
+    return response
 
 @login_required(login_url="teacher_login")
 @cache_control(

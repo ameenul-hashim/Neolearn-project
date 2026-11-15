@@ -1,5 +1,6 @@
 from PIL import Image, UnidentifiedImageError
 from django.core.files.uploadedfile import UploadedFile
+from admins.models import CouponBatchRule
 from admins.models import AdminProfile
 from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate,login,logout
@@ -958,72 +959,32 @@ def edit_batch_view(request, batch_id):
     )
 
 
-@cache_control(no_cache=True, must_revalidate=True, no_store=True)
-@admin_required
 def batch_subjects(request, batch_id):
-    """
-    Display subjects belonging to a specific batch.
+    """Display a batch's subjects, assigned teachers and linked coupons."""
 
-    Features:
-    - Fetch the selected batch.
-    - Search subjects within that batch.
-    - Calculate total and published subject counts.
-    - Display only valid, active assigned teachers.
-    - Prevent duplicate teachers from appearing.
-    - Calculate the unique active teacher count for the batch.
-    """
+    batch = get_object_or_404(Batch, id=batch_id)
+    now = timezone.now()
 
-    # --------------------------------------------------
-    # GET BATCH
-    # --------------------------------------------------
-
-    batch = get_object_or_404(
-        Batch,
-        id=batch_id
-    )
-
-    # --------------------------------------------------
-    # SEARCH
-    # --------------------------------------------------
-
-    search = request.GET.get("search", "").strip()
-
-    # --------------------------------------------------
-    # SUBJECT QUERYSET
-    # --------------------------------------------------
-
+    # Keep the existing subject search and batch-wide statistics.
     subject_queryset = Subject.objects.filter(
         batch=batch
-    ).order_by(
-        "subject_name"
-    )
-
-    # Batch-wide subject statistics.
-    # These counts should not change when searching.
+    ).order_by("subject_name")
 
     total_subject_count = subject_queryset.count()
-
     published_subject_count = subject_queryset.filter(
         subject_status="published"
     ).count()
 
-    # Apply search only to the displayed subjects.
-
+    search = request.GET.get("search", "").strip()
     if search:
         subject_queryset = subject_queryset.filter(
             subject_name__icontains=search
         )
 
     subjects = list(subject_queryset)
+    subject_ids = [subject.id for subject in subjects]
 
-    subject_ids = [
-        subject.id for subject in subjects
-    ]
-
-    # --------------------------------------------------
-    # ACTIVE SUBJECT TEACHER ASSIGNMENTS
-    # --------------------------------------------------
-
+    # Keep the existing active-teacher filtering and de-duplication.
     active_assignments = (
         TeacherSubject.objects.filter(
             subject_id__in=subject_ids,
@@ -1032,18 +993,9 @@ def batch_subjects(request, batch_id):
             teacher__is_blocked=False,
             teacher__user__is_active=True,
         )
-        .select_related(
-            "teacher",
-            "subject",
-        )
-        .order_by(
-            "teacher__full_name"
-        )
+        .select_related("teacher", "subject")
+        .order_by("teacher__full_name")
     )
-
-    # --------------------------------------------------
-    # ACTIVE BATCH TEACHER ASSIGNMENTS
-    # --------------------------------------------------
 
     active_teacher_ids = {
         assignment.teacher_id
@@ -1057,58 +1009,24 @@ def batch_subjects(request, batch_id):
             is_active=True,
             teacher__is_blocked=False,
             teacher__user__is_active=True,
-        ).values_list(
-            "teacher_id",
-            flat=True,
-        )
+        ).values_list("teacher_id", flat=True)
     )
 
-    # --------------------------------------------------
-    # GROUP VALID TEACHERS BY SUBJECT
-    # --------------------------------------------------
-
     teachers_by_subject = {}
-
     for assignment in active_assignments:
-
-        # Teacher must have active access to this batch.
-
         if assignment.teacher_id not in active_batch_teacher_ids:
             continue
-
-        # Use teacher ID as dictionary key to prevent duplicates.
-
         subject_teachers = teachers_by_subject.setdefault(
-            assignment.subject_id,
-            {}
+            assignment.subject_id, {}
         )
-
-        subject_teachers[assignment.teacher_id] = (
-            assignment.teacher
-        )
-
-    # --------------------------------------------------
-    # ATTACH TEACHER DETAILS TO SUBJECTS
-    # --------------------------------------------------
+        subject_teachers[assignment.teacher_id] = assignment.teacher
 
     for subject in subjects:
-
         assigned_teachers = list(
-            teachers_by_subject.get(
-                subject.id,
-                {}
-            ).values()
+            teachers_by_subject.get(subject.id, {}).values()
         )
-
         subject.card_teachers = assigned_teachers
-
-        subject.card_teacher_count = len(
-            assigned_teachers
-        )
-
-    # --------------------------------------------------
-    # TOTAL ACTIVE TEACHERS IN THIS BATCH
-    # --------------------------------------------------
+        subject.card_teacher_count = len(assigned_teachers)
 
     batch_teacher_count = (
         TeacherBatch.objects.filter(
@@ -1117,39 +1035,83 @@ def batch_subjects(request, batch_id):
             teacher__is_blocked=False,
             teacher__user__is_active=True,
         )
-        .values(
-            "teacher_id"
-        )
+        .values("teacher_id")
         .distinct()
         .count()
     )
 
-    # --------------------------------------------------
-    # CONTEXT
-    # --------------------------------------------------
+    # Coupons are connected to batches through CouponBatchRule.
+    # Include enabled and disabled rules in the total so the popup can
+    # explain each linked coupon's actual state.
+    coupon_rules = (
+        CouponBatchRule.objects.filter(batch=batch)
+        .select_related("coupon")
+        .order_by("-created_at")
+    )
+
+    batch_coupon_items = []
+    coupon_active_count = 0
+    coupon_upcoming_count = 0
+    coupon_expired_count = 0
+
+    for rule in coupon_rules:
+        coupon = rule.coupon
+        usage_limit_reached = (
+            coupon.usage_limit is not None
+            and coupon.used_count >= coupon.usage_limit
+        )
+
+        if not rule.is_enabled or coupon.status != "active" or not coupon.is_active:
+            status_key = "inactive"
+            status_label = "Inactive"
+        elif coupon.valid_until and now > coupon.valid_until:
+            status_key = "expired"
+            status_label = "Expired"
+            coupon_expired_count += 1
+        elif coupon.valid_from and now < coupon.valid_from:
+            status_key = "upcoming"
+            status_label = "Upcoming"
+            coupon_upcoming_count += 1
+        elif usage_limit_reached:
+            status_key = "inactive"
+            status_label = "Limit reached"
+        else:
+            status_key = "active"
+            status_label = "Active"
+            coupon_active_count += 1
+
+        if coupon.discount_type == "percentage":
+            discount_label = f"{coupon.discount_value:g}% OFF"
+        else:
+            discount_label = f"₹{coupon.discount_value:,.0f} OFF"
+
+        batch_coupon_items.append({
+            "coupon": coupon,
+            "status_key": status_key,
+            "status_label": status_label,
+            "discount_label": discount_label,
+        })
 
     context = {
         "batch": batch,
         "subjects": subjects,
         "search": search,
-
-        # Subject statistics
         "total_subject_count": total_subject_count,
         "published_subject_count": published_subject_count,
-
-        # Teacher statistics
         "batch_teacher_count": batch_teacher_count,
+        "batch_coupon_items": batch_coupon_items,
+        "coupon_total_count": len(batch_coupon_items),
+        "coupon_active_count": coupon_active_count,
+        "coupon_upcoming_count": coupon_upcoming_count,
+        "coupon_expired_count": coupon_expired_count,
     }
-
-    # --------------------------------------------------
-    # RENDER
-    # --------------------------------------------------
 
     return render(
         request,
         "admins/subjects/batch_subjects.html",
-        context
+        context,
     )
+
 
 
 @cache_control(no_cache=True, must_revalidate=True, no_store=True)

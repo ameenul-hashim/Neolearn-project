@@ -1,647 +1,783 @@
 {% extends "teachers/dashboard/teacher_base.html" %}
 
-{% load static %}
+{% block title %}My Batches | NeoLearn{% endblock %}
 
-{% block title %}
-My Batches | NeoLearn
+{% block extra_head %}
+{{ block.super }}
+<style>
+    #teacherBatchesPage .teacher-batch-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        align-items: stretch;
+        gap: 1rem;
+    }
+    @media (min-width: 680px) {
+        #teacherBatchesPage .teacher-batch-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+    @media (min-width: 1120px) {
+        #teacherBatchesPage .teacher-batch-grid {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+    }
+    @media (min-width: 1500px) {
+        #teacherBatchesPage .teacher-batch-grid {
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+        }
+    }
+    #teacherBatchesPage .teacher-batch-card {
+        display: flex;
+        min-width: 0;
+        min-height: 350px;
+        height: 100%;
+        flex-direction: column;
+    }
+    #teacherBatchesPage .batch-cover {
+        height: 148px;
+        min-height: 148px;
+        flex: 0 0 148px;
+    }
+    #teacherBatchesPage .batch-card-body {
+        display: flex;
+        min-width: 0;
+        flex: 1 1 auto;
+        flex-direction: column;
+    }
+    #teacherBatchesPage .batch-card-footer {
+        margin-top: auto;
+    }
+    #teacherBatchesPage select {
+        color-scheme: dark;
+    }
+
+
+/* =========================================================
+   NEOLEARN TEACHER — POLISHED WHITE / VIOLET BATCHES THEME
+   Visual-only styling. Original Django data, routes, filters,
+   card navigation and teacher modal JavaScript are preserved.
+   ========================================================= */
+
+#teacherBatchesPage{
+    --tb-ink:#1e1b35;
+    --tb-muted:#716b86;
+    --tb-violet:#7c3aed;
+    --tb-violet-dark:#5b21b6;
+    --tb-violet-mid:#9b7af5;
+    --tb-violet-soft:#f1edff;
+    --tb-violet-line:#d8ccfa;
+    color:#f8f7ff!important;
+}
+
+/* Page heading: clear white text against the dark dashboard */
+#teacherBatchesPage header h1{
+    color:#ffffff!important;
+    letter-spacing:-.035em;
+    text-shadow:0 2px 14px rgba(124,58,237,.18);
+}
+#teacherBatchesPage header p{color:#b8b2cb!important}
+#teacherBatchesPage header .text-cyan-300,
+#teacherBatchesPage header .text-cyan-200{
+    color:#c4b5fd!important;
+}
+#teacherBatchesPage header .border-b{
+    border-color:rgba(196,181,253,.24)!important;
+}
+#teacherBatchesPage header > div:first-child > span{
+    color:#8b5cf6!important;
+    background:linear-gradient(145deg,#f1edff,#ddd2ff)!important;
+    border:1px solid rgba(196,181,253,.65)!important;
+    box-shadow:0 6px 18px rgba(91,33,182,.18);
+}
+
+/* Filter controls: soft lavender-white, not glaring pure white */
+#teacherBatchesPage form input,
+#teacherBatchesPage form select{
+    color:#28213e!important;
+    background:linear-gradient(180deg,#fff 0%,#f8f6ff 100%)!important;
+    border:1px solid #d8ccfa!important;
+    border-radius:12px!important;
+    box-shadow:0 3px 10px rgba(8,5,24,.10),inset 0 1px #fff!important;
+    transition:border-color .22s ease,box-shadow .22s ease,transform .22s ease!important;
+    color-scheme:light!important;
+}
+#teacherBatchesPage form input::placeholder{color:#958ba9!important}
+#teacherBatchesPage form input:focus,
+#teacherBatchesPage form select:focus{
+    border-color:#8b5cf6!important;
+    box-shadow:0 0 0 3px rgba(139,92,246,.15),0 5px 14px rgba(76,29,149,.10)!important;
+    outline:none!important;
+}
+#teacherBatchesPage form button[type="submit"]{
+    color:#fff!important;
+    background:linear-gradient(135deg,#8b5cf6 0%,#6d28d9 58%,#5b21b6 100%)!important;
+    border:1px solid rgba(221,214,254,.45)!important;
+    box-shadow:0 7px 17px rgba(91,33,182,.25)!important;
+    transition:transform .22s ease,box-shadow .22s ease,filter .22s ease!important;
+}
+#teacherBatchesPage form button[type="submit"]:hover{
+    transform:translateY(-2px);
+    filter:brightness(1.07);
+    box-shadow:0 11px 23px rgba(91,33,182,.34)!important;
+}
+#teacherBatchesPage form a{
+    border-color:#c4b5fd!important;
+    color:#5b21b6!important;
+    background:#f5f1ff!important;
+    transition:all .2s ease!important;
+}
+#teacherBatchesPage form a:hover{
+    background:#ede7ff!important;
+    border-color:#8b5cf6!important;
+    transform:translateY(-1px);
+}
+
+/* Batch count chip */
+#teacherBatchesPage header > div:last-child{
+    color:#5b21b6!important;
+    background:linear-gradient(135deg,#f7f3ff,#e9e1ff)!important;
+    border:1px solid #c4b5fd!important;
+    box-shadow:0 5px 15px rgba(76,29,149,.10);
+}
+#teacherBatchesPage header > div:last-child strong,
+#teacherBatchesPage header > div:last-child i{color:#6d28d9!important}
+#teacherBatchesPage header > div:last-child span{color:#6b6280!important}
+
+/* Section heading and result count */
+#teacherBatchesPage h2.text-base{color:#fff!important}
+#teacherBatchesPage .rounded-full.border.border-slate-700{
+    border-color:rgba(196,181,253,.35)!important;
+    background:rgba(45,31,78,.72)!important;
+    color:#e7ddff!important;
+}
+
+/* Responsive card grid */
+#teacherBatchesPage .teacher-batch-grid{
+    display:grid!important;
+    grid-template-columns:repeat(4,minmax(0,1fr))!important;
+    align-items:stretch;
+    gap:16px!important;
+}
+#teacherBatchesPage .teacher-batch-card{
+    display:flex!important;
+    min-width:0;
+    min-height:326px!important;
+    height:100%;
+    flex-direction:column;
+    overflow:hidden;
+    border:1px solid #cfc2f7!important;
+    border-radius:18px!important;
+    background:linear-gradient(180deg,#fff 0%,#fcfbff 100%)!important;
+    box-shadow:0 9px 24px rgba(4,3,18,.19),inset 0 1px #fff!important;
+    transition:transform .28s cubic-bezier(.2,.75,.25,1),border-color .25s ease,box-shadow .28s ease!important;
+    animation:teacherBatchEnter .48s cubic-bezier(.2,.75,.25,1) both;
+}
+#teacherBatchesPage .teacher-batch-card:nth-child(4n+1){animation-delay:.03s}
+#teacherBatchesPage .teacher-batch-card:nth-child(4n+2){animation-delay:.08s}
+#teacherBatchesPage .teacher-batch-card:nth-child(4n+3){animation-delay:.13s}
+#teacherBatchesPage .teacher-batch-card:nth-child(4n){animation-delay:.18s}
+@keyframes teacherBatchEnter{
+    from{opacity:0;transform:translateY(12px) scale(.99)}
+    to{opacity:1;transform:translateY(0) scale(1)}
+}
+#teacherBatchesPage .teacher-batch-card:hover,
+#teacherBatchesPage .teacher-batch-card:focus-visible{
+    transform:translateY(-5px)!important;
+    border-color:#8b5cf6!important;
+    box-shadow:0 17px 32px rgba(4,3,18,.25),0 0 0 2px rgba(167,139,250,.16),0 0 22px rgba(124,58,237,.13)!important;
+}
+
+/* Batch image and status */
+#teacherBatchesPage .batch-cover{
+    height:150px!important;
+    min-height:150px!important;
+    flex:0 0 150px!important;
+    background:linear-gradient(135deg,#5b21b6,#a78bfa)!important;
+    border-bottom:3px solid #a78bfa;
+}
+#teacherBatchesPage .batch-cover img{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    transition:transform .5s cubic-bezier(.2,.75,.25,1),filter .4s ease!important;
+}
+#teacherBatchesPage .teacher-batch-card:hover .batch-cover img{
+    transform:scale(1.045);
+    filter:saturate(1.08);
+}
+#teacherBatchesPage .batch-cover > div.absolute.inset-0{
+    background:linear-gradient(180deg,rgba(20,10,42,.10),transparent 48%,rgba(20,10,42,.24))!important;
+}
+#teacherBatchesPage .batch-cover > span{
+    border:1px solid rgba(255,255,255,.65)!important;
+    background:rgba(31,25,49,.88)!important;
+    color:#fff!important;
+    box-shadow:0 4px 12px rgba(0,0,0,.20);
+    backdrop-filter:blur(8px);
+}
+
+/* Card content: dark text, clear hierarchy and controlled spacing */
+#teacherBatchesPage .batch-card-body{
+    display:flex!important;
+    min-width:0;
+    flex:1 1 auto;
+    flex-direction:column;
+    padding:14px 15px 13px!important;
+    background:linear-gradient(180deg,#fff 0%,#faf8ff 100%)!important;
+}
+#teacherBatchesPage .batch-card-body h3{
+    min-height:44px!important;
+    margin:0!important;
+    color:#211b36!important;
+    font-size:14px!important;
+    font-weight:850!important;
+    line-height:1.55!important;
+    letter-spacing:-.015em;
+    transition:color .2s ease!important;
+}
+#teacherBatchesPage .teacher-batch-card:hover .batch-card-body h3{
+    color:#6d28d9!important;
+}
+#teacherBatchesPage .batch-card-body [data-teacher-open]{
+    min-height:42px;
+    margin-top:10px!important;
+    padding:4px 7px!important;
+    border:1px solid transparent!important;
+    border-radius:11px!important;
+    transition:background .2s ease,border-color .2s ease!important;
+}
+#teacherBatchesPage .batch-card-body [data-teacher-open]:not(:disabled):hover{
+    background:#f3efff!important;
+    border-color:#e3d9ff!important;
+}
+#teacherBatchesPage .batch-card-body [data-teacher-open] > span span{
+    border-color:#fff!important;
+    background:linear-gradient(145deg,#eee8ff,#dcd0ff)!important;
+    color:#5b21b6!important;
+    box-shadow:0 0 0 1px #c4b5fd,0 3px 8px rgba(45,25,80,.12);
+    transition:transform .2s ease!important;
+}
+#teacherBatchesPage .batch-card-body [data-teacher-open]:hover > span span{
+    transform:translateY(-2px);
+}
+#teacherBatchesPage .batch-card-body [data-teacher-open] > i{
+    color:#7c3aed!important;
+}
+#teacherBatchesPage .batch-card-body [data-teacher-open]:disabled{
+    cursor:default;
+    opacity:.8;
+}
+
+/* Footer: violet student count, muted date, clear subject action */
+#teacherBatchesPage .batch-card-footer{
+    margin-top:auto!important;
+}
+#teacherBatchesPage .batch-card-footer > div:first-child{
+    border-color:#e7e0f4!important;
+    margin-top:10px!important;
+    margin-bottom:10px!important;
+}
+#teacherBatchesPage .batch-card-footer span.text-cyan-300{
+    color:#6d28d9!important;
+    font-weight:800!important;
+}
+#teacherBatchesPage .batch-card-footer span.text-slate-400{
+    color:#77708a!important;
+}
+#teacherBatchesPage .batch-card-footer i.text-cyan-300{
+    color:#8b5cf6!important;
+}
+#teacherBatchesPage .batch-card-footer > div:last-child span{
+    color:#71658e!important;
+    font-weight:750!important;
+    transition:color .2s ease,transform .2s ease!important;
+}
+#teacherBatchesPage .teacher-batch-card:hover .batch-card-footer > div:last-child span{
+    color:#6d28d9!important;
+    transform:translateX(2px);
+}
+
+/* Empty and no-results states */
+#teacherBatchesPage .border-dashed.border-slate-700{
+    border-color:rgba(196,181,253,.48)!important;
+    background:linear-gradient(135deg,rgba(49,31,83,.70),rgba(19,16,39,.88))!important;
+}
+#teacherBatchesPage .border-dashed.border-slate-700 h2,
+#teacherBatchesPage .border-dashed.border-slate-700 h3{color:#fff!important}
+#teacherBatchesPage .border-dashed.border-slate-700 p{color:#c4bdd6!important}
+#teacherBatchesPage .border-dashed.border-slate-700 .text-cyan-300{color:#c4b5fd!important}
+
+/* Assigned teachers modal: white/lavender panel with dark readable text */
+#assignedTeachersModal{
+    background:rgba(12,8,28,.78)!important;
+    backdrop-filter:blur(8px)!important;
+    transition:opacity .2s ease!important;
+}
+#assignedTeachersModal > section{
+    color:#211b36!important;
+    background:linear-gradient(145deg,#fff 0%,#fcfaff 70%,#f1ebff 100%)!important;
+    border:1px solid #bda9f4!important;
+    border-radius:20px!important;
+    box-shadow:0 25px 75px rgba(0,0,0,.45),0 0 28px rgba(139,92,246,.16)!important;
+    animation:teacherModalEnter .25s cubic-bezier(.2,.75,.25,1) both;
+}
+@keyframes teacherModalEnter{
+    from{opacity:0;transform:translateY(10px) scale(.985)}
+    to{opacity:1;transform:translateY(0) scale(1)}
+}
+#assignedTeachersModal > section > header{
+    background:linear-gradient(110deg,#f0eaff,#fff)!important;
+    border-color:#e5dcf7!important;
+}
+#assignedTeachersModal > section > header h2{color:#211b36!important}
+#assignedTeachersModal > section > header p{color:#716783!important}
+#assignedTeachersModal > section > header .text-cyan-300{color:#6d28d9!important}
+#assignedTeachersModal [data-modal-close]{
+    color:#5b21b6!important;
+    background:#eee8ff!important;
+    border:1px solid #d8ccfa!important;
+}
+#assignedTeachersModal [data-modal-close]:hover{
+    color:#4c1d95!important;
+    background:#e4d9ff!important;
+}
+#assignedTeachersModal .bg-slate-900\/70,
+#assignedTeachersModal .bg-slate-950,
+#assignedTeachersModal .bg-gradient-to-br.from-slate-900{
+    background:#f7f4ff!important;
+}
+#assignedTeachersModal .border-slate-800,
+#assignedTeachersModal .border-slate-700{
+    border-color:#e2daf2!important;
+}
+#assignedTeachersModal input{
+    color:#211b36!important;
+    background:#fff!important;
+    border-color:#d8ccfa!important;
+}
+#assignedTeachersModal input::placeholder{color:#958ba9!important}
+#assignedTeachersModal input:focus{
+    border-color:#8b5cf6!important;
+    box-shadow:0 0 0 3px rgba(139,92,246,.13)!important;
+}
+#assignedTeachersModal #mbTeacherList button{
+    color:#211b36!important;
+    transition:background .18s ease,border-color .18s ease!important;
+}
+#assignedTeachersModal #mbTeacherList button:hover,
+#assignedTeachersModal #mbTeacherList button.border-cyan-400\/50{
+    background:#eee8ff!important;
+    border-color:#c4b5fd!important;
+}
+#assignedTeachersModal #mbTeacherList button strong{color:#211b36!important}
+#assignedTeachersModal #mbTeacherList button small{color:#716783!important}
+#assignedTeachersModal #mbTeacherDetail{
+    background:linear-gradient(145deg,#fff,#f6f2ff)!important;
+    border-color:#e2daf2!important;
+}
+#assignedTeachersModal #mbTeacherDetail :is(h3,h4,strong){color:#211b36!important}
+#assignedTeachersModal #mbTeacherDetail :is(p,span){color:#716783}
+#assignedTeachersModal #mbTeacherDetail .text-white{color:#211b36!important}
+#assignedTeachersModal #mbTeacherDetail .text-slate-200,
+#assignedTeachersModal #mbTeacherDetail .text-slate-300{color:#5f566f!important}
+#assignedTeachersModal #mbTeacherDetail .text-slate-400,
+#assignedTeachersModal #mbTeacherDetail .text-slate-500{color:#766d8a!important}
+#assignedTeachersModal #mbTeacherDetail .border-slate-800{border-color:#e4dcf4!important}
+#assignedTeachersModal #mbTeacherDetail .bg-cyan-950\/30{
+    background:linear-gradient(145deg,#f0eaff,#fff)!important;
+    border-color:#ddd2f6!important;
+}
+#assignedTeachersModal #mbTeacherDetail .text-cyan-300{color:#6d28d9!important}
+#assignedTeachersModal #mbTeacherDetail .border-emerald-400\/30{
+    background:#ecfdf5!important;
+    border-color:#a7f3d0!important;
+    color:#047857!important;
+}
+#assignedTeachersModal #mbTeacherDetail a:hover{color:#6d28d9!important}
+
+/* Consistent keyboard focus */
+#teacherBatchesPage :is(a,button,[role="link"],input,select):focus-visible,
+#assignedTeachersModal :is(a,button,input):focus-visible{
+    outline:3px solid #a78bfa!important;
+    outline-offset:3px!important;
+}
+
+/* Responsive grid */
+@media(max-width:1450px){
+    #teacherBatchesPage .teacher-batch-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+}
+@media(max-width:1120px){
+    #teacherBatchesPage .teacher-batch-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+}
+@media(max-width:680px){
+    #teacherBatchesPage .teacher-batch-grid{grid-template-columns:minmax(0,1fr)!important}
+    #teacherBatchesPage .teacher-batch-card{min-height:0!important}
+    #teacherBatchesPage .batch-cover{height:180px!important;min-height:180px!important;flex-basis:180px!important}
+    #teacherBatchesPage header{align-items:stretch}
+}
+
+/* Motion accessibility */
+@media(prefers-reduced-motion:reduce){
+    #teacherBatchesPage *,
+    #teacherBatchesPage *::before,
+    #teacherBatchesPage *::after,
+    #assignedTeachersModal *{
+        animation-duration:.01ms!important;
+        animation-iteration-count:1!important;
+        transition-duration:.01ms!important;
+        scroll-behavior:auto!important;
+    }
+}
+
+</style>
 {% endblock %}
 
 {% block teacher_content %}
+<section id="teacherBatchesPage" class="w-full space-y-5 text-slate-100" aria-labelledby="myBatchesTitle">
 
-<!-- ===================================================== -->
-<!-- PAGE HEADER WITH ENHANCED GRADIENT -->
-<!-- ===================================================== -->
-
-<div class="relative mb-10 overflow-hidden rounded-3xl bg-gradient-to-r from-cyan-600/20 via-blue-600/10 to-purple-600/20 border border-cyan-500/20 p-8">
-
-    <div class="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-cyan-500/10 blur-3xl"></div>
-    <div class="absolute -left-20 -bottom-20 h-64 w-64 rounded-full bg-blue-500/10 blur-3xl"></div>
-    <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-96 w-96 rounded-full bg-cyan-500/5 blur-3xl"></div>
-
-    <div class="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-
-        <div>
-
-            <div class="flex items-center gap-3">
-
-                <div class="relative flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-600 shadow-lg shadow-cyan-500/30">
-
-                    <i class="ri-graduation-cap-fill text-2xl text-white"></i>
-
-                    <div class="absolute -inset-1 rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-600 opacity-20 blur-md -z-10"></div>
-
-                </div>
-
-                <div>
-
-                    <h1 class="text-3xl font-bold text-white">
-
-                        My Batches
-
-                    </h1>
-
-                    <p class="mt-1 text-slate-300 flex items-center gap-2">
-
-                        <span class="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-
-                        View and manage all batches assigned to you
-
-                    </p>
-
-                </div>
-
+    <!-- Heading and filters share one compact row on desktop. -->
+    <header class="flex flex-col gap-4 border-b border-slate-800/90 pb-5 2xl:flex-row 2xl:items-center 2xl:justify-between">
+        <div class="flex min-w-0 items-center gap-3">
+            <span class="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-cyan-400/25 bg-cyan-400/10 text-2xl text-cyan-300">
+                <i class="ri-book-open-line"></i>
+            </span>
+            <div class="min-w-0">
+                <p class="text-[10px] font-bold uppercase tracking-[0.18em] text-cyan-300">TEACHING WORKSPACE</p>
+                <h1 id="myBatchesTitle" class="mt-0.5 text-2xl font-extrabold tracking-tight text-white sm:text-3xl">My Batches</h1>
+                <p class="mt-1 text-xs text-slate-400 sm:text-sm">Continue managing the batches assigned to you.</p>
             </div>
-
         </div>
 
-        <div
-            class="
-                inline-flex
-                items-center
-                gap-4
+        {% if batch_count > 0 %}
+        <form method="get" action="{% url 'teacher_batches' %}" class="grid w-full grid-cols-1 gap-2 sm:grid-cols-[minmax(180px,1fr)_145px_155px_auto] 2xl:w-auto 2xl:min-w-0 2xl:flex-1 2xl:justify-end 2xl:pl-5">
+            <label class="relative block min-w-0 sm:col-span-1">
+                <span class="sr-only">Search your batches</span>
+                <i class="ri-search-line pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-base text-slate-400"></i>
+                <input
+                    name="q"
+                    type="search"
+                    value="{{ search_query }}"
+                    placeholder="Search batches..."
+                    autocomplete="off"
+                    class="h-11 w-full rounded-xl border border-slate-700 bg-slate-900/85 pl-10 pr-3 text-xs text-white outline-none transition placeholder:text-slate-500 focus:border-cyan-400/70 focus:ring-2 focus:ring-cyan-400/10"
+                >
+            </label>
 
-                rounded-2xl
+            <label class="block min-w-0">
+                <span class="sr-only">Filter by batch status</span>
+                <select name="status" class="h-11 w-full rounded-xl border border-slate-700 bg-slate-900 px-3 text-xs text-slate-200 outline-none transition focus:border-cyan-400/70">
+                    <option value="all" {% if selected_status == "all" %}selected{% endif %}>All statuses</option>
+                    <option value="published" {% if selected_status == "published" %}selected{% endif %}>Published</option>
+                    <option value="draft" {% if selected_status == "draft" %}selected{% endif %}>Draft</option>
+                    <option value="archived" {% if selected_status == "archived" %}selected{% endif %}>Archived</option>
+                </select>
+            </label>
 
-                border
-                border-cyan-500/20
+            <label class="block min-w-0">
+                <span class="sr-only">Sort batches</span>
+                <select name="sort" class="h-11 w-full rounded-xl border border-slate-700 bg-slate-900 px-3 text-xs text-slate-200 outline-none transition focus:border-cyan-400/70">
+                    <option value="name" {% if selected_sort == "name" %}selected{% endif %}>Name: A–Z</option>
+                    <option value="name_desc" {% if selected_sort == "name_desc" %}selected{% endif %}>Name: Z–A</option>
+                    <option value="students" {% if selected_sort == "students" %}selected{% endif %}>Most students</option>
+                    <option value="teachers" {% if selected_sort == "teachers" %}selected{% endif %}>Most teachers</option>
+                    <option value="recent" {% if selected_sort == "recent" %}selected{% endif %}>Recently published</option>
+                </select>
+            </label>
 
-                bg-gradient-to-br
-                from-cyan-500/10
-                to-blue-500/5
-
-                backdrop-blur-sm
-
-                px-6
-                py-4
-
-                hover:bg-cyan-500/20
-                hover:border-cyan-500/40
-                transition-all
-                duration-300
-
-                group
-            ">
-
-            <div
-                class="
-                    flex
-                    h-14
-                    w-14
-                    items-center
-                    justify-center
-
-                    rounded-2xl
-
-                    bg-gradient-to-br
-                    from-cyan-500
-                    to-blue-600
-
-                    shadow-lg
-                    shadow-cyan-500/20
-
-                    group-hover:scale-110
-                    group-hover:shadow-cyan-500/40
-                    transition-all
-                    duration-300
-                ">
-
-                <i class="ri-stack-fill text-2xl text-white"></i>
-
+            <div class="flex items-center gap-2">
+                <button type="submit" class="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-cyan-500 px-4 text-xs font-extrabold text-slate-950 transition hover:bg-cyan-400 sm:w-auto">
+                    <i class="ri-equalizer-line text-sm"></i> Apply
+                </button>
+                {% if search_query or selected_status != "all" or selected_sort != "name" %}
+                <a href="{% url 'teacher_batches' %}" class="inline-flex h-11 items-center justify-center rounded-xl border border-slate-700 px-3 text-xs font-semibold text-slate-300 transition hover:border-cyan-400/50 hover:text-cyan-200">Reset</a>
+                {% endif %}
             </div>
-
-            <div>
-
-                <p class="text-xs uppercase tracking-[3px] text-cyan-300">
-
-                    Assigned Batches
-
-                </p>
-
-                <h2 class="text-3xl font-bold text-white group-hover:text-cyan-400 transition-colors duration-300">
-
-                    {{ batch_count }}
-
-                </h2>
-
-            </div>
-
-        </div>
-
-    </div>
-
-</div>
-
-<!-- ===================================================== -->
-<!-- BATCH GRID - 3 CARDS PER ROW WITH ENHANCED DESIGN -->
-<!-- ===================================================== -->
-
-<div class="mt-10 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-
-{% for item in batch_cards %}
-
-<div
-class="
-group
-
-overflow-hidden
-
-rounded-2xl
-
-border
-border-slate-800
-
-bg-[#0F172A]
-
-transition-all
-duration-300
-
-hover:-translate-y-2
-hover:border-cyan-500/40
-hover:shadow-2xl
-hover:shadow-cyan-900/30
-
-relative
-">
-
-    <!-- Glow Effect on Hover -->
-    <div class="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none">
-        <div class="absolute -inset-0.5 bg-gradient-to-r from-cyan-500/20 via-blue-500/20 to-purple-500/20 rounded-2xl blur-xl"></div>
-    </div>
-
-    <!-- ====================================== -->
-    <!-- THUMBNAIL WITH OVERLAY -->
-    <!-- ====================================== -->
-
-    <div class="relative h-52 overflow-hidden">
-
-        {% if item.batch.batch_thumbnail %}
-
-            <img
-
-                src="{{ item.batch.batch_thumbnail.url }}"
-
-                alt="{{ item.batch.batch_name }}"
-
-                class="
-                    h-full
-                    w-full
-
-                    object-cover
-
-                    transition-transform
-                    duration-700
-
-                    group-hover:scale-110
-                ">
-
-        {% else %}
-
-            <div
-                class="
-                    flex
-                    h-full
-                    items-center
-                    justify-center
-
-                    bg-gradient-to-br
-                    from-slate-800
-                    to-slate-900
-                ">
-
-                <i class="ri-image-line text-6xl text-slate-600"></i>
-
-            </div>
-
+        </form>
         {% endif %}
 
-        <!-- Status Badge -->
-        <div
-            class="
-                absolute
-                left-4
-                top-4
-
-                rounded-full
-
-                bg-black/70
-
-                px-3.5
-                py-1.5
-
-                backdrop-blur-sm
-
-                border
-                border-white/10
-
-                group-hover:scale-105
-                transition-transform
-                duration-300
-            ">
-
-            <span
-                class="
-                    text-[11px]
-                    font-semibold
-                    tracking-wide
-
-                    {% if item.batch.batch_status == 'published' %}
-                        text-emerald-400
-                    {% else %}
-                        text-amber-400
-                    {% endif %}
-                ">
-
-                <i class="{% if item.batch.batch_status == 'published' %}ri-checkbox-circle-fill{% else %}ri-time-fill{% endif %} mr-1.5"></i>
-
-                {{ item.batch.batch_status|title }}
-
-            </span>
-
+        <div class="flex w-fit shrink-0 items-center gap-2 rounded-full border border-cyan-400/25 bg-cyan-400/5 px-4 py-2 2xl:ml-1">
+            <i class="ri-stack-line text-base text-cyan-300"></i>
+            <strong class="text-sm font-bold text-cyan-200">{{ batch_count }}</strong>
+            <span class="text-xs text-slate-400">{% if batch_count == 1 %}Batch{% else %}Batches{% endif %}</span>
         </div>
+    </header>
 
-        <!-- Price Badge -->
-        <div
-            class="
-                absolute
-                right-4
-                bottom-4
-
-                rounded-full
-
-                bg-gradient-to-r
-                from-cyan-600
-                to-blue-600
-
-                px-4
-                py-1.5
-
-                shadow-lg
-                shadow-cyan-500/30
-
-                group-hover:scale-110
-                group-hover:shadow-cyan-500/50
-                transition-all
-                duration-300
-            ">
-
-            <span
-                class="
-                    text-sm
-                    font-bold
-                    text-white
-                ">
-
-                ₹{{ item.batch.batch_price }}
-
-            </span>
-
-        </div>
-
-        <!-- Gradient Overlay at Bottom -->
-        <div class="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-[#0F172A] to-transparent"></div>
-
+    {% if batch_count == 0 %}
+    <div class="flex min-h-[260px] flex-col items-center justify-center rounded-2xl border border-dashed border-slate-700 bg-slate-900/50 px-6 py-12 text-center">
+        <span class="grid h-16 w-16 place-items-center rounded-2xl border border-cyan-400/20 bg-cyan-400/5 text-3xl text-cyan-300"><i class="ri-inbox-archive-line"></i></span>
+        <h2 class="mt-5 text-xl font-bold text-white">No batches assigned yet</h2>
+        <p class="mt-2 max-w-md text-sm leading-6 text-slate-400">Your assigned batches will appear here when an administrator assigns you to a batch.</p>
+    </div>
+    {% else %}
+    <div class="flex items-center justify-between gap-3">
+        <h2 class="text-base font-bold text-white">Your assigned batches</h2>
+        <span class="shrink-0 rounded-full border border-slate-700 bg-slate-900/70 px-3 py-1.5 text-[11px] text-slate-300">
+            Showing {{ filtered_batch_count }} of {{ batch_count }}
+        </span>
     </div>
 
-    <!-- ====================================== -->
-    <!-- CARD BODY -->
-    <!-- ====================================== -->
-
-    <div class="space-y-4 p-5 relative z-10">
-
-        <div>
-
-            <h2
-                class="
-                    line-clamp-1
-
-                    text-xl
-                    font-bold
-
-                    text-white
-
-                    group-hover:text-cyan-400
-                    transition-colors
-                    duration-300
-
-                    flex
-                    items-center
-                    gap-2
-                ">
-
-                {{ item.batch.batch_name }}
-
-                {% if item.batch.batch_status == 'published' %}
-                    <span class="inline-flex items-center gap-1 text-[10px] font-medium text-emerald-400 bg-emerald-400/10 px-2 py-0.5 rounded-full">
-                        <i class="ri-checkbox-circle-fill text-[8px]"></i>
-                        Active
-                    </span>
+    {% if batch_cards %}
+    <div id="batchCards" class="teacher-batch-grid">
+        {% for item in batch_cards %}
+        <article
+            class="teacher-batch-card batch-card group cursor-pointer overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/80 transition duration-200 hover:-translate-y-0.5 hover:border-cyan-400/50 hover:shadow-lg hover:shadow-cyan-950/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
+            role="link" tabindex="0"
+            data-batch-url="{% url 'teacher_subjects' item.batch.id %}"
+            aria-label="Open {{ item.batch.batch_name }}"
+        >
+            <div class="batch-cover relative overflow-hidden bg-slate-800">
+                {% if item.batch.batch_thumbnail %}
+                    <img src="{{ item.batch.batch_thumbnail.url }}" alt="{{ item.batch.batch_name }}" loading="lazy" class="h-full w-full object-cover transition duration-500 group-hover:scale-105">
+                {% else %}
+                    <div class="grid h-full w-full place-items-center bg-gradient-to-br from-cyan-950 via-slate-800 to-slate-950 text-5xl text-cyan-300"><i class="ri-book-open-line"></i></div>
                 {% endif %}
-
-            </h2>
-
-            <p
-                class="
-                    mt-2
-
-                    line-clamp-2
-
-                    text-sm
-                    leading-6
-
-                    text-slate-400
-                ">
-
-                {{ item.batch.batch_description }}
-
-            </p>
-
-        </div>
-
-        <!-- ====================================== -->
-        <!-- STATISTICS WITH ICONS - ENHANCED -->
-        <!-- ====================================== -->
-
-        <div class="grid grid-cols-2 gap-3">
-
-            <div
-                class="
-                    group/stat
-                    rounded-xl
-                    border
-                    border-slate-700
-                    bg-slate-800/50
-                    p-3
-                    text-center
-
-                    transition-all
-                    duration-300
-
-                    hover:border-cyan-500/30
-                    hover:bg-slate-800/80
-                    hover:shadow-lg
-                    hover:shadow-cyan-500/10
-                ">
-
-                <div class="flex items-center justify-center gap-2">
-
-                    <div class="p-1.5 rounded-lg bg-cyan-500/10 group-hover/stat:bg-cyan-500/20 transition-all duration-300">
-
-                        <i class="ri-book-open-line text-cyan-400 text-sm"></i>
-
-                    </div>
-
-                    <p class="text-[10px] uppercase tracking-wide text-slate-400">
-
-                        Subjects
-
-                    </p>
-
-                </div>
-
-                <h3 class="mt-1.5 text-2xl font-bold text-cyan-400 group-hover/stat:text-cyan-300 transition-colors duration-300">
-
-                    {{ item.subject_count }}
-
-                </h3>
-
+                <div class="absolute inset-0 bg-gradient-to-t from-slate-950/55 via-transparent to-slate-950/10"></div>
+                <span class="absolute left-3 top-3 inline-flex items-center gap-2 rounded-full border border-white/10 bg-slate-950/85 px-3 py-1.5 text-[10px] font-bold text-white backdrop-blur">
+                    <span class="h-2 w-2 rounded-full {% if item.batch.batch_status == 'published' %}bg-emerald-400{% elif item.batch.batch_status == 'archived' %}bg-slate-400{% else %}bg-amber-400{% endif %}"></span>
+                    {{ item.batch.get_batch_status_display }}
+                </span>
             </div>
 
-            <div
-                class="
-                    group/stat
-                    rounded-xl
-                    border
-                    border-slate-700
-                    bg-slate-800/50
-                    p-3
-                    text-center
+            <div class="batch-card-body p-4">
+                <h3 class="min-h-[48px] line-clamp-2 text-base font-extrabold leading-6 text-white transition group-hover:text-cyan-300" title="{{ item.batch.batch_name }}">{{ item.batch.batch_name }}</h3>
 
-                    transition-all
-                    duration-300
+                <button type="button" data-teacher-open data-batch-name="{{ item.batch.batch_name|escape }}"
+                        class="mt-3 flex w-full min-w-0 items-center gap-3 rounded-lg text-left outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
+                        aria-label="View {{ item.teacher_count }} teachers assigned to {{ item.batch.batch_name }}"
+                        {% if not item.assigned_teachers %}disabled{% endif %}>
+                    <span class="flex shrink-0 items-center -space-x-3">
+                        {% for assigned_teacher in item.assigned_teachers|slice:":3" %}
+                            <span class="grid h-9 w-9 place-items-center overflow-hidden rounded-full border-2 border-slate-900 bg-slate-800 text-[10px] font-bold text-cyan-200">
+                                {% if assigned_teacher.profile_image %}
+                                    <img src="{{ assigned_teacher.profile_image.url }}" alt="{{ assigned_teacher.full_name }}" loading="lazy" class="h-full w-full object-cover">
+                                {% else %}
+                                    {{ assigned_teacher.full_name|default:"T"|slice:":1"|upper }}
+                                {% endif %}
+                            </span>
+                        {% endfor %}
+                        {% if item.extra_teacher_count > 0 %}
+                            <span class="grid h-9 min-w-9 place-items-center rounded-full border-2 border-slate-900 bg-slate-800 px-2 text-[10px] font-bold text-cyan-200" title="{{ item.extra_teacher_count }} more teachers">+{{ item.extra_teacher_count }}</span>
+                        {% endif %}
+                    </span>
+                    <i class="ri-arrow-right-line ml-auto shrink-0 text-cyan-300"></i>
+                </button>
 
-                    hover:border-emerald-500/30
-                    hover:bg-slate-800/80
-                    hover:shadow-lg
-                    hover:shadow-emerald-500/10
-                ">
-
-                <div class="flex items-center justify-center gap-2">
-
-                    <div class="p-1.5 rounded-lg bg-emerald-500/10 group-hover/stat:bg-emerald-500/20 transition-all duration-300">
-
-                        <i class="ri-user-line text-emerald-400 text-sm"></i>
-
+                <div class="batch-card-footer">
+                    <div class="my-3 border-t border-slate-800"></div>
+                    <div class="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+                        <span class="inline-flex items-center gap-2 text-xs font-semibold text-cyan-300">
+                            <i class="ri-group-line text-base"></i>{{ item.student_count }} Students
+                        </span>
+                        <span class="inline-flex items-center gap-1.5 text-[10px] text-slate-400">
+                            <i class="ri-calendar-event-line text-cyan-300"></i>
+                            {% if item.batch.course_start_date %}Started {{ item.batch.course_start_date|date:"d M Y" }}{% elif item.batch.published_at %}Published {{ item.batch.published_at|date:"d M Y" }}{% else %}Date not set{% endif %}
+                        </span>
                     </div>
-
-                    <p class="text-[10px] uppercase tracking-wide text-slate-400">
-
-                        Teachers
-
-                    </p>
-
+                    <div class="mt-3 flex justify-end">
+                        <span class="inline-flex items-center gap-1 text-[10px] font-bold text-slate-500 transition group-hover:text-cyan-300">View Subjects <i class="ri-arrow-right-line"></i></span>
+                    </div>
                 </div>
-
-                <h3 class="mt-1.5 text-2xl font-bold text-emerald-400 group-hover/stat:text-emerald-300 transition-colors duration-300">
-
-                    {{ item.teacher_count }}
-
-                </h3>
-
             </div>
 
-        </div>
-
-        <!-- ====================================== -->
-        <!-- ACTION BUTTON WITH ENHANCED HOVER -->
-        <!-- ====================================== -->
-
-        <a
-            href="{% url 'teacher_subjects' item.batch.id %}"
-            class="
-                group/btn
-                flex
-                items-center
-                justify-center
-                gap-2
-
-                rounded-xl
-
-                bg-gradient-to-r
-                from-cyan-500
-                to-blue-600
-
-                px-5
-                py-2.5
-
-                font-semibold
-                text-white
-
-                transition-all
-                duration-300
-
-                hover:shadow-lg
-                hover:shadow-cyan-500/30
-                hover:scale-[1.02]
-
-                relative
-                overflow-hidden
-            ">
-
-            <!-- Button Shine Effect -->
-            <div class="absolute inset-0 -translate-x-full group-hover/btn:translate-x-full transition-transform duration-700 bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
-
-            <span>
-
-                View Subjects
-
-            </span>
-
-            <i class="ri-arrow-right-line group-hover/btn:translate-x-1 transition-transform duration-300"></i>
-
-        </a>
-
+            <script type="application/json" class="mb-teacher-data">[
+                {% for assigned_teacher in item.assigned_teachers %}
+                {
+                    "name": "{{ assigned_teacher.full_name|escapejs }}",
+                    "image": "{% if assigned_teacher.profile_image %}{{ assigned_teacher.profile_image.url|escapejs }}{% endif %}",
+                    "qualification": "{{ assigned_teacher.qualification|default:'Not provided'|escapejs }}",
+                    "specialization": "{{ assigned_teacher.specialization|default:'Teacher'|escapejs }}",
+                    "experience": "{{ assigned_teacher.experience|default_if_none:0 }}",
+                    "bio": "{{ assigned_teacher.bio|default:''|escapejs }}",
+                    "email": "{{ assigned_teacher.email|escapejs }}",
+                    "phone": "{{ assigned_teacher.phone_number|escapejs }}"
+                }{% if not forloop.last %},{% endif %}
+                {% endfor %}
+            ]</script>
+        </article>
+        {% endfor %}
     </div>
-
-</div>
-
-{% empty %}
-
-<!-- ====================================== -->
-<!-- EMPTY STATE WITH ENHANCED ANIMATION -->
-<!-- ====================================== -->
-
-<div
-class="
-col-span-full
-
-rounded-3xl
-
-border
-border-dashed
-border-slate-700
-
-bg-[#0F172A]
-
-py-24
-
-text-center
-
-transition-all
-duration-500
-
-hover:border-cyan-500/30
-hover:bg-slate-800/30
-">
-
-    <div
-        class="
-            mx-auto
-
-            flex
-            h-28
-            w-28
-            items-center
-            justify-center
-
-            rounded-full
-
-            bg-gradient-to-br
-            from-slate-800
-            to-slate-900
-
-            border
-            border-slate-700
-
-            animate-bounce
-
-            group-hover:border-cyan-500/30
-            transition-all
-            duration-300
-        ">
-
-        <i class="ri-stack-line text-5xl text-slate-500"></i>
-
+    {% else %}
+    <div class="rounded-2xl border border-dashed border-slate-700 bg-slate-900/50 px-6 py-12 text-center">
+        <i class="ri-search-eye-line text-3xl text-cyan-300"></i>
+        <h3 class="mt-3 text-base font-bold text-white">No matching batches</h3>
+        <p class="mt-1 text-xs text-slate-400">Try another search term or change the selected filters.</p>
+        <a href="{% url 'teacher_batches' %}" class="mt-4 inline-flex rounded-lg border border-cyan-400/30 bg-cyan-400/10 px-4 py-2 text-xs font-bold text-cyan-200 hover:bg-cyan-400/20">Clear filters</a>
     </div>
+    {% endif %}
+    {% endif %}
+</section>
 
-    <h2 class="mt-8 text-3xl font-bold text-white">
-
-        No Batches Assigned
-
-    </h2>
-
-    <p class="mt-3 max-w-md mx-auto text-slate-400 leading-7">
-
-        Your administrator has not assigned any batches to you yet. 
-        Please contact your administrator for access.
-
-    </p>
-
-    <div class="mt-6 flex items-center justify-center gap-2 text-sm text-slate-500">
-
-        <div class="flex items-center gap-2 bg-slate-800/50 px-4 py-2 rounded-full border border-slate-700">
-
-            <span class="inline-block w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse"></span>
-
-            <span>
-
-                You'll see your batches here once assigned
-
-            </span>
-
+<!-- Assigned teachers popup -->
+<div id="assignedTeachersModal" class="fixed inset-0 z-[10000] hidden items-center justify-center bg-slate-950/85 p-3 backdrop-blur-sm sm:p-5" aria-hidden="true">
+    <section class="flex max-h-[calc(100dvh-24px)] w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-cyan-400/70 bg-slate-950 shadow-[0_0_35px_rgba(6,182,212,.18)]" role="dialog" aria-modal="true" aria-labelledby="mbModalTitle">
+        <header class="flex items-center justify-between gap-4 border-b border-cyan-400/15 bg-gradient-to-r from-cyan-950/60 to-slate-950 px-5 py-4 sm:px-6">
+            <div class="flex min-w-0 items-center gap-3">
+                <span class="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-cyan-400/15 text-2xl text-cyan-300"><i class="ri-team-line"></i></span>
+                <div class="min-w-0">
+                    <h2 id="mbModalTitle" class="truncate text-lg font-extrabold text-white">Assigned Teachers</h2>
+                    <p id="mbModalBatchName" class="mt-1 truncate text-xs text-slate-400"></p>
+                    <p id="mbTeacherTotal" class="mt-1 text-[11px] text-cyan-300"></p>
+                </div>
+            </div>
+            <button type="button" data-modal-close class="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-2xl text-slate-300 transition hover:bg-slate-800 hover:text-white" aria-label="Close teachers">&times;</button>
+        </header>
+        <div class="grid min-h-0 flex-1 grid-cols-1 gap-3 overflow-y-auto p-3 sm:grid-cols-[0.85fr_1.15fr] sm:overflow-hidden sm:p-4">
+            <div class="flex min-h-[190px] flex-col overflow-hidden rounded-xl border border-slate-800 bg-slate-900/70 sm:min-h-0">
+                <div class="border-b border-slate-800 p-3">
+                    <label class="relative block">
+                        <span class="sr-only">Search teachers</span>
+                        <i class="ri-search-line pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"></i>
+                        <input id="teacherModalSearch" type="search" placeholder="Search teacher..." autocomplete="off" class="w-full rounded-lg border border-slate-700 bg-slate-950 py-2.5 pl-9 pr-3 text-xs text-white outline-none placeholder:text-slate-500 focus:border-cyan-400/70">
+                    </label>
+                </div>
+                <div id="mbTeacherList" class="max-h-52 space-y-1 overflow-y-auto p-2 sm:max-h-none sm:flex-1"></div>
+                <p id="mbTeacherEmpty" class="hidden px-3 py-5 text-center text-xs text-slate-500">No teachers match your search.</p>
+            </div>
+            <div id="mbTeacherDetail" class="min-h-[220px] overflow-y-auto rounded-xl border border-slate-800 bg-gradient-to-br from-slate-900 to-slate-950 p-4 sm:min-h-0">
+                <div class="flex h-full min-h-[180px] flex-col items-center justify-center text-center">
+                    <i class="ri-user-search-line text-3xl text-cyan-300"></i>
+                    <strong class="mt-3 text-sm text-slate-200">Select a teacher</strong>
+                    <span class="mt-1 max-w-xs text-[11px] leading-5 text-slate-500">Choose a teacher from the list to view their profile and contact information.</span>
+                </div>
+            </div>
         </div>
-
-    </div>
-
+    </section>
 </div>
+{% endblock %}
 
-{% endfor %}
+{% block extra_js %}
+<script>
+(() => {
+    "use strict";
+    const page = document.getElementById("teacherBatchesPage");
+    if (!page) return;
 
-</div>
+    const cards = Array.from(page.querySelectorAll(".batch-card"));
 
-<!-- ===================================================== -->
-<!-- BOTTOM DECORATION - ENHANCED -->
-<!-- ===================================================== -->
+    const modal = document.getElementById("assignedTeachersModal");
+    const teacherList = document.getElementById("mbTeacherList");
+    const detail = document.getElementById("mbTeacherDetail");
+    const batchName = document.getElementById("mbModalBatchName");
+    const teacherTotal = document.getElementById("mbTeacherTotal");
+    const teacherSearch = document.getElementById("teacherModalSearch");
+    const teacherEmpty = document.getElementById("mbTeacherEmpty");
+    if (!modal || !teacherList || !detail) return;
 
-<div class="mt-12 flex flex-col items-center gap-3">
+    let previousFocus = null;
+    let teachers = [];
+    let filteredTeachers = [];
 
-    <div class="flex items-center gap-6">
+    const escapeHTML = value => String(value ?? "").replace(/[&<>"']/g, char => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+    })[char]);
+    const initials = name => String(name || "T").trim().split(/\s+/).slice(0, 2).map(part => part[0] || "").join("").toUpperCase() || "T";
 
-        <div class="flex items-center gap-2 text-xs text-slate-500">
+    function avatarHTML(teacher, large = false) {
+        const size = large ? "h-24 w-24 text-xl" : "h-10 w-10 text-xs";
+        const content = teacher.image ? `<img src="${escapeHTML(teacher.image)}" alt="" class="h-full w-full object-cover">` : escapeHTML(initials(teacher.name));
+        return `<span class="grid ${size} shrink-0 place-items-center overflow-hidden rounded-full border-2 border-cyan-400/70 bg-slate-800 font-bold text-cyan-200">${content}</span>`;
+    }
 
-            <i class="ri-shield-check-line text-emerald-400"></i>
+    function showTeacher(index) {
+        const teacher = filteredTeachers[index];
+        if (!teacher) return;
+        teacherList.querySelectorAll("[data-teacher-index]").forEach(button => {
+            const selected = Number(button.dataset.teacherIndex) === index;
+            button.classList.toggle("border-cyan-400/50", selected);
+            button.classList.toggle("bg-cyan-950/60", selected);
+            button.setAttribute("aria-pressed", String(selected));
+        });
+        const email = String(teacher.email || "").trim();
+        const phone = String(teacher.phone || "").trim();
+        detail.innerHTML = `
+            <div class="flex flex-col gap-4 border-b border-slate-800 pb-4 sm:flex-row sm:items-center">
+                ${avatarHTML(teacher, true)}
+                <div class="min-w-0"><h3 class="break-words text-xl font-extrabold text-white">${escapeHTML(teacher.name)}</h3>
+                <p class="mt-1 text-sm text-slate-300">${escapeHTML(teacher.specialization || "Teacher")}</p>
+                <span class="mt-3 inline-flex rounded-full border border-emerald-400/30 bg-emerald-500/10 px-3 py-1 text-[10px] font-bold text-emerald-300">Assigned to this batch</span></div>
+            </div>
+            <div class="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
+                <div class="rounded-xl border border-cyan-400/15 bg-cyan-950/30 p-3 text-center"><i class="ri-graduation-cap-line text-xl text-cyan-300"></i><small class="mt-2 block text-[9px] font-bold uppercase text-slate-400">Qualification</small><span class="mt-1 block break-words text-xs text-white">${escapeHTML(teacher.qualification || "Not provided")}</span></div>
+                <div class="rounded-xl border border-cyan-400/15 bg-cyan-950/30 p-3 text-center"><i class="ri-briefcase-4-line text-xl text-cyan-300"></i><small class="mt-2 block text-[9px] font-bold uppercase text-slate-400">Experience</small><span class="mt-1 block text-xs text-white">${escapeHTML(teacher.experience)} ${Number(teacher.experience) === 1 ? "Year" : "Years"}</span></div>
+                <div class="rounded-xl border border-cyan-400/15 bg-cyan-950/30 p-3 text-center"><i class="ri-book-open-line text-xl text-cyan-300"></i><small class="mt-2 block text-[9px] font-bold uppercase text-slate-400">Specialization</small><span class="mt-1 block break-words text-xs text-white">${escapeHTML(teacher.specialization || "Not provided")}</span></div>
+            </div>
+            <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div><h4 class="mb-2 flex items-center gap-2 text-sm font-bold text-white"><i class="ri-user-line text-cyan-300"></i> About</h4><p class="text-xs leading-6 text-slate-300">${escapeHTML(teacher.bio || "No biography provided.")}</p></div>
+                <div class="border-t border-slate-800 pt-4 sm:border-l sm:border-t-0 sm:pl-4 sm:pt-0"><h4 class="mb-2 flex items-center gap-2 text-sm font-bold text-white"><i class="ri-contacts-line text-cyan-300"></i> Contact Information</h4>
+                <p class="mb-2 break-all text-xs text-slate-300"><i class="ri-mail-line mr-2 text-cyan-300"></i>${email ? `<a class="hover:text-cyan-200" href="mailto:${escapeHTML(email)}">${escapeHTML(email)}</a>` : "Not provided"}</p>
+                <p class="break-all text-xs text-slate-300"><i class="ri-phone-line mr-2 text-cyan-300"></i>${phone ? `<a class="hover:text-cyan-200" href="tel:${escapeHTML(phone)}">${escapeHTML(phone)}</a>` : "Not provided"}</p></div>
+            </div>`;
+    }
 
-            Secure
+    function renderTeacherList() {
+        const query = (teacherSearch?.value || "").trim().toLowerCase();
+        filteredTeachers = teachers.filter(teacher => `${teacher.name || ""} ${teacher.qualification || ""} ${teacher.specialization || ""}`.toLowerCase().includes(query));
+        teacherList.innerHTML = "";
+        if (teacherTotal) teacherTotal.textContent = `${filteredTeachers.length} of ${teachers.length} teachers assigned`;
+        teacherEmpty?.classList.toggle("hidden", filteredTeachers.length !== 0);
+        filteredTeachers.forEach((teacher, index) => {
+            const button = document.createElement("button");
+            button.type = "button";
+            button.dataset.teacherIndex = String(index);
+            button.className = "flex w-full items-center gap-3 rounded-xl border border-transparent p-2 text-left transition hover:border-slate-700 hover:bg-slate-800/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400";
+            button.setAttribute("aria-pressed", "false");
+            button.innerHTML = `${avatarHTML(teacher)}<span class="min-w-0 flex-1"><strong class="block truncate text-xs text-white">${escapeHTML(teacher.name)}</strong><small class="mt-1 block truncate text-[10px] text-slate-400">${escapeHTML(teacher.specialization || teacher.qualification || "Teacher")}</small></span>`;
+            button.addEventListener("click", () => showTeacher(index));
+            teacherList.appendChild(button);
+        });
+        detail.innerHTML = `<div class="flex h-full min-h-[180px] flex-col items-center justify-center text-center"><i class="ri-user-search-line text-3xl text-cyan-300"></i><strong class="mt-3 text-sm text-slate-200">Select a teacher</strong><span class="mt-1 max-w-xs text-[11px] leading-5 text-slate-500">Choose a teacher from the list to view their profile and contact information.</span></div>`;
+    }
 
-        </div>
+    function openModal(card, trigger) {
+        previousFocus = trigger;
+        try { teachers = JSON.parse(card.querySelector(".mb-teacher-data")?.textContent || "[]"); }
+        catch (_error) { teachers = []; }
+        if (batchName) batchName.textContent = `Assigned Teachers — ${trigger.dataset.batchName || ""}`;
+        if (teacherSearch) teacherSearch.value = "";
+        renderTeacherList();
+        modal.classList.remove("hidden");
+        modal.classList.add("flex");
+        modal.setAttribute("aria-hidden", "false");
+        document.body.classList.add("overflow-hidden");
+        modal.querySelector("[data-modal-close]")?.focus();
+    }
 
-        <div class="w-px h-4 bg-slate-700"></div>
+    function closeModal() {
+        if (modal.classList.contains("hidden")) return;
+        modal.classList.add("hidden");
+        modal.classList.remove("flex");
+        modal.setAttribute("aria-hidden", "true");
+        document.body.classList.remove("overflow-hidden");
+        previousFocus?.focus();
+        previousFocus = null;
+        teachers = [];
+        filteredTeachers = [];
+    }
 
-        <div class="flex items-center gap-2 text-xs text-slate-500">
-
-            <i class="ri-time-line text-cyan-400"></i>
-
-            Updated recently
-
-        </div>
-
-        <div class="w-px h-4 bg-slate-700"></div>
-
-        <div class="flex items-center gap-2 text-xs text-slate-500">
-
-            <i class="ri-database-2-line text-blue-400"></i>
-
-            {{ batch_count }} batches
-
-        </div>
-
-    </div>
-
-    <p class="text-[10px] text-slate-600">
-
-        © 2026 NeoLearn — All rights reserved
-
-    </p>
-
-</div>
-
+    teacherSearch?.addEventListener("input", renderTeacherList);
+    cards.forEach(card => {
+        card.addEventListener("click", event => {
+            if (event.target.closest("[data-teacher-open]")) return;
+            if (card.dataset.batchUrl) window.location.assign(card.dataset.batchUrl);
+        });
+        card.addEventListener("keydown", event => {
+            if (event.target !== card) return;
+            if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                if (card.dataset.batchUrl) window.location.assign(card.dataset.batchUrl);
+            }
+        });
+        card.querySelector("[data-teacher-open]")?.addEventListener("click", event => {
+            event.preventDefault();
+            event.stopPropagation();
+            openModal(card, event.currentTarget);
+        });
+    });
+    modal.querySelectorAll("[data-modal-close]").forEach(button => button.addEventListener("click", closeModal));
+    modal.addEventListener("click", event => { if (event.target === modal) closeModal(); });
+    document.addEventListener("keydown", event => {
+        if (event.key === "Escape" && !modal.classList.contains("hidden")) closeModal();
+    });
+})();
+</script>
 {% endblock %}

@@ -4,7 +4,7 @@
 
 {% block teacher_content %}
 
-<div class="w-full max-w-none space-y-4 pb-2">
+<div class="settings-page w-full max-w-none space-y-4 pb-2">
 
 
 
@@ -1063,6 +1063,173 @@
         }
     }
 
+
+    /* WHITE + VIOLET TEACHER SETTINGS THEME
+       Visual-only overrides: keep the existing layout, forms, routes and scripts. */
+    .settings-page { color:#35264f; }
+    .settings-page .settings-sidebar,
+    .settings-page .settings-content-card {
+        background:linear-gradient(145deg,#ffffff 0%,#faf7ff 100%) !important;
+        border-color:#e6d8ff !important;
+        box-shadow:0 12px 30px rgba(65,35,110,.08) !important;
+    }
+    .settings-page .settings-sidebar > p { color:#8b78a7 !important; }
+    .settings-page .settings-content-card h2,
+    .settings-page .settings-content-card h3,
+    .settings-page .settings-content-card .text-white { color:#35264f !important; }
+    .settings-page .settings-content-card .text-slate-200,
+    .settings-page .settings-content-card .text-slate-300 { color:#594b70 !important; }
+    .settings-page .settings-content-card .text-slate-400,
+    .settings-page .settings-content-card .text-slate-500 { color:#88799f !important; }
+    .settings-page .settings-content-card .text-slate-600 { color:#9586aa !important; }
+    .settings-page .settings-nav-item {
+        color:#66577e !important;
+        border-color:transparent !important;
+        background:transparent !important;
+    }
+    .settings-page .settings-nav-item:hover {
+        color:#6030b5 !important;
+        background:#f3ecff !important;
+        border-color:#e4d5ff !important;
+    }
+    .settings-page .settings-nav-item.is-active {
+        color:#672bd0 !important;
+        background:linear-gradient(90deg,#f0e7ff,#faf7ff) !important;
+        border-color:#d9c4ff !important;
+        box-shadow:inset 3px 0 0 #8545e8 !important;
+    }
+    .settings-page .settings-nav-arrow,
+    .settings-page .settings-nav-item.is-active .settings-nav-arrow { color:#8545e8 !important; }
+    .settings-page .settings-security-card {
+        border-color:#e1d0ff !important;
+        background:linear-gradient(135deg,#f5efff,#fbf9ff) !important;
+    }
+    .settings-page .settings-security-card .text-cyan-400 { color:#7138c8 !important; }
+    .settings-page .settings-security-card p { color:#817095 !important; }
+    .settings-page .settings-input {
+        color:#35264f !important;
+        background:#ffffff !important;
+        border:1px solid #dfd2f2 !important;
+        box-shadow:inset 0 1px 2px rgba(70,40,110,.03);
+    }
+    .settings-page .settings-input::placeholder { color:#a295b5 !important; }
+    .settings-page .settings-input:focus {
+        border-color:#9258e8 !important;
+        box-shadow:0 0 0 3px rgba(133,69,232,.13) !important;
+    }
+    .settings-page .settings-input + p { color:#8b7ca0 !important; }
+    .settings-page .settings-content-card button[type="submit"] {
+        color:#ffffff !important;
+        background:linear-gradient(135deg,#9658ee,#672ac5) !important;
+        border:1px solid #7a3bd1 !important;
+        box-shadow:0 7px 18px rgba(111,48,190,.2);
+    }
+    .settings-page .settings-content-card button[type="submit"]:hover {
+        background:linear-gradient(135deg,#a66cf5,#7537d2) !important;
+    }
+    .settings-page .settings-content-card button[type="submit"]:focus-visible {
+        outline:2px solid #a77af0 !important;
+        outline-offset:3px;
+    }
+    .settings-page .settings-content-card [class*="border-t"] { border-color:#eadfff !important; }
+    .settings-page .settings-notification-row {
+        border-color:#e7dcf6 !important;
+        background:#fcfaff !important;
+    }
+    .settings-page .settings-notification-icon {
+        color:#7940cf !important;
+        background:#f0e7ff !important;
+    }
+    .settings-page .settings-switch { background:#e4d9f3 !important; }
+    .settings-page .settings-switch i { background:#9875c8 !important; }
+    .settings-page .settings-lock-caption { color:#927fa9 !important; }
+    .settings-page .settings-lock-badge {
+        color:#7440bd !important;
+        background:#f0e8ff !important;
+        border-color:#ffffff !important;
+    }
+    .settings-page .settings-coming-soon {
+        border-color:#dfcff8 !important;
+        background:linear-gradient(135deg,#f5efff,#fbf9ff) !important;
+    }
+    .settings-page .settings-coming-soon .text-sky-100 { color:#7440bd !important; }
+    .settings-page .settings-coming-soon .text-slate-300 { color:#77688d !important; }
+    .settings-page .settings-theme-card {
+        border-color:#e5d9f5 !important;
+        background:#fcfaff !important;
+    }
+    .settings-page .settings-theme-card h3 { color:#44345e !important; }
+    .settings-page .theme-radio { border-color:#b8a4d4 !important; }
+    .settings-page .settings-content-card::-webkit-scrollbar-thumb { background:#c6a8f4; }
+    .settings-page .settings-content-card { scrollbar-color:#c6a8f4 transparent !important; }
+
+    /* Crop dialog follows the same light surface and violet controls. */
+    #crop-modal .crop-dialog {
+        border-color:#e2d4f6 !important;
+        background:linear-gradient(145deg,#ffffff,#faf7ff) !important;
+        box-shadow:0 24px 80px rgba(20,10,40,.35);
+    }
+    #crop-modal #crop-title { color:#35264f !important; }
+    #crop-modal .text-slate-400 { color:#88799f !important; }
+    #crop-modal .border-slate-800 { border-color:#e6dcf2 !important; }
+    #crop-modal #crop-dialog-header { border-color:#e6dcf2 !important; }
+    #crop-modal #crop-dialog-header button {
+        color:#78658f !important;
+    }
+    #crop-modal #crop-dialog-header button:hover {
+        color:#5e2db0 !important;
+        background:#f2eaff !important;
+    }
+    #crop-modal .crop-controls {
+        border-color:#e4d8f2 !important;
+        background:#f8f4ff !important;
+    }
+    #crop-modal .crop-controls label { color:#594b70 !important; }
+    #crop-modal #crop-zoom-value { color:#783ed0 !important; }
+    #crop-modal #crop-zoom { accent-color:#8545e8 !important; }
+    #crop-modal #crop-selection { border-color:#ffffff !important; }
+    #crop-modal #crop-selection span { border-color:#b58af3 !important; }
+    #crop-modal #cancel-crop {
+        border-color:#ded1ef !important;
+        color:#594b70 !important;
+        background:#ffffff !important;
+    }
+    #crop-modal #cancel-crop:hover { background:#f4effb !important; }
+    #crop-modal #apply-crop {
+        color:#ffffff !important;
+        background:linear-gradient(135deg,#9658ee,#672ac5) !important;
+    }
+    #crop-modal #apply-crop:hover { background:linear-gradient(135deg,#a66cf5,#7537d2) !important; }
+    #crop-modal #crop-error { color:#dc4545 !important; }
+    .settings-page .text-cyan-500,
+    .settings-page .text-cyan-400 { color:#7840cf !important; }
+    .settings-page .bg-cyan-400,
+    .settings-page .bg-cyan-500 { background-color:#8545e8 !important; }
+    .settings-page .border-cyan-500,
+    .settings-page .border-cyan-700,
+    .settings-page .border-cyan-700\/60 { border-color:#c6a8f4 !important; }
+    .settings-page .shadow-cyan-950\/50 { --tw-shadow-color:rgba(111,48,190,.15) !important; }
+    .settings-page .text-rose-400 { color:#dc4545 !important; }
+    @media (max-width:1023px) {
+        .settings-page .settings-sidebar { background:linear-gradient(145deg,#ffffff,#faf7ff) !important; }
+    }
+
+
+    .settings-page #profile-preview,
+    .settings-page #profile-placeholder { border-color:#b991f0 !important; }
+    .settings-page #profile-placeholder { background:#f2eaff !important; color:#7840cf !important; }
+    .settings-page #open-cropper {
+        color:#ffffff !important;
+        background:linear-gradient(135deg,#9658ee,#672ac5) !important;
+        border-color:#ffffff !important;
+    }
+    .settings-page #open-cropper:hover { background:linear-gradient(135deg,#a66cf5,#7537d2) !important; }
+    .settings-page .settings-sidebar .bg-slate-800 {
+        background:#f0e8fb !important;
+        color:#795d9e !important;
+    }
+    .settings-page .settings-sidebar .text-slate-400,
+    .settings-page .settings-sidebar .text-slate-500 { color:#89799e !important; }
 </style>
 
 
@@ -1456,7 +1623,7 @@ document.addEventListener("DOMContentLoaded", function () {
             if (profilePlaceholder) profilePlaceholder.classList.add("hidden");
 
             imageStatus.textContent = "Cropped image ready to save.";
-            imageStatus.className = "mt-2 text-center text-xs text-cyan-400";
+            imageStatus.className = "mt-2 text-center text-xs text-violet-600";
             hideCropModal();
         }, "image/png");
     });
