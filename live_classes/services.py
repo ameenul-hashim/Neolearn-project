@@ -454,6 +454,7 @@ def create_live_class(
 # RESCHEDULE A LIVE CLASS
 # ============================================================
 
+
 @transaction.atomic
 def reschedule_live_class(
     *,
@@ -464,10 +465,13 @@ def reschedule_live_class(
     teacher=None,
 ):
     """
-    Reschedule a confirmed class.
+    Reschedule a confirmed upcoming live class.
 
     Admin callers may omit teacher.
     Teacher callers must supply their own Teacher profile.
+
+    Existing booking, assignment, content and conflict
+    validations remain enforced.
     """
 
     if not getattr(updated_by, "is_authenticated", False):
@@ -483,8 +487,15 @@ def reschedule_live_class(
     if live_class is None:
         _raise_error("The requested live class was not found.")
 
-    if teacher is not None and live_class.teacher_id != teacher.pk:
-        _raise_error("You cannot reschedule another teacher's class.")
+    # Teachers can reschedule only their own classes.
+    if teacher is not None:
+        if not getattr(teacher, "pk", None):
+            _raise_error("A valid teacher account is required.")
+
+        if live_class.teacher_id != teacher.pk:
+            _raise_error(
+                "You cannot reschedule another teacher's class."
+            )
 
     if live_class.status != LiveClassStatus.CONFIRMED:
         _raise_error("Only confirmed classes can be rescheduled.")
@@ -494,20 +505,10 @@ def reschedule_live_class(
             "A class that has already started cannot be rescheduled."
         )
 
-    pending_request = CancellationRequest.objects.filter(
-        live_class=live_class,
-        status=CancellationStatus.PENDING,
-    ).exists()
-
-    if pending_request:
-        _raise_error(
-            "This class has a pending cancellation request. "
-            "Wait for the Admin's decision before rescheduling."
-        )
-
+    # Validate the requested new schedule.
     _validate_datetime(start_at, end_at)
 
-    # Use the same lock order as the creation service.
+    # Lock the associated batch and teacher.
     locked_batch = (
         Batch.objects
         .select_for_update()
@@ -528,7 +529,7 @@ def reschedule_live_class(
     if locked_teacher is None:
         _raise_error("The class's teacher no longer exists.")
 
-    # Refresh the class after locks and recheck its state.
+    # Refresh the class after acquiring locks.
     live_class.refresh_from_db()
 
     if live_class.status != LiveClassStatus.CONFIRMED:
@@ -541,31 +542,30 @@ def reschedule_live_class(
             "A class that has already started cannot be rescheduled."
         )
 
-    pending_request = CancellationRequest.objects.filter(
-        live_class=live_class,
-        status=CancellationStatus.PENDING,
-    ).exists()
-
-    if pending_request:
+    # Recheck teacher ownership after refreshing.
+    if teacher is not None and live_class.teacher_id != teacher.pk:
         _raise_error(
-            "This class has a pending cancellation request. "
-            "Wait for the Admin's decision before rescheduling."
+            "You cannot reschedule another teacher's class."
         )
 
+    # Verify that the teacher still has active assignments.
     validate_teacher_assignment(
         teacher=locked_teacher,
         batch=locked_batch,
         subject=live_class.subject,
     )
 
+    # Verify batch, subject and chapter eligibility.
     validate_class_content(
         batch=locked_batch,
         subject=live_class.subject,
         chapter=live_class.chapter,
     )
 
+    # Revalidate time immediately before checking conflicts.
     _validate_datetime(start_at, end_at)
 
+    # Prevent batch and teacher scheduling conflicts.
     validate_class_conflicts(
         teacher=locked_teacher,
         batch=locked_batch,
@@ -574,11 +574,78 @@ def reschedule_live_class(
         exclude_class_id=live_class.pk,
     )
 
+    # Update only the schedule.
     live_class.start_at = start_at
     live_class.end_at = end_at
 
     live_class.full_clean()
-    live_class.save(update_fields=["start_at", "end_at", "updated_at"])
+    live_class.save(
+        update_fields=[
+            "start_at",
+            "end_at",
+            "updated_at",
+        ]
+    )
+
+    return live_class
+
+# ============================================================
+# DIRECTLY CANCEL A LIVE CLASS
+# ============================================================
+
+@transaction.atomic
+def cancel_live_class(
+    *,
+    live_class_id,
+    cancelled_by,
+    teacher=None,
+):
+    """
+    Directly cancel a confirmed upcoming live class.
+
+    Admin callers may omit teacher.
+    Teacher callers must supply their own Teacher profile.
+
+    The class record is retained. Only its status changes.
+    """
+
+    if not getattr(cancelled_by, "is_authenticated", False):
+        _raise_error("Authentication is required.")
+
+    live_class = (
+        LiveClass.objects
+        .select_for_update()
+        .filter(pk=live_class_id)
+        .first()
+    )
+
+    if live_class is None:
+        _raise_error("The requested live class was not found.")
+
+    # Teachers can cancel only their own classes.
+    if teacher is not None:
+        if not getattr(teacher, "pk", None):
+            _raise_error("A valid teacher account is required.")
+
+        if live_class.teacher_id != teacher.pk:
+            _raise_error(
+                "You can only cancel your own live classes."
+            )
+
+    # Only confirmed classes can be cancelled.
+    if live_class.status != LiveClassStatus.CONFIRMED:
+        _raise_error(
+            "Only confirmed classes can be cancelled."
+        )
+
+    # Do not allow cancellation after the class has started.
+    if live_class.start_at <= timezone.now():
+        _raise_error(
+            "A class that has already started cannot be cancelled."
+        )
+
+    live_class.status = LiveClassStatus.CANCELLED
+    live_class.save(update_fields=["status", "updated_at"])
 
     return live_class
 
@@ -658,6 +725,7 @@ def request_live_class_cancellation(
 # REVIEW A CANCELLATION REQUEST
 # ============================================================
 
+
 @transaction.atomic
 def review_live_class_cancellation(
     *,
@@ -669,8 +737,9 @@ def review_live_class_cancellation(
     """
     Review a teacher cancellation request.
 
-    The calling view must enforce Admin authorization.
-    Approval cancels the class; rejection leaves it confirmed.
+    Approval cancels the class.
+    Rejection requires an Admin explanation and
+    leaves the class confirmed.
     """
 
     if not getattr(reviewed_by, "is_authenticated", False):
@@ -708,15 +777,31 @@ def review_live_class_cancellation(
             "through this request."
         )
 
+    # Prepare and validate the Admin's review explanation.
+    review_note = (review_note or "").strip()
+
+    # Rejection must always include an explanation.
+    if not approve and not review_note:
+        _raise_error(
+            "Please provide a reason for rejecting this cancellation request."
+        )
+
     if approve:
+        # Admin approves: cancel the existing class.
         live_class.status = LiveClassStatus.CANCELLED
-        live_class.save(update_fields=["status", "updated_at"])
+        live_class.save(
+            update_fields=["status", "updated_at"]
+        )
+
         request_record.status = CancellationStatus.APPROVED
+
     else:
+        # Admin rejects: class remains Confirmed.
         request_record.status = CancellationStatus.REJECTED
 
+    # Save Admin review details.
     request_record.reviewed_by = reviewed_by
-    request_record.review_note = (review_note or "").strip()
+    request_record.review_note = review_note
     request_record.reviewed_at = timezone.now()
 
     request_record.full_clean()

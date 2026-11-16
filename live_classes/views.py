@@ -3,29 +3,20 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
 from django.shortcuts import redirect, render
+from django.urls import reverse
 from django.http import JsonResponse
 from django.utils import timezone
 from django.utils.dateparse import parse_date, parse_time
 from django.views.decorators.cache import cache_control
 from django.views.decorators.http import require_POST
-
+from courses.models import CourseChapter
 from admins.decorators import admin_required
 from admins.models import Batch, Subject, Teacher, TeacherBatch, TeacherSubject
-
+from django.db.models import Exists, OuterRef, Q
+from django.core.paginator import Paginator
 from .forms import LiveClassBookingForm
-from .models import (
-    CancellationRequest,
-    CancellationStatus,
-    LiveClass,
-    LiveClassStatus,
-)
-from .services import (
-    create_live_class,
-    reschedule_live_class,
-    request_live_class_cancellation,
-    review_live_class_cancellation,
-)
-
+from .models import (CancellationRequest,CancellationStatus,LiveClass,LiveClassStatus,)
+from .services import (create_live_class,reschedule_live_class,cancel_live_class,request_live_class_cancellation,review_live_class_cancellation,)
 
 # ============================================================
 # SHARED TIMETABLE CONFIGURATION
@@ -52,18 +43,25 @@ def _format_time(value):
 
 
 def _decorate_classes(classes, now):
-    """Attach display-only local times and live-state flags to class objects."""
+    """Attach display-only local times, duration and live-state flags."""
     for live_class in classes:
         live_class.local_start = timezone.localtime(live_class.start_at)
         live_class.local_end = timezone.localtime(live_class.end_at)
+
         live_class.time_range = (
             f"{_format_time(live_class.start_at)} – "
             f"{_format_time(live_class.end_at)}"
         )
+
+        live_class.duration_minutes = int(
+            (live_class.end_at - live_class.start_at).total_seconds() // 60
+        )
+
         live_class.is_live = (
             live_class.status == LiveClassStatus.CONFIRMED
             and live_class.start_at <= now < live_class.end_at
         )
+
     return classes
 
 
@@ -271,6 +269,14 @@ def _build_calendar_rows(days, classes, now, selected_batch_id=None, all_week_cl
 @login_required(login_url="teacher_login")
 @cache_control(no_cache=True, must_revalidate=True, no_store=True)
 def teacher_live_classes_view(request):
+    """
+    Teacher timetable and booking page.
+
+    The timetable is filtered to one batch at a time, but displays every
+    confirmed/previous class in that batch so a teacher can see slots occupied
+    by colleagues. Booking permissions remain enforced by LiveClassBookingForm
+    and create_live_class().
+    """
     teacher = getattr(request.user, "teacher_profile", None)
 
     if teacher is None:
@@ -284,7 +290,88 @@ def teacher_live_classes_view(request):
     if teacher.is_first_login:
         return redirect("teacher_change_password")
 
-    form = LiveClassBookingForm(request.POST or None, teacher=teacher)
+    today = timezone.localdate()
+    now = timezone.now()
+    current_tz = timezone.get_current_timezone()
+
+    # Teacher-only dependent dropdown data. Reuse this view URL so no route
+    # changes are needed; every option is restricted to active assignments.
+    if request.method == "GET" and request.GET.get("ajax"):
+        from courses.models import CourseChapter
+
+        option_type = request.GET.get("ajax", "").strip()
+        batch_id = request.GET.get("batch_id", "").strip()
+        subject_id = request.GET.get("subject_id", "").strip()
+
+        if not batch_id.isdigit():
+            return JsonResponse({"results": []})
+
+        assigned_batch = Batch.objects.filter(
+            pk=int(batch_id),
+            batch_status__in=ALLOWED_BATCH_STATUSES,
+        ).exists() and TeacherBatch.objects.filter(
+            teacher=teacher,
+            batch_id=int(batch_id),
+            is_active=True,
+        ).exists()
+        if not assigned_batch:
+            return JsonResponse({"results": []})
+
+        if option_type == "subjects":
+            assigned_subject_ids = TeacherSubject.objects.filter(
+                teacher=teacher,
+                batch_id=int(batch_id),
+                is_active=True,
+            ).values_list("subject_id", flat=True)
+            items = Subject.objects.filter(
+                pk__in=assigned_subject_ids,
+                batch_id=int(batch_id),
+                subject_status="published",
+            ).order_by("subject_name", "pk")
+            return JsonResponse({"results": [
+                {"id": item.pk, "text": item.subject_name} for item in items
+            ]})
+
+        if option_type == "chapters":
+            if not subject_id.isdigit():
+                return JsonResponse({"results": []})
+            assigned_subject = Subject.objects.filter(
+                pk=int(subject_id),
+                batch_id=int(batch_id),
+                subject_status="published",
+            ).exists() and TeacherSubject.objects.filter(
+                teacher=teacher,
+                batch_id=int(batch_id),
+                subject_id=int(subject_id),
+                is_active=True,
+            ).exists()
+            if not assigned_subject:
+                return JsonResponse({"results": []})
+            items = CourseChapter.objects.filter(
+                batch_id=int(batch_id),
+                subject_id=int(subject_id),
+                status="published",
+            ).order_by("chapter_order", "pk")
+            return JsonResponse({"results": [
+                {"id": item.pk, "text": item.chapter_name} for item in items
+            ]})
+
+        return JsonResponse({"results": []}, status=400)
+
+    # Keep the booking form independent from the timetable batch filter.
+    initial = {}
+    requested_date = parse_date(request.GET.get("class_date", ""))
+    requested_time = parse_time(request.GET.get("start_time", ""))
+    if requested_date and today <= requested_date <= today + timedelta(days=BOOKING_WINDOW_DAYS - 1):
+        initial["class_date"] = requested_date
+    if requested_time and requested_time.minute == 0 and requested_time.second == 0:
+        initial["start_time"] = requested_time
+
+    form = LiveClassBookingForm(
+        request.POST or None,
+        initial=initial if request.method == "GET" else None,
+        teacher=teacher,
+    )
 
     if request.method == "POST" and form.is_valid():
         class_date = form.cleaned_data["class_date"]
@@ -310,34 +397,71 @@ def teacher_live_classes_view(request):
             messages.success(request, "Live class booked successfully and confirmed.")
             return redirect("live_classes:teacher_live_classes")
 
-    now = timezone.now()
-    today = timezone.localdate()
-    window_end_date = today + timedelta(days=BOOKING_WINDOW_DAYS)
-    current_tz = timezone.get_current_timezone()
-    window_start_at = timezone.make_aware(
-        datetime.combine(today, datetime.min.time()), current_tz
+    assigned_batch_ids = TeacherBatch.objects.filter(
+        teacher=teacher,
+        is_active=True,
+    ).values_list("batch_id", flat=True)
+
+    assigned_batches = Batch.objects.filter(
+        pk__in=assigned_batch_ids,
+        batch_status__in=ALLOWED_BATCH_STATUSES,
+    ).order_by("batch_name", "pk")
+
+    requested_batch = request.GET.get("batch", "").strip()
+    selected_batch_id = (
+        int(requested_batch)
+        if requested_batch.isdigit()
+        and assigned_batches.filter(pk=int(requested_batch)).exists()
+        else assigned_batches.values_list("pk", flat=True).first()
     )
-    window_end_at = timezone.make_aware(
-        datetime.combine(window_end_date, datetime.min.time()), current_tz
+    selected_batch = str(selected_batch_id) if selected_batch_id is not None else ""
+
+    # Week navigation is display-only. Actual booking remains restricted to
+    # today and the next six dates by the form and service validators.
+    requested_week = parse_date(request.GET.get("week", ""))
+    week_start = requested_week or today
+    week_end_exclusive = week_start + timedelta(days=BOOKING_WINDOW_DAYS)
+
+    week_start_at = timezone.make_aware(
+        datetime.combine(week_start, datetime.min.time()), current_tz
+    )
+    week_end_at = timezone.make_aware(
+        datetime.combine(week_end_exclusive, datetime.min.time()), current_tz
     )
 
+    # This teacher's own classes are used for upcoming/history lists and
+    # for deciding which timetable cards may show teacher actions.
     teacher_classes = (
         LiveClass.objects.filter(teacher=teacher)
         .select_related("batch", "subject", "chapter", "teacher", "created_by")
         .order_by("start_at", "pk")
     )
 
-    week_classes_qs = teacher_classes.filter(
-        start_at__gte=window_start_at,
-        start_at__lt=window_end_at,
-    )
-    timetable_classes = _decorate_classes(list(week_classes_qs), now)
+    # The calendar must load the whole selected batch's schedule, not only
+    # this teacher's classes, otherwise another teacher's booking looks free.
+    all_week_classes = []
+    visible_classes = []
+    if selected_batch_id is not None:
+        all_week_classes = list(
+            LiveClass.objects.filter(
+                batch_id=selected_batch_id,
+                start_at__lt=week_end_at,
+                end_at__gt=week_start_at,
+            )
+            .select_related("batch", "subject", "chapter", "teacher", "created_by")
+            .order_by("start_at", "pk")
+        )
+        visible_classes = all_week_classes
+    _decorate_classes(all_week_classes, now)
+    _decorate_classes(visible_classes, now)
 
     upcoming_classes = _decorate_classes(
-        list(teacher_classes.filter(
-            status=LiveClassStatus.CONFIRMED,
-            end_at__gt=now,
-        ).order_by("start_at", "pk")),
+        list(
+            teacher_classes.filter(
+                status=LiveClassStatus.CONFIRMED,
+                end_at__gt=now,
+            ).order_by("start_at", "pk")
+        ),
         now,
     )
     recent_classes = _decorate_classes(
@@ -350,39 +474,233 @@ def teacher_live_classes_view(request):
         now,
     )
 
-    assigned_batch_ids = TeacherBatch.objects.filter(
-        teacher=teacher,
-        is_active=True,
-    ).values_list("batch_id", flat=True)
-    assigned_batches = Batch.objects.filter(
-        pk__in=assigned_batch_ids,
-        batch_status__in=ALLOWED_BATCH_STATUSES,
-    ).order_by("batch_name", "pk")
+    confirmed = [item for item in visible_classes if item.status == LiveClassStatus.CONFIRMED]
+    upcoming_count = sum(1 for item in confirmed if item.start_at > now)
+    live_now_count = sum(1 for item in confirmed if item.start_at <= now < item.end_at)
+    completed_count = sum(1 for item in visible_classes if item.status == LiveClassStatus.COMPLETED)
+    cancelled_count = sum(1 for item in visible_classes if item.status == LiveClassStatus.CANCELLED)
 
-    days = _calendar_days(today)
+    days = _calendar_days(week_start)
     rows = _build_calendar_rows(
         days,
-        timetable_classes,
+        visible_classes,
         now,
-        all_week_classes=timetable_classes,
+        selected_batch_id=selected_batch_id,
+        all_week_classes=all_week_classes,
     )
 
     context = _booking_context(form, teacher)
     context.update({
         "upcoming_classes": upcoming_classes,
         "recent_classes": recent_classes,
-        "timetable_classes": timetable_classes,
+        "timetable_classes": visible_classes,
         "assigned_batches": assigned_batches,
+        "batches": assigned_batches,
+        "selected_batch": selected_batch,
         "calendar_days": days,
         "calendar_rows": rows,
-        "week_start": today,
-        "week_end": today + timedelta(days=BOOKING_WINDOW_DAYS - 1),
-        "upcoming_count": len(upcoming_classes),
-        "live_now_count": sum(1 for item in upcoming_classes if item.is_live),
+        "week_start": week_start,
+        "week_end": week_start + timedelta(days=BOOKING_WINDOW_DAYS - 1),
+        "previous_week": week_start - timedelta(days=BOOKING_WINDOW_DAYS),
+        "next_week": week_start + timedelta(days=BOOKING_WINDOW_DAYS),
+        "week_classes_count": len(visible_classes),
+        "upcoming_count": upcoming_count,
+        "live_now_count": live_now_count,
+        "completed_count": completed_count,
+        "cancelled_count": cancelled_count,
         "now": now,
     })
 
     return render(request, "live_classes/teacher_live_classes.html", context)
+
+
+# ============================================================
+# TEACHER: UPCOMING LIVE CLASSES
+# ============================================================
+
+@login_required(login_url="teacher_login")
+@cache_control(no_cache=True, must_revalidate=True, no_store=True)
+def teacher_upcoming_classes_view(request):
+    """
+    Show this Teacher's confirmed future classes with batch/subject/search
+    filters and server-side pagination (20 classes per page).
+    """
+    teacher = getattr(request.user, "teacher_profile", None)
+
+    if teacher is None:
+        messages.error(request, "Access denied.")
+        return redirect("teacher_login")
+
+    if not request.user.is_active or teacher.is_blocked:
+        messages.error(request, "Your account cannot access Live Classes.")
+        return redirect("teacher_login")
+
+    if teacher.is_first_login:
+        return redirect("teacher_change_password")
+
+    now = timezone.now()
+    today = timezone.localdate()
+
+    # Only batches actively assigned to this teacher are available as filters.
+    assigned_batch_ids = TeacherBatch.objects.filter(
+        teacher=teacher,
+        is_active=True,
+    ).values_list("batch_id", flat=True)
+
+    batches = Batch.objects.filter(
+        pk__in=assigned_batch_ids,
+        batch_status__in=ALLOWED_BATCH_STATUSES,
+    ).order_by("batch_name", "pk")
+
+    batch_value = request.GET.get("batch", "").strip()
+    selected_batch = ""
+    if batch_value.isdigit() and batches.filter(pk=int(batch_value)).exists():
+        selected_batch = batch_value
+
+    # Subjects are restricted to active TeacherSubject assignments and,
+    # when a batch is selected, to that batch only.
+    assigned_subject_ids = TeacherSubject.objects.filter(
+        teacher=teacher,
+        is_active=True,
+    ).values_list("subject_id", flat=True)
+
+    subjects = Subject.objects.filter(
+        pk__in=assigned_subject_ids,
+        subject_status="published",
+        batch__batch_status__in=ALLOWED_BATCH_STATUSES,
+    )
+    if selected_batch:
+        subjects = subjects.filter(batch_id=int(selected_batch))
+    subjects = subjects.order_by("subject_name", "pk")
+
+    subject_value = request.GET.get("subject", "").strip()
+    selected_subject = ""
+    if subject_value.isdigit() and subjects.filter(pk=int(subject_value)).exists():
+        selected_subject = subject_value
+
+    # Detect pending cancellation requests without changing the LiveClass model.
+    # The class remains confirmed and visible until an Admin approves the request.
+    pending_cancellation_requests = CancellationRequest.objects.filter(
+        live_class_id=OuterRef("pk"),
+        status=CancellationStatus.PENDING,
+    )
+
+    # Base queryset: only this teacher's confirmed classes that have not started.
+    # has_pending_cancellation is consumed by the Upcoming Classes card template.
+    classes = (
+        LiveClass.objects.filter(
+            teacher=teacher,
+            status=LiveClassStatus.CONFIRMED,
+            start_at__gt=now,
+        )
+        .annotate(
+            has_pending_cancellation=Exists(pending_cancellation_requests)
+        )
+        .select_related("batch", "subject", "chapter", "teacher")
+    )
+
+    if selected_batch:
+        classes = classes.filter(batch_id=int(selected_batch))
+
+    if selected_subject:
+        classes = classes.filter(subject_id=int(selected_subject))
+
+    search_query = request.GET.get("search", "").strip()
+    if search_query:
+        classes = classes.filter(
+            Q(batch__batch_name__icontains=search_query)
+            | Q(subject__subject_name__icontains=search_query)
+            | Q(chapter__chapter_name__icontains=search_query)
+        )
+
+    # Date filtering is performed in the database before pagination,
+    # so it searches every upcoming class, not only the visible 20 cards.
+    date_value = request.GET.get("date", "").strip()
+    selected_date = parse_date(date_value)
+    if selected_date:
+        local_start = timezone.make_aware(
+            datetime.combine(selected_date, datetime.min.time()),
+            timezone.get_current_timezone(),
+        )
+        local_end = local_start + timedelta(days=1)
+        classes = classes.filter(
+            start_at__gte=local_start,
+            start_at__lt=local_end,
+        )
+
+    classes = classes.order_by("start_at", "pk")
+
+    # Header statistics are calculated from the database, not hardcoded.
+    # "This week" means upcoming confirmed classes from today through Sunday.
+    week_start = today - timedelta(days=today.weekday())
+    week_end = week_start + timedelta(days=7)
+    week_start_at = timezone.make_aware(
+        datetime.combine(week_start, datetime.min.time()),
+        timezone.get_current_timezone(),
+    )
+    week_end_at = timezone.make_aware(
+        datetime.combine(week_end, datetime.min.time()),
+        timezone.get_current_timezone(),
+    )
+
+    this_week_count = LiveClass.objects.filter(
+        teacher=teacher,
+        status=LiveClassStatus.CONFIRMED,
+        start_at__gt=now,
+        start_at__gte=week_start_at,
+        start_at__lt=week_end_at,
+    ).count()
+
+    live_now_count = LiveClass.objects.filter(
+        teacher=teacher,
+        status=LiveClassStatus.CONFIRMED,
+        start_at__lte=now,
+        end_at__gt=now,
+    ).count()
+
+    # 20 per page; get_page() safely handles invalid/out-of-range page values.
+    paginator = Paginator(classes, 20)
+    page_obj = paginator.get_page(request.GET.get("page"))
+    upcoming_classes = list(page_obj.object_list)
+    _decorate_classes(upcoming_classes, now)
+
+    # Available hourly values for the reschedule popup. The service remains
+    # the authoritative validator for booking window and schedule conflicts.
+    reschedule_time_options = []
+    for hour in range(FIRST_HOUR, LAST_START_HOUR + 1):
+        value = f"{hour:02d}:00"
+        label = datetime.strptime(value, "%H:%M").strftime("%I:%M %p").lstrip("0")
+        reschedule_time_options.append((value, label))
+
+    # Preserve active filters while changing pagination pages.
+    pagination_params = request.GET.copy()
+    pagination_params.pop("page", None)
+    pagination_query = pagination_params.urlencode()
+
+    context = {
+        "teacher": teacher,
+        "upcoming_classes": upcoming_classes,
+        "page_obj": page_obj,
+        "paginator": paginator,
+        "upcoming_count": paginator.count,
+        "this_week_count": this_week_count,
+        "live_now_count": live_now_count,
+        "batches": batches,
+        "subjects": subjects,
+        "selected_batch": selected_batch,
+        "selected_subject": selected_subject,
+        "search_query": search_query,
+        "selected_date": selected_date,
+        "pagination_query": pagination_query,
+        "reschedule_time_options": reschedule_time_options,
+        "now": now,
+    }
+
+    return render(
+        request,
+        "live_classes/teacher_upcoming_classes.html",
+        context,
+    )
 
 
 # ============================================================
@@ -651,6 +969,198 @@ def admin_live_schedule_view(request):
 
     return render(request, "admins/live_classes/live_schedule.html", context)
 
+# ============================================================
+# ADMIN: UPCOMING LIVE CLASSES
+# ============================================================
+
+@admin_required
+@cache_control(no_cache=True, must_revalidate=True, no_store=True)
+def admin_upcoming_classes_view(request):
+    """
+    Separate Admin Upcoming Classes page.
+
+    Shows confirmed future classes with filters, search
+    and pagination. Does not change the timetable page.
+    """
+
+    now = timezone.now()
+    today = timezone.localdate()
+
+    classes = (
+        LiveClass.objects
+        .filter(
+            status=LiveClassStatus.CONFIRMED,
+            start_at__gt=now,
+        )
+        .select_related(
+            "batch",
+            "subject",
+            "chapter",
+            "teacher",
+        )
+        .order_by("start_at", "pk")
+    )
+
+    # -----------------------------
+    # Read filters
+    # -----------------------------
+
+    search_query = request.GET.get("q", "").strip()
+    batch_value = request.GET.get("batch", "").strip()
+    subject_value = request.GET.get("subject", "").strip()
+    teacher_value = request.GET.get("teacher", "").strip()
+    chapter_value = request.GET.get("chapter", "").strip()
+    date_value = request.GET.get("date", "").strip()
+
+    # -----------------------------
+    # Search
+    # -----------------------------
+
+    if search_query:
+        classes = classes.filter(
+            Q(batch__batch_name__icontains=search_query)
+            | Q(subject__subject_name__icontains=search_query)
+            | Q(chapter__chapter_name__icontains=search_query)
+            | Q(teacher__full_name__icontains=search_query)
+        )
+
+    # -----------------------------
+    # Batch filter
+    # -----------------------------
+
+    if batch_value.isdigit():
+        classes = classes.filter(batch_id=int(batch_value))
+
+    # -----------------------------
+    # Subject filter
+    # -----------------------------
+
+    if subject_value.isdigit():
+        classes = classes.filter(subject_id=int(subject_value))
+
+    # -----------------------------
+    # Teacher filter
+    # -----------------------------
+
+    if teacher_value.isdigit():
+        classes = classes.filter(teacher_id=int(teacher_value))
+
+    # -----------------------------
+    # Chapter filter
+    # -----------------------------
+
+    if chapter_value.isdigit():
+        classes = classes.filter(chapter_id=int(chapter_value))
+
+    # -----------------------------
+    # Date filter
+    # -----------------------------
+
+    selected_date = parse_date(date_value)
+
+    if selected_date:
+        local_start = timezone.make_aware(
+            datetime.combine(selected_date, datetime.min.time()),
+            timezone.get_current_timezone(),
+        )
+
+        local_end = local_start + timedelta(days=1)
+
+        classes = classes.filter(
+            start_at__gte=local_start,
+            start_at__lt=local_end,
+        )
+
+    # -----------------------------
+    # Filter dropdown data
+    # -----------------------------
+
+    upcoming_base = (
+        LiveClass.objects
+        .filter(
+            status=LiveClassStatus.CONFIRMED,
+            start_at__gt=now,
+        )
+    )
+
+    batches = (
+        Batch.objects
+        .filter(
+            pk__in=upcoming_base.values_list("batch_id", flat=True)
+        )
+        .order_by("batch_name", "pk")
+    )
+
+    teachers = (
+        Teacher.objects
+        .filter(
+            pk__in=upcoming_base.values_list("teacher_id", flat=True)
+        )
+        .order_by("full_name", "pk")
+    )
+
+    subjects = Subject.objects.filter(
+        pk__in=upcoming_base.values_list("subject_id", flat=True)
+    )
+
+    if batch_value.isdigit():
+        subjects = subjects.filter(batch_id=int(batch_value))
+
+    subjects = subjects.order_by("subject_name", "pk")
+
+    chapters = CourseChapter.objects.filter(
+        pk__in=upcoming_base.values_list("chapter_id", flat=True)
+    )
+
+    if batch_value.isdigit():
+        chapters = chapters.filter(batch_id=int(batch_value))
+
+    if subject_value.isdigit():
+        chapters = chapters.filter(subject_id=int(subject_value))
+
+    chapters = chapters.order_by("chapter_order", "pk")
+
+    # -----------------------------
+    # Pagination
+    # -----------------------------
+
+    paginator = Paginator(classes, 20)
+
+    page_number = request.GET.get("page", 1)
+    page_obj = paginator.get_page(page_number)
+
+    upcoming_classes = list(page_obj.object_list)
+    _decorate_classes(upcoming_classes, now)
+
+    context = {
+        "upcoming_classes": upcoming_classes,
+        "page_obj": page_obj,
+        "paginator": paginator,
+
+        "batches": batches,
+        "teachers": teachers,
+        "subjects": subjects,
+        "chapters": chapters,
+
+        "search_query": search_query,
+        "selected_batch": batch_value,
+        "selected_subject": subject_value,
+        "selected_teacher": teacher_value,
+        "selected_chapter": chapter_value,
+        "selected_date": selected_date,
+
+        "today": today,
+        "booking_end_date": today + timedelta(days=BOOKING_WINDOW_DAYS - 1),
+        "now": now,
+        "upcoming_count": paginator.count,
+    }
+
+    return render(
+        request,
+        "admins/live_classes/admin_upcoming_classes.html",
+        context,
+    )
+
 
 # ============================================================
 # TEACHER: RESCHEDULE AND CANCELLATION REQUEST
@@ -668,6 +1178,21 @@ def teacher_reschedule_live_class_view(request, class_id):
     if teacher.is_first_login:
         return redirect("teacher_change_password")
 
+    # A pending cancellation request locks rescheduling until Admin reviews it.
+    # Rejected requests no longer match PENDING, so rescheduling becomes available
+    # again; approved requests cancel the class and cannot be rescheduled.
+    has_pending_cancellation = CancellationRequest.objects.filter(
+        live_class_id=class_id,
+        requested_by=teacher,
+        status=CancellationStatus.PENDING,
+    ).exists()
+    if has_pending_cancellation:
+        messages.error(
+            request,
+            "This class cannot be rescheduled while its cancellation request is pending Admin review.",
+        )
+        return redirect("live_classes:teacher_upcoming_classes")
+
     try:
         start_at, end_at = _get_reschedule_times(request)
         reschedule_live_class(
@@ -683,8 +1208,60 @@ def teacher_reschedule_live_class_view(request, class_id):
     else:
         messages.success(request, "Live class rescheduled successfully.")
 
-    return redirect("live_classes:teacher_live_classes")
+    return redirect("live_classes:teacher_upcoming_classes")
 
+
+# ============================================================
+# ADMIN: DIRECTLY CANCEL A LIVE CLASS
+# ============================================================
+
+@admin_required
+@require_POST
+@cache_control(no_cache=True, must_revalidate=True, no_store=True)
+def admin_cancel_live_class_view(request, class_id):
+
+    entered_batch_name = request.POST.get(
+        "batch_name_confirmation", ""
+    ).strip()
+
+    live_class = (
+        LiveClass.objects
+        .select_related("batch")
+        .filter(pk=class_id)
+        .first()
+    )
+
+    if live_class is None:
+        messages.error(request, "The requested live class was not found.")
+        return redirect("live_classes:admin_upcoming_classes")
+
+    actual_batch_name = live_class.batch.batch_name
+
+    # Require the exact batch name before cancellation.
+    if entered_batch_name != actual_batch_name:
+        messages.error(
+            request,
+            "Batch name does not match. Live class was not cancelled."
+        )
+        return redirect("live_classes:admin_upcoming_classes")
+
+    try:
+        cancel_live_class(
+            live_class_id=class_id,
+            cancelled_by=request.user,
+        )
+
+    except ValidationError as exc:
+        for error in exc.messages:
+            messages.error(request, error)
+
+    else:
+        messages.success(
+            request,
+            "Live class cancelled successfully."
+        )
+
+    return redirect("live_classes:admin_upcoming_classes")
 
 @login_required(login_url="teacher_login")
 @require_POST
@@ -698,20 +1275,216 @@ def teacher_request_live_class_cancellation_view(request, class_id):
     if teacher.is_first_login:
         return redirect("teacher_change_password")
 
-    reason = request.POST.get("reason", "").strip()
+    # Validate the submitted reason on the server as well as in the browser.
+    # Never rely on HTML maxlength because a request can be submitted manually.
+    reason = request.POST.get("reason", "")
+    trimmed_reason = reason.strip()
+
+    if not trimmed_reason:
+        messages.error(
+            request,
+            "Please fill in the cancellation reason field before submitting.",
+        )
+        return redirect(
+            f"{reverse('live_classes:teacher_upcoming_classes')}?open_cancel={class_id}"
+        )
+
+    if len(reason) > 250:
+        messages.error(
+            request,
+            "Cancellation reason cannot exceed 250 characters. "
+            "Please shorten your reason and try again.",
+        )
+        return redirect(
+            f"{reverse('live_classes:teacher_upcoming_classes')}?open_cancel={class_id}"
+        )
+
     try:
         request_live_class_cancellation(
             live_class_id=class_id,
             teacher=teacher,
-            reason=reason,
+            reason=trimmed_reason,
         )
     except ValidationError as exc:
         for error in exc.messages:
             messages.error(request, error)
+        return redirect(
+            f"{reverse('live_classes:teacher_upcoming_classes')}?open_cancel={class_id}"
+        )
     else:
-        messages.success(request, "Cancellation request submitted for Admin review.")
+        messages.success(
+            request,
+            "Cancellation request submitted for Admin review.",
+        )
 
-    return redirect("live_classes:teacher_live_classes")
+    return redirect("live_classes:teacher_upcoming_classes")
+
+
+# ============================================================
+# TEACHER: CANCELLATION REQUEST HISTORY
+# ============================================================
+
+@login_required(login_url="teacher_login")
+@cache_control(no_cache=True, must_revalidate=True, no_store=True)
+def teacher_cancellation_requests_view(request):
+    """Show this Teacher's cancellation requests with filters and 20-item pagination."""
+
+    teacher = getattr(request.user, "teacher_profile", None)
+
+    if teacher is None:
+        messages.error(request, "Access denied.")
+        return redirect("teacher_login")
+
+    if not request.user.is_active or teacher.is_blocked:
+        messages.error(
+            request,
+            "Your account cannot access cancellation request history.",
+        )
+        return redirect("teacher_login")
+
+    if teacher.is_first_login:
+        return redirect("teacher_change_password")
+
+    # Base queryset is always limited to the logged-in teacher's own requests.
+    base_requests = (
+        CancellationRequest.objects
+        .filter(requested_by=teacher)
+        .select_related(
+            "live_class",
+            "live_class__batch",
+            "live_class__subject",
+            "live_class__chapter",
+            "live_class__teacher",
+            "reviewed_by",
+        )
+        .order_by("-requested_at", "-pk")
+    )
+
+    # Summary counts remain totals for this teacher, independent of active filters.
+    pending_count = base_requests.filter(
+        status=CancellationStatus.PENDING
+    ).count()
+    approved_count = base_requests.filter(
+        status=CancellationStatus.APPROVED
+    ).count()
+    rejected_count = base_requests.filter(
+        status=CancellationStatus.REJECTED
+    ).count()
+
+    # Read and validate filter values against this teacher's own request records.
+    batch_value = request.GET.get("batch", "").strip()
+    subject_value = request.GET.get("subject", "").strip()
+    date_value = request.GET.get("date", "").strip()
+    status_value = request.GET.get("status", "").strip().lower()
+    search_query = request.GET.get("search", "").strip()
+
+    batches = Batch.objects.filter(
+        pk__in=base_requests.values_list("live_class__batch_id", flat=True)
+    ).distinct().order_by("batch_name", "pk")
+
+    subjects = Subject.objects.filter(
+        pk__in=base_requests.values_list("live_class__subject_id", flat=True)
+    ).distinct().order_by("subject_name", "pk")
+
+    selected_batch = ""
+    if batch_value.isdigit() and batches.filter(pk=int(batch_value)).exists():
+        selected_batch = batch_value
+
+    if selected_batch:
+        subjects = subjects.filter(batch_id=int(selected_batch))
+
+    selected_subject = ""
+    if subject_value.isdigit() and subjects.filter(pk=int(subject_value)).exists():
+        selected_subject = subject_value
+
+    selected_date = parse_date(date_value)
+    selected_status = (
+        status_value
+        if status_value in {
+            CancellationStatus.PENDING,
+            CancellationStatus.APPROVED,
+            CancellationStatus.REJECTED,
+        }
+        else ""
+    )
+
+    cancellation_queryset = base_requests
+
+    if selected_batch:
+        cancellation_queryset = cancellation_queryset.filter(
+            live_class__batch_id=int(selected_batch)
+        )
+
+    if selected_subject:
+        cancellation_queryset = cancellation_queryset.filter(
+            live_class__subject_id=int(selected_subject)
+        )
+
+    if selected_date:
+        local_start = timezone.make_aware(
+            datetime.combine(selected_date, datetime.min.time()),
+            timezone.get_current_timezone(),
+        )
+        local_end = local_start + timedelta(days=1)
+        cancellation_queryset = cancellation_queryset.filter(
+            live_class__start_at__gte=local_start,
+            live_class__start_at__lt=local_end,
+        )
+
+    if selected_status:
+        cancellation_queryset = cancellation_queryset.filter(status=selected_status)
+
+    if search_query:
+        cancellation_queryset = cancellation_queryset.filter(
+            Q(live_class__batch__batch_name__icontains=search_query)
+            | Q(live_class__subject__subject_name__icontains=search_query)
+            | Q(live_class__chapter__chapter_name__icontains=search_query)
+        )
+
+    cancellation_queryset = cancellation_queryset.order_by("-requested_at", "-pk")
+
+    # Exactly 20 cancellation requests per page.
+    paginator = Paginator(cancellation_queryset, 20)
+    page_obj = paginator.get_page(request.GET.get("page"))
+    cancellation_requests = list(page_obj.object_list)
+
+    # Keep the current filters in pagination links.
+    pagination_params = request.GET.copy()
+    pagination_params.pop("page", None)
+    pagination_query = pagination_params.urlencode()
+
+    has_active_filters = any((
+        selected_batch,
+        selected_subject,
+        selected_date,
+        selected_status,
+        search_query,
+    ))
+
+    context = {
+        "teacher": teacher,
+        "cancellation_requests": cancellation_requests,
+        "pending_count": pending_count,
+        "approved_count": approved_count,
+        "rejected_count": rejected_count,
+        "batches": batches,
+        "subjects": subjects,
+        "selected_batch": selected_batch,
+        "selected_subject": selected_subject,
+        "selected_date": selected_date,
+        "selected_status": selected_status,
+        "search_query": search_query,
+        "paginator": paginator,
+        "page_obj": page_obj,
+        "pagination_query": pagination_query,
+        "has_active_filters": has_active_filters,
+    }
+
+    return render(
+        request,
+        "live_classes/teacher_cancellation_requests.html",
+        context,
+    )
 
 
 # ============================================================
@@ -736,7 +1509,7 @@ def admin_reschedule_live_class_view(request, class_id):
     else:
         messages.success(request, "Live class rescheduled successfully.")
 
-    return redirect("live_classes:admin_live_schedule")
+    return redirect("live_classes:admin_upcoming_classes")
 
 
 @admin_required
@@ -746,7 +1519,7 @@ def admin_review_cancellation_view(request, request_id):
     decision = request.POST.get("decision", "").strip().lower()
     if decision not in {"approve", "reject"}:
         messages.error(request, "Choose approve or reject.")
-        return redirect("live_classes:admin_live_schedule")
+        return redirect("live_classes:admin_cancellation_requests")
 
     try:
         review_live_class_cancellation(
@@ -766,4 +1539,63 @@ def admin_review_cancellation_view(request, request_id):
             else "Cancellation request rejected.",
         )
 
-    return redirect("live_classes:admin_live_schedule")
+    return redirect("live_classes:admin_cancellation_requests")
+
+# ============================================================
+# ADMIN: CANCELLATION REQUESTS PAGE
+# ============================================================
+
+@admin_required
+@cache_control(no_cache=True, must_revalidate=True, no_store=True)
+def admin_cancellation_requests_view(request):
+
+    pending_requests = (
+        CancellationRequest.objects
+        .filter(status=CancellationStatus.PENDING)
+        .select_related(
+            "live_class",
+            "live_class__batch",
+            "live_class__subject",
+            "live_class__chapter",
+            "live_class__teacher",
+            "requested_by",
+        )
+        .order_by("requested_at", "pk")
+    )
+
+    reviewed_requests = (
+        CancellationRequest.objects
+        .filter(
+            status__in=[
+                CancellationStatus.APPROVED,
+                CancellationStatus.REJECTED,
+            ]
+        )
+        .select_related(
+            "live_class",
+            "live_class__batch",
+            "live_class__subject",
+            "live_class__chapter",
+            "live_class__teacher",
+            "requested_by",
+            "reviewed_by",
+        )
+        .order_by("-reviewed_at", "-requested_at")
+    )
+
+    context = {
+        "pending_cancellation_requests": pending_requests,
+        "reviewed_cancellation_requests": reviewed_requests,
+        "approved_cancellation_count": reviewed_requests.filter(
+            status=CancellationStatus.APPROVED
+        ).count(),
+        "rejected_cancellation_count": reviewed_requests.filter(
+            status=CancellationStatus.REJECTED
+        ).count(),
+    }
+
+    return render(
+        request,
+        "admins/live_classes/cancellation_requests.html",
+        context,
+    )

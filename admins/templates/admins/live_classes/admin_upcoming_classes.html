@@ -1,0 +1,352 @@
+{% extends "admins/admin_base.html" %}
+
+{% block title %}Upcoming Live Classes | NeoLearn Admin{% endblock %}
+
+{% block extra_head %}
+<style>
+    .up-page{color:#e2e8f0;display:flex;flex-direction:column;gap:14px}
+    .up-panel{background:linear-gradient(145deg,rgba(5,31,49,.96),rgba(3,19,34,.96));border:1px solid rgba(14,165,233,.28);border-radius:14px}
+    .up-stat{min-width:0;padding:12px 14px;border:1px solid rgba(14,165,233,.25);border-radius:12px;background:linear-gradient(145deg,rgba(7,43,62,.9),rgba(3,22,38,.95))}
+    .up-input,.up-select{width:100%;height:38px;border:1px solid #155274;border-radius:8px;background:#071c30;color:#e2e8f0;padding:0 11px;font-size:12px;outline:none}
+    .up-input:focus,.up-select:focus{border-color:#22d3ee;box-shadow:0 0 0 2px rgba(34,211,238,.12)}
+    .up-label{display:block;margin-bottom:5px;color:#a9c0d2;font-size:10px;font-weight:700}
+    .up-btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:36px;border:1px solid #155274;border-radius:9px;padding:0 13px;background:#082238;color:#dbeafe;font-size:11px;font-weight:700;text-decoration:none;cursor:pointer;transition:.18s}
+    .up-btn:hover{border-color:#22d3ee;background:#0b3048}
+    .up-btn-primary{border-color:#06b6d4;background:#06c6d9;color:#03202c}
+    .up-btn-primary:hover{background:#22d3ee;color:#031923}
+    .up-card{position:relative;display:flex;flex-direction:column;min-width:0;min-height:0;height:100%;overflow:hidden;border:1px solid rgba(14,165,233,.28);border-radius:18px;background:linear-gradient(155deg,#06243a 0%,#031525 100%);box-shadow:0 8px 22px rgba(0,0,0,.16);transition:transform .2s ease,border-color .2s ease,box-shadow .2s ease}
+    .up-card:hover{transform:translateY(-3px);border-color:rgba(34,211,238,.62);box-shadow:0 16px 30px rgba(0,0,0,.28),0 0 18px rgba(34,211,238,.07)}
+    .up-card-media{position:relative;height:145px;flex:0 0 145px;overflow:hidden;background:linear-gradient(135deg,#0e7490,#172554)}
+    .up-subject-thumb{display:block;width:100%;height:100%;object-fit:cover;object-position:center;border:0;border-radius:0;transition:transform .4s ease}
+    .up-card:hover .up-subject-thumb{transform:scale(1.035)}
+    .up-card-media:after{content:"";position:absolute;inset:auto 0 0;height:45px;background:linear-gradient(transparent,rgba(3,12,25,.62));pointer-events:none}
+    .up-card-media .up-status{position:absolute;z-index:3;left:11px;top:11px;backdrop-filter:blur(8px);background:rgba(2,20,25,.88)}
+    .up-card-media .up-menu-wrap{position:absolute;z-index:5;right:10px;top:9px;margin:0}
+    .up-card-media .up-menu-trigger{border:1px solid rgba(71,85,105,.9);background:rgba(2,8,23,.86);color:#e2e8f0;backdrop-filter:blur(8px)}
+    .up-card-body{display:flex;flex:1;flex-direction:column;gap:8px;padding:12px}
+    .up-card-title{min-width:0;overflow:hidden;color:#f8fafc;font-size:14px;font-weight:800;text-overflow:ellipsis;white-space:nowrap}
+    .up-card-batch{display:flex;align-items:center;gap:7px;min-width:0;padding:7px 9px;border:1px solid rgba(14,165,233,.17);border-radius:9px;background:rgba(3,19,34,.65);color:#cbd5e1;font-size:10px}
+    .up-card-batch span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .up-card-details{display:grid;gap:7px;margin-top:2px}
+    .up-card-countdown{margin-top:auto;padding-top:3px}
+    .up-meta{display:flex;align-items:center;gap:8px;color:#c0d2df;font-size:11px;line-height:1.4;min-width:0}
+    .up-meta i{width:14px;flex:0 0 14px;color:#67e8f9;font-size:14px}
+    .up-status{display:inline-flex;align-items:center;gap:5px;border:1px solid rgba(16,185,129,.35);border-radius:999px;padding:4px 8px;color:#86efac;background:rgba(16,185,129,.08);font-size:9px;font-weight:800;white-space:nowrap}
+    .up-countdown{display:inline-flex;align-items:center;gap:6px;border:1px solid rgba(16,185,129,.25);border-radius:8px;padding:6px 8px;color:#6ee7b7;background:rgba(5,150,105,.10);font-size:10px;font-weight:800}
+    .up-menu-wrap{position:relative;margin-left:auto;align-self:flex-start}
+    .up-menu-trigger{display:flex;width:30px;height:30px;align-items:center;justify-content:center;border:1px solid transparent;border-radius:8px;background:transparent;color:#a8c4d5;cursor:pointer}
+    .up-menu-trigger:hover,.up-menu-trigger[aria-expanded="true"]{border-color:#155274;background:#0a2b43;color:#67e8f9}
+    .up-menu{position:absolute;top:34px;right:0;z-index:40;width:150px;padding:5px;border:1px solid #155274;border-radius:10px;background:#061a2c;box-shadow:0 14px 35px rgba(0,0,0,.45)}
+    .up-menu[hidden]{display:none}
+    .up-menu button{display:flex;width:100%;align-items:center;gap:9px;border:0;border-radius:7px;padding:9px 10px;background:transparent;color:#dbeafe;text-align:left;font-size:11px;font-weight:700;cursor:pointer}
+    .up-menu button:hover{background:#0b3048}
+    .up-menu .danger{color:#fda4af}
+    .up-modal-backdrop{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(1,8,18,.78);backdrop-filter:blur(7px)}
+    .up-modal-backdrop[hidden]{display:none}
+    .up-modal{width:min(540px,100%);max-height:calc(100vh - 32px);overflow:auto;border:1px solid rgba(34,211,238,.38);border-radius:17px;background:linear-gradient(150deg,#08243a,#031321);box-shadow:0 25px 80px rgba(0,0,0,.55)}
+    .up-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:17px 19px;border-bottom:1px solid rgba(14,165,233,.18)}
+    .up-modal-close{display:flex;width:32px;height:32px;align-items:center;justify-content:center;border:1px solid rgba(148,163,184,.2);border-radius:8px;background:transparent;color:#cbd5e1;cursor:pointer}
+    .up-modal-content{padding:17px 19px 19px}
+    .up-class-summary{display:flex;align-items:center;gap:12px;border:1px solid rgba(14,165,233,.2);border-radius:11px;padding:11px;background:rgba(4,24,40,.8)}
+    .up-warning{border:1px solid rgba(245,158,11,.45);border-radius:10px;padding:11px;background:rgba(120,53,15,.18);color:#fde68a;font-size:11px}
+    .up-danger-btn{border-color:#e11d48;background:#e11d48;color:white}
+    .up-danger-btn:hover{border-color:#fb7185;background:#fb7185}
+    .up-time-field{position:relative;min-width:0}
+    .up-time-trigger{display:flex;width:100%;height:38px;align-items:center;justify-content:space-between;gap:10px;border:1px solid #155274;border-radius:8px;background:#071c30;color:#e2e8f0;padding:0 11px;font-size:12px;text-align:left;cursor:pointer;outline:none}
+    .up-time-trigger:focus,.up-time-trigger[aria-expanded="true"]{border-color:#22d3ee;box-shadow:0 0 0 2px rgba(34,211,238,.12)}
+    .up-time-trigger i{color:#67e8f9;font-size:16px}
+    .up-time-menu{position:absolute;top:calc(100% + 5px);left:0;right:0;z-index:1200;max-height:190px;overflow-y:auto;overscroll-behavior:contain;border:1px solid #155274;border-radius:9px;padding:5px;background:#061a2c;box-shadow:0 14px 32px rgba(0,0,0,.5);scrollbar-width:thin;scrollbar-color:#0e7490 #0f172a}
+    .up-time-menu[hidden]{display:none}
+    .up-time-option{display:block;width:100%;border:0;border-radius:6px;padding:8px 10px;background:transparent;color:#dbeafe;font-size:12px;text-align:left;cursor:pointer}
+    .up-time-option:hover,.up-time-option[aria-selected="true"]{background:#0b3b56;color:#67e8f9}
+    .up-card-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-auto-rows:auto;gap:14px}
+    @media(max-width:1350px){.up-card-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+    @media(max-width:1024px){.up-card-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media(max-width:640px){.up-card-grid{grid-template-columns:minmax(0,1fr);gap:12px}.up-card-media{height:175px;flex-basis:175px}.up-card-body{padding:12px}}
+    @media(prefers-reduced-motion:reduce){.up-card,.up-subject-thumb{transition:none!important}}
+</style>
+{% endblock %}
+
+{% block admin_content %}
+<div class="up-page">
+    <header class="flex flex-wrap items-center justify-between gap-3">
+        <div class="flex min-w-0 items-center gap-3">
+            <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 text-white"><i class="ri-calendar-event-line text-2xl"></i></div>
+            <div class="min-w-0"><h1 class="text-xl font-extrabold text-white sm:text-2xl">Upcoming Live Classes</h1><p class="mt-1 text-xs text-slate-400">Manage confirmed future classes, reschedule or cancel directly.</p></div>
+        </div>
+        <div class="flex items-center gap-2">
+            <a class="up-btn" href="{% url 'live_classes:admin_live_schedule' %}"><i class="ri-calendar-line"></i>Timetable</a>
+            <a class="up-btn up-btn-primary" href="{% url 'live_classes:admin_upcoming_classes' %}"><i class="ri-refresh-line"></i>Clear filters</a>
+        </div>
+    </header>
+
+    <section class="grid grid-cols-2 gap-2 xl:grid-cols-4">
+        <div class="up-stat flex items-center gap-3"><span class="flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-500/15 text-xl text-cyan-300"><i class="ri-calendar-check-line"></i></span><div><p class="text-[10px] font-semibold text-cyan-200">Matching Upcoming Classes</p><p class="text-2xl font-extrabold text-white">{{ upcoming_count }}</p><p class="text-[9px] text-slate-400">Based on current filters</p></div></div>
+        <div class="up-stat flex items-center gap-3"><span class="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/15 text-xl text-emerald-300"><i class="ri-image-line"></i></span><div><p class="text-[10px] font-semibold text-emerald-200">Batches</p><p class="text-2xl font-extrabold text-white">{{ batches|length }}</p><p class="text-[9px] text-slate-400">With upcoming classes</p></div></div>
+        <div class="up-stat flex items-center gap-3"><span class="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-500/15 text-xl text-violet-300"><i class="ri-book-open-line"></i></span><div><p class="text-[10px] font-semibold text-violet-200">Subjects</p><p class="text-2xl font-extrabold text-white">{{ subjects|length }}</p><p class="text-[9px] text-slate-400">Available in filters</p></div></div>
+        <div class="up-stat flex items-center gap-3"><span class="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/15 text-xl text-amber-300"><i class="ri-user-star-line"></i></span><div><p class="text-[10px] font-semibold text-amber-200">Teachers</p><p class="text-2xl font-extrabold text-white">{{ teachers|length }}</p><p class="text-[9px] text-slate-400">With upcoming classes</p></div></div>
+    </section>
+
+    <section class="up-panel p-3">
+        <form method="get" class="grid grid-cols-1 items-end gap-2 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
+            <div class="2xl:col-span-2"><label class="up-label" for="up-q">Search</label><input class="up-input" id="up-q" name="q" value="{{ search_query }}" placeholder="Batch, subject or teacher..."></div>
+            <div><label class="up-label" for="up-batch">Batch</label><select class="up-select" id="up-batch" name="batch"><option value="">All batches</option>{% for item in batches %}<option value="{{ item.pk }}" {% if selected_batch == item.pk|stringformat:'s' %}selected{% endif %}>{{ item.batch_name }}</option>{% endfor %}</select></div>
+            <div><label class="up-label" for="up-subject">Subject</label><select class="up-select" id="up-subject" name="subject"><option value="">All subjects</option>{% for item in subjects %}<option value="{{ item.pk }}" {% if selected_subject == item.pk|stringformat:'s' %}selected{% endif %}>{{ item.subject_name }}</option>{% endfor %}</select></div>
+            <div><label class="up-label" for="up-teacher">Teacher</label><select class="up-select" id="up-teacher" name="teacher"><option value="">All teachers</option>{% for item in teachers %}<option value="{{ item.pk }}" {% if selected_teacher == item.pk|stringformat:'s' %}selected{% endif %}>{{ item.full_name }}</option>{% endfor %}</select></div>
+            <div><label class="up-label" for="up-date">Class date</label><input class="up-input" id="up-date" type="date" name="date" value="{{ selected_date|date:'Y-m-d' }}"></div>
+            <div class="flex justify-end gap-2 sm:col-span-2 lg:col-span-3 2xl:col-span-6"><a class="up-btn" href="{% url 'live_classes:admin_upcoming_classes' %}">Reset</a><button class="up-btn up-btn-primary" type="submit"><i class="ri-search-line"></i>Apply filters</button></div>
+        </form>
+    </section>
+
+    <section>
+        <div class="mb-3 flex flex-wrap items-center justify-between gap-2"><div><h2 class="text-base font-extrabold text-white">Scheduled Classes</h2><p class="mt-1 text-[10px] text-slate-400">Showing {{ page_obj.start_index }}–{{ page_obj.end_index }} of {{ paginator.count }} classes · 20 per page</p></div><span class="up-status"><i class="ri-checkbox-circle-fill"></i>Confirmed and upcoming</span></div>
+
+        {% if upcoming_classes %}
+        <div class="up-card-grid">
+            {% for live_class in upcoming_classes %}
+            <article class="up-card" data-class-card>
+                <div class="up-card-media">
+                    {% if live_class.subject.subject_thumbnail %}
+                    <img class="up-subject-thumb" src="{{ live_class.subject.subject_thumbnail.url }}" alt="{{ live_class.subject.subject_name }} subject thumbnail" loading="lazy">
+                    {% else %}
+                    <div class="flex h-full w-full items-center justify-center text-5xl text-cyan-200"><i class="ri-book-open-line"></i></div>
+                    {% endif %}
+                    <span class="up-status"><span class="h-1.5 w-1.5 rounded-full bg-emerald-400"></span>Confirmed</span>
+                    <div class="up-menu-wrap"><button type="button" class="up-menu-trigger" aria-label="Class actions" aria-expanded="false" data-menu-trigger><i class="ri-more-2-fill text-lg"></i></button><div class="up-menu" hidden data-menu><button type="button" data-open-reschedule><i class="ri-calendar-edit-line text-cyan-300"></i>Reschedule</button><button type="button" class="danger" data-open-cancel><i class="ri-close-circle-line"></i>Cancel class</button></div></div>
+                </div>
+                <div class="up-card-body">
+                    <div class="min-w-0"><h3 class="up-card-title" title="{{ live_class.subject.subject_name }}">{{ live_class.subject.subject_name }}</h3><p class="mt-1 truncate text-[10px] text-cyan-200" title="{{ live_class.chapter.chapter_name }}">Chapter: {{ live_class.chapter.chapter_name }}</p></div>
+                    <div class="up-card-batch"><i class="ri-stack-line shrink-0 text-cyan-300"></i><span title="{{ live_class.batch.batch_name }}">{{ live_class.batch.batch_name }}</span></div>
+                    <div class="up-card-details">
+                        <div class="up-meta"><i class="ri-user-line"></i><span class="truncate">{{ live_class.teacher.full_name }}</span></div>
+                        <div class="up-meta"><i class="ri-calendar-line"></i><span>{{ live_class.local_start|date:'D, d M Y' }}</span></div>
+                        <div class="up-meta"><i class="ri-time-line"></i><span>{{ live_class.time_range }}</span><span class="ml-auto shrink-0 text-[10px] text-slate-400">{{ live_class.duration_minutes|default:60 }} min</span></div>
+                    </div>
+                    <div class="up-card-countdown"><span class="up-countdown" data-countdown data-start-at="{{ live_class.start_at|date:'c' }}"><i class="ri-timer-line"></i><span>Calculating…</span></span></div>
+                </div>
+                <div class="hidden" data-class-data
+                    data-class-id="{{ live_class.pk }}"
+                    data-reschedule-url="{% url 'live_classes:admin_reschedule_live_class' live_class.pk %}"
+                    data-cancel-url="{% url 'live_classes:admin_cancel_live_class' live_class.pk %}"
+                    data-batch-name="{{ live_class.batch.batch_name|escape }}"
+                    data-subject-name="{{ live_class.subject.subject_name|escape }}"
+                    data-chapter-name="{{ live_class.chapter.chapter_name|escape }}"
+                    data-teacher-name="{{ live_class.teacher.full_name|escape }}"
+                    data-class-date="{{ live_class.local_start|date:'Y-m-d' }}"
+                    data-start-time="{{ live_class.local_start|date:'H:i' }}"
+                    data-duration="{{ live_class.duration_minutes|default:60 }}"
+                    data-display-date="{{ live_class.local_start|date:'D, d M Y' }}"
+                    data-time-range="{{ live_class.time_range|escape }}"></div>
+            </article>
+            {% endfor %}
+        </div>
+
+        {% if page_obj.has_other_pages %}
+        <nav class="mt-4 flex flex-wrap items-center justify-between gap-3" aria-label="Upcoming class pages">
+            <p class="text-[10px] text-slate-400">Page {{ page_obj.number }} of {{ paginator.num_pages }}</p>
+            <div class="flex items-center gap-1">
+                {% if page_obj.has_previous %}<a class="up-btn" href="?q={{ search_query|urlencode }}&batch={{ selected_batch }}&subject={{ selected_subject }}&teacher={{ selected_teacher }}&date={{ selected_date|date:'Y-m-d' }}&page={{ page_obj.previous_page_number }}"><i class="ri-arrow-left-s-line"></i>Previous</a>{% endif %}
+                {% if page_obj.has_next %}<a class="up-btn" href="?q={{ search_query|urlencode }}&batch={{ selected_batch }}&subject={{ selected_subject }}&teacher={{ selected_teacher }}&date={{ selected_date|date:'Y-m-d' }}&page={{ page_obj.next_page_number }}">Next<i class="ri-arrow-right-s-line"></i></a>{% endif %}
+            </div>
+        </nav>
+        {% endif %}
+        {% else %}
+        <div class="up-panel flex flex-col items-center justify-center px-5 py-14 text-center"><i class="ri-calendar-close-line text-4xl text-slate-500"></i><h3 class="mt-3 text-sm font-bold text-white">No upcoming classes found</h3><p class="mt-1 text-xs text-slate-400">Try changing or clearing your filters.</p><a class="up-btn up-btn-primary mt-4" href="{% url 'live_classes:admin_upcoming_classes' %}">Clear filters</a></div>
+        {% endif %}
+    </section>
+
+</div>
+
+<!-- Reschedule modal: one shared form, no separate action page. -->
+<div class="up-modal-backdrop" id="rescheduleModal" hidden>
+    <section class="up-modal" role="dialog" aria-modal="true" aria-labelledby="rescheduleTitle">
+        <div class="up-modal-head"><div><h2 id="rescheduleTitle" class="text-base font-extrabold text-white">Reschedule Live Class</h2><p class="mt-1 text-[10px] text-slate-400">Update the date, start time or duration.</p></div><button type="button" class="up-modal-close" data-close-modal="rescheduleModal" aria-label="Close"><i class="ri-close-line"></i></button></div>
+        <div class="up-modal-content">
+            <div class="up-class-summary mb-4"><div id="rescheduleThumb" class="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border border-cyan-800 bg-cyan-950 text-cyan-300"><i class="ri-book-open-line text-xl"></i></div><div class="min-w-0"><p id="rescheduleSubject" class="truncate text-xs font-bold text-white"></p><p id="rescheduleBatch" class="mt-1 truncate text-[10px] text-slate-300"></p><p id="rescheduleCurrent" class="mt-1 truncate text-[10px] text-cyan-200"></p></div></div>
+            <form id="rescheduleForm" method="post" class="space-y-3">{% csrf_token %}<div class="grid grid-cols-1 gap-3 sm:grid-cols-3"><div><label class="up-label" for="rescheduleDate">New date *</label><input class="up-input" id="rescheduleDate" name="class_date" type="date" min="{{ today|date:'Y-m-d' }}" max="{{ booking_end_date|date:'Y-m-d' }}" required></div><div class="up-time-field"><label class="up-label" id="rescheduleTimeLabel">Start time *</label><input type="hidden" id="rescheduleTime" name="start_time" value=""><button type="button" class="up-time-trigger" id="rescheduleTimeTrigger" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="rescheduleTimeLabel rescheduleTimeValue"><span id="rescheduleTimeValue">Select time</span><i class="ri-arrow-down-s-line"></i></button><div class="up-time-menu" id="rescheduleTimeMenu" role="listbox" aria-label="Choose start time" hidden>
+                <button type="button" class="up-time-option" role="option" data-time="05:00">5:00 AM</button>
+                <button type="button" class="up-time-option" role="option" data-time="06:00">6:00 AM</button>
+                <button type="button" class="up-time-option" role="option" data-time="07:00">7:00 AM</button>
+                <button type="button" class="up-time-option" role="option" data-time="08:00">8:00 AM</button>
+                <button type="button" class="up-time-option" role="option" data-time="09:00">9:00 AM</button>
+                <button type="button" class="up-time-option" role="option" data-time="10:00">10:00 AM</button>
+                <button type="button" class="up-time-option" role="option" data-time="11:00">11:00 AM</button>
+                <button type="button" class="up-time-option" role="option" data-time="12:00">12:00 PM</button>
+                <button type="button" class="up-time-option" role="option" data-time="13:00">1:00 PM</button>
+                <button type="button" class="up-time-option" role="option" data-time="14:00">2:00 PM</button>
+                <button type="button" class="up-time-option" role="option" data-time="15:00">3:00 PM</button>
+                <button type="button" class="up-time-option" role="option" data-time="16:00">4:00 PM</button>
+                <button type="button" class="up-time-option" role="option" data-time="17:00">5:00 PM</button>
+                <button type="button" class="up-time-option" role="option" data-time="18:00">6:00 PM</button>
+                <button type="button" class="up-time-option" role="option" data-time="19:00">7:00 PM</button>
+                <button type="button" class="up-time-option" role="option" data-time="20:00">8:00 PM</button>
+                <button type="button" class="up-time-option" role="option" data-time="21:00">9:00 PM</button>
+                <button type="button" class="up-time-option" role="option" data-time="22:00">10:00 PM</button>
+                <button type="button" class="up-time-option" role="option" data-time="23:00">11:00 PM</button>
+            </div></div><div><label class="up-label" for="rescheduleDuration">Duration *</label><select class="up-select" id="rescheduleDuration" name="duration_minutes" required><option value="60">1 Hour</option><option value="120">2 Hours</option><option value="180">3 Hours</option></select></div></div><p class="text-[10px] leading-5 text-slate-400">The server will recheck the booking window, teacher assignment and schedule conflicts before saving.</p><div class="flex justify-end gap-2 pt-2"><button type="button" class="up-btn" data-close-modal="rescheduleModal">Keep current time</button><button type="submit" class="up-btn up-btn-primary"><i class="ri-calendar-check-line"></i>Save reschedule</button></div></form>
+        </div>
+    </section>
+</div>
+
+<!-- Cancel modal: Admin must re-enter the exact batch name to confirm. -->
+<div class="up-modal-backdrop" id="cancelModal" hidden>
+    <section class="up-modal" role="dialog" aria-modal="true" aria-labelledby="cancelTitle">
+        <div class="up-modal-head"><div><h2 id="cancelTitle" class="text-base font-extrabold text-white">Cancel Live Class</h2><p class="mt-1 text-[10px] text-slate-400">This will cancel the confirmed class and retain its record.</p></div><button type="button" class="up-modal-close" data-close-modal="cancelModal" aria-label="Close"><i class="ri-close-line"></i></button></div>
+        <div class="up-modal-content">
+            <div class="up-class-summary mb-3"><div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border border-rose-800 bg-rose-950/50 text-rose-300"><i class="ri-calendar-close-line text-xl"></i></div><div class="min-w-0"><p id="cancelSubject" class="truncate text-xs font-bold text-white"></p><p id="cancelBatch" class="mt-1 truncate text-[10px] text-slate-300"></p><p id="cancelCurrent" class="mt-1 truncate text-[10px] text-cyan-200"></p></div></div>
+            <div class="up-warning mb-4"><div class="flex items-start gap-2"><i class="ri-alert-line text-lg"></i><div><p class="font-extrabold">Are you sure you want to cancel this class?</p><p class="mt-1">This action cannot be undone. The class will remain in class history with Cancelled status.</p></div></div></div>
+            <form id="cancelForm" method="post" class="space-y-3">{% csrf_token %}<div><label class="up-label" for="confirmBatchName">Re-enter the batch name to confirm *</label><input class="up-input" id="confirmBatchName" name="batch_name_confirmation" autocomplete="off" placeholder="Type the exact batch name" required><p class="mt-1 text-[10px] text-slate-500">Batch name: <strong id="expectedBatchName" class="text-slate-300"></strong></p><p id="cancelNameError" class="hidden mt-1 text-[10px] text-rose-300" role="alert">The batch name does not match.</p></div><div class="flex justify-end gap-2 pt-2"><button type="button" class="up-btn" data-close-modal="cancelModal">Keep class</button><button type="submit" class="up-btn up-danger-btn"><i class="ri-close-circle-line"></i>Confirm cancellation</button></div></form>
+        </div>
+    </section>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const rescheduleModal = document.getElementById('rescheduleModal');
+    const cancelModal = document.getElementById('cancelModal');
+    const rescheduleForm = document.getElementById('rescheduleForm');
+    const cancelForm = document.getElementById('cancelForm');
+    const confirmInput = document.getElementById('confirmBatchName');
+    const timeInput = document.getElementById('rescheduleTime');
+    const timeTrigger = document.getElementById('rescheduleTimeTrigger');
+    const timeValue = document.getElementById('rescheduleTimeValue');
+    const timeMenu = document.getElementById('rescheduleTimeMenu');
+    let activeClassData = null;
+
+    function closeTimeMenu() {
+        if (!timeMenu || !timeTrigger) return;
+        timeMenu.hidden = true;
+        timeTrigger.setAttribute('aria-expanded', 'false');
+    }
+    function setSelectedTime(value) {
+        const option = timeMenu.querySelector('[data-time="' + value + '"]');
+        if (!option) return;
+        timeInput.value = value;
+        timeValue.textContent = option.textContent.trim();
+        timeMenu.querySelectorAll('[data-time]').forEach(item => {
+            item.setAttribute('aria-selected', item === option ? 'true' : 'false');
+        });
+    }
+    timeTrigger.addEventListener('click', function (event) {
+        event.stopPropagation();
+        const opening = timeMenu.hidden;
+        timeMenu.hidden = !opening;
+        timeTrigger.setAttribute('aria-expanded', opening ? 'true' : 'false');
+        if (opening) {
+            const selected = timeMenu.querySelector('[data-time="' + timeInput.value + '"]');
+            if (selected) selected.scrollIntoView({block: 'nearest'});
+        }
+    });
+    timeMenu.querySelectorAll('[data-time]').forEach(option => {
+        option.addEventListener('click', function () {
+            setSelectedTime(option.dataset.time);
+            closeTimeMenu();
+        });
+    });
+    document.addEventListener('click', function (event) {
+        if (!event.target.closest('.up-time-field')) closeTimeMenu();
+    });
+
+    function closeAllMenus(except) {
+        document.querySelectorAll('[data-menu]').forEach(menu => {
+            if (menu !== except) menu.hidden = true;
+        });
+        document.querySelectorAll('[data-menu-trigger]').forEach(button => {
+            const menu = button.parentElement.querySelector('[data-menu]');
+            if (menu !== except) button.setAttribute('aria-expanded', 'false');
+        });
+    }
+    function openModal(modal) { closeAllMenus(); modal.hidden = false; document.body.style.overflow = 'hidden'; }
+    function closeModal(modal) { modal.hidden = true; document.body.style.overflow = ''; }
+    function getData(card) { return card.querySelector('[data-class-data]').dataset; }
+    function setSummary(prefix, data) {
+        document.getElementById(prefix + 'Subject').textContent = data.subjectName;
+        document.getElementById(prefix + 'Batch').textContent = 'Batch: ' + data.batchName + ' · Chapter: ' + data.chapterName;
+        document.getElementById(prefix + 'Current').textContent = data.displayDate + ' · ' + data.timeRange + ' · ' + data.teacherName;
+    }
+
+    document.querySelectorAll('[data-menu-trigger]').forEach(button => {
+        button.addEventListener('click', event => {
+            event.stopPropagation();
+            const menu = button.parentElement.querySelector('[data-menu]');
+            const shouldOpen = menu.hidden;
+            closeAllMenus(menu);
+            menu.hidden = !shouldOpen;
+            button.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
+        });
+    });
+    document.addEventListener('click', () => closeAllMenus());
+
+    document.querySelectorAll('[data-open-reschedule]').forEach(button => {
+        button.addEventListener('click', () => {
+            const card = button.closest('[data-class-card]');
+            activeClassData = getData(card);
+            setSummary('reschedule', activeClassData);
+            rescheduleForm.action = card.querySelector('[data-class-data]').dataset.rescheduleUrl;
+            document.getElementById('rescheduleDate').value = activeClassData.classDate;
+            setSelectedTime(activeClassData.startTime);
+            closeTimeMenu();
+            document.getElementById('rescheduleDuration').value = activeClassData.duration;
+            openModal(rescheduleModal);
+        });
+    });
+
+    document.querySelectorAll('[data-open-cancel]').forEach(button => {
+        button.addEventListener('click', () => {
+            const card = button.closest('[data-class-card]');
+            activeClassData = getData(card);
+            setSummary('cancel', activeClassData);
+            document.getElementById('expectedBatchName').textContent = activeClassData.batchName;
+            confirmInput.value = '';
+            document.getElementById('cancelNameError').classList.add('hidden');
+            cancelForm.action = card.querySelector('[data-class-data]').dataset.cancelUrl;
+            openModal(cancelModal);
+            setTimeout(() => confirmInput.focus(), 50);
+        });
+    });
+
+    rescheduleForm.addEventListener('submit', function (event) {
+        if (!timeInput.value) {
+            event.preventDefault();
+            timeTrigger.focus();
+            timeTrigger.style.borderColor = '#fb7185';
+        }
+    });
+
+    cancelForm.addEventListener('submit', function (event) {
+        if (!activeClassData || confirmInput.value.trim() !== activeClassData.batchName.trim()) {
+            event.preventDefault();
+            document.getElementById('cancelNameError').classList.remove('hidden');
+            confirmInput.focus();
+        }
+    });
+
+    document.querySelectorAll('[data-close-modal]').forEach(button => {
+        button.addEventListener('click', () => closeModal(document.getElementById(button.dataset.closeModal)));
+    });
+    [rescheduleModal, cancelModal].forEach(modal => {
+        modal.addEventListener('click', event => { if (event.target === modal) closeModal(modal); });
+    });
+    document.addEventListener('keydown', event => {
+        if (event.key === 'Escape') { closeModal(rescheduleModal); closeModal(cancelModal); closeAllMenus(); closeTimeMenu(); }
+    });
+
+    function updateCountdowns() {
+        const now = Date.now();
+        document.querySelectorAll('[data-countdown]').forEach(el => {
+            const start = new Date(el.dataset.startAt).getTime();
+            const label = el.querySelector('span');
+            if (!Number.isFinite(start)) { label.textContent = 'Start time unavailable'; return; }
+            let diff = Math.max(0, start - now);
+            if (diff === 0) { label.textContent = 'Starting now'; return; }
+            const days = Math.floor(diff / 86400000); diff %= 86400000;
+            const hours = Math.floor(diff / 3600000); diff %= 3600000;
+            const minutes = Math.floor(diff / 60000);
+            label.textContent = 'Starts in ' + (days ? days + 'd ' : '') + (hours ? hours + 'h ' : '') + minutes + 'm';
+        });
+    }
+    updateCountdowns();
+    window.setInterval(updateCountdowns, 30000);
+});
+</script>
+{% endblock %}

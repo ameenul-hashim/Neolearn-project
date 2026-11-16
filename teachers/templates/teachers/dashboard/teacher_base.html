@@ -620,35 +620,19 @@
                 <nav class="space-y-0.5" aria-label="Main teacher navigation">
                     <p class="nav-label">Workspace</p>
 
-
-
                     <a href="{% url 'teacher_dashboard' %}"
-
-                    class="admin-nav-link {% if request.resolver_match.url_name == 'teacher_dashboard' %}active{% endif %}"
-
-                    {% if request.resolver_match.url_name == 'teacher_dashboard' %}aria-current="page"{% endif %}>
-
+                       class="admin-nav-link {% if request.resolver_match.url_name == 'teacher_dashboard' %}active{% endif %}"
+                       {% if request.resolver_match.url_name == 'teacher_dashboard' %}aria-current="page"{% endif %}>
                         <i class="ri-dashboard-3-line nav-icon"></i>
-
                         <span class="truncate">Dashboard</span>
-
                     </a>
-
-
 
                     <a href="{% url 'teacher_batches' %}"
-
-                    class="admin-nav-link {% if request.resolver_match.url_name == 'teacher_batches' or request.resolver_match.url_name == 'teacher_subjects' or request.resolver_match.url_name == 'teacher_course_builder_entry' %}active{% endif %}"
-
-                    {% if request.resolver_match.url_name == 'teacher_batches' or request.resolver_match.url_name == 'teacher_subjects' or request.resolver_match.url_name == 'teacher_course_builder_entry' %}aria-current="page"{% endif %}>
-
+                       class="admin-nav-link {% if request.resolver_match.url_name == 'teacher_batches' or request.resolver_match.url_name == 'teacher_subjects' or request.resolver_match.url_name == 'teacher_course_builder_entry' %}active{% endif %}"
+                       {% if request.resolver_match.url_name == 'teacher_batches' or request.resolver_match.url_name == 'teacher_subjects' or request.resolver_match.url_name == 'teacher_course_builder_entry' %}aria-current="page"{% endif %}>
                         <i class="ri-stack-line nav-icon"></i>
-
                         <span class="truncate">My Batches</span>
-
                     </a>
-
-
 
                     <p class="nav-label">Live Classes</p>
 
@@ -659,12 +643,12 @@
                         <span class="truncate">My Timetable</span>
                     </a>
 
-                    <div class="admin-nav-link teacher-placeholder" aria-disabled="true"
-                         title="This page has not been connected yet">
+                    <a href="{% url 'live_classes:teacher_upcoming_classes' %}"
+                       class="admin-nav-link {% if request.resolver_match.url_name == 'teacher_upcoming_classes' %}active{% endif %}"
+                       {% if request.resolver_match.url_name == 'teacher_upcoming_classes' %}aria-current="page"{% endif %}>
                         <i class="ri-calendar-event-line nav-icon"></i>
                         <span class="truncate">Upcoming Classes</span>
-                        <span class="teacher-coming-soon">Soon</span>
-                    </div>
+                    </a>
 
                     <div class="admin-nav-link teacher-placeholder" aria-disabled="true"
                          title="This page has not been connected yet">
@@ -673,12 +657,12 @@
                         <span class="teacher-coming-soon">Soon</span>
                     </div>
 
-                    <div class="admin-nav-link teacher-placeholder" aria-disabled="true"
-                         title="This page has not been connected yet">
+                    <a href="{% url 'live_classes:teacher_cancellation_requests' %}"
+                       class="admin-nav-link {% if request.resolver_match.url_name == 'teacher_cancellation_requests' %}active{% endif %}"
+                       {% if request.resolver_match.url_name == 'teacher_cancellation_requests' %}aria-current="page"{% endif %}>
                         <i class="ri-close-circle-line nav-icon"></i>
                         <span class="truncate">Cancellation Requests</span>
-                        <span class="teacher-coming-soon">Soon</span>
-                    </div>
+                    </a>
 
                     <div class="admin-nav-link teacher-placeholder" aria-disabled="true"
                          title="This page has not been connected yet">
@@ -687,115 +671,56 @@
                         <span class="teacher-coming-soon">Soon</span>
                     </div>
 
-
-
-<a href="{% url 'teacher_analytics' %}"
-
-   class="admin-nav-link {% if request.resolver_match.url_name == 'teacher_analytics' %}active{% endif %}"
-
-   {% if request.resolver_match.url_name == 'teacher_analytics' %}aria-current="page"{% endif %}>
-
-    <i class="ri-line-chart-line nav-icon"></i>
-
-    <span class="truncate">Analytics</span>
-
-</a>
-
-
-
                     <p class="nav-label">Communication</p>
 
+                    <a href="{% url 'teacher_colleagues' %}"
+                       class="admin-nav-link {% if request.resolver_match.url_name == 'teacher_colleagues' or request.resolver_match.url_name == 'teacher_colleague_detail' %}active{% endif %}"
+                       {% if request.resolver_match.url_name == 'teacher_colleagues' or request.resolver_match.url_name == 'teacher_colleague_detail' %}aria-current="page"{% endif %}>
+                        <i class="ri-team-line nav-icon"></i>
+                        <span class="truncate">My Colleagues</span>
+                    </a>
 
-
-                    <div class="admin-nav-link teacher-placeholder"
-
-                        aria-disabled="true"
-
-                        title="This page has not been connected yet">
-
+                    <div class="admin-nav-link teacher-placeholder" aria-disabled="true"
+                         title="Notifications are coming soon">
                         <i class="ri-notification-3-line nav-icon"></i>
-
                         <span class="truncate">Notifications</span>
-
                         <span class="teacher-coming-soon">Soon</span>
-
                     </div>
 
+                    <p class="nav-label">Analytics</p>
 
-
-
-
-                    <a href="{% url 'teacher_colleagues' %}"
-
-                                class="admin-nav-link {% if request.resolver_match.url_name == 'teacher_colleagues' or request.resolver_match.url_name == 'teacher_colleague_detail' %}active{% endif %}"
-
-                            {% if request.resolver_match.url_name == 'teacher_colleagues' or request.resolver_match.url_name == 'teacher_colleague_detail' %}aria-current="page"{% endif %}>
-
-                                        <i class="ri-team-line nav-icon"></i>
-
-                            <span class="truncate">My Colleagues</span>
-
-                            </a>
-
-
-
-                    <p class="nav-label">Account</p>
-
-
-
-                    <a href="{% url 'teacher_my_profile' %}"
-
-                    class="admin-nav-link {% if request.resolver_match.url_name == 'teacher_my_profile' %}active{% endif %}"
-
-                    {% if request.resolver_match.url_name == 'teacher_my_profile' %}aria-current="page"{% endif %}>
-
-                        <i class="ri-user-3-line nav-icon"></i>
-
-                        <span class="truncate">My Profile</span>
-
+                    <a href="{% url 'teacher_analytics' %}"
+                       class="admin-nav-link {% if request.resolver_match.url_name == 'teacher_analytics' %}active{% endif %}"
+                       {% if request.resolver_match.url_name == 'teacher_analytics' %}aria-current="page"{% endif %}
+                       title="Teaching performance, batches, subjects, students and class reports">
+                        <i class="ri-line-chart-line nav-icon"></i>
+                        <span class="truncate">Analytics &amp; Reports</span>
                     </a>
-
-
-
-
-
-                    <a href="{% url 'teacher_settings' %}"
-
-                        class="admin-nav-link {% if request.resolver_match.url_name == 'teacher_settings' %}active{% endif %}"
-
-                        {% if request.resolver_match.url_name == 'teacher_settings' %}aria-current="page"{% endif %}>
-
-                            <i class="ri-settings-3-line nav-icon"></i>
-
-                            <span class="truncate">Settings</span>
-
-                    </a>
-
-
-
-
 
                     <p class="nav-label">Help &amp; Support</p>
 
-
-
-
-
                     <a href="{% url 'teacher_help_videos' %}"
+                       class="admin-nav-link {% if request.resolver_match.url_name == 'teacher_help_videos' %}active{% endif %}"
+                       {% if request.resolver_match.url_name == 'teacher_help_videos' %}aria-current="page"{% endif %}>
+                        <i class="ri-question-answer-line nav-icon"></i>
+                        <span class="truncate">Help Videos</span>
+                    </a>
 
-                            class="admin-nav-link {% if request.resolver_match.url_name == 'teacher_help_videos' %}active{% endif %}"
+                    <p class="nav-label">Account</p>
 
-                            {% if request.resolver_match.url_name == 'teacher_help_videos' %}aria-current="page"{% endif %}>
+                    <a href="{% url 'teacher_my_profile' %}"
+                       class="admin-nav-link {% if request.resolver_match.url_name == 'teacher_my_profile' %}active{% endif %}"
+                       {% if request.resolver_match.url_name == 'teacher_my_profile' %}aria-current="page"{% endif %}>
+                        <i class="ri-user-3-line nav-icon"></i>
+                        <span class="truncate">My Profile</span>
+                    </a>
 
-                            <i class="ri-question-answer-line nav-icon"></i>
-
-                                <span class="truncate">Help Videos</span>
-
-                            </a>
-
-
-
-
+                    <a href="{% url 'teacher_settings' %}"
+                       class="admin-nav-link {% if request.resolver_match.url_name == 'teacher_settings' %}active{% endif %}"
+                       {% if request.resolver_match.url_name == 'teacher_settings' %}aria-current="page"{% endif %}>
+                        <i class="ri-settings-3-line nav-icon"></i>
+                        <span class="truncate">Settings</span>
+                    </a>
                 </nav>
             </div>
 
@@ -826,14 +751,16 @@
                                 <p class="mt-1 text-[10px] text-slate-500">Jump directly to a Teacher section</p>
                             </div>
                             <div class="py-2" id="quickAccessLinks">
-                                <a href="{% url 'teacher_dashboard' %}" class="quick-access-link" data-quick-link="dashboard workspace"><span class="teacher-dropdown-icon"><i class="ri-layout-grid-line"></i></span><span class="flex-1">Dashboard</span><i class="ri-arrow-right-s-line text-slate-500"></i></a>
-                                <a href="{% url 'teacher_batches' %}" class="quick-access-link" data-quick-link="my batches subjects courses course builder"><span class="teacher-dropdown-icon"><i class="ri-stack-line"></i></span><span class="flex-1">My Batches</span><i class="ri-arrow-right-s-line text-slate-500"></i></a>
-                                <a href="{% url 'live_classes:teacher_live_classes' %}" class="quick-access-link" data-quick-link="live classes timetable schedule"><span class="teacher-dropdown-icon"><i class="ri-calendar-schedule-line"></i></span><span class="flex-1">My Timetable</span><i class="ri-arrow-right-s-line text-slate-500"></i></a>
-                                <a href="{% url 'teacher_analytics' %}" class="quick-access-link" data-quick-link="analytics reports"><span class="teacher-dropdown-icon"><i class="ri-line-chart-line"></i></span><span class="flex-1">Analytics</span><i class="ri-arrow-right-s-line text-slate-500"></i></a>
-                                <a href="{% url 'teacher_colleagues' %}" class="quick-access-link" data-quick-link="colleagues teachers team"><span class="teacher-dropdown-icon"><i class="ri-team-line"></i></span><span class="flex-1">My Colleagues</span><i class="ri-arrow-right-s-line text-slate-500"></i></a>
-                                <a href="{% url 'teacher_my_profile' %}" class="quick-access-link" data-quick-link="profile account"><span class="teacher-dropdown-icon"><i class="ri-user-3-line"></i></span><span class="flex-1">My Profile</span><i class="ri-arrow-right-s-line text-slate-500"></i></a>
-                                <a href="{% url 'teacher_settings' %}" class="quick-access-link" data-quick-link="settings preferences"><span class="teacher-dropdown-icon"><i class="ri-settings-3-line"></i></span><span class="flex-1">Settings</span><i class="ri-arrow-right-s-line text-slate-500"></i></a>
-                                <a href="{% url 'teacher_help_videos' %}" class="quick-access-link" data-quick-link="help support videos"><span class="teacher-dropdown-icon"><i class="ri-question-line"></i></span><span class="flex-1">Help Videos</span><i class="ri-arrow-right-s-line text-slate-500"></i></a>
+                                <a href="{% url 'teacher_dashboard' %}" class="quick-access-link" data-quick-link="dashboard home workspace overview"><span class="teacher-dropdown-icon"><i class="ri-dashboard-3-line"></i></span><span class="flex-1">Dashboard</span><i class="ri-arrow-right-s-line text-slate-500"></i></a>
+                                <a href="{% url 'teacher_batches' %}" class="quick-access-link" data-quick-link="my batches batch subjects courses course builder teaching workspace"><span class="teacher-dropdown-icon"><i class="ri-stack-line"></i></span><span class="flex-1">My Batches</span><i class="ri-arrow-right-s-line text-slate-500"></i></a>
+                                <a href="{% url 'teacher_analytics' %}" class="quick-access-link" data-quick-link="analytics reports performance statistics student batch subject class report"><span class="teacher-dropdown-icon"><i class="ri-line-chart-line"></i></span><span class="flex-1">Analytics &amp; Reports</span><i class="ri-arrow-right-s-line text-slate-500"></i></a>
+                                <a href="{% url 'live_classes:teacher_live_classes' %}" class="quick-access-link" data-quick-link="my timetable live classes schedule calendar booked classes"><span class="teacher-dropdown-icon"><i class="ri-calendar-schedule-line"></i></span><span class="flex-1">My Timetable</span><i class="ri-arrow-right-s-line text-slate-500"></i></a>
+                                <a href="{% url 'live_classes:teacher_upcoming_classes' %}" class="quick-access-link" data-quick-link="upcoming classes next classes scheduled classes"><span class="teacher-dropdown-icon"><i class="ri-calendar-event-line"></i></span><span class="flex-1">Upcoming Classes</span><i class="ri-arrow-right-s-line text-slate-500"></i></a>
+                                <a href="{% url 'live_classes:teacher_cancellation_requests' %}" class="quick-access-link" data-quick-link="cancellation requests cancel history approved rejected pending"><span class="teacher-dropdown-icon"><i class="ri-close-circle-line"></i></span><span class="flex-1">Cancellation Requests</span><i class="ri-arrow-right-s-line text-slate-500"></i></a>
+                                <a href="{% url 'teacher_colleagues' %}" class="quick-access-link" data-quick-link="my colleagues teachers team communication"><span class="teacher-dropdown-icon"><i class="ri-team-line"></i></span><span class="flex-1">My Colleagues</span><i class="ri-arrow-right-s-line text-slate-500"></i></a>
+                                <a href="{% url 'teacher_help_videos' %}" class="quick-access-link" data-quick-link="help support help videos tutorials guides how to"><span class="teacher-dropdown-icon"><i class="ri-question-answer-line"></i></span><span class="flex-1">Help Videos</span><i class="ri-arrow-right-s-line text-slate-500"></i></a>
+                                <a href="{% url 'teacher_my_profile' %}" class="quick-access-link" data-quick-link="my profile account personal details"><span class="teacher-dropdown-icon"><i class="ri-user-3-line"></i></span><span class="flex-1">My Profile</span><i class="ri-arrow-right-s-line text-slate-500"></i></a>
+                                <a href="{% url 'teacher_settings' %}" class="quick-access-link" data-quick-link="settings preferences password security account"><span class="teacher-dropdown-icon"><i class="ri-settings-3-line"></i></span><span class="flex-1">Settings</span><i class="ri-arrow-right-s-line text-slate-500"></i></a>
                             </div>
                             <p id="quickAccessEmpty" class="hidden px-4 py-5 text-center text-[12px] text-slate-500">No matching Teacher page found.</p>
                         </div>
@@ -1021,11 +948,44 @@
             quickInput.addEventListener('click', openQuickAccess);
             quickInput.addEventListener('input', openQuickAccess);
             quickInput.addEventListener('keydown', event => {
-                if (event.key === 'Escape') { closeQuickAccess(); quickInput.blur(); }
+                const visibleLinks = quickLinks.filter(link => !link.hidden);
+
+                if (event.key === 'Escape') {
+                    closeQuickAccess();
+                    quickInput.blur();
+                    return;
+                }
+
+                if (event.key === 'ArrowDown' && visibleLinks.length) {
+                    event.preventDefault();
+                    visibleLinks[0].focus();
+                    return;
+                }
+
                 if (event.key === 'Enter') {
-                    const first = quickLinks.find(link => !link.hidden);
+                    event.preventDefault();
+                    const first = visibleLinks[0];
                     if (first) window.location.href = first.href;
                 }
+            });
+
+            quickLinks.forEach((link, index) => {
+                link.addEventListener('keydown', event => {
+                    const visibleLinks = quickLinks.filter(item => !item.hidden);
+                    const currentIndex = visibleLinks.indexOf(link);
+
+                    if (event.key === 'ArrowDown') {
+                        event.preventDefault();
+                        visibleLinks[(currentIndex + 1) % visibleLinks.length]?.focus();
+                    } else if (event.key === 'ArrowUp') {
+                        event.preventDefault();
+                        if (currentIndex <= 0) quickInput.focus();
+                        else visibleLinks[currentIndex - 1]?.focus();
+                    } else if (event.key === 'Escape') {
+                        closeQuickAccess();
+                        quickInput.focus();
+                    }
+                });
             });
             document.addEventListener('click', event => {
                 if (quickRoot && !quickRoot.contains(event.target)) closeQuickAccess();
@@ -1034,7 +994,7 @@
         document.addEventListener('keydown', event => {
             if (event.key === 'Escape') { closeSidebar(); closeQuickAccess(); }
             if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
-                if (quickInput) { event.preventDefault(); quickInput.focus(); }
+                if (quickInput) { event.preventDefault(); openQuickAccess(); quickInput.focus(); quickInput.select(); }
             }
         });
     })();
