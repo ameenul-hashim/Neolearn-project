@@ -46,6 +46,18 @@
     .batch-teacher-detail { display:flex; min-width:0; align-items:center; gap:10px; padding:10px; border:1px solid rgba(71,85,105,.68); border-radius:13px; background:rgba(15,23,42,.82); }
     .batch-teacher-photo { display:flex; width:46px; height:46px; flex:0 0 46px; align-items:center; justify-content:center; overflow:hidden; border:2px solid rgba(34,211,238,.34); border-radius:50%; background:#23344e; color:#e2e8f0; font-weight:800; }
     .batch-teacher-photo img { width:100%; height:100%; object-fit:cover; }
+    .batch-coupon-strip { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:12px; }
+    .batch-coupon-modal { position:fixed; inset:0; z-index:180; display:none; align-items:center; justify-content:center; padding:16px; background:rgba(2,6,23,.78); backdrop-filter:blur(9px); }
+    .batch-coupon-modal.open { display:flex; }
+    .batch-coupon-panel { width:min(760px,100%); max-height:min(82vh,720px); overflow:hidden; border:1px solid rgba(34,211,238,.55); border-radius:20px; background:linear-gradient(145deg,#101e34,#071225); box-shadow:0 28px 90px rgba(0,0,0,.62),0 0 28px rgba(34,211,238,.08); }
+    .batch-coupon-row { display:grid; grid-template-columns:minmax(110px,.8fr) minmax(0,1.2fr) minmax(150px,1fr) auto; align-items:center; gap:12px; padding:11px 12px; border:1px solid rgba(71,85,105,.55); border-radius:13px; background:rgba(15,23,42,.78); }
+    .batch-coupon-code { display:inline-flex; min-width:0; align-items:center; justify-content:center; border:1px dashed rgba(148,163,184,.55); border-radius:10px; padding:8px 10px; color:#e2e8f0; font-size:11px; font-weight:900; letter-spacing:.04em; overflow-wrap:anywhere; }
+    .batch-coupon-status { display:inline-flex; align-items:center; justify-content:center; border-radius:999px; padding:6px 10px; font-size:10px; font-weight:800; white-space:nowrap; }
+    .batch-coupon-status-active { border:1px solid rgba(16,185,129,.38); background:rgba(6,78,59,.35); color:#6ee7b7; }
+    .batch-coupon-status-upcoming { border:1px solid rgba(56,189,248,.38); background:rgba(7,89,133,.3); color:#7dd3fc; }
+    .batch-coupon-status-expired { border:1px solid rgba(244,63,94,.38); background:rgba(136,19,55,.25); color:#fda4af; }
+    .batch-coupon-status-inactive { border:1px solid rgba(148,163,184,.3); background:rgba(51,65,85,.35); color:#cbd5e1; }
+    @media(max-width:760px){.batch-coupon-strip{grid-template-columns:minmax(0,1fr)}.batch-coupon-row{grid-template-columns:minmax(0,1fr) auto}.batch-coupon-row .coupon-meta{grid-column:1/-1}.batch-coupon-panel{max-height:88vh}}
     @media(max-width:1350px){.batch-subjects-grid{grid-template-columns:repeat(3,minmax(0,1fr));}}
     @media(max-width:1024px){.batch-subjects-grid{grid-template-columns:repeat(2,minmax(0,1fr));}}
     @media(max-width:640px){.batch-subjects-grid{grid-template-columns:minmax(0,1fr);}.batch-subject-media{height:175px;}.batch-teacher-modal{padding:10px}.batch-teacher-modal-list{grid-template-columns:minmax(0,1fr);}}
@@ -146,6 +158,81 @@
             </div>
         </div>
     </section>
+
+    <!-- Batch offer and coupon quick access -->
+    <section class="batch-coupon-strip" aria-label="Batch offers and coupons">
+        {% if batch.is_offer_active %}
+        <article class="flex min-w-0 flex-wrap items-center justify-between gap-3 rounded-2xl border border-fuchsia-500/60 bg-gradient-to-r from-fuchsia-950/70 via-slate-900 to-cyan-950/70 px-4 py-3 shadow-[0_10px_28px_rgba(0,0,0,.22)]">
+            <div class="flex min-w-0 items-center gap-3">
+                <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-fuchsia-500/15 text-2xl text-fuchsia-300"><i class="ri-gift-line"></i></span>
+                <div class="min-w-0">
+                    <span class="inline-flex rounded-full border border-fuchsia-400/30 bg-fuchsia-500/15 px-2 py-0.5 text-[9px] font-extrabold text-fuchsia-200">BATCH OFFER</span>
+                    <p class="mt-1 text-sm font-extrabold text-white">
+                        {% if batch.discount_type == "percentage" %}{{ batch.discount_value|floatformat:0 }}% OFF{% else %}₹{{ batch.discount_value|floatformat:0 }} OFF{% endif %} on this batch
+                    </p>
+                    <p class="text-[10px] text-slate-400">Automatically reflected in the batch price</p>
+                </div>
+            </div>
+            <div class="text-[10px] font-semibold text-cyan-300">
+                {% if batch.offer_end_date %}<i class="ri-calendar-line mr-1"></i> Valid till {{ batch.offer_end_date|date:"d M Y" }}{% else %}<i class="ri-calendar-check-line mr-1"></i> Offer active{% endif %}
+            </div>
+        </article>
+        {% else %}
+        <article class="flex min-w-0 items-center gap-3 rounded-2xl border border-slate-700/70 bg-slate-900/55 px-4 py-3">
+            <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-800 text-xl text-slate-500"><i class="ri-price-tag-3-line"></i></span>
+            <div class="min-w-0"><p class="text-xs font-bold text-slate-300">No active batch offer</p><p class="mt-0.5 text-[10px] text-slate-500">The batch's regular pricing is currently applied.</p></div>
+        </article>
+        {% endif %}
+
+        <button type="button" id="openBatchCoupons" class="group flex min-w-0 items-center justify-between gap-3 rounded-2xl border border-dashed border-cyan-400/70 bg-gradient-to-r from-cyan-950/55 to-slate-900/80 px-4 py-3 text-left transition hover:border-cyan-300 hover:bg-cyan-950/65 focus:outline-none focus:ring-2 focus:ring-cyan-400/40" aria-haspopup="dialog" aria-controls="batchCouponsModal">
+            <span class="flex min-w-0 items-center gap-3">
+                <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-cyan-400/15 text-2xl text-cyan-300"><i class="ri-coupon-3-line"></i></span>
+                <span class="min-w-0"><span class="block text-sm font-extrabold text-white">{{ coupon_total_count }} Coupon{{ coupon_total_count|pluralize }} Linked</span><span class="mt-0.5 block text-[10px] text-slate-400">View coupons linked to this batch</span></span>
+            </span>
+            <span class="flex shrink-0 items-center gap-3"><span class="flex h-10 min-w-10 items-center justify-center rounded-full bg-cyan-400 px-3 text-base font-black text-slate-950">{{ coupon_total_count }}</span><span class="hidden rounded-full border border-cyan-400/50 bg-cyan-500/15 px-4 py-2 text-[11px] font-extrabold text-cyan-200 sm:inline-flex">View Coupons <i class="ri-arrow-right-line ml-2"></i></span><i class="ri-arrow-right-line text-lg text-cyan-300 sm:hidden"></i></span>
+        </button>
+    </section>
+
+    <!-- Coupon details popup -->
+    <div id="batchCouponsModal" class="batch-coupon-modal" role="dialog" aria-modal="true" aria-labelledby="batchCouponsTitle" aria-hidden="true">
+        <section class="batch-coupon-panel flex flex-col">
+            <header class="flex shrink-0 items-center justify-between gap-3 border-b border-slate-700/80 px-4 py-4 sm:px-5">
+                <div class="flex min-w-0 items-center gap-3">
+                    <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-cyan-400/15 text-xl text-cyan-300"><i class="ri-coupon-3-line"></i></span>
+                    <div class="min-w-0"><h3 id="batchCouponsTitle" class="truncate text-base font-extrabold text-white">Batch Coupons</h3><p class="mt-0.5 truncate text-[11px] text-slate-400">{{ batch.batch_name }}</p></div>
+                </div>
+                <button type="button" id="closeBatchCoupons" class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-700 text-slate-400 transition hover:border-cyan-400 hover:text-white" aria-label="Close coupon details"><i class="ri-close-line text-xl"></i></button>
+            </header>
+
+            <div class="grid shrink-0 grid-cols-2 gap-2 border-b border-slate-700/70 p-4 sm:grid-cols-4 sm:px-5">
+                <article class="rounded-xl border border-blue-400/25 bg-blue-500/10 p-3"><p class="text-[9px] font-extrabold uppercase tracking-wide text-blue-300">Total</p><p class="mt-1 text-2xl font-black text-white">{{ coupon_total_count }}</p></article>
+                <article class="rounded-xl border border-emerald-400/25 bg-emerald-500/10 p-3"><p class="text-[9px] font-extrabold uppercase tracking-wide text-emerald-300">Active</p><p class="mt-1 text-2xl font-black text-white">{{ coupon_active_count }}</p></article>
+                <article class="rounded-xl border border-sky-400/25 bg-sky-500/10 p-3"><p class="text-[9px] font-extrabold uppercase tracking-wide text-sky-300">Upcoming</p><p class="mt-1 text-2xl font-black text-white">{{ coupon_upcoming_count }}</p></article>
+                <article class="rounded-xl border border-rose-400/25 bg-rose-500/10 p-3"><p class="text-[9px] font-extrabold uppercase tracking-wide text-rose-300">Expired</p><p class="mt-1 text-2xl font-black text-white">{{ coupon_expired_count }}</p></article>
+            </div>
+
+            <div class="min-h-0 flex-1 space-y-2 overflow-y-auto p-4 sm:p-5">
+                {% for item in batch_coupon_items %}
+                <article class="batch-coupon-row">
+                    <span class="batch-coupon-code">{{ item.coupon.code }}</span>
+                    <div class="min-w-0"><p class="text-sm font-extrabold text-cyan-300">{{ item.discount_label }}</p><p class="mt-1 truncate text-[10px] text-slate-400">{% if item.coupon.description %}{{ item.coupon.description|truncatechars:65 }}{% else %}{{ item.coupon.get_coupon_type_display }}{% endif %}</p>{% if item.coupon.minimum_order_amount %}<p class="mt-1 text-[10px] text-slate-500">Minimum order: ₹{{ item.coupon.minimum_order_amount|floatformat:0 }}</p>{% endif %}</div>
+                    <div class="coupon-meta space-y-1 text-[10px] text-slate-400"><p><i class="ri-calendar-line mr-1 text-cyan-300"></i>{{ item.coupon.valid_from|date:"d M Y, h:i A" }} – {{ item.coupon.valid_until|date:"d M Y, h:i A" }}</p><p><i class="ri-ticket-2-line mr-1 text-cyan-300"></i>Used {{ item.coupon.used_count }} / {% if item.coupon.usage_limit %}{{ item.coupon.usage_limit }}{% else %}Unlimited{% endif %}</p></div>
+                    <span class="batch-coupon-status batch-coupon-status-{{ item.status_key }}">{{ item.status_label }}</span>
+                </article>
+                {% empty %}
+                <div class="flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-700 bg-slate-900/45 px-5 py-10 text-center">
+                    <span class="flex h-14 w-14 items-center justify-center rounded-2xl bg-cyan-400/10 text-3xl text-cyan-300"><i class="ri-coupon-3-line"></i></span>
+                    <h4 class="mt-4 text-base font-extrabold text-white">No coupons linked to this batch</h4>
+                    <p class="mt-1 max-w-sm text-xs leading-5 text-slate-400">There are no coupons to display yet. Once a coupon is linked to this batch, its discount, validity and usage details will appear here.</p>
+                </div>
+                {% endfor %}
+            </div>
+            <footer class="flex shrink-0 items-center justify-between gap-3 border-t border-slate-700/80 px-4 py-3 sm:px-5">
+                <p class="text-[10px] text-slate-500">Coupon details are read from the current batch assignments.</p>
+                <button type="button" id="closeBatchCouponsFooter" class="rounded-xl border border-slate-600 bg-slate-800 px-4 py-2 text-xs font-bold text-slate-200 transition hover:border-cyan-400 hover:text-cyan-200">Close</button>
+            </footer>
+        </section>
+    </div>
 
     <!-- Search -->
     <section>
@@ -293,6 +380,46 @@
 <script>
 (function () {
     "use strict";
+
+    // Batch coupon popup: accessible open/close, backdrop and Escape support.
+    const couponModal = document.getElementById("batchCouponsModal");
+    const couponOpen = document.getElementById("openBatchCoupons");
+    const couponCloseButtons = [
+        document.getElementById("closeBatchCoupons"),
+        document.getElementById("closeBatchCouponsFooter")
+    ];
+
+    function closeCouponModal() {
+        if (!couponModal) return;
+        couponModal.classList.remove("open");
+        couponModal.setAttribute("aria-hidden", "true");
+        document.body.classList.remove("overflow-hidden");
+        if (couponOpen) couponOpen.focus();
+    }
+
+    if (couponModal && couponOpen) {
+        couponOpen.addEventListener("click", function () {
+            couponModal.classList.add("open");
+            couponModal.setAttribute("aria-hidden", "false");
+            document.body.classList.add("overflow-hidden");
+            const closeButton = document.getElementById("closeBatchCoupons");
+            if (closeButton) closeButton.focus();
+        });
+
+        couponCloseButtons.forEach(function (button) {
+            if (button) button.addEventListener("click", closeCouponModal);
+        });
+
+        couponModal.addEventListener("click", function (event) {
+            if (event.target === couponModal) closeCouponModal();
+        });
+
+        document.addEventListener("keydown", function (event) {
+            if (event.key === "Escape" && couponModal.classList.contains("open")) {
+                closeCouponModal();
+            }
+        });
+    }
 
     // Open the Course Builder when a subject card itself is clicked.
     document.querySelectorAll(".batch-subject-card[data-course-url]").forEach(function (card) {

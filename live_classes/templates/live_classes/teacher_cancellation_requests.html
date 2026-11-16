@@ -1,0 +1,493 @@
+{% extends "teachers/dashboard/teacher_base.html" %}
+
+{% block title %}Cancellation History | NeoLearn{% endblock %}
+
+{% block extra_head %}
+{{ block.super }}
+<style>
+/* Cancellation History — aligned with Upcoming Classes card dimensions and grid. */
+#teacherCancellationHistory { color:#e9e5f5; }
+#teacherCancellationHistory .history-panel {
+    border:1px solid rgba(196,181,253,.35); border-radius:16px;
+    background:linear-gradient(135deg,rgba(124,58,237,.14),rgba(22,18,48,.94));
+}
+#teacherCancellationHistory .filter-control {
+    width:100%; min-width:0; height:42px; border:1px solid #d8ccfa;
+    border-radius:10px; background:#fff; color:#211b35; padding:0 11px;
+    font-size:11px; outline:none;
+}
+#teacherCancellationHistory .filter-control:focus {
+    border-color:#8b5cf6; box-shadow:0 0 0 3px rgba(139,92,246,.14);
+}
+#teacherCancellationHistory .history-filters {
+    display:grid; grid-template-columns:minmax(110px,.8fr) minmax(110px,.8fr)
+    minmax(130px,.8fr) minmax(110px,.7fr) minmax(180px,1.3fr) auto auto;
+    align-items:end; gap:10px;
+}
+#teacherCancellationHistory .filter-label {
+    display:block; margin:0 0 6px; color:#ddd0ff; font-size:9px;
+    font-weight:900; letter-spacing:.06em; text-transform:uppercase;
+}
+#teacherCancellationHistory .filter-button {
+    display:inline-flex; height:42px; align-items:center; justify-content:center;
+    gap:7px; white-space:nowrap; border-radius:10px; padding:0 14px;
+    font-size:11px; font-weight:900;
+}
+#teacherCancellationHistory .filter-apply {
+    border:1px solid #7c3aed; background:linear-gradient(135deg,#8b5cf6,#5b21b6);
+    color:#fff; box-shadow:0 5px 14px rgba(91,33,182,.2);
+}
+#teacherCancellationHistory .filter-reset {
+    border:1px solid #d8ccfa; background:#fff; color:#5b21b6;
+}
+#teacherCancellationHistory .history-grid {
+    display:grid; grid-template-columns:repeat(4,minmax(0,1fr));
+    align-items:stretch; gap:16px;
+}
+#teacherCancellationHistory .history-card {
+    display:flex; min-width:0; width:100%; min-height:326px; height:100%; max-height:none;
+    flex-direction:column; overflow:hidden; border:1px solid #ddd6fe; border-radius:18px;
+    background:linear-gradient(180deg,#fff 0%,#fcfbff 100%); color:#211b35;
+    box-shadow:0 9px 24px rgba(4,3,18,.19);
+    transition:transform .22s,border-color .22s,box-shadow .22s;
+}
+#teacherCancellationHistory .history-card:hover {
+    transform:translateY(-3px); border-color:#a78bfa;
+    box-shadow:0 14px 28px rgba(10,7,28,.2);
+}
+#teacherCancellationHistory .history-thumb {
+    position:relative; flex:0 0 150px; height:150px; min-height:150px; overflow:hidden;
+    background:linear-gradient(135deg,#ede9fe,#c4b5fd);
+    border-bottom:3px solid #a78bfa;
+}
+#teacherCancellationHistory .history-thumb img {
+    display:block; width:100%; height:100%; object-fit:cover;
+}
+#teacherCancellationHistory .history-card-body {
+    display:flex; flex:1 1 auto; min-width:0; min-height:0; flex-direction:column;
+    justify-content:flex-start; gap:0; padding:11px 12px 12px;
+}
+#teacherCancellationHistory .history-status {
+    position:absolute; top:10px; left:10px; display:inline-flex;
+    align-items:center; gap:5px; border:1px solid; border-radius:999px;
+    padding:6px 9px; background:rgba(255,255,255,.97);
+    font-size:9px; font-weight:900; box-shadow:0 2px 8px rgba(0,0,0,.1);
+}
+#teacherCancellationHistory .status-pending { border-color:#fcd34d; color:#a16207; }
+#teacherCancellationHistory .status-approved { border-color:#6ee7b7; color:#047857; }
+#teacherCancellationHistory .status-rejected { border-color:#fb7185; color:#e11d48; }
+#teacherCancellationHistory .history-date-chip {
+    position:absolute; top:10px; right:10px; min-width:43px;
+    border:1px solid rgba(255,255,255,.8); border-radius:10px;
+    background:rgba(255,255,255,.96); padding:5px 7px; text-align:center;
+    color:#211b35; box-shadow:0 3px 10px rgba(20,12,40,.15);
+}
+#teacherCancellationHistory .history-subject-icon {
+    display:grid; width:38px; height:38px; flex:0 0 38px; place-items:center;
+    border:1px solid #d8ccfa; border-radius:11px; background:#f1ecff;
+    color:#6d28d9; font-size:18px;
+}
+#teacherCancellationHistory .history-subject-title {
+    overflow:hidden; color:#211b35; font-size:13px; font-weight:900;
+    text-overflow:ellipsis; white-space:nowrap;
+}
+#teacherCancellationHistory .history-batch-name {
+    overflow:hidden; color:#716982; font-size:10px; font-weight:700;
+    text-overflow:ellipsis; white-space:nowrap;
+}
+#teacherCancellationHistory .history-more {
+    display:grid; width:38px; height:38px; flex:0 0 38px; place-items:center;
+    border:1px solid #d8ccfa; border-radius:10px; background:#fff;
+    color:#6d28d9; font-size:18px; transition:background .2s;
+}
+#teacherCancellationHistory .history-more:hover { background:#f1ecff; }
+#teacherCancellationHistory .history-chapter {
+    min-height:22px; margin-top:7px; color:#514a63; font-size:10px;
+}
+#teacherCancellationHistory .history-info {
+    display:flex; min-width:0; align-items:center; gap:8px;
+    color:#373047; font-size:10px; font-weight:800; line-height:1.3;
+}
+#teacherCancellationHistory .history-info i {
+    width:15px; flex:0 0 15px; color:#7c3aed; font-size:13px; text-align:center;
+}
+#teacherCancellationHistory .history-pagination {
+    display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between;
+    gap:12px; border-top:1px solid rgba(196,181,253,.22); padding-top:18px;
+}
+#teacherCancellationHistory .page-link {
+    display:inline-flex; min-width:36px; height:36px; align-items:center;
+    justify-content:center; border:1px solid rgba(167,139,250,.35);
+    border-radius:9px; background:#17112f; padding:0 10px;
+    color:#e9ddff; font-size:11px; font-weight:900;
+}
+#teacherCancellationHistory .page-link.active {
+    border-color:#7c3aed; background:linear-gradient(135deg,#8b5cf6,#5b21b6); color:#fff;
+}
+#teacherCancellationHistory .page-link.disabled { opacity:.4; pointer-events:none; }
+#teacherCancellationHistory .history-empty {
+    display:flex; min-height:260px; grid-column:1/-1; flex-direction:column;
+    align-items:center; justify-content:center; border:1px dashed #bda9f4;
+    border-radius:17px; background:rgba(124,58,237,.07); padding:30px; text-align:center;
+}
+#cancellationDetailsModal {
+    position:fixed; inset:0; z-index:10000; display:none; justify-content:flex-end;
+    background:rgba(8,5,25,.55); backdrop-filter:blur(5px);
+}
+#cancellationDetailsModal.is-open { display:flex; }
+#cancellationDetailsModal .detail-panel {
+    display:flex; width:min(390px,94vw); height:100%; max-height:100vh;
+    flex-direction:column; overflow:hidden; border-left:1px solid #ddd6fe;
+    background:#fff; color:#211b35; box-shadow:-18px 0 50px rgba(0,0,0,.28);
+    animation:historyPanelIn .2s ease both;
+}
+@keyframes historyPanelIn { from{transform:translateX(24px);opacity:.6} to{transform:translateX(0);opacity:1} }
+#cancellationDetailsModal .detail-scroll {
+    min-height:0; flex:1 1 auto; overflow-y:auto; padding:17px;
+}
+#cancellationDetailsModal .detail-label {
+    color:#77728e; font-size:9px; font-weight:900; letter-spacing:.06em; text-transform:uppercase;
+}
+#cancellationDetailsModal .detail-value {
+    overflow-wrap:anywhere; color:#211b43; font-size:11px; font-weight:700; line-height:1.5;
+}
+#cancellationDetailsModal .detail-box {
+    border:1px solid #e5e1f5; border-radius:10px; background:#f8f7ff;
+    padding:10px; color:#373047; font-size:11px; line-height:1.55;
+}
+@media(max-width:1450px) { #teacherCancellationHistory .history-grid{grid-template-columns:repeat(3,minmax(0,1fr));} }
+@media(max-width:1120px) {
+    #teacherCancellationHistory .history-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
+    #teacherCancellationHistory .history-filters{grid-template-columns:repeat(4,minmax(0,1fr));}
+    #teacherCancellationHistory .history-filters .search-field{grid-column:span 2;}
+}
+@media(max-width:680px) {
+    #teacherCancellationHistory .history-grid{grid-template-columns:minmax(0,1fr);}
+    #teacherCancellationHistory .history-card{min-height:326px;height:100%;max-height:none;}
+    #teacherCancellationHistory .history-filters{grid-template-columns:repeat(2,minmax(0,1fr));}
+    #teacherCancellationHistory .history-filters .search-field{grid-column:span 2;}
+    #cancellationDetailsModal{justify-content:center;}
+    #cancellationDetailsModal .detail-panel{width:100%;height:min(92vh,760px);align-self:flex-end;border:1px solid #ddd6fe;border-radius:18px 18px 0 0;}
+}
+@media(prefers-reduced-motion:reduce) {
+    #teacherCancellationHistory *,#cancellationDetailsModal * { animation-duration:.01ms!important; transition-duration:.01ms!important; }
+}
+</style>
+{% endblock %}
+
+{% block teacher_content %}
+<section id="teacherCancellationHistory" class="mx-auto w-full max-w-[1600px] space-y-5 pb-5" aria-labelledby="teacherCancellationTitle">
+
+    <!-- PAGE HEADER: this page intentionally contains no timetable/upcoming-page tabs -->
+    <header class="flex flex-col justify-between gap-4 xl:flex-row xl:items-center">
+        <div class="flex min-w-0 items-center gap-3">
+            <span class="grid h-12 w-12 shrink-0 place-items-center rounded-2xl border border-rose-400/35 bg-rose-500/15 text-2xl text-rose-300">
+                <i class="ri-calendar-close-line"></i>
+            </span>
+            <div class="min-w-0">
+                <p class="text-[10px] font-extrabold uppercase tracking-[.18em] text-rose-300">TEACHING WORKSPACE</p>
+                <h1 id="teacherCancellationTitle" class="mt-0.5 text-2xl font-extrabold tracking-tight text-white sm:text-3xl">Cancellation History</h1>
+                <p class="mt-1 text-xs text-slate-400 sm:text-sm">Track cancellation requests and view the Admin's decisions.</p>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-3 gap-2 sm:min-w-[390px]">
+            <div class="rounded-xl border border-amber-400/30 bg-amber-500/10 px-3 py-2.5">
+                <p class="text-[10px] font-bold text-amber-200">Pending</p>
+                <p class="mt-0.5 text-2xl font-extrabold text-amber-100">{{ pending_count }}</p>
+            </div>
+            <div class="rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-3 py-2.5">
+                <p class="text-[10px] font-bold text-emerald-200">Approved</p>
+                <p class="mt-0.5 text-2xl font-extrabold text-emerald-100">{{ approved_count }}</p>
+            </div>
+            <div class="rounded-xl border border-rose-500/40 bg-rose-600/15 px-3 py-2.5">
+                <p class="text-[10px] font-bold text-rose-200">Rejected</p>
+                <p class="mt-0.5 text-2xl font-extrabold text-rose-100">{{ rejected_count }}</p>
+            </div>
+        </div>
+    </header>
+
+    {% if messages %}
+        <div class="space-y-2" aria-live="polite">
+            {% for message in messages %}
+                <div class="flex items-start gap-3 rounded-xl border px-4 py-3 text-sm
+                    {% if message.tags == 'success' %}border-emerald-400/25 bg-emerald-500/10 text-emerald-200
+                    {% elif message.tags == 'error' %}border-rose-400/25 bg-rose-500/10 text-rose-200
+                    {% else %}border-violet-400/25 bg-violet-500/10 text-violet-100{% endif %}">
+                    <i class="{% if message.tags == 'success' %}ri-checkbox-circle-line{% elif message.tags == 'error' %}ri-error-warning-line{% else %}ri-information-line{% endif %} mt-0.5"></i>
+                    <span>{{ message }}</span>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <!-- FILTERS -->
+    <form method="get" class="history-panel p-3 sm:p-3">
+        <div class="history-filters">
+            <label class="min-w-0">
+                <span class="filter-label"><i class="ri-stack-line"></i> Batch</span>
+                <select name="batch" class="filter-control">
+                    <option value="">All batches</option>
+                    {% for batch in batches %}
+                        <option value="{{ batch.pk }}" {% if selected_batch == batch.pk|stringformat:"s" %}selected{% endif %}>{{ batch.batch_name }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label class="min-w-0">
+                <span class="filter-label"><i class="ri-book-open-line"></i> Subject</span>
+                <select name="subject" class="filter-control">
+                    <option value="">All subjects</option>
+                    {% for subject in subjects %}
+                        <option value="{{ subject.pk }}" {% if selected_subject == subject.pk|stringformat:"s" %}selected{% endif %}>{{ subject.subject_name }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label class="min-w-0">
+                <span class="filter-label"><i class="ri-calendar-line"></i> Class date</span>
+                <input type="date" name="date" value="{% if selected_date %}{{ selected_date|date:'Y-m-d' }}{% endif %}" class="filter-control">
+            </label>
+            <label class="min-w-0">
+                <span class="filter-label"><i class="ri-filter-3-line"></i> Status</span>
+                <select name="status" class="filter-control">
+                    <option value="">All statuses</option>
+                    <option value="pending" {% if selected_status == "pending" %}selected{% endif %}>Pending</option>
+                    <option value="approved" {% if selected_status == "approved" %}selected{% endif %}>Approved</option>
+                    <option value="rejected" {% if selected_status == "rejected" %}selected{% endif %}>Rejected</option>
+                </select>
+            </label>
+            <label class="min-w-0 search-field">
+                <span class="filter-label"><i class="ri-search-line"></i> Search requests</span>
+                <input type="search" name="search" value="{{ search_query }}" placeholder="Search batch, subject or chapter..." class="filter-control">
+            </label>
+            <button type="submit" class="filter-button filter-apply"><i class="ri-search-line"></i> Search</button>
+            <a href="{% url 'live_classes:teacher_cancellation_requests' %}" class="filter-button filter-reset"><i class="ri-refresh-line"></i> Reset</a>
+        </div>
+        <p class="mt-2 text-[9px] text-slate-400"><i class="ri-information-line"></i> Filters apply to all your cancellation requests.</p>
+    </form>
+
+    {% if cancellation_requests %}
+        <div class="history-grid">
+            {% for item in cancellation_requests %}
+                <article class="history-card">
+                    <!-- Same thumbnail-first card structure as Upcoming Classes -->
+                    <div class="history-thumb">
+                        {% if item.live_class.subject.subject_thumbnail %}
+                            <img src="{{ item.live_class.subject.subject_thumbnail.url }}" alt="{{ item.live_class.subject.subject_name }} thumbnail" loading="lazy">
+                        {% elif item.live_class.batch.batch_thumbnail %}
+                            <img src="{{ item.live_class.batch.batch_thumbnail.url }}" alt="{{ item.live_class.batch.batch_name }} thumbnail" loading="lazy">
+                        {% else %}
+                            <div class="grid h-full w-full place-items-center bg-gradient-to-br from-violet-100 via-indigo-100 to-slate-200 text-5xl text-violet-500">
+                                <i class="ri-book-open-line"></i>
+                            </div>
+                        {% endif %}
+
+                        <span class="history-status
+                            {% if item.status == 'pending' %}status-pending
+                            {% elif item.status == 'approved' %}status-approved
+                            {% elif item.status == 'rejected' %}status-rejected{% endif %}">
+                            {% if item.status == "pending" %}<i class="ri-time-line"></i> Pending
+                            {% elif item.status == "approved" %}<i class="ri-checkbox-circle-line"></i> Approved
+                            {% elif item.status == "rejected" %}<i class="ri-close-circle-line"></i> Rejected
+                            {% else %}{{ item.get_status_display|default:item.status }}{% endif %}
+                        </span>
+
+                        <span class="history-date-chip">
+                            <strong class="text-lg leading-5">{{ item.live_class.start_at|date:"d" }}</strong>
+                            <span class="text-[9px] font-extrabold uppercase">{{ item.live_class.start_at|date:"M" }}</span>
+                        </span>
+                    </div>
+
+                    <div class="history-card-body">
+                        <div class="flex items-start justify-between gap-2">
+                            <div class="flex min-w-0 items-center gap-2">
+                                <span class="history-subject-icon"><i class="ri-book-2-line"></i></span>
+                                <div class="min-w-0">
+                                    <h3 class="history-subject-title" title="{{ item.live_class.subject.subject_name }}">{{ item.live_class.subject.subject_name }}</h3>
+                                    <p class="history-batch-name" title="{{ item.live_class.batch.batch_name }}">{{ item.live_class.batch.batch_name }}</p>
+                                </div>
+                            </div>
+                            <button type="button" data-open-cancellation-details="{{ item.pk }}" aria-label="View cancellation details for {{ item.live_class.subject.subject_name }}" class="history-more">
+                                <i class="ri-more-2-fill"></i>
+                            </button>
+                        </div>
+
+                        <p class="history-chapter truncate"><span class="font-extrabold text-violet-700">Chapter:</span> {{ item.live_class.chapter.chapter_name }}</p>
+
+                        <div class="mt-2.5 space-y-1.5 border-t border-slate-100 pt-2.5">
+                            <p class="history-info"><i class="ri-calendar-line text-base text-violet-600"></i>{{ item.live_class.start_at|date:"D, d M Y" }}</p>
+                            <p class="history-info"><i class="ri-time-line text-base text-violet-600"></i>
+                                {{ item.live_class.start_at|date:"g:i A" }} – {{ item.live_class.end_at|date:"g:i A" }}
+                            </p>
+                            <p class="history-info"><i class="ri-hourglass-line text-base text-violet-600"></i>{{ item.live_class.end_at|timeuntil:item.live_class.start_at }}</p>
+                        </div>
+
+                    </div>
+
+                    <!-- Server-rendered safe details copied into the shared modal on demand -->
+                    <div id="cancellation-detail-data-{{ item.pk }}" class="hidden">
+                        <div class="space-y-4">
+                            <div class="flex items-start gap-3 rounded-xl border p-3
+                                {% if item.status == 'pending' %}border-amber-200 bg-amber-50
+                                {% elif item.status == 'approved' %}border-emerald-200 bg-emerald-50
+                                {% else %}border-rose-200 bg-rose-50{% endif %}">
+                                <i class="mt-0.5 text-xl {% if item.status == 'pending' %}ri-time-line text-amber-600{% elif item.status == 'approved' %}ri-checkbox-circle-line text-emerald-600{% else %}ri-close-circle-line text-rose-600{% endif %}"></i>
+                                <div>
+                                    <p class="text-sm font-extrabold text-slate-900">
+                                        {% if item.status == 'pending' %}Awaiting Admin review
+                                        {% elif item.status == 'approved' %}Cancellation approved
+                                        {% else %}Cancellation rejected{% endif %}
+                                    </p>
+                                    <p class="mt-0.5 text-xs text-slate-600">
+                                        {% if item.status == 'pending' %}Your class remains confirmed until the Admin reviews the request.
+                                        {% elif item.status == 'approved' %}The Admin approved the request and the class was cancelled.
+                                        {% else %}The request was not approved. The class remains confirmed.{% endif %}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                <div><p class="detail-label">Batch</p><p class="detail-value">{{ item.live_class.batch.batch_name }}</p></div>
+                                <div><p class="detail-label">Subject</p><p class="detail-value">{{ item.live_class.subject.subject_name }}</p></div>
+                                <div><p class="detail-label">Chapter</p><p class="detail-value">{{ item.live_class.chapter.chapter_name }}</p></div>
+                                <div><p class="detail-label">Class date</p><p class="detail-value">{{ item.live_class.start_at|date:"D, d M Y" }}</p></div>
+                                <div><p class="detail-label">Class time</p><p class="detail-value">{{ item.live_class.start_at|date:"g:i A" }} – {{ item.live_class.end_at|date:"g:i A" }}</p></div>
+                                <div><p class="detail-label">Requested on</p><p class="detail-value">{{ item.requested_at|date:"d M Y, g:i A" }}</p></div>
+                                {% if item.reviewed_at %}
+                                    <div><p class="detail-label">Reviewed on</p><p class="detail-value">{{ item.reviewed_at|date:"d M Y, g:i A" }}</p></div>
+                                {% endif %}
+                            </div>
+
+                            <div>
+                                <p class="mb-1.5 text-xs font-extrabold text-slate-800">Your cancellation reason</p>
+                                <div class="detail-box text-xs leading-5 text-slate-700">{{ item.reason|linebreaksbr }}</div>
+                            </div>
+
+                            {% if item.status == "pending" %}
+                                <div>
+                                    <p class="mb-1.5 text-xs font-extrabold text-amber-800">Admin reply</p>
+                                    <div class="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-800">No reply yet. Your request is waiting for Admin review.</div>
+                                </div>
+                            {% elif item.status == "approved" %}
+                                <div>
+                                    <p class="mb-1.5 text-xs font-extrabold text-emerald-800">Admin reply (Approved)</p>
+                                    <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs leading-5 text-emerald-900">
+                                        {% if item.review_note %}{{ item.review_note|linebreaksbr }}{% else %}The Admin approved your cancellation request.{% endif %}
+                                    </div>
+                                </div>
+                            {% elif item.status == "rejected" %}
+                                <div>
+                                    <p class="mb-1.5 text-xs font-extrabold text-rose-800">Admin reply (Rejected)</p>
+                                    <div class="rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs leading-5 text-rose-900">
+                                        {% if item.review_note %}{{ item.review_note|linebreaksbr }}{% else %}No rejection explanation was recorded.{% endif %}
+                                    </div>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </article>
+            {% endfor %}
+        </div>
+
+        <!-- PAGINATION -->
+        {% if page_obj.paginator.num_pages > 1 %}
+            <nav class="history-pagination" aria-label="Cancellation history pagination">
+                <p class="text-[11px] text-slate-400">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</p>
+                <div class="flex flex-wrap items-center justify-center gap-2">
+                    {% if page_obj.has_previous %}
+                        <a class="page-link" href="?{% if pagination_query %}{{ pagination_query }}&{% endif %}page={{ page_obj.previous_page_number }}" aria-label="Previous page">« Previous</a>
+                    {% else %}
+                        <span class="pagination-link disabled" aria-disabled="true">« Previous</span>
+                    {% endif %}
+                    {% for number in page_obj.paginator.page_range %}
+                        {% if number == page_obj.number %}
+                            <span class="pagination-link active" aria-current="page">{{ number }}</span>
+                        {% elif number >= page_obj.number|add:"-2" and number <= page_obj.number|add:"2" %}
+                            <a class="page-link" href="?{% if pagination_query %}{{ pagination_query }}&{% endif %}page={{ number }}">{{ number }}</a>
+                        {% endif %}
+                    {% endfor %}
+                    {% if page_obj.has_next %}
+                        <a class="page-link" href="?{% if pagination_query %}{{ pagination_query }}&{% endif %}page={{ page_obj.next_page_number }}" aria-label="Next page">Next »</a>
+                    {% else %}
+                        <span class="pagination-link disabled" aria-disabled="true">Next »</span>
+                    {% endif %}
+                </div>
+                <span class="text-[11px] text-slate-400">20 requests per page</span>
+            </nav>
+        {% endif %}
+    {% else %}
+        <div class="flex min-h-[300px] flex-col items-center justify-center rounded-2xl border border-dashed border-violet-300/25 bg-violet-500/5 px-6 py-12 text-center">
+            <span class="grid h-16 w-16 place-items-center rounded-2xl border border-violet-300/20 bg-violet-500/10 text-3xl text-violet-300"><i class="ri-file-list-3-line"></i></span>
+            <h2 class="mt-5 text-lg font-extrabold text-white">{% if has_active_filters %}No matching cancellation requests{% else %}No cancellation requests yet{% endif %}</h2>
+            <p class="mt-2 max-w-md text-xs leading-6 text-slate-400">{% if has_active_filters %}Try changing or clearing your filters to see more requests.{% else %}When you submit a cancellation request for one of your classes, its status and Admin decision will appear here.{% endif %}</p>
+            {% if has_active_filters %}
+                <a href="{% url 'live_classes:teacher_cancellation_requests' %}" class="mt-5 inline-flex items-center gap-2 rounded-lg bg-violet-600 px-4 py-2.5 text-xs font-extrabold text-white hover:bg-violet-500"><i class="ri-refresh-line"></i> Clear filters</a>
+            {% endif %}
+        </div>
+    {% endif %}
+</section>
+
+<!-- SHARED CANCELLATION DETAILS POPUP -->
+<div id="cancellationDetailsModal" class="cancellation-detail" role="dialog" aria-modal="true" aria-labelledby="cancellationDetailsTitle" aria-hidden="true">
+    <div class="detail-panel">
+        <div class="sticky top-0 z-10 flex items-center justify-between border-b border-violet-100 bg-white px-5 py-4">
+            <div class="flex items-center gap-2">
+                <span class="grid h-9 w-9 place-items-center rounded-xl bg-violet-100 text-lg text-violet-700"><i class="ri-message-2-line"></i></span>
+                <h2 id="cancellationDetailsTitle" class="text-base font-extrabold text-slate-900">Cancellation Details</h2>
+            </div>
+            <button type="button" id="closeCancellationDetails" class="grid h-9 w-9 place-items-center rounded-lg text-xl text-slate-500 hover:bg-slate-100" aria-label="Close details"><i class="ri-close-line"></i></button>
+        </div>
+        <div id="cancellationDetailsContent" class="detail-scroll"></div>
+        <div class="border-t border-violet-100 px-5 py-4 text-right">
+            <button type="button" id="closeCancellationDetailsFooter" class="rounded-lg bg-violet-600 px-5 py-2.5 text-xs font-extrabold text-white hover:bg-violet-500">Close</button>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    const root = document.getElementById("teacherCancellationHistory");
+    const modal = document.getElementById("cancellationDetailsModal");
+    if (!root || !modal) return;
+
+    const content = document.getElementById("cancellationDetailsContent");
+    const closeButtons = [
+        document.getElementById("closeCancellationDetails"),
+        document.getElementById("closeCancellationDetailsFooter")
+    ];
+
+    function closeModal() {
+        modal.classList.remove("is-open");
+        modal.setAttribute("aria-hidden", "true");
+        document.body.style.overflow = "";
+        content.innerHTML = "";
+    }
+
+    root.addEventListener("click", function (event) {
+        const button = event.target.closest("[data-open-cancellation-details]");
+        if (!button) return;
+
+        const id = button.getAttribute("data-open-cancellation-details");
+        const source = document.getElementById("cancellation-detail-data-" + id);
+        if (!source) return;
+
+        content.innerHTML = source.innerHTML;
+        modal.classList.add("is-open");
+        modal.setAttribute("aria-hidden", "false");
+        document.body.style.overflow = "hidden";
+        closeButtons[0].focus();
+    });
+
+    closeButtons.forEach(function (button) {
+        if (button) button.addEventListener("click", closeModal);
+    });
+
+    modal.addEventListener("click", function (event) {
+        if (event.target === modal) closeModal();
+    });
+
+    document.addEventListener("keydown", function (event) {
+        if (event.key === "Escape" && modal.classList.contains("is-open")) closeModal();
+    });
+})();
+</script>
+{% endblock %}

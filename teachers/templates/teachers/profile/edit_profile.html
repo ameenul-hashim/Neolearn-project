@@ -1,4 +1,3 @@
-
 {% extends "teachers/dashboard/teacher_base.html" %}
 {% block title %}Edit Profile | NeoLearn{% endblock %}
 {% block page_heading %}Edit Profile{% endblock %}
@@ -61,6 +60,139 @@
  .neo-edit .crop-stage{height:clamp(175px,32vh,235px)}
  .neo-edit .crop-dialog-actions .ne-button{min-height:39px;padding:9px 10px}
 }
+
+/* WHITE + VIOLET THEME — COLOUR OVERRIDES ONLY.
+   All existing HTML, fields, validation, cropper behaviour, dimensions,
+   spacing, grid/flex layouts and responsive breakpoints remain unchanged. */
+.neo-edit{
+    --line:#e5d9f8;
+    --muted:#817292;
+    color:#35264a;
+}
+.neo-edit .ne-card{
+    border-color:#e6dcf7;
+    background:linear-gradient(145deg,#ffffff,#faf7ff);
+}
+.neo-edit .ne-heading .ne-icon,
+.neo-edit .ne-icon{
+    background:linear-gradient(145deg,#a78bfa,#7c3aed);
+    color:#ffffff;
+}
+.neo-edit .ne-title{color:#302044}
+.neo-edit .ne-subtitle{color:#827394}
+.neo-edit .ne-label{color:#5f5074}
+.neo-edit .ne-help{color:#827394}
+.neo-edit .ne-error{color:#dc2626}
+.neo-edit .ne-input,
+.neo-edit .ne-select,
+.neo-edit .ne-textarea{
+    border-color:#dfd3f1;
+    background:#fbf9ff;
+    color:#35264a;
+}
+.neo-edit .ne-input:focus,
+.neo-edit .ne-select:focus,
+.neo-edit .ne-textarea:focus{
+    border-color:#8b5cf6;
+    box-shadow:0 0 0 2px #8b5cf625;
+}
+.neo-edit .ne-input::placeholder,
+.neo-edit .ne-textarea::placeholder{color:#9a8cab}
+.neo-edit .ne-input[readonly]{
+    border-color:#e8e0f3;
+    background:#f1edf7;
+    color:#796b8c;
+}
+.neo-edit .ne-progress{background:#e8def8}
+.neo-edit .ne-progress>span{
+    background:linear-gradient(90deg,#16a34a,#22c55e);
+}
+.neo-edit .ne-photo{
+    border-color:#8b5cf6;
+    background:#f1eaff;
+}
+.neo-edit .ne-upload{
+    border-color:#cbb8ee;
+    background:linear-gradient(145deg,#fcfaff,#f5efff);
+}
+.neo-edit .ne-upload input{color:#5f5074}
+.neo-edit .ne-save{
+    border:1px solid #6d28d9;
+    background:linear-gradient(135deg,#8b5cf6,#6d28d9);
+    color:#ffffff;
+}
+.neo-edit .ne-cancel{
+    border:1px solid #ded3ed;
+    background:#f5f1fb;
+    color:#59496e;
+}
+.neo-edit .ne-button:focus-visible{outline-color:#8b5cf6}
+
+/* Crop popup keeps its original size and positioning. */
+.neo-edit .crop-backdrop{background:rgba(25,12,45,.72)}
+.neo-edit .crop-dialog{
+    border-color:#e1d5f4;
+    background:linear-gradient(145deg,#ffffff,#faf7ff);
+    box-shadow:0 24px 80px rgba(35,18,60,.28);
+}
+.neo-edit .crop-dialog-header h3{color:#302044}
+.neo-edit .crop-dialog-header p{color:#827394}
+.neo-edit .crop-close{
+    border-color:#e1d5f4;
+    background:#f4effc;
+    color:#59496e;
+}
+.neo-edit .crop-stage{
+    border-color:#d9c9f1;
+    background:#f1eaff;
+}
+.neo-edit .cropper-view-box{outline-color:#8b5cf6}
+.neo-edit .cropper-line,
+.neo-edit .cropper-point{background-color:#8b5cf6}
+.neo-edit .ne-range{accent-color:#8b5cf6}
+.neo-edit .crop-zoom-button{
+    border-color:#ded3ed;
+    background:#f5f1fb;
+    color:#59496e;
+}
+
+/* Page heading and breadcrumb: keep readable on the existing dark shell. */
+.neo-edit > header > div > p.text-cyan-400{color:#a78bfa!important}
+.neo-edit > header > div > h1.text-white{color:#ffffff!important}
+.neo-edit > header > div > p.text-slate-400{color:#b7a9ca!important}
+.neo-edit > header nav{
+    border-color:#3b2c52!important;
+    background:#171025!important;
+    color:#b7a9ca!important;
+}
+.neo-edit > header nav a:hover,
+.neo-edit > header nav span.text-cyan-300{color:#c4a7ff!important}
+.neo-edit > header nav a{color:#c0b2d2!important}
+
+/* Keep success green and error red, with readable text on light surfaces. */
+.neo-edit [role="status"][class*="border-emerald-500/30"]{
+    border-color:#86efac!important;
+    background:#f0fdf4!important;
+    color:#166534!important;
+}
+.neo-edit [role="status"][class*="border-red-500/30"],
+.neo-edit [role="alert"][class*="border-red-500/30"]{
+    border-color:#fca5a5!important;
+    background:#fef2f2!important;
+    color:#b91c1c!important;
+}
+.neo-edit [role="status"][class*="border-cyan-500/30"]{
+    border-color:#c4b5fd!important;
+    background:#f5f3ff!important;
+    color:#5b21b6!important;
+}
+
+/* Completion percentage remains green, matching the profile page. */
+.neo-edit .ne-card .text-emerald-300{color:#15803d!important}
+.neo-edit .ne-card .text-slate-400{color:#827394!important}
+.neo-edit .ne-card .text-white{color:#302044!important}
+.neo-edit .ne-card .text-cyan-200{color:#7c3aed!important}
+.neo-edit .ne-card .text-cyan-300{color:#7c3aed!important}
 </style>
 {% endblock %}
 {% block teacher_content %}

@@ -1,4 +1,3 @@
-
 {% extends "teachers/dashboard/teacher_base.html" %}
 
 {% block title %}My Colleagues | NeoLearn{% endblock %}
@@ -482,6 +481,509 @@
         padding: 0 6px;
     }
 }
+
+/* ==========================================================
+   TEACHER COLLEAGUES — PREMIUM VIOLET THEME + UNIFORM CARDS
+   Page-only styling. Shared teacher base remains untouched.
+   ========================================================== */
+.colleague-page {
+    color:#eee9ff;
+    max-width:1450px;
+}
+.colleague-hero {
+    border-color:rgba(196,181,253,.22);
+    background:
+      radial-gradient(circle at 92% 10%,rgba(139,92,246,.20),transparent 34%),
+      linear-gradient(115deg,rgba(35,22,66,.94),rgba(13,11,29,.97) 72%);
+    box-shadow:0 12px 32px rgba(0,0,0,.16),inset 0 1px rgba(255,255,255,.045);
+}
+.colleague-eyebrow {color:#c4b5fd}
+.colleague-title {color:#faf8ff;letter-spacing:-.035em}
+.colleague-subtitle {color:#b8afcc}
+.colleague-count {
+    border-color:rgba(196,181,253,.25);
+    background:rgba(139,92,246,.12);
+    color:#ddd0ff;
+}
+.colleague-toolbar {
+    border-color:rgba(196,181,253,.16);
+    background:linear-gradient(115deg,rgba(20,16,39,.94),rgba(10,10,25,.94));
+    box-shadow:0 8px 24px rgba(0,0,0,.12);
+}
+.colleague-input,.colleague-select {
+    border-color:rgba(196,181,253,.18);
+    background:#100d20;
+    color:#f4f0ff;
+}
+.colleague-input:focus,.colleague-select:focus {
+    border-color:rgba(167,139,250,.72);
+    box-shadow:0 0 0 3px rgba(139,92,246,.13);
+}
+.colleague-input::placeholder {color:#9389a9}
+.colleague-select option {background:#100d20;color:#f4f0ff}
+.colleague-button {
+    border-color:rgba(196,181,253,.25);
+    background:linear-gradient(135deg,#a78bfa,#7c3aed);
+    color:#fff;
+    box-shadow:0 5px 15px rgba(91,33,182,.20);
+    transition:transform .2s ease,box-shadow .2s ease,filter .2s ease;
+}
+.colleague-button:hover {
+    transform:translateY(-2px);
+    filter:brightness(1.08);
+    box-shadow:0 9px 22px rgba(124,58,237,.28);
+}
+.colleague-button-secondary {
+    border-color:rgba(196,181,253,.20);
+    background:rgba(167,139,250,.08);
+    color:#ddd6fe;
+    box-shadow:none;
+}
+.colleague-results-heading h2 {color:#f5f0ff}
+.colleague-results-heading p {color:#a69bbd}
+
+/* Uniform card sizing: same grid rhythm and minimum height on every row. */
+.colleague-grid {
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    align-items:stretch;
+    gap:15px;
+}
+.colleague-card {
+    position:relative;
+    min-height:278px;
+    height:100%;
+    padding:16px;
+    border:1px solid rgba(196,181,253,.19);
+    border-radius:17px;
+    background:
+      radial-gradient(circle at 100% 0%,rgba(139,92,246,.13),transparent 38%),
+      linear-gradient(150deg,#17132a 0%,#100e20 56%,#0c0b19 100%);
+    box-shadow:0 8px 24px rgba(0,0,0,.16),inset 0 1px rgba(255,255,255,.035);
+    cursor:pointer;
+    outline:none;
+    transition:transform .22s ease,border-color .22s ease,background .22s ease,box-shadow .22s ease;
+}
+.colleague-card::after {
+    content:"";
+    position:absolute;
+    inset:0;
+    border-radius:inherit;
+    pointer-events:none;
+    opacity:0;
+    background:linear-gradient(135deg,rgba(167,139,250,.08),transparent 58%);
+    transition:opacity .22s ease;
+}
+.colleague-card:hover,
+.colleague-card:focus-visible {
+    transform:translateY(-4px);
+    border-color:rgba(196,181,253,.55);
+    background:
+      radial-gradient(circle at 100% 0%,rgba(139,92,246,.20),transparent 42%),
+      linear-gradient(150deg,#21183a 0%,#151027 58%,#100d20 100%);
+    box-shadow:0 16px 34px rgba(0,0,0,.25),0 0 0 3px rgba(139,92,246,.09);
+}
+.colleague-card:hover::after,.colleague-card:focus-visible::after {opacity:1}
+.colleague-card-top,.colleague-divider,.colleague-info-list {position:relative;z-index:1}
+.colleague-avatar,.colleague-avatar-fallback {
+    width:58px;
+    height:58px;
+    flex-basis:58px;
+    border:1px solid rgba(196,181,253,.40);
+    border-radius:15px;
+    background:linear-gradient(135deg,#382568,#21183d);
+    color:#e4d8ff;
+    box-shadow:0 4px 13px rgba(0,0,0,.18);
+}
+.colleague-name {color:#faf8ff;font-size:13px}
+.colleague-specialization {color:#c4b5fd;font-weight:650}
+.colleague-divider {background:rgba(196,181,253,.14)}
+.colleague-info-list {gap:10px}
+.colleague-info-icon {
+    border-color:rgba(196,181,253,.15);
+    background:rgba(139,92,246,.12);
+    color:#c4b5fd;
+}
+.colleague-info-label {color:#9b91b3}
+.colleague-info-value {color:#e0d9ef}
+.colleague-info-value a {color:#c4b5fd}
+.colleague-info-value a:hover {color:#ede9fe}
+.colleague-pagination {
+    border-color:rgba(196,181,253,.16);
+    background:rgba(16,13,32,.88);
+}
+.pagination-info {color:#b8afcc}
+.pagination-link,.pagination-current,.pagination-ellipsis {
+    border-color:rgba(196,181,253,.17);
+    background:rgba(167,139,250,.07);
+    color:#e4dcf5;
+    transition:background .18s ease,border-color .18s ease,color .18s ease,transform .18s ease;
+}
+.pagination-link:hover {
+    transform:translateY(-1px);
+    border-color:rgba(196,181,253,.45);
+    background:rgba(139,92,246,.16);
+    color:#fff;
+}
+.pagination-current {
+    border-color:transparent;
+    background:linear-gradient(135deg,#a78bfa,#7c3aed);
+    color:#fff;
+}
+.colleague-empty {
+    border-color:rgba(196,181,253,.24);
+    background:rgba(16,13,32,.72);
+}
+.colleague-empty-icon {
+    border-color:rgba(196,181,253,.22);
+    background:rgba(139,92,246,.13);
+    color:#c4b5fd;
+}
+.colleague-empty h3 {color:#f5f0ff}
+.colleague-empty p {color:#b8afcc}
+
+@media (max-width:1100px) {
+    .colleague-grid {grid-template-columns:repeat(2,minmax(0,1fr));}
+}
+@media (max-width:680px) {
+    .colleague-grid {grid-template-columns:minmax(0,1fr);gap:11px}
+    .colleague-card {min-height:250px;padding:14px}
+}
+@media (prefers-reduced-motion:reduce) {
+    .colleague-card,.colleague-card::after,.colleague-button,.pagination-link {
+        transition:none!important;
+    }
+}
+
+
+
+/* ==========================================================
+   NEOLEARN TEACHER COLLEAGUES — FULL VIOLET / 4-COLUMN GRID
+   Card content stays inside equal-height cards. Existing
+   Django data, search, pagination and click navigation remain.
+   ========================================================== */
+
+.colleague-page{
+    width:100%;
+    max-width:1600px;
+    color:#f1ebff;
+}
+
+/* Violet hero and toolbar surfaces */
+.colleague-hero{
+    border:1px solid rgba(196,181,253,.34)!important;
+    background:
+      radial-gradient(ellipse at 92% 8%,rgba(167,139,250,.28),transparent 38%),
+      linear-gradient(118deg,#28194a 0%,#1b1233 48%,#100d20 100%)!important;
+    box-shadow:0 14px 34px rgba(5,2,18,.28),inset 0 1px rgba(255,255,255,.07)!important;
+}
+.colleague-eyebrow{color:#d8c6ff!important}
+.colleague-title{color:#fff!important}
+.colleague-subtitle{color:#d0c5e6!important}
+.colleague-count{
+    border-color:rgba(221,214,254,.38)!important;
+    background:linear-gradient(120deg,rgba(167,139,250,.22),rgba(124,58,237,.16))!important;
+    color:#f0eaff!important;
+}
+.colleague-toolbar{
+    border:1px solid rgba(196,181,253,.28)!important;
+    background:linear-gradient(115deg,#211638,#151027)!important;
+    box-shadow:0 9px 25px rgba(4,2,15,.22),inset 0 1px rgba(255,255,255,.045)!important;
+}
+.colleague-input,.colleague-select{
+    border:1px solid #6d559d!important;
+    background:#17112a!important;
+    color:#fff!important;
+}
+.colleague-input::placeholder{color:#b2a4cb!important}
+.colleague-input:focus,.colleague-select:focus{
+    border-color:#c4b5fd!important;
+    box-shadow:0 0 0 3px rgba(167,139,250,.18)!important;
+}
+.colleague-select option{background:#17112a!important;color:#fff!important}
+.colleague-button{
+    border:1px solid rgba(221,214,254,.38)!important;
+    background:linear-gradient(135deg,#a78bfa 0%,#8b5cf6 48%,#6d28d9 100%)!important;
+    color:#fff!important;
+    box-shadow:0 7px 17px rgba(91,33,182,.28)!important;
+}
+.colleague-button:hover{
+    transform:translateY(-2px)!important;
+    box-shadow:0 11px 24px rgba(124,58,237,.38)!important;
+}
+.colleague-button-secondary{
+    background:rgba(167,139,250,.13)!important;
+    border-color:rgba(196,181,253,.3)!important;
+    color:#e9ddff!important;
+}
+.colleague-results-heading h2{color:#fff!important}
+.colleague-results-heading p{color:#c2b6d8!important}
+
+/* Four cards per row on desktop; responsive reductions below. */
+.colleague-grid{
+    display:grid!important;
+    grid-template-columns:repeat(4,minmax(0,1fr))!important;
+    align-items:stretch!important;
+    gap:14px!important;
+}
+.colleague-card{
+    position:relative!important;
+    display:flex!important;
+    flex-direction:column!important;
+    min-width:0!important;
+    min-height:292px!important;
+    height:100%!important;
+    padding:14px!important;
+    overflow:hidden!important;
+    border:1px solid rgba(196,181,253,.34)!important;
+    border-radius:17px!important;
+    background:
+      radial-gradient(ellipse at 100% 0%,rgba(167,139,250,.20),transparent 43%),
+      linear-gradient(150deg,#2a1c49 0%,#211638 54%,#171127 100%)!important;
+    box-shadow:0 10px 25px rgba(4,2,16,.25),inset 0 1px rgba(255,255,255,.06)!important;
+    cursor:pointer!important;
+    outline:none!important;
+    transition:transform .24s ease,border-color .24s ease,box-shadow .24s ease,background .24s ease!important;
+    animation:colleagueCardEnter .42s ease both;
+}
+.colleague-card:nth-child(4n+1){animation-delay:.025s}
+.colleague-card:nth-child(4n+2){animation-delay:.07s}
+.colleague-card:nth-child(4n+3){animation-delay:.115s}
+.colleague-card:nth-child(4n){animation-delay:.16s}
+@keyframes colleagueCardEnter{
+    from{opacity:0;transform:translateY(10px)}
+    to{opacity:1;transform:translateY(0)}
+}
+.colleague-card::before{
+    content:"";
+    position:absolute;
+    top:0;left:14px;right:14px;
+    height:3px;
+    border-radius:0 0 8px 8px;
+    background:linear-gradient(90deg,#6d28d9,#c4b5fd,#8b5cf6);
+    opacity:.9;
+}
+.colleague-card::after{
+    content:"";
+    position:absolute;
+    inset:0;
+    border-radius:inherit;
+    pointer-events:none;
+    background:linear-gradient(135deg,rgba(196,181,253,.10),transparent 55%);
+    opacity:0;
+    transition:opacity .22s ease;
+}
+.colleague-card:hover,.colleague-card:focus-visible{
+    transform:translateY(-5px)!important;
+    border-color:#c4b5fd!important;
+    box-shadow:0 17px 34px rgba(4,2,16,.34),0 0 0 2px rgba(167,139,250,.16),0 0 22px rgba(139,92,246,.16)!important;
+}
+.colleague-card:hover::after,.colleague-card:focus-visible::after{opacity:1}
+
+/* Profile row: fixed avatar, flexible name/specialization */
+.colleague-card-top{
+    position:relative;z-index:1;
+    display:flex!important;
+    align-items:center!important;
+    gap:10px!important;
+    min-width:0!important;
+    min-height:66px;
+}
+.colleague-avatar,.colleague-avatar-fallback{
+    width:56px!important;height:56px!important;flex:0 0 56px!important;
+    border:2px solid #c4b5fd!important;
+    border-radius:15px!important;
+    background:linear-gradient(145deg,#8b5cf6,#4c1d95)!important;
+    color:#fff!important;
+    box-shadow:0 0 0 3px rgba(167,139,250,.12),0 6px 14px rgba(0,0,0,.22)!important;
+    object-fit:cover;
+}
+.colleague-name{
+    color:#fff!important;
+    font-size:13px!important;
+    font-weight:850!important;
+    line-height:1.4!important;
+    overflow-wrap:anywhere;
+}
+.colleague-specialization{
+    color:#d2bfff!important;
+    font-size:10px!important;
+    font-weight:700!important;
+    line-height:1.45!important;
+    overflow-wrap:anywhere;
+}
+.colleague-divider{
+    position:relative;z-index:1;
+    height:1px!important;
+    margin:10px 0!important;
+    background:linear-gradient(90deg,rgba(196,181,253,.04),rgba(196,181,253,.32),rgba(196,181,253,.04))!important;
+}
+
+/* All profile details fit within the card body */
+.colleague-info-list{
+    position:relative;z-index:1;
+    display:grid!important;
+    gap:8px!important;
+    min-width:0;
+    flex:1 1 auto;
+    align-content:start;
+}
+.colleague-info-row{
+    display:flex!important;
+    align-items:flex-start!important;
+    gap:8px!important;
+    min-width:0!important;
+}
+.colleague-info-icon{
+    width:27px!important;height:27px!important;flex:0 0 27px!important;
+    border:1px solid rgba(221,214,254,.22)!important;
+    border-radius:9px!important;
+    background:linear-gradient(145deg,rgba(167,139,250,.28),rgba(91,33,182,.22))!important;
+    color:#e3d6ff!important;
+    font-size:13px!important;
+}
+.colleague-info-content{flex:1 1 auto;min-width:0}
+.colleague-info-label{
+    margin-bottom:2px!important;
+    color:#b9a8d9!important;
+    font-size:9px!important;
+    font-weight:800!important;
+    letter-spacing:.035em;
+    text-transform:uppercase;
+}
+.colleague-info-value{
+    color:#f0eaff!important;
+    font-size:10px!important;
+    line-height:1.5!important;
+    overflow-wrap:anywhere!important;
+    word-break:break-word!important;
+}
+.colleague-info-value a{
+    color:#d8c6ff!important;
+    text-decoration:none!important;
+    overflow-wrap:anywhere;
+}
+.colleague-info-value a:hover{
+    color:#fff!important;
+    text-decoration:underline!important;
+}
+
+/* The whole card is the action; no separate profile button/footer. */
+.colleague-card[role="link"]{cursor:pointer}
+.colleague-card:focus-visible{
+    outline:3px solid #c4b5fd!important;
+    outline-offset:3px!important;
+}
+
+/* Pagination and empty state use the same violet family. */
+.colleague-pagination{
+    border-color:rgba(196,181,253,.25)!important;
+    background:linear-gradient(115deg,#211638,#151027)!important;
+}
+.pagination-info{color:#d0c5e6!important}
+.pagination-link,.pagination-current,.pagination-ellipsis{
+    border-color:rgba(196,181,253,.28)!important;
+    background:rgba(167,139,250,.12)!important;
+    color:#f0eaff!important;
+}
+.pagination-link:hover{
+    border-color:#c4b5fd!important;
+    background:rgba(139,92,246,.28)!important;
+    color:#fff!important;
+}
+.pagination-current{
+    border-color:transparent!important;
+    background:linear-gradient(135deg,#a78bfa,#6d28d9)!important;
+    color:#fff!important;
+}
+.colleague-empty{
+    border-color:rgba(196,181,253,.34)!important;
+    background:linear-gradient(135deg,#28194a,#151027)!important;
+}
+.colleague-empty-icon{
+    border-color:rgba(221,214,254,.32)!important;
+    background:rgba(139,92,246,.22)!important;
+    color:#e5d9ff!important;
+}
+.colleague-empty h3{color:#fff!important}
+.colleague-empty p{color:#d0c5e6!important}
+
+/* Four columns on wide desktop, then adapt cleanly. */
+@media(max-width:1250px){
+    .colleague-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+}
+@media(max-width:920px){
+    .colleague-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+}
+@media(max-width:580px){
+    .colleague-grid{grid-template-columns:minmax(0,1fr)!important;gap:11px!important}
+    .colleague-card{min-height:0!important;padding:14px!important}
+}
+@media(prefers-reduced-motion:reduce){
+    .colleague-card,.colleague-card::before,.colleague-card::after,.colleague-button,.pagination-link{
+        animation:none!important;transition:none!important;
+    }
+}
+
+/* ===== WHITE + VIOLET BALANCED THEME ===== */
+.colleague-page{color:#30234a!important}
+.colleague-hero{
+  border:1px solid rgba(196,181,253,.55)!important;
+  background:linear-gradient(115deg,#3b2468 0%,#5b35a0 52%,#281b45 100%)!important;
+  box-shadow:0 12px 28px rgba(17,10,35,.22),inset 0 1px rgba(255,255,255,.14)!important;
+}
+.colleague-eyebrow{color:#e9ddff!important}
+.colleague-title{color:#fff!important}
+.colleague-subtitle{color:#eee7fb!important}
+.colleague-count{background:rgba(255,255,255,.14)!important;border-color:rgba(255,255,255,.35)!important;color:#fff!important}
+.colleague-toolbar{
+  border:1px solid #ddd2f4!important;
+  background:linear-gradient(110deg,#fff 0%,#f7f3ff 100%)!important;
+  box-shadow:0 7px 20px rgba(31,18,55,.10)!important;
+}
+.colleague-input,.colleague-select{
+  border:1px solid #d8cbed!important;background:#fff!important;color:#30234a!important;
+  box-shadow:inset 0 1px 2px rgba(42,24,72,.035)!important;
+}
+.colleague-input::placeholder{color:#88799f!important}
+.colleague-search-icon{color:#7654ad!important}
+.colleague-input:focus,.colleague-select:focus{border-color:#8b5cf6!important;box-shadow:0 0 0 3px rgba(139,92,246,.13)!important}
+.colleague-select option{background:#fff!important;color:#30234a!important}
+.colleague-button{background:linear-gradient(135deg,#8b5cf6,#6d28d9)!important;color:#fff!important;border-color:#7c3aed!important;box-shadow:0 6px 15px rgba(109,40,217,.2)!important}
+.colleague-button-secondary{background:#f3edff!important;color:#5b35a0!important;border-color:#d8c8f3!important}
+.colleague-results-heading h2{color:#f7f2ff!important}
+.colleague-results-heading p{color:#cfc1e5!important}
+.colleague-grid{grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:14px!important}
+.colleague-card{
+  background:linear-gradient(155deg,#fff 0%,#fff 70%,#f5f0ff 100%)!important;
+  border:1px solid #ded3f0!important;border-radius:16px!important;
+  box-shadow:0 8px 22px rgba(15,8,32,.14),inset 0 1px #fff!important;
+}
+.colleague-card::before{background:linear-gradient(90deg,#6d28d9,#a78bfa,#d8b4fe)!important}
+.colleague-card::after{background:linear-gradient(135deg,rgba(167,139,250,.10),transparent 58%)!important}
+.colleague-card:hover,.colleague-card:focus-visible{border-color:#a78bfa!important;box-shadow:0 15px 30px rgba(15,8,32,.2),0 0 0 2px rgba(139,92,246,.12)!important}
+.colleague-avatar,.colleague-avatar-fallback{border-color:#a78bfa!important;background:linear-gradient(145deg,#8b5cf6,#4c1d95)!important;color:#fff!important;box-shadow:0 0 0 3px #f0eaff,0 5px 13px rgba(50,24,90,.15)!important}
+.colleague-name{color:#28183f!important}
+.colleague-specialization{color:#7045a8!important}
+.colleague-divider{background:linear-gradient(90deg,transparent,#d9cbed,transparent)!important}
+.colleague-info-icon{background:linear-gradient(145deg,#f0e9ff,#e5d8ff)!important;border:1px solid #d5c3f1!important;color:#673ab7!important}
+.colleague-info-label{color:#806b9e!important}
+.colleague-info-value{color:#34234e!important}
+.colleague-info-value a{color:#6d28d9!important}
+.colleague-info-value a:hover{color:#4c1d95!important}
+.colleague-pagination{border-color:#ded3f0!important;background:linear-gradient(110deg,#fff,#f7f3ff)!important}
+.pagination-info{color:#67547f!important}
+.pagination-link,.pagination-current,.pagination-ellipsis{border-color:#ded3f0!important;background:#f5f0ff!important;color:#5b35a0!important}
+.pagination-link:hover{background:#e9ddff!important;color:#4c1d95!important}
+.pagination-current{background:linear-gradient(135deg,#8b5cf6,#6d28d9)!important;color:#fff!important}
+.colleague-empty{border-color:#ded3f0!important;background:linear-gradient(135deg,#fff,#f5f0ff)!important}
+.colleague-empty-icon{background:#eee6ff!important;border-color:#d9c8f3!important;color:#6d28d9!important}
+.colleague-empty h3{color:#30234a!important}
+.colleague-empty p{color:#76658e!important}
+@media(max-width:1250px){.colleague-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important}}
+@media(max-width:920px){.colleague-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
+@media(max-width:580px){.colleague-grid{grid-template-columns:minmax(0,1fr)!important}}
+@media(prefers-reduced-motion:reduce){.colleague-card,.colleague-button{animation:none!important;transition:none!important}}
+
 </style>
 {% endblock %}
 
@@ -562,7 +1064,11 @@
     {% if colleagues %}
         <div class="colleague-grid">
             {% for colleague in colleagues %}
-                <article class="colleague-card">
+                <article class="colleague-card"
+                         data-card-url="{% url 'teacher_colleague_detail' colleague.pk %}"
+                         role="link"
+                         tabindex="0"
+                         aria-label="Open {{ colleague.full_name|default:'teacher' }} profile">
 
                     <div class="colleague-card-top">
                         {% if colleague.profile_image %}
@@ -646,36 +1152,32 @@
                             </div>
                         </div>
 
-                        {% if colleague.linkedin %}
-                            <div class="colleague-info-row">
-                                <span class="colleague-info-icon">
-                                    <i class="ri-linkedin-box-line"></i>
-                                </span>
-                                <div class="colleague-info-content">
-                                    <div class="colleague-info-label">
-                                        Professional profile
-                                    </div>
-                                    <div class="colleague-info-value">
+                        <div class="colleague-info-row">
+                            <span class="colleague-info-icon">
+                                <i class="ri-linkedin-box-line"></i>
+                            </span>
+                            <div class="colleague-info-content">
+                                <div class="colleague-info-label">
+                                    Professional profile
+                                </div>
+                                <div class="colleague-info-value">
+                                    {% if colleague.linkedin %}
                                         <a href="{{ colleague.linkedin }}"
                                            target="_blank"
                                            rel="noopener noreferrer">
                                             View LinkedIn
                                             <i class="ri-external-link-line"></i>
                                         </a>
-                                    </div>
+                                    {% else %}
+                                        Not provided
+                                    {% endif %}
                                 </div>
                             </div>
-                        {% endif %}
+                        </div>
 
                     </div>
 
-                    <div class="colleague-card-footer">
-                        <a href="{% url 'teacher_colleague_detail' colleague.pk %}"
-                           class="colleague-button">
-                            View Profile
-                            <i class="ri-arrow-right-line"></i>
-                        </a>
-                    </div>
+
 
                 </article>
             {% endfor %}
@@ -762,4 +1264,32 @@
     {% endif %}
 
 </div>
+
+<script>
+(() => {
+    const cards = document.querySelectorAll('.colleague-card[data-card-url]');
+
+    cards.forEach((card) => {
+        const openCard = () => {
+            const url = card.dataset.cardUrl;
+            if (url) window.location.assign(url);
+        };
+
+        card.addEventListener('click', (event) => {
+            // Preserve normal behaviour for contact and external profile links.
+            if (event.target.closest('a,button,input,select,textarea')) return;
+            openCard();
+        });
+
+        card.addEventListener('keydown', (event) => {
+            if (event.target !== card) return;
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                openCard();
+            }
+        });
+    });
+})();
+</script>
+
 {% endblock %}

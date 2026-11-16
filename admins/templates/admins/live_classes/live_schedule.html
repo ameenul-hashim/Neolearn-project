@@ -152,6 +152,16 @@
         min-width: 0;
     }
 
+    /* Stretch the calendar panel to the booking panel's full row height. */
+    .live-calendar-panel {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+        min-height: 620px;
+        height: auto;
+        overflow: hidden;
+    }
+
     /* Fill the left card's available height, including when form errors make
        the right booking card taller. Only the calendar rows scroll internally. */
     .live-calendar-wrap {
@@ -159,12 +169,14 @@
         width: 100%;
         min-width: 0;
         height: 0;
-        min-height: 420px;
+        min-height: 0;
         max-height: none;
         flex: 1 1 auto;
-        overflow-y: auto;
-        overflow-x: hidden;
-        overscroll-behavior: contain;
+        overflow: auto;
+        /* Keep the calendar scrollable, but let the page take over at its
+           vertical edges instead of trapping wheel/touch scrolling. */
+        overscroll-behavior-y: auto;
+        overscroll-behavior-x: contain;
         scrollbar-width: none;
         -ms-overflow-style: none;
         -webkit-overflow-scrolling: touch;
@@ -178,7 +190,7 @@
 
     .live-calendar {
         display: grid;
-        width: 100%;
+        width: max-content;
         min-width: 940px;
         min-height: 100%;
         grid-template-columns: 62px repeat(7, minmax(125px, 1fr));
@@ -389,13 +401,19 @@
             gap: 8px;
         }
 
+        .live-calendar-panel {
+            height: 620px;
+            min-height: 620px;
+        }
+
         .live-calendar-wrap {
-            height: 55vh;
-            min-height: 300px;
-            max-height: 480px;
-            flex: 0 0 auto;
-            overflow-y: auto;
-            overflow-x: hidden;
+            height: 0;
+            min-height: 0;
+            max-height: none;
+            flex: 1 1 auto;
+            overflow: auto;
+            overscroll-behavior-y: auto;
+            overscroll-behavior-x: contain;
         }
 
         .live-calendar {
@@ -702,7 +720,7 @@ document.addEventListener("DOMContentLoaded", function () {
     <section class="live-main-grid">
 
         <!-- Weekly calendar -->
-        <div class="live-panel overflow-hidden flex flex-col min-w-0" style="min-height:0">
+        <div class="live-panel live-calendar-panel min-w-0">
             <div class="flex flex-wrap items-center justify-between gap-2 border-b border-sky-900/50 p-3">
                 <div class="min-w-0">
                     <h2 class="text-base font-bold text-white">Weekly Calendar</h2>
