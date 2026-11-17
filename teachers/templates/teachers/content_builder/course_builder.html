@@ -2395,21 +2395,21 @@
 
                 <div class="flex flex-wrap items-center gap-2">
 
-                    <button
-                        type="button"
+                    <a
+                        href="{% url 'courses:teacher_my_delete_requests' %}?batch_id={{ batch.id }}&subject_id={{ subject.id }}"
                         id="teacherMyRequestsBtn"
-                        class="inline-flex items-center gap-2 rounded-lg border border-blue-300 bg-white px-3 py-2 text-xs font-bold text-blue-700 transition hover:bg-blue-50"
+                        class="inline-flex items-center gap-2 rounded-lg border border-cyan-300/20 bg-cyan-400/[0.08] px-3 py-2 text-xs font-bold text-cyan-200 shadow-sm backdrop-blur-md transition-all duration-200 hover:border-cyan-300/35 hover:bg-cyan-400/[0.14] hover:text-cyan-100"
                         aria-label="My deletion requests">
 
                         <i class="ri-file-list-3-line"></i>
 
                         My Requests
 
-                    </button>
+                    </a>
 
 
-                    <button
-                        type="button"
+                    <a
+                        href="{% url 'courses:admin_deletion_audit_list' %}?batch_id={{ batch.id }}&subject_id={{ subject.id }}"
                         id="teacherDeleteAuditBtn"
                         class="inline-flex items-center gap-2 rounded-lg border border-amber-300 bg-white px-3 py-2 text-xs font-bold text-amber-700 transition hover:bg-amber-50"
                         aria-label="Delete audit">
@@ -2418,7 +2418,7 @@
 
                         Delete Audit
 
-                    </button>
+                    </a>
 
 
                     <button
@@ -7367,13 +7367,26 @@
                 <i class="ri-close-line text-xl"></i>
             </button>
         </div>
-        <form
+        <form data-teacher-delete-request="true"
             novalidate method="POST" action="{% url 'courses:teacher_request_delete' batch.id subject.id 'chapter' chapter.id %}" class="p-5">
             {% csrf_token %}
             <p class="text-sm font-bold text-slate-900">Delete: <span class="text-red-600">{{ chapter.chapter_name }}</span></p>
             <div class="mt-5">
                 <label class="neo-label">Reason <span class="text-red-500">*</span></label>
-                <textarea name="reason" rows="4" class="neo-input resize-none" placeholder="Enter deletion reason"></textarea>
+                <textarea
+                        name="reason"
+                        rows="4"
+                        maxlength="250"
+                        required
+                        data-delete-reason
+                        class="neo-input resize-none"
+                        placeholder="Enter deletion reason"></textarea>
+                    <div class="mt-2 flex items-center justify-between gap-3">
+                        <p data-delete-reason-error class="hidden text-xs font-bold text-red-600" role="alert"></p>
+                        <p class="ml-auto text-[11px] font-semibold text-slate-500">
+                            <span data-delete-reason-count>0</span> / 250 characters
+                        </p>
+                    </div>
             </div>
             <div class="mt-6 flex justify-end gap-2">
                 <button type="button" data-close-modal="deleteChapterModal-{{ chapter.id }}" class="rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-600">Cancel</button>
@@ -7956,12 +7969,25 @@
                 <div><h3 class="text-lg font-black text-slate-900">Delete Video</h3><p class="mt-1 text-xs text-slate-500">Enter a reason before deleting this video.</p></div>
                 <button type="button" data-close-modal="deleteVideoModal-{{ video.id }}" class="flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100"><i class="ri-close-line text-xl"></i></button>
             </div>
-            <form
+            <form data-teacher-delete-request="true"
             novalidate method="POST" action="{% url 'courses:teacher_request_delete' batch.id subject.id 'video' video.id %}" class="p-5">
                 {% csrf_token %}
                 <input type="hidden" name="chapter_id" value="{{ selected_chapter.id }}">
                 <p class="text-sm font-bold text-slate-900">Delete: <span class="text-red-600">{{ video.video_name }}</span></p>
-                <div class="mt-5"><label class="neo-label">Reason <span class="text-red-500">*</span></label><textarea name="reason" rows="4" class="neo-input resize-none" placeholder="Enter deletion reason"></textarea></div>
+                <div class="mt-5"><label class="neo-label">Reason <span class="text-red-500">*</span></label><textarea
+                        name="reason"
+                        rows="4"
+                        maxlength="250"
+                        required
+                        data-delete-reason
+                        class="neo-input resize-none"
+                        placeholder="Enter deletion reason"></textarea>
+                    <div class="mt-2 flex items-center justify-between gap-3">
+                        <p data-delete-reason-error class="hidden text-xs font-bold text-red-600" role="alert"></p>
+                        <p class="ml-auto text-[11px] font-semibold text-slate-500">
+                            <span data-delete-reason-count>0</span> / 250 characters
+                        </p>
+                    </div></div>
                 <div class="mt-6 flex justify-end gap-2"><button type="button" data-close-modal="deleteVideoModal-{{ video.id }}" class="rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-600">Cancel</button><button type="submit" class="rounded-lg bg-red-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-red-700">Delete</button></div>
             </form>
         </div>
@@ -8305,7 +8331,7 @@
             </div>
 
 
-            <form
+            <form data-teacher-delete-request="true"
                 novalidate
                 method="POST"
                 action="{% url 'courses:teacher_request_delete' batch.id subject.id 'pdf' pdf.id %}"
@@ -8333,8 +8359,17 @@
                     <textarea
                         name="reason"
                         rows="4"
+                        maxlength="250"
+                        required
+                        data-delete-reason
                         class="neo-input resize-none"
                         placeholder="Enter deletion reason"></textarea>
+                    <div class="mt-2 flex items-center justify-between gap-3">
+                        <p data-delete-reason-error class="hidden text-xs font-bold text-red-600" role="alert"></p>
+                        <p class="ml-auto text-[11px] font-semibold text-slate-500">
+                            <span data-delete-reason-count>0</span> / 250 characters
+                        </p>
+                    </div>
 
                 </div>
 
@@ -8971,7 +9006,7 @@
                 </button>
             </div>
 
-            <form method="POST"
+            <form data-teacher-delete-request="true" method="POST"
                   action="{% url 'courses:teacher_request_delete' batch.id subject.id 'quiz' quiz.id %}"
                   class="p-5"
                   novalidate>
@@ -8990,10 +9025,20 @@
                         Reason
                         <span class="text-red-500">*</span>
                     </label>
-                    <textarea name="reason"
-                              rows="4"
-                              class="neo-input resize-none"
-                              placeholder="Enter deletion reason"></textarea>
+                    <textarea
+                        name="reason"
+                        rows="4"
+                        maxlength="250"
+                        required
+                        data-delete-reason
+                        class="neo-input resize-none"
+                        placeholder="Enter deletion reason"></textarea>
+                    <div class="mt-2 flex items-center justify-between gap-3">
+                        <p data-delete-reason-error class="hidden text-xs font-bold text-red-600" role="alert"></p>
+                        <p class="ml-auto text-[11px] font-semibold text-slate-500">
+                            <span data-delete-reason-count>0</span> / 250 characters
+                        </p>
+                    </div>
                 </div>
 
                 <div class="mt-6 flex justify-end gap-2">
@@ -9962,6 +10007,76 @@
         });
     }
 
+})();
+</script>
+
+
+<style>
+    .delete-reason-invalid {
+        border-color: #ef4444 !important;
+        background: #fffafa !important;
+        box-shadow: 0 0 0 3px rgba(239, 68, 68, .08) !important;
+    }
+</style>
+<script>
+(function () {
+    "use strict";
+
+    function updateDeleteReason(form, showRequiredError) {
+        const field = form.querySelector("[data-delete-reason]");
+        const error = form.querySelector("[data-delete-reason-error]");
+        const count = form.querySelector("[data-delete-reason-count]");
+        if (!field || !error) return true;
+
+        const value = field.value || "";
+        const trimmed = value.trim();
+
+        if (count) count.textContent = String(value.length);
+
+        let message = "";
+        if (!trimmed && showRequiredError) {
+            message = "This field is required.";
+        } else if (value.length > 250) {
+            message = "Reason cannot exceed 250 characters.";
+        }
+
+        if (message) {
+            error.textContent = message;
+            error.classList.remove("hidden");
+            field.classList.add("delete-reason-invalid");
+            field.setAttribute("aria-invalid", "true");
+            return false;
+        }
+
+        error.textContent = "";
+        error.classList.add("hidden");
+        field.classList.remove("delete-reason-invalid");
+        field.removeAttribute("aria-invalid");
+        return true;
+    }
+
+    document.addEventListener("input", function (event) {
+        const field = event.target.closest("[data-delete-reason]");
+        if (!field) return;
+        const form = field.closest("form[data-teacher-delete-request]");
+        if (!form) return;
+        updateDeleteReason(form, false);
+    });
+
+    document.addEventListener("submit", function (event) {
+        const form = event.target.closest("form[data-teacher-delete-request]");
+        if (!form) return;
+
+        if (!updateDeleteReason(form, true)) {
+            event.preventDefault();
+            const field = form.querySelector("[data-delete-reason]");
+            if (field) field.focus();
+        }
+    });
+
+    document.querySelectorAll("form[data-teacher-delete-request]").forEach(function (form) {
+        updateDeleteReason(form, false);
+    });
 })();
 </script>
 
