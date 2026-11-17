@@ -63,6 +63,15 @@ from .timeline import (
     record_correct_answer_changed,
 )
 
+from .services import (
+    DeletionServiceError,
+    submit_teacher_deletion_request,
+    admin_direct_delete,
+    approve_teacher_deletion_request,
+    reject_teacher_deletion_request,
+    withdraw_teacher_deletion_request,
+)
+
 # ============================================================
 # CONSTANTS
 # ============================================================
@@ -5661,1096 +5670,279 @@ def delete_quiz_question_view(
     )
 
 # ============================================================
-# DELETION AUDIT SNAPSHOT
+# DELETION MANAGEMENT SERVICES
 # ============================================================
 
-def _get_original_creator(obj):
-    """
-    Capture original creator.
-    """
 
-    if getattr(
-        obj,
-        "created_by_admin_id",
-        None,
-    ):
+def _deletion_scope_from_request(request, actor, *, teacher_only=False):
+    """Resolve and authorize the selected Batch + Subject for deletion pages."""
+    batch_id = request.GET.get("batch_id") or request.POST.get("batch_id")
+    subject_id = request.GET.get("subject_id") or request.POST.get("subject_id")
 
-        return {
-            "admin": obj.created_by_admin,
-            "teacher": None,
-        }
+    if not batch_id or not subject_id:
+        messages.error(request, "Select a Batch and Subject to open deletion history.")
+        return None, None
 
-    if getattr(
-        obj,
-        "created_by_teacher_id",
-        None,
-    ):
+    try:
+        batch, subject = _get_batch_subject(batch_id, subject_id)
+    except Exception:
+        messages.error(request, "The selected Batch or Subject could not be found.")
+        return None, None
 
-        return {
-            "admin": None,
-            "teacher": obj.created_by_teacher,
-        }
+    if actor["role"] == "teacher":
+        authorized_actor = _authorize_teacher(request, batch, subject)
+        if authorized_actor is None:
+            messages.error(request, "You are not assigned to this Batch and Subject.")
+            return None, None
+        if teacher_only and authorized_actor["teacher"].pk != actor["teacher"].pk:
+            messages.error(request, "Teacher access is required.")
+            return None, None
 
-    return {
-        "admin": None,
-        "teacher": None,
-    }
+    return batch, subject
 
-def _build_deletion_snapshot(
-    content_type,
-    obj,
-):
-    """
-    Permanent audit snapshot.
 
-    This is metadata about what was deleted.
-    It does not try to store the actual Cloudinary file.
-    """
+def _deletion_scope_url(route_name, batch_id, subject_id, **kwargs):
+    """Build a namespaced deletion URL while preserving selected subject context."""
+    # All deletion routes are registered inside courses/urls.py with
+    # app_name = "courses". Ensure reverse() receives the full namespaced
+    # route name, while still accepting existing unnamespaced callers.
+    if ":" not in route_name:
+        route_name = f"courses:{route_name}"
 
-    if content_type == "chapter":
-        chapter = obj
-    else:
-        chapter = obj.chapter
+    url = reverse(route_name, kwargs=kwargs or None)
+    query_string = urlencode({
+        "batch_id": batch_id,
+        "subject_id": subject_id,
+    })
+    return f"{url}?{query_string}"
 
-    content_name = ""
 
-    if content_type == "chapter":
-        content_name = obj.chapter_name
-
-    elif content_type == "video":
-        content_name = obj.video_name
-
-    elif content_type == "pdf":
-        content_name = obj.pdf_name
-
-    elif content_type == "quiz":
-        content_name = obj.quiz_name
-
-    snapshot = {
-        "content_type": content_type,
-        "object_id": obj.pk,
-        "content_name": content_name,
-
-        "batch_name": (
-            chapter.batch.batch_name
-        ),
-
-        "subject_name": (
-            chapter.subject.subject_name
-        ),
-
-        "chapter_name": (
-            chapter.chapter_name
-        ),
-    }
-
-    if content_type == "chapter":
-
-        snapshot.update(
-            {
-                "chapter_description": (
-                    obj.chapter_description
-                ),
-                "chapter_order": (
-                    obj.chapter_order
-                ),
-                "status": obj.status,
-            }
-        )
-
-    elif content_type == "video":
-
-        snapshot.update(
-            {
-                "video_description": (
-                    obj.video_description
-                ),
-                "video_order": (
-                    obj.video_order
-                ),
-                "status": obj.status,
-                "video_file": (
-                    _get_cloudinary_public_id(
-                        obj.video_file
-                    )
-                ),
-            }
-        )
-
-    elif content_type == "pdf":
-
-        snapshot.update(
-            {
-                "pdf_description": (
-                    obj.pdf_description
-                ),
-                "pdf_order": (
-                    obj.pdf_order
-                ),
-                "status": obj.status,
-                "pdf_file": (
-                    _get_cloudinary_public_id(
-                        obj.pdf_file
-                    )
-                ),
-                "pdf_thumbnail": (
-                    _get_cloudinary_public_id(
-                        obj.pdf_thumbnail
-                    )
-                ),
-            }
-        )
-
-    elif content_type == "quiz":
-
-        snapshot.update(
-            {
-                "quiz_description": (
-                    obj.quiz_description
-                ),
-                "quiz_order": (
-                    obj.quiz_order
-                ),
-                "maximum_attempts": (
-                    obj.maximum_attempts
-                ),
-                "status": obj.status,
-            }
-        )
-
-    return snapshot
-
-def _create_deletion_audit(
-    content_type,
-    obj,
-    status,
-    actor,
-    request_reason="",
-    admin_response="",
-    deletion_method="",
-):
-    """
-    Create one permanent deletion audit record.
-    """
-
-    creator = _get_original_creator(
-        obj
-    )
-
-    chapter = (
-        obj
-        if content_type == "chapter"
-        else obj.chapter
-    )
-
-    content_name = ""
-
-    if content_type == "chapter":
-        content_name = obj.chapter_name
-
-    elif content_type == "video":
-        content_name = obj.video_name
-
-    elif content_type == "pdf":
-        content_name = obj.pdf_name
-
-    elif content_type == "quiz":
-        content_name = obj.quiz_name
-
-    return DeletionAudit.objects.create(
-        content_type=content_type,
-        object_id=obj.pk,
-
-        content_name=content_name,
-
-        batch_name=(
-            chapter.batch.batch_name
-        ),
-
-        subject_name=(
-            chapter.subject.subject_name
-        ),
-
-        chapter_name=(
-            chapter.chapter_name
-        ),
-
-        created_by_admin=(
-            creator["admin"]
-        ),
-
-        created_by_teacher=(
-            creator["teacher"]
-        ),
-
-        original_created_at=(
-            obj.created_at
-        ),
-
-        requested_by_teacher=(
-            actor["teacher"]
-            if actor["role"] == "teacher"
-            else None
-        ),
-
-        requested_at=(
-            timezone.now()
-            if actor["role"] == "teacher"
-            else None
-        ),
-
-        request_reason=request_reason,
-
-        deleted_by_admin=(
-            actor["admin"]
-            if (
-                actor["role"] == "admin"
-                and status == "deleted"
-            )
-            else None
-        ),
-
-        admin_delete_reason=(
-            request_reason
-            if (
-                actor["role"] == "admin"
-                and status == "deleted"
-            )
-            else ""
-        ),
-
-        deletion_method=deletion_method,
-
-        status=status,
-
-        admin_response=admin_response,
-
-        snapshot=_build_deletion_snapshot(
-            content_type,
-            obj,
-        ),
-    )
-
-# ============================================================
-# TEACHER DELETE REQUEST
-# ============================================================
-
-@require_POST
-def teacher_request_delete_view(
-    request,
-    batch_id,
-    subject_id,
-    content_type,
-    object_id,
-):
-    """
-    SENSITIVE OPERATION.
-
-    Teacher CANNOT delete.
-
-    Teacher can ONLY create a pending DeletionAudit.
-
-    Actual deletion can happen only after Admin approval.
-    """
-
-    batch, subject = _get_batch_subject(
-        batch_id,
-        subject_id,
-    )
-
-    actor = _authorize_teacher(
-        request,
-        batch,
-        subject,
-    )
-
+def admin_delete_management_view(request):
+    """Admin pending requests, restricted to the selected Batch + Subject."""
+    actor = _authorize_admin(request)
     if actor is None:
+        messages.error(request, "Only Admin can access Delete Management.")
+        return redirect("teacher_login")
 
-        messages.error(
-            request,
-            "Only the assigned Teacher can request deletion.",
+    batch, subject = _deletion_scope_from_request(request, actor)
+    if batch is None:
+        return redirect("courses:course_builder", batch_id=request.GET.get("batch_id", 0), subject_id=request.GET.get("subject_id", 0))
+
+    pending_requests = (
+        DeletionAudit.objects.select_related(
+            "created_by_admin", "created_by_teacher", "requested_by_teacher", "decision_by_admin"
         )
-
-        return _builder_redirect(
-            batch,
-            subject,
-        )
-
-    if content_type not in VALID_CONTENT_TYPES:
-
-        messages.error(
-            request,
-            "Invalid content type.",
-        )
-
-        return _builder_redirect(
-            batch,
-            subject,
-        )
-
-    reason = (
-        request.POST.get(
-            "reason",
-            "",
-        )
-        .strip()
+        .filter(status="pending", snapshot__batch_id=batch.pk, snapshot__subject_id=subject.pk)
+        .order_by("created_at", "id")
     )
+    return render(request, "courses/admin_delete_management.html", {
+        "actor": actor, "batch": batch, "subject": subject,
+        "pending_requests": pending_requests, "pending_count": pending_requests.count(),
+    })
 
-    if not reason:
 
-        messages.error(
-            request,
-            "Please enter a deletion reason.",
+def teacher_my_delete_requests_view(request):
+    """Show only this teacher's requests in the selected Batch + Subject."""
+    actor = _get_actor(request)
+    if actor is None or actor["role"] != "teacher":
+        messages.error(request, "Teacher access is required.")
+        return redirect("teacher_login")
+
+    batch, subject = _deletion_scope_from_request(request, actor, teacher_only=True)
+    if batch is None:
+        return redirect("teacher_login")
+
+    requests_qs = (
+        DeletionAudit.objects.select_related(
+            "created_by_admin", "created_by_teacher", "requested_by_teacher",
+            "decision_by_admin", "deleted_by_admin", "withdrawn_by_teacher",
         )
-
-        return _builder_redirect(
-            batch,
-            subject,
-        )
-
-    chapter_id = (
-        request.POST.get(
-            "chapter_id"
-        )
-    )
-
-    obj = _get_content_object(
-        batch=batch,
-        subject=subject,
-        content_type=content_type,
-        object_id=object_id,
-        chapter_id=chapter_id,
-    )
-
-    if obj is None:
-
-        messages.error(
-            request,
-            "Invalid content.",
-        )
-
-        return _builder_redirect(
-            batch,
-            subject,
-        )
-
-    # --------------------------------------------------------
-    # PREVENT DUPLICATE PENDING REQUEST
-    # --------------------------------------------------------
-
-    pending_exists = (
-        DeletionAudit.objects
         .filter(
-            content_type=content_type,
-            object_id=obj.pk,
-            status="pending",
+            requested_by_teacher=actor["teacher"],
+            snapshot__batch_id=batch.pk,
+            snapshot__subject_id=subject.pk,
         )
-        .exists()
+        .order_by("-created_at", "-id")
     )
+    return render(request, "courses/teacher_my_delete_requests.html", {
+        "actor": actor, "batch": batch, "subject": subject,
+        "deletion_requests": requests_qs,
+    })
 
-    if pending_exists:
-
-        messages.error(
-            request,
-            "A deletion request is already pending for this content.",
-        )
-
-        return _builder_redirect(
-            batch,
-            subject,
-        )
-
-    # --------------------------------------------------------
-    # CREATE AUDIT ONLY
-    # --------------------------------------------------------
-
-    with transaction.atomic():
-
-        _create_deletion_audit(
-            content_type=content_type,
-            obj=obj,
-            status="pending",
-            actor=actor,
-            request_reason=reason,
-            deletion_method="",
-        )
-
-    messages.success(
-        request,
-        "Deletion request submitted to Admin successfully.",
-    )
-
-    return _builder_redirect(
-        batch,
-        subject,
-    )
-
-# ============================================================
-# ADMIN DIRECT DELETE
-# ============================================================
 
 @require_POST
-def admin_direct_delete_view(
-    request,
-    batch_id,
-    subject_id,
-    content_type,
-    object_id,
-):
-    """
-    SENSITIVE ADMIN-ONLY OPERATION.
-
-    Teacher cannot access this successfully even if they
-    manually construct the URL.
-
-    Admin:
-        audit -> capture assets -> delete DB -> Cloudinary
-        cleanup after successful transaction.
-    """
-
-    batch, subject = _get_batch_subject(
-        batch_id,
-        subject_id,
-    )
-
-    actor = _authorize_admin(
-        request
-    )
-
+def teacher_request_delete_view(request, batch_id, subject_id, content_type, object_id):
+    batch, subject = _get_batch_subject(batch_id, subject_id)
+    actor = _authorize_teacher(request, batch, subject)
     if actor is None:
+        messages.error(request, "Only the assigned Teacher can request deletion.")
+        return _builder_redirect(batch, subject)
 
-        messages.error(
-            request,
-            "Only Admin can directly delete course content.",
+    chapter_id = request.POST.get("chapter_id")
+    try:
+        submit_teacher_deletion_request(
+            content_type=content_type, object_id=object_id, actor=actor,
+            reason=(request.POST.get("reason") or "").strip(),
+            batch=batch, subject=subject, chapter_id=chapter_id,
         )
-
-        return _builder_redirect(
-            batch,
-            subject,
-        )
-
-    if content_type not in VALID_CONTENT_TYPES:
-
-        messages.error(
-            request,
-            "Invalid content type.",
-        )
-
-        return _builder_redirect(
-            batch,
-            subject,
-        )
-
-    reason = (
-        request.POST.get(
-            "reason",
-            "",
-        )
-        .strip()
-    )
-
-    if not reason:
-
-        messages.error(
-            request,
-            "Please enter a deletion reason.",
-        )
-
-        return _builder_redirect(
-            batch,
-            subject,
-        )
-
-    chapter_id = (
-        request.POST.get(
-            "chapter_id"
-        )
-    )
-
-    obj = _get_content_object(
-        batch=batch,
-        subject=subject,
-        content_type=content_type,
-        object_id=object_id,
-        chapter_id=chapter_id,
-    )
-
-    if obj is None:
-
-        messages.error(
-            request,
-            "Invalid content.",
-        )
-
-        return _builder_redirect(
-            batch,
-            subject,
-        )
-
-    # --------------------------------------------------------
-    # CAPTURE CLOUDINARY ASSETS BEFORE DELETE
-    # --------------------------------------------------------
-
-    if content_type == "chapter":
-
-        cleanup_assets = (
-            _capture_chapter_assets(
-                obj
-            )
-        )
-
-    elif content_type == "video":
-
-        cleanup_assets = (
-            _capture_video_assets(
-                obj
-            )
-        )
-
-    elif content_type == "pdf":
-
-        cleanup_assets = (
-            _capture_pdf_assets(
-                obj
-            )
-        )
-
+    except DeletionServiceError as exc:
+        messages.error(request, str(exc))
     else:
+        messages.success(request, "Deletion request submitted to Admin successfully.")
+    return _builder_redirect(batch, subject, chapter_id=chapter_id)
 
-        cleanup_assets = []
 
-    # --------------------------------------------------------
-    # AUDIT + ORDER + DELETE
-    # --------------------------------------------------------
-
-    with transaction.atomic():
-
-        _create_deletion_audit(
-            content_type=content_type,
-            obj=obj,
-            status="deleted",
-            actor=actor,
-            request_reason=reason,
-            deletion_method="admin_direct",
-        )
-
-        if content_type == "chapter":
-
-            remove_item_and_close_gap(
-                item=obj,
-                queryset=CourseChapter.objects.filter(
-                    batch=batch,
-                    subject=subject,
-                ),
-                order_field="chapter_order",
-            )
-
-        elif content_type == "video":
-
-            remove_item_and_close_gap(
-                item=obj,
-                queryset=ChapterVideo.objects.filter(
-                    chapter=obj.chapter,
-                ),
-                order_field="video_order",
-            )
-
-        elif content_type == "pdf":
-
-            remove_item_and_close_gap(
-                item=obj,
-                queryset=ChapterPDF.objects.filter(
-                    chapter=obj.chapter,
-                ),
-                order_field="pdf_order",
-            )
-
-        elif content_type == "quiz":
-
-            remove_item_and_close_gap(
-                item=obj,
-                queryset=ChapterQuiz.objects.filter(
-                    chapter=obj.chapter,
-                ),
-                order_field="quiz_order",
-            )
-
-        obj.delete()
-
-        if cleanup_assets:
-            _schedule_cloudinary_cleanup(
-                cleanup_assets
-            )
-
-    messages.success(
-        request,
-        "Content deleted successfully.",
-    )
-
-    return _builder_redirect(
-        batch,
-        subject,
-    )
-
-# ============================================================
-# ADMIN DELETION AUDIT LIST
-# ============================================================
-
-def admin_deletion_audit_list_view(
-    request,
-):
-    """
-    Admin-only read-only deletion audit list.
-    """
-
-    actor = _authorize_admin(
-        request
-    )
-
+@require_POST
+def admin_direct_delete_view(request, batch_id, subject_id, content_type, object_id):
+    batch, subject = _get_batch_subject(batch_id, subject_id)
+    actor = _authorize_admin(request)
     if actor is None:
+        messages.error(request, "Only Admin can directly delete course content.")
+        return _builder_redirect(batch, subject)
 
-        messages.error(
-            request,
-            "Only Admin can view deletion audits.",
+    chapter_id = request.POST.get("chapter_id")
+    try:
+        admin_direct_delete(
+            content_type=content_type, object_id=object_id, actor=actor,
+            reason=(request.POST.get("reason") or "").strip(),
+            batch=batch, subject=subject, chapter_id=chapter_id,
         )
+    except DeletionServiceError as exc:
+        messages.error(request, str(exc))
+    else:
+        messages.success(request, "Content deleted successfully.")
+    return _builder_redirect(batch, subject, chapter_id=chapter_id)
 
-        return redirect(
-            "teacher_login"
+
+def _scope_action_redirect(request, route_name, audit_id=None):
+    batch_id = request.POST.get("batch_id") or request.GET.get("batch_id")
+    subject_id = request.POST.get("subject_id") or request.GET.get("subject_id")
+    if not batch_id or not subject_id:
+        messages.error(request, "Batch and Subject context is required.")
+        return redirect("teacher_login")
+    if audit_id is None:
+        return redirect(_deletion_scope_url(route_name, batch_id, subject_id))
+    return redirect(_deletion_scope_url(route_name, batch_id, subject_id, audit_id=audit_id))
+
+
+@require_POST
+def admin_approve_delete_view(request, audit_id):
+    actor = _authorize_admin(request)
+    if actor is None:
+        messages.error(request, "Only Admin can approve deletion requests.")
+        return redirect("teacher_login")
+    batch_id = request.POST.get("batch_id")
+    subject_id = request.POST.get("subject_id")
+    try:
+        batch, subject = _get_batch_subject(batch_id, subject_id)
+        approve_teacher_deletion_request(
+            audit_id=audit_id, actor=actor,
+            admin_response=(request.POST.get("admin_response") or "").strip(),
+            batch_id=batch.pk, subject_id=subject.pk,
         )
+    except (DeletionServiceError, Exception) as exc:
+        messages.error(request, str(exc) or "Unable to approve this request.")
+        return _scope_action_redirect(request, "admin_deletion_audit_detail", audit_id)
+    messages.success(request, "Deletion request approved and content deleted successfully.")
+    return _scope_action_redirect(request, "admin_deletion_audit_list")
+
+
+@require_POST
+def admin_reject_delete_view(request, audit_id):
+    actor = _authorize_admin(request)
+    if actor is None:
+        messages.error(request, "Only Admin can reject deletion requests.")
+        return redirect("teacher_login")
+    batch_id = request.POST.get("batch_id")
+    subject_id = request.POST.get("subject_id")
+    try:
+        batch, subject = _get_batch_subject(batch_id, subject_id)
+        reject_teacher_deletion_request(
+            audit_id=audit_id, actor=actor,
+            admin_response=(request.POST.get("admin_response") or "").strip(),
+            batch_id=batch.pk, subject_id=subject.pk,
+        )
+    except Exception as exc:
+        messages.error(request, str(exc) or "Unable to reject this request.")
+        return _scope_action_redirect(request, "admin_deletion_audit_detail", audit_id)
+    messages.success(request, "Deletion request rejected successfully.")
+    return _scope_action_redirect(request, "admin_deletion_audit_list")
+
+
+@require_POST
+def teacher_withdraw_delete_request_view(request, audit_id):
+    actor = _get_actor(request)
+    if actor is None or actor["role"] != "teacher":
+        messages.error(request, "Teacher access is required.")
+        return redirect("teacher_login")
+    batch_id = request.POST.get("batch_id")
+    subject_id = request.POST.get("subject_id")
+    try:
+        batch, subject = _get_batch_subject(batch_id, subject_id)
+        _authorize_teacher(request, batch, subject)
+        withdraw_teacher_deletion_request(
+            audit_id=audit_id, actor=actor,
+            batch_id=batch.pk, subject_id=subject.pk,
+        )
+    except Exception as exc:
+        messages.error(request, str(exc) or "Unable to withdraw this request.")
+    else:
+        messages.success(request, "Your deletion request was withdrawn.")
+    return _scope_action_redirect(request, "teacher_my_delete_requests")
+
+
+# ============================================================
+# SHARED READ-ONLY DELETION AUDIT LIST
+# ============================================================
+
+def deletion_audit_list_view(request):
+    """Shared audit history for the selected Batch + Subject only."""
+    actor = _get_actor(request)
+    if actor is None:
+        messages.error(request, "Please sign in to view deletion history.")
+        return redirect("teacher_login")
+
+    batch, subject = _deletion_scope_from_request(request, actor)
+    if batch is None:
+        return redirect("teacher_login")
 
     audits = (
-        DeletionAudit.objects
-        .select_related(
-            "created_by_admin",
-            "created_by_teacher",
-            "requested_by_teacher",
-            "decision_by_admin",
-            "deleted_by_admin",
+        DeletionAudit.objects.select_related(
+            "created_by_admin", "created_by_teacher", "requested_by_teacher",
+            "decision_by_admin", "deleted_by_admin", "withdrawn_by_teacher",
         )
-        .order_by(
-            "-created_at",
-            "-id",
-        )
+        .filter(snapshot__batch_id=batch.pk, snapshot__subject_id=subject.pk)
+        .order_by("-created_at", "-id")
     )
+    return render(request, "courses/deletion_audit_list.html", {
+        "actor": actor, "batch": batch, "subject": subject, "audits": audits,
+    })
 
-    return render(
-        request,
-        "courses/admin_deletion_audit_list.html",
-        {
-            "audits": audits,
-            "actor": actor,
-        },
-    )
 
 # ============================================================
-# ADMIN DELETION AUDIT DETAIL
+# SHARED READ-ONLY DELETION AUDIT DETAIL
 # ============================================================
 
-def admin_deletion_audit_detail_view(
-    request,
-    audit_id,
-):
-    """
-    Admin-only deletion audit detail.
-    """
-
-    actor = _authorize_admin(
-        request
-    )
-
+def deletion_audit_detail_view(request, audit_id):
+    """Open an audit only when it belongs to the selected Batch + Subject."""
+    actor = _get_actor(request)
     if actor is None:
+        messages.error(request, "Please sign in to view deletion history.")
+        return redirect("teacher_login")
 
-        messages.error(
-            request,
-            "Only Admin can view deletion audits.",
-        )
-
-        return redirect(
-            "teacher_login"
-        )
+    batch, subject = _deletion_scope_from_request(request, actor)
+    if batch is None:
+        return redirect("teacher_login")
 
     audit = get_object_or_404(
-        DeletionAudit,
-        id=audit_id,
+        DeletionAudit.objects.select_related(
+            "created_by_admin", "created_by_teacher", "requested_by_teacher",
+            "decision_by_admin", "deleted_by_admin", "withdrawn_by_teacher",
+        ),
+        pk=audit_id,
+        snapshot__batch_id=batch.pk,
+        snapshot__subject_id=subject.pk,
     )
-
-    return render(
-        request,
-        "courses/admin_deletion_audit_detail.html",
-        {
-            "audit": audit,
-            "actor": actor,
-        },
-    )
-
-# ============================================================
-# ADMIN APPROVE TEACHER DELETE REQUEST
-# ============================================================
-
-@require_POST
-def admin_approve_delete_view(
-    request,
-    audit_id,
-):
-    """
-    SENSITIVE ADMIN-ONLY OPERATION.
-
-    Flow:
-
-        Teacher request
-              ↓
-        DeletionAudit pending
-              ↓
-        Admin approves
-              ↓
-        actual content delete
-              ↓
-        Cloudinary cleanup
-              ↓
-        audit becomes deleted
-    """
-
-    actor = _authorize_admin(
-        request
-    )
-
-    if actor is None:
-
-        messages.error(
-            request,
-            "Only Admin can approve deletion requests.",
-        )
-
-        return redirect(
-            "teacher_login"
-        )
-
-    audit = get_object_or_404(
-        DeletionAudit,
-        id=audit_id,
-        status="pending",
-    )
-
-    admin_response = (
-        request.POST.get(
-            "admin_response",
-            "",
-        )
-        .strip()
-    )
-
-    if not admin_response:
-
-        messages.error(
-            request,
-            "Please enter an Admin response before approving.",
-        )
-
-        return redirect(
-            "courses:admin_deletion_audit_detail",
-            audit_id=audit.id,
-        )
-
-    content_type = audit.content_type
-
-    obj = None
-
-    # --------------------------------------------------------
-    # FIND CURRENT CONTENT
-    # --------------------------------------------------------
-
-    if content_type == "chapter":
-
-        obj = (
-            CourseChapter.objects
-            .filter(
-                id=audit.object_id,
-            )
-            .first()
-        )
-
-    elif content_type == "video":
-
-        obj = (
-            ChapterVideo.objects
-            .filter(
-                id=audit.object_id,
-            )
-            .select_related(
-                "chapter",
-            )
-            .first()
-        )
-
-    elif content_type == "pdf":
-
-        obj = (
-            ChapterPDF.objects
-            .filter(
-                id=audit.object_id,
-            )
-            .select_related(
-                "chapter",
-            )
-            .first()
-        )
-
-    elif content_type == "quiz":
-
-        obj = (
-            ChapterQuiz.objects
-            .filter(
-                id=audit.object_id,
-            )
-            .select_related(
-                "chapter",
-            )
-            .first()
-        )
-
-    if obj is None:
-
-        messages.error(
-            request,
-            "The requested content no longer exists.",
-        )
-
-        return redirect(
-            "courses:admin_deletion_audit_detail",
-            audit_id=audit.id,
-        )
-
-    # --------------------------------------------------------
-    # CAPTURE CLOUDINARY ASSETS
-    # --------------------------------------------------------
-
-    if content_type == "chapter":
-
-        cleanup_assets = (
-            _capture_chapter_assets(
-                obj
-            )
-        )
-
-    elif content_type == "video":
-
-        cleanup_assets = (
-            _capture_video_assets(
-                obj
-            )
-        )
-
-    elif content_type == "pdf":
-
-        cleanup_assets = (
-            _capture_pdf_assets(
-                obj
-            )
-        )
-
-    else:
-
-        cleanup_assets = []
-
-    # --------------------------------------------------------
-    # APPROVE + DELETE
-    # --------------------------------------------------------
-
-    with transaction.atomic():
-
-        audit.admin_decision = (
-            "approved"
-        )
-
-        audit.decision_by_admin = (
-            actor["admin"]
-        )
-
-        audit.decision_at = (
-            timezone.now()
-        )
-
-        audit.admin_response = (
-            admin_response
-        )
-
-        audit.status = "approved"
-
-        audit.save(
-            update_fields=[
-                "admin_decision",
-                "decision_by_admin",
-                "decision_at",
-                "admin_response",
-                "status",
-            ]
-        )
-
-        if content_type == "chapter":
-
-            remove_item_and_close_gap(
-                item=obj,
-                queryset=CourseChapter.objects.filter(
-                    batch=obj.batch,
-                    subject=obj.subject,
-                ),
-                order_field="chapter_order",
-            )
-
-        elif content_type == "video":
-
-            remove_item_and_close_gap(
-                item=obj,
-                queryset=ChapterVideo.objects.filter(
-                    chapter=obj.chapter,
-                ),
-                order_field="video_order",
-            )
-
-        elif content_type == "pdf":
-
-            remove_item_and_close_gap(
-                item=obj,
-                queryset=ChapterPDF.objects.filter(
-                    chapter=obj.chapter,
-                ),
-                order_field="pdf_order",
-            )
-
-        elif content_type == "quiz":
-
-            remove_item_and_close_gap(
-                item=obj,
-                queryset=ChapterQuiz.objects.filter(
-                    chapter=obj.chapter,
-                ),
-                order_field="quiz_order",
-            )
-
-        obj.delete()
-
-        audit.deletion_method = (
-            "teacher_request_approved"
-        )
-
-        audit.status = "deleted"
-
-        audit.deleted_at = (
-            timezone.now()
-        )
-
-        audit.save(
-            update_fields=[
-                "deletion_method",
-                "status",
-                "deleted_at",
-            ]
-        )
-
-        if cleanup_assets:
-            _schedule_cloudinary_cleanup(
-                cleanup_assets
-            )
-
-    messages.success(
-        request,
-        "Deletion request approved and content deleted successfully.",
-    )
-
-    return redirect(
-        "courses:admin_deletion_audit_list"
-    )
-
-# ============================================================
-# ADMIN REJECT TEACHER DELETE REQUEST
-# ============================================================
-
-@require_POST
-def admin_reject_delete_view(
-    request,
-    audit_id,
-):
-    """
-    Admin rejects a pending Teacher request.
-
-    IMPORTANT:
-    No content deletion happens here.
-    """
-
-    actor = _authorize_admin(
-        request
-    )
-
-    if actor is None:
-
-        messages.error(
-            request,
-            "Only Admin can reject deletion requests.",
-        )
-
-        return redirect(
-            "teacher_login"
-        )
-
-    audit = get_object_or_404(
-        DeletionAudit,
-        id=audit_id,
-        status="pending",
-    )
-
-    admin_response = (
-        request.POST.get(
-            "admin_response",
-            "",
-        )
-        .strip()
-    )
-
-    if not admin_response:
-
-        messages.error(
-            request,
-            "Please enter an Admin response before rejecting.",
-        )
-
-        return redirect(
-            "courses:admin_deletion_audit_detail",
-            audit_id=audit.id,
-        )
-
-    audit.admin_decision = (
-        "rejected"
-    )
-
-    audit.decision_by_admin = (
-        actor["admin"]
-    )
-
-    audit.decision_at = (
-        timezone.now()
-    )
-
-    audit.admin_response = (
-        admin_response
-    )
-
-    audit.status = "rejected"
-
-    audit.save(
-        update_fields=[
-            "admin_decision",
-            "decision_by_admin",
-            "decision_at",
-            "admin_response",
-            "status",
-        ]
-    )
-
-    messages.success(
-        request,
-        "Deletion request rejected successfully.",
-    )
-
-    return redirect(
-        "courses:admin_deletion_audit_list"
-    )
+    return render(request, "courses/deletion_audit_detail.html", {
+        "actor": actor, "batch": batch, "subject": subject, "audit": audit,
+    })

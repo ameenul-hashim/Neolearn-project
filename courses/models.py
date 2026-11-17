@@ -1,8 +1,12 @@
-from django.db import models
+import secrets
+import string
+
+from django.db import models, IntegrityError, transaction
 
 from django.contrib.auth.models import User
 
 from cloudinary.models import CloudinaryField
+from django.utils import timezone
 
 from admins.models import Batch, Subject
 
@@ -1197,6 +1201,16 @@ class DeletionAudit(models.Model):
         ("quiz", "Quiz"),
     ]
 
+    # Human-readable reference ID, e.g. DEL-ED234S2.
+    # Nullable initially so existing audit records can be backfilled safely.
+    deletion_id = models.CharField(
+        max_length=11,
+        unique=True,
+        null=True,
+        blank=True,
+        editable=False,
+    )
+
     content_type = models.CharField(
         max_length=20,
         choices=CONTENT_TYPE_CHOICES,
@@ -1247,6 +1261,16 @@ class DeletionAudit(models.Model):
         null=True,
         blank=True,
     )
+    
+    created_by_name = models.CharField(
+        max_length=255,
+        blank=True,
+    )
+
+    created_by_role = models.CharField(
+        max_length=50,
+        blank=True,
+    )
 
     # ========================================================
     # TEACHER DELETE REQUEST
@@ -1269,6 +1293,15 @@ class DeletionAudit(models.Model):
         blank=True,
     )
 
+    requested_by_name = models.CharField(
+        max_length=255,
+        blank=True,
+    )
+
+    requested_by_role = models.CharField(
+        max_length=50,
+        blank=True,
+    )
     # ========================================================
     # ADMIN DECISION
     # ========================================================
@@ -1300,6 +1333,16 @@ class DeletionAudit(models.Model):
     admin_response = models.TextField(
         blank=True,
     )
+    
+    decision_by_name = models.CharField(
+        max_length=255,
+        blank=True,
+    )
+
+    decision_by_role = models.CharField(
+        max_length=50,
+        blank=True,
+    )
 
     # ========================================================
     # DIRECT ADMIN DELETE
@@ -1314,6 +1357,16 @@ class DeletionAudit(models.Model):
     )
 
     admin_delete_reason = models.TextField(
+        blank=True,
+    )
+    
+    deleted_by_name = models.CharField(
+        max_length=255,
+        blank=True,
+    )
+
+    deleted_by_role = models.CharField(
+        max_length=50,
         blank=True,
     )
 
@@ -1344,6 +1397,7 @@ class DeletionAudit(models.Model):
         ("approved", "Approved"),
         ("rejected", "Rejected"),
         ("deleted", "Deleted"),
+        ("withdrawn", "Withdrawn"),
     ]
 
     status = models.CharField(
@@ -1357,6 +1411,33 @@ class DeletionAudit(models.Model):
     # ========================================================
 
     deleted_at = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+
+    # ========================================================
+    # TEACHER REQUEST WITHDRAWAL
+    # ========================================================
+
+    withdrawn_by_teacher = models.ForeignKey(
+        Teacher,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="withdrawn_content_deletion_requests",
+    )
+
+    withdrawn_by_name = models.CharField(
+        max_length=255,
+        blank=True,
+    )
+
+    withdrawn_by_role = models.CharField(
+        max_length=50,
+        blank=True,
+    )
+
+    withdrawn_at = models.DateTimeField(
         null=True,
         blank=True,
     )
@@ -1415,9 +1496,84 @@ class DeletionAudit(models.Model):
             ),
         ]
 
+    def save(self, *args, **kwargs):
+        """Generate a permanent unique DEL-XXXXXXX reference when needed."""
+
+        if self.deletion_id:
+            return super().save(*args, **kwargs)
+
+        alphabet = string.ascii_uppercase + string.digits
+
+        for _ in range(100):
+            candidate = "DEL-" + "".join(
+                secrets.choice(alphabet) for _ in range(7)
+            )
+
+            if type(self).objects.filter(deletion_id=candidate).exists():
+                continue
+
+            self.deletion_id = candidate
+
+            save_kwargs = dict(kwargs)
+            update_fields = save_kwargs.get("update_fields")
+            if update_fields is not None:
+                save_kwargs["update_fields"] = set(update_fields) | {"deletion_id"}
+
+            try:
+                # A savepoint makes collision retries safe inside outer transactions.
+                with transaction.atomic():
+                    return super().save(*args, **save_kwargs)
+            except IntegrityError:
+                if type(self).objects.filter(deletion_id=candidate).exists():
+                    self.deletion_id = None
+                    continue
+                raise
+
+        raise RuntimeError(
+            "Could not generate a unique deletion reference after 100 attempts."
+        )
+
     def __str__(self):
         return (
+            f"{self.deletion_id or self.pk} - "
             f"{self.get_content_type_display()} - "
             f"{self.content_name} - "
             f"{self.get_status_display()}"
         )
+
+# ============================================================
+# CLOUDINARY DELETION CLEANUP QUEUE
+# ============================================================
+
+class CloudinaryDeletionTask(models.Model):
+    """Durable retry record for a Cloudinary asset awaiting deletion."""
+
+    STATUS_CHOICES = [
+        ("pending", "Pending"),
+        ("failed", "Failed"),
+        ("completed", "Completed"),
+    ]
+
+    public_id = models.CharField(max_length=500)
+    resource_type = models.CharField(max_length=20)
+    status = models.CharField(
+        max_length=20, choices=STATUS_CHOICES, default="pending", db_index=True
+    )
+    attempts = models.PositiveIntegerField(default=0)
+    last_error = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["created_at", "pk"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["public_id", "resource_type"],
+                name="unique_cloudinary_deletion_task_asset",
+            )
+        ]
+        indexes = [models.Index(fields=["status", "created_at"])]
+
+    def __str__(self):
+        return f"{self.public_id} ({self.resource_type}) - {self.status}"

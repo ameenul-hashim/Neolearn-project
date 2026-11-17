@@ -4,13 +4,11 @@ from .views import (
     # ============================================================
     # COURSE BUILDER
     # ============================================================
-
     course_builder_view,
 
     # ============================================================
     # CHAPTER
     # ============================================================
-
     create_chapter_view,
     edit_chapter_view,
     chapter_details_view,
@@ -18,45 +16,46 @@ from .views import (
     # ============================================================
     # VIDEO
     # ============================================================
-
     create_video_view,
     edit_video_view,
 
     # ============================================================
     # PDF
     # ============================================================
-
     create_pdf_view,
     edit_pdf_view,
 
     # ============================================================
     # QUIZ
     # ============================================================
-
     create_quiz_view,
     edit_quiz_view,
 
     # ============================================================
     # QUIZ QUESTION
     # ============================================================
-
     add_quiz_question_view,
     edit_quiz_question_view,
     delete_quiz_question_view,
 
     # ============================================================
-    # DELETE
+    # DELETION REQUESTS AND DIRECT DELETE
     # ============================================================
-
     teacher_request_delete_view,
     admin_direct_delete_view,
+    teacher_withdraw_delete_request_view,
 
     # ============================================================
-    # DELETION AUDIT
+    # DELETE MANAGEMENT AND TEACHER REQUESTS
     # ============================================================
+    admin_delete_management_view,
+    teacher_my_delete_requests_view,
 
-    admin_deletion_audit_list_view,
-    admin_deletion_audit_detail_view,
+    # ============================================================
+    # SHARED DELETION AUDIT
+    # ============================================================
+    deletion_audit_list_view,
+    deletion_audit_detail_view,
     admin_approve_delete_view,
     admin_reject_delete_view,
 )
@@ -70,32 +69,27 @@ urlpatterns = [
     # ============================================================
     # COURSE BUILDER
     # ============================================================
-
     path(
         "batches/<int:batch_id>/subjects/<int:subject_id>/course-builder/",
         course_builder_view,
         name="course_builder",
     ),
 
-
     # ============================================================
     # CHAPTER
     # ============================================================
-
     path(
         "batches/<int:batch_id>/subjects/<int:subject_id>/"
         "course-builder/chapter/<int:chapter_id>/details/",
         chapter_details_view,
         name="chapter_details",
     ),
-
     path(
         "batches/<int:batch_id>/subjects/<int:subject_id>/"
         "course-builder/chapter/create/",
         create_chapter_view,
         name="create_chapter",
     ),
-
     path(
         "batches/<int:batch_id>/subjects/<int:subject_id>/"
         "course-builder/chapter/<int:chapter_id>/edit/",
@@ -103,18 +97,15 @@ urlpatterns = [
         name="edit_chapter",
     ),
 
-
     # ============================================================
     # VIDEO
     # ============================================================
-
     path(
         "batches/<int:batch_id>/subjects/<int:subject_id>/"
         "course-builder/chapter/<int:chapter_id>/video/create/",
         create_video_view,
         name="create_video",
     ),
-
     path(
         "batches/<int:batch_id>/subjects/<int:subject_id>/"
         "course-builder/chapter/<int:chapter_id>/video/<int:video_id>/edit/",
@@ -122,18 +113,15 @@ urlpatterns = [
         name="edit_video",
     ),
 
-
     # ============================================================
     # PDF
     # ============================================================
-
     path(
         "batches/<int:batch_id>/subjects/<int:subject_id>/"
         "course-builder/chapter/<int:chapter_id>/pdf/create/",
         create_pdf_view,
         name="create_pdf",
     ),
-
     path(
         "batches/<int:batch_id>/subjects/<int:subject_id>/"
         "course-builder/chapter/<int:chapter_id>/pdf/<int:pdf_id>/edit/",
@@ -141,18 +129,15 @@ urlpatterns = [
         name="edit_pdf",
     ),
 
-
     # ============================================================
     # QUIZ
     # ============================================================
-
     path(
         "batches/<int:batch_id>/subjects/<int:subject_id>/"
         "course-builder/chapter/<int:chapter_id>/quiz/create/",
         create_quiz_view,
         name="create_quiz",
     ),
-
     path(
         "batches/<int:batch_id>/subjects/<int:subject_id>/"
         "course-builder/chapter/<int:chapter_id>/quiz/<int:quiz_id>/edit/",
@@ -160,11 +145,9 @@ urlpatterns = [
         name="edit_quiz",
     ),
 
-
     # ============================================================
-    # QUIZ QUESTION - ADD
+    # QUIZ QUESTIONS
     # ============================================================
-
     path(
         "batches/<int:batch_id>/subjects/<int:subject_id>/"
         "course-builder/chapter/<int:chapter_id>/quiz/<int:quiz_id>/"
@@ -172,12 +155,6 @@ urlpatterns = [
         add_quiz_question_view,
         name="add_quiz_question",
     ),
-
-
-    # ============================================================
-    # QUIZ QUESTION - EDIT
-    # ============================================================
-
     path(
         "batches/<int:batch_id>/subjects/<int:subject_id>/"
         "course-builder/chapter/<int:chapter_id>/quiz/<int:quiz_id>/"
@@ -185,12 +162,6 @@ urlpatterns = [
         edit_quiz_question_view,
         name="edit_quiz_question",
     ),
-
-
-    # ============================================================
-    # QUIZ QUESTION - DELETE
-    # ============================================================
-
     path(
         "batches/<int:batch_id>/subjects/<int:subject_id>/"
         "course-builder/chapter/<int:chapter_id>/quiz/<int:quiz_id>/"
@@ -199,11 +170,11 @@ urlpatterns = [
         name="delete_quiz_question",
     ),
 
-
     # ============================================================
     # TEACHER DELETE REQUEST
+    # Batch and Subject are part of the URL so the service can
+    # validate the target content against the selected subject.
     # ============================================================
-
     path(
         "batches/<int:batch_id>/subjects/<int:subject_id>/"
         "course-builder/delete-request/<str:content_type>/<int:object_id>/",
@@ -211,11 +182,9 @@ urlpatterns = [
         name="teacher_request_delete",
     ),
 
-
     # ============================================================
     # ADMIN DIRECT DELETE
     # ============================================================
-
     path(
         "batches/<int:batch_id>/subjects/<int:subject_id>/"
         "course-builder/delete/<str:content_type>/<int:object_id>/",
@@ -223,29 +192,58 @@ urlpatterns = [
         name="admin_direct_delete",
     ),
 
-
     # ============================================================
-    # DELETION AUDIT
+    # ADMIN DELETE MANAGEMENT
+    # batch_id and subject_id are supplied as query parameters.
+    # Example: ?batch_id=1&subject_id=2
     # ============================================================
-
     path(
-        "deletion-audit/",
-        admin_deletion_audit_list_view,
-        name="admin_deletion_audit_list",
+        "deletion-management/",
+        admin_delete_management_view,
+        name="admin_delete_management",
     ),
 
+    # ============================================================
+    # TEACHER MY DELETE REQUESTS
+    # batch_id and subject_id are supplied as query parameters.
+    # Withdraw forms also POST both IDs as hidden fields.
+    # ============================================================
+    path(
+        "my-deletion-requests/",
+        teacher_my_delete_requests_view,
+        name="teacher_my_delete_requests",
+    ),
+    path(
+        "my-deletion-requests/<int:audit_id>/withdraw/",
+        teacher_withdraw_delete_request_view,
+        name="teacher_withdraw_delete_request",
+    ),
+
+    # ============================================================
+    # SHARED DELETION AUDIT
+    # Keep these route names for compatibility with the views.
+    # batch_id and subject_id are supplied as query parameters.
+    # ============================================================
+    path(
+        "deletion-audit/",
+        deletion_audit_list_view,
+        name="admin_deletion_audit_list",
+    ),
     path(
         "deletion-audit/<int:audit_id>/",
-        admin_deletion_audit_detail_view,
+        deletion_audit_detail_view,
         name="admin_deletion_audit_detail",
     ),
 
+    # ============================================================
+    # ADMIN APPROVE / REJECT
+    # batch_id and subject_id are POSTed as hidden fields.
+    # ============================================================
     path(
         "deletion-audit/<int:audit_id>/approve/",
         admin_approve_delete_view,
         name="admin_approve_delete",
     ),
-
     path(
         "deletion-audit/<int:audit_id>/reject/",
         admin_reject_delete_view,

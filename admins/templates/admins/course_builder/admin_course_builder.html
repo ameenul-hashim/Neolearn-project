@@ -2360,18 +2360,18 @@
 
             <div class="flex flex-wrap items-center justify-end gap-2">
 
-                <button
-                    type="button"
+                <a
+                    href="{% url 'courses:admin_delete_management' %}?batch_id={{ batch.id }}&subject_id={{ subject.id }}"
                     class="inline-flex items-center gap-2 rounded-lg border border-red-900 bg-[#160b11] px-3 py-2 text-xs font-bold text-red-400 transition hover:bg-red-950">
 
                     <i class="ri-delete-bin-line"></i>
                     Delete Management
 
-                </button>
+                </a>
 
 
                 <a
-                    href="{% url 'courses:admin_deletion_audit_list' %}"
+                    href="{% url 'courses:admin_deletion_audit_list' %}?batch_id={{ batch.id }}&subject_id={{ subject.id }}"
                     class="inline-flex items-center gap-2 rounded-lg border border-amber-900 bg-[#171006] px-3 py-2 text-xs font-bold text-amber-400 transition hover:bg-amber-950">
 
                     <i class="ri-file-history-line"></i>

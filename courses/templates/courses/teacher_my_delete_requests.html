@@ -1,0 +1,281 @@
+{% extends "base.html" %}
+{% block title %}My Delete Requests | NeoLearn{% endblock %}
+
+{% block content %}
+<style>
+    /* Keep normal page scrolling, but hide the browser scrollbar. */
+    html,
+    body {
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+    }
+
+    html::-webkit-scrollbar,
+    body::-webkit-scrollbar {
+        display: none;
+        width: 0;
+        height: 0;
+    }
+
+    /* Also hide scrollbars on nested scrollable areas without disabling scrolling. */
+    * {
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+    }
+
+    *::-webkit-scrollbar {
+        display: none;
+        width: 0;
+        height: 0;
+    }
+</style>
+
+<main class="w-full px-4 py-5 sm:px-6 lg:px-8">
+    <!--
+        Desktop: back button stays in its own left column.
+        The content begins on the same top line as the button.
+        Mobile: the button naturally sits above the content.
+    -->
+    <div class="mx-auto grid w-full max-w-[1500px] grid-cols-1 items-start gap-5 sm:gap-6 lg:grid-cols-[190px_minmax(0,1fr)] lg:gap-7">
+
+        <aside class="self-start lg:sticky lg:top-5">
+            <button type="button"
+                    onclick="if (window.history.length > 1) { window.history.back(); }"
+                    class="inline-flex items-center gap-2 rounded-lg border border-violet-200 bg-white px-4 py-2 text-sm font-semibold text-violet-700 shadow-sm transition hover:border-violet-300 hover:bg-violet-50 focus:outline-none focus:ring-2 focus:ring-violet-300 focus:ring-offset-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+                </svg>
+                Back
+            </button>
+        </aside>
+
+        <div class="min-w-0 w-full max-w-5xl">
+            <header class="mb-6">
+                <p class="text-xs font-bold uppercase tracking-widest text-violet-600">NeoLearn Teacher</p>
+                <h1 class="mt-1 text-2xl font-black text-slate-900">My Deletion Requests</h1>
+                <p class="mt-1 text-sm text-slate-500">A quick view of the requests you have submitted.</p>
+            </header>
+
+            {% if messages %}
+                <div id="page-toast-container" class="mb-5 space-y-2" aria-live="polite" aria-atomic="false">
+                    {% for message in messages %}
+                        <div class="page-toast flex items-start justify-between gap-4 rounded-xl border px-4 py-3 text-sm shadow-sm transition-all duration-300
+                            {% if message.tags == 'success' %}border-emerald-200 bg-emerald-50 text-emerald-800
+                            {% elif message.tags == 'error' %}border-rose-200 bg-rose-50 text-rose-800
+                            {% else %}border-amber-200 bg-amber-50 text-amber-800{% endif %}"
+                            role="{% if message.tags == 'error' %}alert{% else %}status{% endif %}">
+                            <span class="min-w-0 flex-1">{{ message }}</span>
+                            <button type="button"
+                                    class="shrink-0 rounded-md p-1 opacity-70 transition hover:bg-black/5 hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-current"
+                                    aria-label="Dismiss notification"
+                                    onclick="dismissPageToast(this.closest('.page-toast'))">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 6l12 12M18 6L6 18"/>
+                                </svg>
+                            </button>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            <section class="space-y-3">
+                {% for item in deletion_requests %}
+                    <article class="rounded-xl border border-slate-200 bg-white px-4 py-4 shadow-sm transition hover:border-violet-200 hover:shadow-md sm:px-5">
+                        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                            <div class="min-w-0 flex-1">
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <h2 class="break-words text-base font-bold text-slate-900">
+                                        {{ item.content_name|default:"Untitled content" }}
+                                    </h2>
+                                    <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-bold
+                                        {% if item.status == 'pending' %}bg-amber-100 text-amber-800
+                                        {% elif item.status == 'rejected' %}bg-rose-100 text-rose-800
+                                        {% elif item.status == 'withdrawn' %}bg-slate-200 text-slate-700
+                                        {% else %}bg-emerald-100 text-emerald-800{% endif %}">
+                                        {{ item.get_status_display }}
+                                    </span>
+                                </div>
+
+                                <p class="mt-1 text-sm text-slate-500">
+                                    {{ item.get_content_type_display }}
+                                    {% if item.batch_name %} · {{ item.batch_name }}{% endif %}
+                                    {% if item.subject_name %} · {{ item.subject_name }}{% endif %}
+                                    {% if item.chapter_name %} · Chapter: {{ item.chapter_name }}{% endif %}
+                                </p>
+
+                                <div class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500">
+                                    <span>
+                                        Request ID:
+                                        <span class="font-semibold tracking-wide text-violet-700">{{ item.deletion_id|default:"—" }}</span>
+                                    </span>
+                                    <span class="hidden text-slate-300 sm:inline">|</span>
+                                    <span>
+                                        Submitted: {{ item.requested_at|date:"d M Y, h:i A"|default:"—" }}
+                                    </span>
+                                    <span class="hidden text-slate-300 sm:inline">|</span>
+                                    <span>
+                                        Decision: {{ item.get_admin_decision_display|default:"Awaiting review" }}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div class="flex shrink-0 flex-wrap items-center gap-2">
+                                <a href="{% url 'courses:admin_deletion_audit_detail' item.id %}?batch_id={{ batch.id }}&subject_id={{ subject.id }}"
+                                   class="inline-flex items-center justify-center rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-violet-700 focus:outline-none focus:ring-2 focus:ring-violet-300 focus:ring-offset-2">
+                                    View details
+                                </a>
+
+                                {% if item.status == "pending" %}
+                                    <form id="withdraw-form-{{ item.id }}" method="post"
+                                          action="{% url 'courses:teacher_withdraw_delete_request' item.id %}">
+                                        {% csrf_token %}
+                                          <input type="hidden" name="batch_id" value="{{ batch.id }}">
+                                          <input type="hidden" name="subject_id" value="{{ subject.id }}">
+                                        <button type="button"
+                                                onclick="openWithdrawModal('{{ item.id }}', '{{ item.content_name|default:'this request'|escapejs }}')"
+                                                class="inline-flex items-center justify-center rounded-lg border border-rose-300 bg-white px-4 py-2 text-sm font-semibold text-rose-700 transition hover:bg-rose-50 focus:outline-none focus:ring-2 focus:ring-rose-200 focus:ring-offset-2">
+                                            Withdraw
+                                        </button>
+                                    </form>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </article>
+                {% empty %}
+                    <div class="rounded-xl border border-dashed border-violet-200 bg-white px-6 py-14 text-center">
+                        <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-violet-50 text-violet-600">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.7">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M8 7h8M8 11h8m-8 4h5m6 5H5a2 2 0 01-2-2V6a2 2 0 012-2h9l5 5v9a2 2 0 01-2 2z"/>
+                            </svg>
+                        </div>
+                        <h2 class="mt-3 text-base font-bold text-slate-900">No deletion requests yet</h2>
+                        <p class="mt-1 text-sm text-slate-500">Requests you submit from Course Builder will appear here.</p>
+                    </div>
+                {% endfor %}
+            </section>
+        </div>
+    </div>
+</main>
+
+<!-- Custom withdrawal confirmation modal -->
+<div id="withdraw-confirm-modal"
+     class="fixed inset-0 z-[100] hidden items-center justify-center bg-slate-950/40 px-4 py-6"
+     aria-hidden="true">
+    <div class="w-full max-w-md rounded-2xl border border-violet-100 bg-white p-6 shadow-2xl"
+         role="dialog" aria-modal="true" aria-labelledby="withdraw-modal-title">
+        <div class="flex h-12 w-12 items-center justify-center rounded-full bg-violet-50 text-violet-700">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3m0 4h.01M10.3 3.9L2.8 17a2 2 0 001.7 3h15a2 2 0 001.7-3l-7.5-13.1a2 2 0 00-3.4 0z"/>
+            </svg>
+        </div>
+
+        <h2 id="withdraw-modal-title" class="mt-4 text-lg font-bold text-slate-900">Withdraw deletion request?</h2>
+        <p class="mt-2 text-sm leading-6 text-slate-600">
+            Are you sure you want to withdraw
+            <span id="withdraw-request-name" class="font-semibold text-slate-800">this request</span>?
+            This action will cancel your pending request.
+        </p>
+
+        <div class="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <button type="button" onclick="closeWithdrawModal()"
+                    class="inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
+                Cancel
+            </button>
+            <button type="button" id="confirm-withdraw-button" onclick="confirmWithdraw()"
+                    class="inline-flex items-center justify-center rounded-lg bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-violet-700 focus:outline-none focus:ring-2 focus:ring-violet-300 focus:ring-offset-2">
+                Yes, Withdraw Request
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    /*
+     * Page notifications:
+     * - remain visible for five seconds
+     * - can also be dismissed immediately with the close button
+     * - fade out without changing the page layout or other interactions
+     */
+    function dismissPageToast(toast) {
+        if (!toast || toast.dataset.dismissing === "true") return;
+
+        toast.dataset.dismissing = "true";
+        toast.style.opacity = "0";
+        toast.style.transform = "translateY(-6px)";
+        toast.style.maxHeight = toast.offsetHeight + "px";
+
+        requestAnimationFrame(function () {
+            toast.style.maxHeight = "0";
+            toast.style.marginTop = "0";
+            toast.style.marginBottom = "0";
+            toast.style.paddingTop = "0";
+            toast.style.paddingBottom = "0";
+            toast.style.borderWidth = "0";
+        });
+
+        window.setTimeout(function () {
+            toast.remove();
+            const container = document.getElementById("page-toast-container");
+            if (container && container.children.length === 0) {
+                container.remove();
+            }
+        }, 320);
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+        document.querySelectorAll("#page-toast-container .page-toast").forEach(function (toast) {
+            window.setTimeout(function () {
+                dismissPageToast(toast);
+            }, 5000);
+        });
+    });
+
+    let selectedWithdrawFormId = null;
+
+    function openWithdrawModal(requestId, requestName) {
+        selectedWithdrawFormId = "withdraw-form-" + requestId;
+
+        const modal = document.getElementById("withdraw-confirm-modal");
+        const nameElement = document.getElementById("withdraw-request-name");
+
+        nameElement.textContent = requestName || "this request";
+        modal.classList.remove("hidden");
+        modal.classList.add("flex");
+        modal.setAttribute("aria-hidden", "false");
+
+        document.getElementById("confirm-withdraw-button").focus();
+    }
+
+    function closeWithdrawModal() {
+        const modal = document.getElementById("withdraw-confirm-modal");
+
+        modal.classList.add("hidden");
+        modal.classList.remove("flex");
+        modal.setAttribute("aria-hidden", "true");
+        selectedWithdrawFormId = null;
+    }
+
+    function confirmWithdraw() {
+        if (!selectedWithdrawFormId) {
+            return;
+        }
+
+        const form = document.getElementById(selectedWithdrawFormId);
+        if (form) {
+            form.submit();
+        }
+    }
+
+    document.getElementById("withdraw-confirm-modal").addEventListener("click", function (event) {
+        if (event.target === this) {
+            closeWithdrawModal();
+        }
+    });
+
+    document.addEventListener("keydown", function (event) {
+        if (event.key === "Escape") {
+            closeWithdrawModal();
+        }
+    });
+</script>
+{% endblock %}
