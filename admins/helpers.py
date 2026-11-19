@@ -31,6 +31,9 @@ from orders.helpers import (
 
 from .models import (
     Batch,
+    BatchFeature,
+    BatchImage,
+    BatchDemo,
     Coupon,
     CouponUsage,
     CouponBatchRule,
@@ -151,9 +154,63 @@ def get_batch_marketplace_status(batch):
 
 
 def create_batch(cleaned_data):
-    batch = Batch(**cleaned_data)
-    batch.full_clean()
-    batch.save()
+    """
+    Create a Batch and its Create-form related records.
+
+    The validator returns normal Batch model fields together with
+    three helper-only values:
+        key_features
+        _additional_images
+        _batch_demo
+
+    Those helper-only values must not be passed to Batch(**kwargs).
+    They are saved to their own related models after the Batch exists.
+    """
+    data = dict(cleaned_data)
+
+    # Separate related-model payloads from actual Batch model fields.
+    key_features = data.pop("key_features", [])
+    additional_images = data.pop("_additional_images", [])
+    demo_data = data.pop("_batch_demo", None)
+
+    with transaction.atomic():
+        batch = Batch(**data)
+        batch.full_clean()
+        batch.save()
+
+        # Save the key features in their submitted order.
+        for order, feature_text in enumerate(key_features or [], start=1):
+            feature = BatchFeature(
+                batch=batch,
+                feature_text=feature_text,
+                display_order=order,
+            )
+            feature.full_clean()
+            feature.save()
+
+        # Save the additional gallery images in their submitted order.
+        for order, image_file in enumerate(additional_images or [], start=1):
+            gallery_image = BatchImage(
+                batch=batch,
+                image=image_file,
+                display_order=order,
+            )
+            gallery_image.full_clean()
+            gallery_image.save()
+
+        # A draft may have no demo. When a demo payload exists, save
+        # exactly one BatchDemo record for this Batch.
+        if demo_data:
+            demo = BatchDemo(
+                batch=batch,
+                demo_type=demo_data.get("demo_type", ""),
+                title=demo_data.get("title", ""),
+                description=demo_data.get("description", ""),
+                video_file=demo_data.get("video_file"),
+                external_url=demo_data.get("external_url", ""),
+            )
+            demo.full_clean()
+            demo.save()
 
     return batch
 

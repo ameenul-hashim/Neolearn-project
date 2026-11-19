@@ -193,6 +193,64 @@ class Batch(models.Model):
     )
 
 
+    # --------------------------------------------------
+    # Batch Overview and Course Information
+    # --------------------------------------------------
+
+    batch_overview = models.TextField(
+        max_length=3000,
+        blank=True,
+        default="",
+    )
+
+    COURSE_LANGUAGE_CHOICES = [
+        ("english", "English"),
+        ("malayalam", "Malayalam"),
+        ("malayalam_english", "English and Malayalam"),
+    ]
+
+    course_language = models.CharField(
+        max_length=30,
+        choices=COURSE_LANGUAGE_CHOICES,
+        blank=True,
+        default="",
+    )
+
+    course_duration_years = models.PositiveSmallIntegerField(
+        default=0,
+    )
+
+    course_duration_months = models.PositiveSmallIntegerField(
+        default=0,
+    )
+
+    target_audience = models.CharField(
+        max_length=100,
+        blank=True,
+        default="",
+    )
+
+    prerequisites = models.CharField(
+        max_length=150,
+        blank=True,
+        default="",
+    )
+
+    LEARNING_LEVEL_CHOICES = [
+        ("beginner", "Beginner"),
+        ("intermediate", "Intermediate"),
+        ("advanced", "Advanced"),
+        ("all_levels", "All Levels"),
+    ]
+
+    learning_level = models.CharField(
+        max_length=20,
+        choices=LEARNING_LEVEL_CHOICES,
+        blank=True,
+        default="",
+    )
+
+
 
     # --------------------------------------------------
 
@@ -786,6 +844,95 @@ class Batch(models.Model):
 
 
 
+
+
+class BatchFeature(models.Model):
+    """A single ordered key feature belonging to a batch."""
+
+    batch = models.ForeignKey(
+        Batch,
+        on_delete=models.CASCADE,
+        related_name="features",
+    )
+    feature_text = models.CharField(max_length=150)
+    display_order = models.PositiveSmallIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["display_order", "id"]
+
+    def __str__(self):
+        return self.feature_text
+
+
+class BatchImage(models.Model):
+    """Additional gallery image for a batch (main thumbnail is Batch.batch_thumbnail)."""
+
+    batch = models.ForeignKey(
+        Batch,
+        on_delete=models.CASCADE,
+        related_name="gallery_images",
+    )
+    image = CloudinaryField(
+        "batch_gallery_image",
+        folder="neolearn/batches/gallery",
+    )
+    display_order = models.PositiveSmallIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["display_order", "id"]
+
+    def __str__(self):
+        return f"{self.batch.batch_name} - Image {self.display_order + 1}"
+
+
+class BatchDemo(models.Model):
+    """One batch-wise demo, stored as an uploaded video or external video URL."""
+
+    DEMO_TYPE_CHOICES = [
+        ("upload", "Uploaded Video"),
+        ("external", "External Video URL"),
+    ]
+
+    batch = models.OneToOneField(
+        Batch,
+        on_delete=models.CASCADE,
+        related_name="demo",
+    )
+    demo_type = models.CharField(
+        max_length=20,
+        choices=DEMO_TYPE_CHOICES,
+        default="upload",
+    )
+    title = models.CharField(max_length=100)
+    description = models.CharField(max_length=300, blank=True, default="")
+    video_file = CloudinaryField(
+        "video",
+        resource_type="video",
+        folder="neolearn/batches/demos",
+        blank=True,
+        null=True,
+    )
+    external_url = models.URLField(blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.batch.batch_name} - {self.title}"
+
+    def clean(self):
+        super().clean()
+        if self.demo_type == "upload":
+            if not self.video_file:
+                raise ValidationError({"video_file": "Upload a demo video."})
+            if self.external_url:
+                raise ValidationError({"external_url": "Remove the external URL when using an uploaded video."})
+        elif self.demo_type == "external":
+            if not self.external_url:
+                raise ValidationError({"external_url": "Enter the external demo video URL."})
+            if self.video_file:
+                raise ValidationError({"video_file": "Remove the uploaded video when using an external URL."})
 
 
 class Subject(models.Model):

@@ -10,7 +10,7 @@ from django.contrib.auth.decorators import login_required
 from django.views.decorators.cache import cache_control
 from django.contrib import messages
 from django.http import JsonResponse
-from django.db.models import Q
+from django.db.models import Q, Count, Prefetch
 from django.utils import timezone
 from django.db import transaction
 from datetime import datetime, timedelta
@@ -113,7 +113,7 @@ def dashboard_view(request):
 
     return render(
         request,
-        'students/dashboard.html'
+        'students/dashboard/dashboard.html'
     )
 
 
@@ -1116,7 +1116,7 @@ def marketplace_view(request):
 
     return render(
         request,
-        'students/marketplace.html',
+        'students/marketplace/marketplace.html',
         {
             # ------------------------------------------------
             # MAIN MARKETPLACE RESULTS
@@ -1199,32 +1199,179 @@ def marketplace_view(request):
     no_store=True
 )
 def marketplace_detail_view(request, batch_id):
+    """Display the public details for a published Marketplace batch.
+
+    This view deliberately reuses the existing Batch, Subject, Teacher,
+    gallery, feature, demo, cart, wishlist and purchase records. It does not
+    grant access to protected course chapters or lessons.
+    """
 
     if not is_student_user(request.user):
-
         messages.error(
             request,
             'Admin login is not allowed here. Please use the admin login area.'
         )
-
         return redirect('signin')
 
+    now = timezone.now()
+
     batch = get_object_or_404(
-        Batch.objects.prefetch_related(
-            'subjects',
-            'assigned_teachers',
+        Batch.objects.filter(
+            batch_status='published',
+            marketplace_visible=True,
+        ).prefetch_related(
+            'gallery_images',
+            'features',
         ),
-        id=batch_id,
-        batch_status='published',
-        marketplace_visible=True,
+        pk=batch_id,
     )
+
+    # Only published subjects are displayed to Marketplace visitors.
+    subjects = list(
+        Subject.objects.filter(
+            batch=batch,
+            subject_status='published',
+        ).annotate(
+            published_chapter_count=Count(
+                'course_chapters',
+                filter=Q(course_chapters__status='published'),
+                distinct=True,
+            ),
+        ).prefetch_related(
+            Prefetch(
+                'assigned_teachers',
+                queryset=TeacherSubject.objects.filter(
+                    batch=batch,
+                    is_active=True,
+                    teacher__is_blocked=False,
+                ).select_related('teacher'),
+                to_attr='active_teacher_assignments',
+            ),
+        ).order_by('created_at', 'pk')
+    )
+
+    # Add a convenient list of real assigned teacher profiles to each
+    # subject. The related manager contains TeacherSubject assignments.
+    for subject in subjects:
+        subject.detail_teachers = [
+            assignment.teacher
+            for assignment in subject.active_teacher_assignments
+        ]
+
+    # Include teachers assigned either to the whole batch or to at least
+    # one published subject in this batch. Never show blocked/inactive links.
+    teachers = list(
+        Teacher.objects.filter(
+            is_blocked=False,
+        ).filter(
+            Q(
+                assigned_batches__batch=batch,
+                assigned_batches__is_active=True,
+            )
+            |
+            Q(
+                assigned_subjects__batch=batch,
+                assigned_subjects__is_active=True,
+                assigned_subjects__subject__subject_status='published',
+            )
+        ).distinct().order_by('full_name')
+    )
+
+    # Main thumbnail first, followed by the ordered additional gallery.
+    gallery_images = []
+    if batch.batch_thumbnail:
+        gallery_images.append({
+            'url': batch.batch_thumbnail.url,
+            'alt': f'{batch.batch_name} main image',
+            'is_main': True,
+        })
+
+    for gallery_image in batch.gallery_images.all():
+        if gallery_image.image:
+            gallery_images.append({
+                'url': gallery_image.image.url,
+                'alt': f'{batch.batch_name} gallery image',
+                'is_main': False,
+            })
+
+    # Overall demo is optional. BatchDemo is a OneToOne relation.
+    try:
+        batch_demo = batch.demo
+        if not (batch_demo.video_file or batch_demo.external_url):
+            batch_demo = None
+    except Batch.demo.RelatedObjectDoesNotExist:
+        batch_demo = None
+
+    # The supplied admins/models.py defines a batch-wide demo but does not
+    # define a subject-demo model. Keep this empty until the actual subject
+    # demo storage model is confirmed; do not fabricate demo URLs.
+    subject_demos = []
+
+    # Current student state: wishlist, cart and active purchase.
+    is_wishlisted = StudentWishlist.objects.filter(
+        student=request.user,
+        batch=batch,
+    ).exists()
+
+    cart = Cart.objects.filter(student=request.user).first()
+    is_in_cart = bool(
+        cart and cart.items.filter(batch=batch).exists()
+    )
+
+    active_purchase = StudentBatchPurchase.objects.filter(
+        student=request.user,
+        batch=batch,
+        status=StudentBatchPurchase.Status.ACTIVE,
+    ).first()
+    already_purchased = active_purchase is not None
+
+    # Use the model's existing marketplace status and offer calculation.
+    marketplace_status = batch.marketplace_status
+    offer_is_active = batch.is_offer_active
+    offer_end_timestamp = None
+    if offer_is_active and batch.offer_end_date:
+        offer_end_timestamp = int(batch.offer_end_date.timestamp())
+
+    duration_parts = []
+    if batch.course_duration_years:
+        duration_parts.append(
+            f"{batch.course_duration_years} "
+            f"{'Year' if batch.course_duration_years == 1 else 'Years'}"
+        )
+    if batch.course_duration_months:
+        duration_parts.append(
+            f"{batch.course_duration_months} "
+            f"{'Month' if batch.course_duration_months == 1 else 'Months'}"
+        )
+    course_duration_display = ' '.join(duration_parts) or 'Not specified'
+
+    # Admission dates and course end date are existing Batch fields.
+    admission_closing = batch.admission_close_datetime
+    course_end_date = batch.course_end_date
 
     return render(
         request,
-        'students/marketplace-detail.html',
+        'students/marketplace/marketplace-detail.html',
         {
             'batch': batch,
-        }
+            'gallery_images': gallery_images,
+            'subjects': subjects,
+            'teachers': teachers,
+            'batch_demo': batch_demo,
+            'subject_demos': subject_demos,
+            'is_wishlisted': is_wishlisted,
+            'is_in_cart': is_in_cart,
+            'already_purchased': already_purchased,
+            'active_purchase': active_purchase,
+            'marketplace_status': marketplace_status,
+            'can_purchase': marketplace_status == 'buy_now' and not already_purchased,
+            'offer_is_active': offer_is_active,
+            'offer_end_timestamp': offer_end_timestamp,
+            'course_duration_display': course_duration_display,
+            'admission_closing': admission_closing,
+            'course_end_date': course_end_date,
+            'current_time': now,
+        },
     )
 
 

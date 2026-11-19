@@ -3,6 +3,7 @@ from django.core.files.uploadedfile import UploadedFile
 from admins.models import CouponBatchRule
 from admins.models import AdminProfile
 from django.shortcuts import render, redirect
+from django.http import JsonResponse
 from django.contrib.auth import authenticate,login,logout
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.cache import cache_control
@@ -80,7 +81,8 @@ from teachers.models import (Teacher,TeacherBatch,TeacherSubject,)
 from decimal import Decimal
 from django.http import JsonResponse
 from django.utils import timezone
-from .validators import (validate_create_batch,validate_edit_batch,)
+
+from .validators import (validate_create_batch,validate_create_batch_step,validate_edit_batch,)
 from cloudinary.uploader import destroy
 
 
@@ -810,48 +812,49 @@ def create_batch_view(request):
 
     if request.method == "POST":
 
+        # Intermediate Next clicks validate only the requested section.
+        # They never create a Batch or persist uploaded files as model records.
+        if request.POST.get("action") == "validate_step":
+            try:
+                validate_create_batch_step(
+                    request, request.POST.get("current_step")
+                )
+                return JsonResponse({"success": True})
+            except ValidationError as exc:
+                return JsonResponse(
+                    {"success": False, "errors": {"__all__": exc.messages}},
+                    status=400,
+                )
+            except Exception:
+                import traceback
+                traceback.print_exc()
+                return JsonResponse(
+                    {"success": False, "message": "Unable to validate this section. Please try again."},
+                    status=500,
+                )
+
+        # Step 7 Save Batch: validate the complete form and save once.
         try:
-
             cleaned_data = validate_create_batch(request)
-
             create_batch(cleaned_data)
 
-            messages.success(
-                request,
-                "Batch created successfully."
-            )
+            messages.success(request, "Batch created successfully.")
+            return redirect("admin_batches")
 
-            return redirect(
-                "admin_batches"
-            )
-
-        except ValidationError as e:
-
-            messages.error(
-                request,
-                e.messages[0]
-            )
-
+        except ValidationError as exc:
+            messages.error(request, exc.messages[0])
             context["form_data"] = request.POST
-
             return render(
                 request,
                 "admins/batches/create_batch.html",
                 context,
             )
 
-        except Exception as e:
-
+        except Exception as exc:
             import traceback
             traceback.print_exc()
-
-            messages.error(
-                request,
-                str(e)
-            )
-
+            messages.error(request, str(exc))
             context["form_data"] = request.POST
-
             return render(
                 request,
                 "admins/batches/create_batch.html",
@@ -859,7 +862,6 @@ def create_batch_view(request):
             )
 
     context["form_data"] = {}
-
     return render(
         request,
         "admins/batches/create_batch.html",
