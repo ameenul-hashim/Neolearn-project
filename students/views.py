@@ -886,130 +886,161 @@ def marketplace_view(request):
         )
 
     # ========================================================
-    # DISCOUNT FILTER
+    # CURRENT SELLING PRICE, DISCOUNT FILTERS AND PRICE SORTING
+    # ========================================================
+    #
+    # IMPORTANT:
+    # final_price is a stored value. It can still contain an old
+    # discounted price after a timed offer expires.
+    #
+    # Use the Batch model's existing get_current_price() method.
+    # for marketplace filtering and sorting instead.
     # ========================================================
 
-    if discount_option in {
-        'percentage',
-        'fixed',
-        'none',
-    }:
-
-        batches = batches.filter(
-            discount_type=discount_option
-        )
-
-    elif discount_option:
-
-        discount_option = ''
-
-    # ========================================================
-    # MINIMUM PRICE
-    # ========================================================
+    # Validate the optional price filters first.
+    min_price_value = None
+    max_price_value = None
 
     if min_price:
-
         try:
-
-            min_price_value = float(
-                min_price
-            )
-
-            if min_price_value >= 0:
-
-                batches = batches.filter(
-                    final_price__gte=min_price_value
-                )
-
-            else:
-
+            min_price_value = float(min_price)
+            if min_price_value < 0:
                 min_price = ''
-
+                min_price_value = None
         except (TypeError, ValueError):
-
             min_price = ''
-
-    # ========================================================
-    # MAXIMUM PRICE
-    # ========================================================
+            min_price_value = None
 
     if max_price:
-
         try:
-
-            max_price_value = float(
-                max_price
-            )
-
-            if max_price_value >= 0:
-
-                batches = batches.filter(
-                    final_price__lte=max_price_value
-                )
-
-            else:
-
+            max_price_value = float(max_price)
+            if max_price_value < 0:
                 max_price = ''
-
+                max_price_value = None
         except (TypeError, ValueError):
-
             max_price = ''
+            max_price_value = None
 
-    # ========================================================
-    # SORTING
-    # ========================================================
+    if discount_option not in {'percentage', 'fixed', 'none', ''}:
+        discount_option = ''
 
-    sort_mapping = {
+    # Evaluate the filtered queryset once, with related marketplace data
+    # prefetched. The current selling price is time-dependent and is
+    # calculated by the existing Batch model method.
+    batches = list(
+        batches
+        .distinct()
+        .prefetch_related(
+            'subjects',
+            'assigned_teachers',
+        )
+    )
 
-        'newest': '-created_at',
+    for batch in batches:
+        current_selling_price = batch.get_current_price()
 
-        'oldest': 'created_at',
+        # Keep a display-friendly attribute for the Marketplace template
+        # update that follows this view change.
+        batch.current_selling_price = current_selling_price
 
-        'a_z': 'batch_name',
+        original_price_value = float(batch.original_price or 0)
+        current_price_value = float(current_selling_price or 0)
 
-        'z_a': '-batch_name',
-
-        'price_low': 'final_price',
-
-        'price_high': '-final_price',
-
-    }
-
-    if sort_option == 'discount':
-
-        batches = batches.order_by(
-            '-discount_value',
-            '-created_at'
+        batch.has_current_discount = (
+            current_price_value < original_price_value
         )
 
-    elif sort_option in sort_mapping:
+        batch.current_discount_amount = max(
+            original_price_value - current_price_value,
+            0,
+        )
 
-        batches = batches.order_by(
-            sort_mapping[sort_option]
+    # Discount filter must reflect the effective price at the current time.
+    # An expired timed offer is therefore treated as having no active discount.
+    if discount_option == 'percentage':
+        batches = [
+            batch for batch in batches
+            if batch.discount_type == 'percentage'
+            and batch.has_current_discount
+        ]
+
+    elif discount_option == 'fixed':
+        batches = [
+            batch for batch in batches
+            if batch.discount_type == 'fixed'
+            and batch.has_current_discount
+        ]
+
+    elif discount_option == 'none':
+        batches = [
+            batch for batch in batches
+            if not batch.has_current_discount
+        ]
+
+    # Apply minimum and maximum filters using the current selling price,
+    # never the stored final_price.
+    if min_price_value is not None:
+        batches = [
+            batch for batch in batches
+            if float(batch.current_selling_price or 0) >= min_price_value
+        ]
+
+    if max_price_value is not None:
+        batches = [
+            batch for batch in batches
+            if float(batch.current_selling_price or 0) <= max_price_value
+        ]
+
+    # Sort using the current selling price for price-based sorting.
+    # Other sorting options retain their existing behaviour.
+    if sort_option == 'newest':
+        batches.sort(
+            key=lambda batch: batch.created_at,
+            reverse=True,
+        )
+
+    elif sort_option == 'oldest':
+        batches.sort(
+            key=lambda batch: batch.created_at,
+        )
+
+    elif sort_option == 'a_z':
+        batches.sort(
+            key=lambda batch: (batch.batch_name or '').lower(),
+        )
+
+    elif sort_option == 'z_a':
+        batches.sort(
+            key=lambda batch: (batch.batch_name or '').lower(),
+            reverse=True,
+        )
+
+    elif sort_option == 'price_low':
+        batches.sort(
+            key=lambda batch: float(batch.current_selling_price or 0),
+        )
+
+    elif sort_option == 'price_high':
+        batches.sort(
+            key=lambda batch: float(batch.current_selling_price or 0),
+            reverse=True,
+        )
+
+    elif sort_option == 'discount':
+        batches.sort(
+            key=lambda batch: (
+                batch.current_discount_amount,
+                batch.created_at,
+            ),
+            reverse=True,
         )
 
     else:
-
         sort_option = 'newest'
-
-        batches = batches.order_by(
-            '-created_at'
+        batches.sort(
+            key=lambda batch: batch.created_at,
+            reverse=True,
         )
-
-    # ========================================================
-    # REMOVE DUPLICATES
-    # ========================================================
-
-    batches = batches.distinct()
-
-    # ========================================================
-    # PREFETCH MARKETPLACE DATA
-    # ========================================================
-
-    batches = batches.prefetch_related(
-        'subjects',
-        'assigned_teachers',
-    )
 
     # ========================================================
     # WISHLIST IDS

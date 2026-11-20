@@ -133,23 +133,49 @@
                 </div>
             </div>
 
-            <div class="rounded-2xl border border-slate-700/80 bg-slate-900/80 p-4">
+            <div
+                id="batchPricePanel"
+                class="rounded-2xl border border-slate-700/80 bg-slate-900/80 p-4"
+                data-original-price="{{ batch.original_price|floatformat:0 }}"
+            >
                 <div class="flex flex-wrap items-end gap-x-3 gap-y-1">
-                    <span class="text-3xl font-extrabold tracking-tight text-white">₹{{ batch.final_price|floatformat:0 }}</span>
-                    {% if batch.original_price > batch.final_price %}
-                        <span class="pb-1 text-base text-slate-500 line-through">₹{{ batch.original_price|floatformat:0 }}</span>
-                        {% if batch.discount_type != 'none' and batch.discount_value %}
-                            <span class="mb-1 rounded-md bg-emerald-500/15 px-2 py-1 text-xs font-bold text-emerald-300">
-                                {% if batch.discount_type == 'percentage' %}{{ batch.discount_value|floatformat:0 }}% OFF{% else %}Discount{% endif %}
-                            </span>
+                    <span
+                        id="batchCurrentPrice"
+                        class="text-3xl font-extrabold tracking-tight text-white"
+                    >₹{{ batch.current_price|floatformat:0 }}</span>
+
+                    {% if batch.current_price < batch.original_price %}
+                        <span
+                            id="batchOriginalPrice"
+                            class="pb-1 text-base text-slate-500 line-through"
+                        >₹{{ batch.original_price|floatformat:0 }}</span>
+
+                        {% if batch.discount_type == 'percentage' and batch.discount_value %}
+                            <span
+                                id="batchDiscountBadge"
+                                class="mb-1 rounded-md bg-emerald-500/15 px-2 py-1 text-xs font-bold text-emerald-300"
+                            >{{ batch.discount_value|floatformat:0 }}% OFF</span>
+                        {% elif batch.discount_type == 'fixed' and batch.discount_value %}
+                            <span
+                                id="batchDiscountBadge"
+                                class="mb-1 rounded-md bg-emerald-500/15 px-2 py-1 text-xs font-bold text-emerald-300"
+                            >SAVE ₹{{ batch.discount_value|floatformat:0 }}</span>
                         {% endif %}
                     {% endif %}
                 </div>
+
                 {% if offer_is_active and offer_end_timestamp %}
-                    <div class="mt-4 rounded-xl border border-rose-400/20 bg-rose-500/10 p-3">
+                    <div
+                        id="offerCountdownPanel"
+                        class="mt-4 rounded-xl border border-rose-400/20 bg-rose-500/10 p-3"
+                    >
                         <div class="flex flex-wrap items-center justify-between gap-2">
                             <span class="text-sm font-semibold text-rose-100">Limited offer ends in</span>
-                            <span id="offerCountdown" data-end="{{ offer_end_timestamp }}" class="text-sm font-extrabold tabular-nums text-rose-300">Calculating…</span>
+                            <span
+                                id="offerCountdown"
+                                data-end="{{ offer_end_timestamp }}"
+                                class="text-sm font-extrabold tabular-nums text-rose-300"
+                            >Calculating…</span>
                         </div>
                     </div>
                 {% endif %}
@@ -459,24 +485,56 @@
         });
     }
 
-    // Offer countdown - server supplies the actual offer end timestamp.
+    // Offer countdown and automatic price reset at the exact expiry time.
     const countdown = document.getElementById('offerCountdown');
     if (countdown) {
         const end = Number(countdown.dataset.end) * 1000;
+        const pricePanel = document.getElementById('batchPricePanel');
+        const currentPrice = document.getElementById('batchCurrentPrice');
+        const originalPrice = document.getElementById('batchOriginalPrice');
+        const discountBadge = document.getElementById('batchDiscountBadge');
+        const countdownPanel = document.getElementById('offerCountdownPanel');
+        let countdownTimer = null;
+
+        function expireOffer() {
+            if (pricePanel && currentPrice) {
+                const originalAmount = pricePanel.dataset.originalPrice;
+                if (originalAmount) {
+                    currentPrice.textContent = `₹${originalAmount}`;
+                }
+            }
+
+            // Remove all visual indicators of the expired discount.
+            originalPrice?.remove();
+            discountBadge?.remove();
+            countdownPanel?.remove();
+
+            if (countdownTimer !== null) {
+                window.clearInterval(countdownTimer);
+                countdownTimer = null;
+            }
+        }
+
         function updateCountdown() {
             const remaining = end - Date.now();
-            if (remaining <= 0) {
-                countdown.textContent = 'Offer ended';
+
+            if (!Number.isFinite(end) || remaining <= 0) {
+                expireOffer();
                 return;
             }
+
             const days = Math.floor(remaining / 86400000);
             const hours = Math.floor((remaining % 86400000) / 3600000);
             const minutes = Math.floor((remaining % 3600000) / 60000);
             const seconds = Math.floor((remaining % 60000) / 1000);
             countdown.textContent = `${days}d ${hours}h ${minutes}m ${seconds}s`;
         }
+
         updateCountdown();
-        window.setInterval(updateCountdown, 1000);
+
+        if (end > Date.now()) {
+            countdownTimer = window.setInterval(updateCountdown, 1000);
+        }
     }
 })();
 </script>

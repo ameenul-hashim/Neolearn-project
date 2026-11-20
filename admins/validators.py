@@ -36,7 +36,8 @@ LEARNING_LEVELS = ("beginner", "intermediate", "advanced", "all_level")
 # Current Batch model choices used by the new Create Batch workflow.
 CREATE_COURSE_LANGUAGES = ("english", "malayalam", "malayalam_english")
 CREATE_LEARNING_LEVELS = ("beginner", "intermediate", "advanced", "all_levels")
-MAX_DEMO_TITLE_LENGTH = 100
+MAX_DEMO_TITLE_LENGTH = 100  # Create Batch rule; do not change Create Batch behaviour.
+MAX_EDIT_DEMO_TITLE_LENGTH = 150  # Edit Batch demo title limit.
 MAX_DEMO_DESCRIPTION_LENGTH = 300
 MAX_DEMO_URL_LENGTH = 200
 
@@ -167,19 +168,23 @@ def validate_discount(discount_type, discount_value, original_price):
 
     if discount_value is None or not str(discount_value).strip():
         raise ValidationError("Discount value is required.")
+
     try:
         amount = Decimal(str(discount_value).strip())
     except (InvalidOperation, ValueError, TypeError):
         raise ValidationError("Enter a valid discount value.")
 
-    if not amount.is_finite() or amount < 0:
-        raise ValidationError("Discount value cannot be negative.")
-    if discount_type == "percentage" and amount > 100:
-        raise ValidationError("Percentage discount cannot exceed 100.")
-    if discount_type == "fixed" and amount > original_price:
-        raise ValidationError("Discount cannot exceed the original price.")
-    return discount_type, amount
+    if not amount.is_finite() or amount <= 0:
+        raise ValidationError("Discount value must be greater than zero.")
 
+    if discount_type == "percentage":
+        if amount > 100:
+            raise ValidationError("Percentage discount cannot exceed 100.")
+    elif discount_type == "fixed":
+        if amount > original_price:
+            raise ValidationError("Discount cannot exceed the original price.")
+
+    return discount_type, amount
 
 def validate_batch_status(batch_status, student_count=0):
     batch_status = _text(batch_status) or "draft"
@@ -220,6 +225,80 @@ def validate_admission(batch_status, admission_close_datetime, publish_time):
     if publish_time and admission_close <= publish_time:
         raise ValidationError("Admission close date must be after the publish date.")
     return admission_close
+
+
+def _same_local_minute(value, existing_value):
+    """Compare a datetime-local value with a stored aware datetime to minute precision."""
+    if not value or not existing_value:
+        return False
+    submitted = parse_datetime(value, "admission close date and time")
+    existing_local = timezone.localtime(existing_value)
+    return submitted.replace(second=0, microsecond=0) == existing_local.replace(
+        second=0, microsecond=0
+    )
+
+
+def _validate_edit_publish_and_admission(request, batch, batch_status):
+    """Keep an already-published batch published without re-validating its old publish time.
+
+    A previously closed admission window remains closed when its existing date is
+    left unchanged. Supplying a different admission-close date reopens admission
+    only when the new date is in the future.
+    """
+    already_published = (
+        getattr(batch, "batch_status", None) == "published"
+        and batch_status == "published"
+    )
+
+    if already_published:
+        publish_type = getattr(batch, "publish_type", None) or "immediate"
+        if publish_type not in PUBLISH_TYPES:
+            publish_type = "immediate"
+        published_at = getattr(batch, "published_at", None)
+        publish_datetime = getattr(batch, "publish_datetime", None)
+
+        submitted_close = _text(request.POST.get("admission_close_datetime"))
+        existing_close = getattr(batch, "admission_close_datetime", None)
+
+        if not submitted_close:
+            # Blank means retain the current admission setting; it does not
+            # silently reopen an admission window that has already closed.
+            admission_close = existing_close
+        elif existing_close and _same_local_minute(submitted_close, existing_close):
+            # Allow an unchanged historical close date on an already-published batch.
+            admission_close = existing_close
+        else:
+            admission_close = parse_datetime(
+                submitted_close, "admission close date and time"
+            )
+            if admission_close is None:
+                raise ValidationError("Admission close date and time is required.")
+            validate_future_datetime(admission_close, "New admission close date")
+            publication_reference = published_at or publish_datetime
+            if publication_reference and admission_close <= publication_reference:
+                raise ValidationError(
+                    "New admission close date must be after the original publish date."
+                )
+
+        return publish_type, published_at, publish_datetime, admission_close
+
+    publish_type, published_at = validate_publish_settings(
+        batch_status=batch_status,
+        publish_type=request.POST.get("publish_type"),
+        publish_datetime=request.POST.get("publish_datetime"),
+        existing_publish_time=getattr(batch, "published_at", None),
+    )
+    admission_close = validate_admission(
+        batch_status=batch_status,
+        admission_close_datetime=request.POST.get("admission_close_datetime"),
+        publish_time=published_at,
+    )
+    publish_datetime = (
+        parse_datetime(request.POST.get("publish_datetime"), "publish date and time")
+        if batch_status == "published" and publish_type == "scheduled"
+        else None
+    )
+    return publish_type, published_at, publish_datetime, admission_close
 
 
 def validate_offer_dates(
@@ -519,6 +598,307 @@ def validate_batch_demo(video, url, batch_status):
     return video, url
 
 
+def _existing_batch_demo(batch):
+    try:
+        return batch.demo
+    except Exception:
+        return None
+
+
+def _existing_subject_demo(subject):
+    try:
+        return subject.demo
+    except Exception:
+        return None
+
+
+def _posted_subject_value(request, subject_id, *suffixes):
+    """
+    Read the subject-specific edit controls.
+
+    Canonical HTML names:
+      subject_demo_<subject_id>_type
+      subject_demo_<subject_id>_title
+      subject_demo_<subject_id>_description
+      subject_demo_<subject_id>_video
+      subject_demo_<subject_id>_url
+      subject_demo_<subject_id>_remove
+    """
+    names = []
+    for suffix in suffixes:
+        names.extend((
+            f"subject_demo_{subject_id}_{suffix}",
+            f"subject_demo_{suffix}_{subject_id}",
+        ))
+    return _first_post_value(request, *names)
+
+
+def _posted_subject_file(request, subject_id, *suffixes):
+    names = []
+    for suffix in suffixes:
+        names.extend((
+            f"subject_demo_{subject_id}_{suffix}",
+            f"subject_demo_{suffix}_{subject_id}",
+        ))
+    return _first_file_value(request, *names)
+
+
+def _validate_one_edit_demo(
+    *,
+    request,
+    batch_status,
+    existing_demo,
+    title_names,
+    description_names,
+    type_names,
+    file_names,
+    url_names,
+    required=False,
+    label="Demo",
+):
+    """Validate one edit demo while retaining an existing unchanged asset."""
+    video = _first_file_value(request, *file_names)
+    submitted_url = _first_post_value(request, *url_names)
+    submitted_title = _first_post_value(request, *title_names)
+    submitted_description = _first_post_value(request, *description_names)
+    submitted_type = _first_post_value(request, *type_names).strip().lower()
+
+    if submitted_type and submitted_type not in ("upload", "external"):
+        raise ValidationError(f"Select a valid {label.lower()} source type.")
+
+    if video:
+        video = validate_demo_video(video)
+
+    # A blank URL control means "keep the existing URL" when the existing
+    # demo already uses the external source. A nonblank URL replaces it.
+    if submitted_url:
+        external_url = validate_demo_url(submitted_url)
+    elif (
+        existing_demo
+        and existing_demo.demo_type == "external"
+        and submitted_type != "upload"
+    ):
+        # Keep an existing external URL only when the admin has not explicitly
+        # switched this editor to uploaded-video mode. An explicit "upload"
+        # selection must allow replacing an old external URL with a new file.
+        external_url = existing_demo.external_url or ""
+    else:
+        external_url = ""
+
+    if video and external_url:
+        raise ValidationError(
+            f"Choose either an uploaded {label.lower()} video or an external URL, not both."
+        )
+
+    if video:
+        demo_type = "upload"
+    elif external_url:
+        demo_type = "external"
+    elif submitted_type:
+        demo_type = submitted_type
+    elif existing_demo:
+        demo_type = existing_demo.demo_type
+    else:
+        demo_type = ""
+
+    # The Edit form submits these controls even when the admin clears them.
+    # Distinguish an intentionally blank submitted value from a field that was
+    # not part of a partial request; otherwise an old title could silently be
+    # reused and a missing required title would incorrectly pass validation.
+    if any(name in request.POST for name in title_names):
+        title = _text(submitted_title)
+    elif existing_demo:
+        title = existing_demo.title
+    else:
+        title = ""
+
+    if any(name in request.POST for name in description_names):
+        description = _text(submitted_description)
+    elif existing_demo:
+        description = existing_demo.description or ""
+    else:
+        description = ""
+
+    # Retain an existing uploaded file when the form has not submitted a new
+    # file and the selected source remains "upload".
+    if demo_type == "upload":
+        if not video and existing_demo and existing_demo.demo_type == "upload":
+            video = existing_demo.video_file
+        external_url = ""
+    elif demo_type == "external":
+        video = None
+    else:
+        video = None
+        external_url = ""
+
+    has_demo = bool((video or external_url) and title)
+
+    if required and not has_demo:
+        raise ValidationError(
+            f"A {label.lower()} video or external URL with a title is required before publishing."
+        )
+
+    if not (video or external_url):
+        # The edit template posts a hidden default source type (usually
+        # "upload") for every subject card. That default alone is not a
+        # partially completed demo; an otherwise empty subject card is valid.
+        if title or description or submitted_url:
+            raise ValidationError(
+                f"Select a {label.lower()} video or enter an external URL."
+            )
+        return None
+
+    if not title:
+        raise ValidationError(f"{label} title is required.")
+    if len(title) > MAX_EDIT_DEMO_TITLE_LENGTH:
+        raise ValidationError(f"{label} title cannot exceed 150 characters.")
+    if len(description) > MAX_DEMO_DESCRIPTION_LENGTH:
+        raise ValidationError(
+            f"{label} description cannot exceed 300 characters."
+        )
+    if len(external_url) > MAX_DEMO_URL_LENGTH:
+        raise ValidationError(
+            f"External {label.lower()} URL cannot exceed 200 characters."
+        )
+
+    return {
+        "demo_type": demo_type,
+        "title": title,
+        "description": description,
+        "video_file": video if demo_type == "upload" else None,
+        "external_url": external_url if demo_type == "external" else "",
+    }
+
+
+def _validate_edit_demo_mode(request, batch, batch_status, cleaned_data):
+    """
+    Validate only the Batch Edit demo workflow.
+
+    The source selector (`batch_demo_type`) is deliberately NOT used as the
+    scope selector: it continues to mean upload/external source. The scope is
+    read from `demo_mode` (or the UI radio `demo_type_ui`).
+    """
+    mode = _first_post_value(
+        request, "demo_mode", "batch_demo_mode", "demo_type_ui", default=""
+    ).strip().lower()
+
+    if not mode:
+        mode = getattr(batch, "demo_mode", "batch") or "batch"
+
+    if mode not in ("batch", "subject"):
+        raise ValidationError("Select Batch-wise or Subject-wise demo mode.")
+
+    subjects = list(batch.subjects.all().order_by("subject_name", "id"))
+    if mode == "subject" and not subjects:
+        raise ValidationError(
+            "Subject-wise demos are available only after subjects have been created."
+        )
+
+    cleaned_data["demo_mode"] = mode
+    cleaned_data["_batch_demo"] = None
+    cleaned_data["_subject_demos"] = []
+
+    if mode == "batch":
+        existing = _existing_batch_demo(batch)
+        payload = _validate_one_edit_demo(
+            request=request,
+            batch_status=batch_status,
+            existing_demo=existing,
+            title_names=("batch_demo_title", "batch_demo_url_title", "demo_title"),
+            description_names=(
+                "batch_demo_description",
+                "batch_demo_url_description",
+                "demo_description",
+            ),
+            type_names=("batch_demo_type",),
+            file_names=("batch_demo_video", "overall_demo_video"),
+            url_names=(
+                "batch_demo_external_url",
+                "batch_demo_url",
+                "overall_demo_url",
+                "video_url",
+            ),
+            required=(batch_status == "published"),
+            label="Batch demo",
+        )
+        cleaned_data["_batch_demo"] = payload
+        # Retain these legacy keys for any existing edit helper code that
+        # still reads them. The source type remains upload/external.
+        cleaned_data["batch_demo_video"] = (
+            payload["video_file"] if payload and payload["demo_type"] == "upload" else None
+        )
+        cleaned_data["batch_demo_url"] = (
+            payload["external_url"] if payload and payload["demo_type"] == "external" else ""
+        )
+        return
+
+    active_subject_demo_count = 0
+
+    for subject in subjects:
+        existing = _existing_subject_demo(subject)
+        subject_id = subject.pk
+        remove_requested = parse_checkbox(
+            _posted_subject_value(request, subject_id, "remove", "delete")
+        )
+
+        if remove_requested:
+            cleaned_data["_subject_demos"].append({
+                "subject_id": subject_id,
+                "remove": True,
+                "demo": None,
+            })
+            continue
+
+        payload = _validate_one_edit_demo(
+            request=request,
+            batch_status=batch_status,
+            existing_demo=existing,
+            title_names=(
+                f"subject_demo_{subject_id}_title",
+                f"subject_demo_title_{subject_id}",
+            ),
+            description_names=(
+                f"subject_demo_{subject_id}_description",
+                f"subject_demo_description_{subject_id}",
+            ),
+            type_names=(
+                f"subject_demo_{subject_id}_type",
+                f"subject_demo_type_{subject_id}",
+            ),
+            file_names=(
+                f"subject_demo_{subject_id}_video",
+                f"subject_demo_video_{subject_id}",
+            ),
+            url_names=(
+                f"subject_demo_{subject_id}_url",
+                f"subject_demo_url_{subject_id}",
+                f"subject_demo_{subject_id}_external_url",
+            ),
+            required=False,
+            label=f"{subject.subject_name} demo",
+        )
+
+        if (
+            payload
+            and payload.get("demo_type") == "upload"
+            and payload.get("video_file")
+            and _text(payload.get("title"))
+        ):
+            active_subject_demo_count += 1
+
+        cleaned_data["_subject_demos"].append({
+            "subject_id": subject_id,
+            "remove": False,
+            "demo": payload,
+        })
+
+    if active_subject_demo_count < 1:
+        raise ValidationError(
+            "Subject-wise demo requires at least one subject video with a demo title. "
+            "Add a video and title to at least one subject before continuing."
+        )
+
+
 # ==========================================================
 # BOOLEAN PARSER
 # ==========================================================
@@ -531,22 +911,22 @@ def parse_checkbox(value):
 # CREATE / EDIT VALIDATION
 # ==========================================================
 
-def _validate_course_fields(request, cleaned_data, batch_status):
+def _validate_course_fields(request, cleaned_data, batch_status, batch=None):
+    """Validate Edit Batch course details with the same required fields as Create Batch."""
     cleaned_data["batch_overview"] = validate_batch_overview(
-        request.POST.get("batch_overview")
+        request.POST.get("batch_overview"), required=True
     )
     cleaned_data["key_features"] = validate_key_features(
         request.POST.getlist("batch_features")
         or request.POST.getlist("batch_features[]")
         or request.POST.getlist("key_features[]"),
         batch_status=batch_status,
+        minimum_required=True,
     )
-    cleaned_data["course_language"] = validate_course_language(
+    cleaned_data["course_language"] = _validate_create_course_language(
         request.POST.get("course_language")
     )
 
-    # The current Batch model stores duration as years and months.
-    # Also accept the older combined duration controls if those are what the page posts.
     years_value = request.POST.get("course_duration_years")
     months_value = request.POST.get("course_duration_months")
     if years_value is None and request.POST.get("course_duration"):
@@ -556,9 +936,13 @@ def _validate_course_fields(request, cleaned_data, batch_status):
             amount = int(duration)
         except (TypeError, ValueError):
             raise ValidationError("Course duration must be a whole number.")
-        years_value, months_value = (amount, 0) if unit in ("year", "years") else (0, amount)
+        years_value, months_value = (
+            (amount, 0) if unit in ("year", "years") else (0, amount)
+        )
 
-    years, months = validate_course_duration(years_value, months_value)
+    years, months = validate_course_duration(
+        years_value, months_value, require_positive=True
+    )
     cleaned_data["course_duration_years"] = years
     cleaned_data["course_duration_months"] = months
     cleaned_data["target_audience"] = validate_limited_text(
@@ -567,31 +951,26 @@ def _validate_course_fields(request, cleaned_data, batch_status):
     cleaned_data["prerequisites"] = validate_limited_text(
         request.POST.get("prerequisites"), "Prerequisites", 150
     )
-    cleaned_data["learning_level"] = validate_learning_level(
+    cleaned_data["learning_level"] = _validate_create_learning_level(
         request.POST.get("learning_level")
     )
 
     start_date = request.POST.get("course_start_date")
-    cleaned_data["course_start_date"] = parse_date(start_date, "course start date") if start_date else None
+    cleaned_data["course_start_date"] = (
+        parse_date(start_date, "course start date")
+        if start_date
+        else getattr(batch, "course_start_date", None)
+    )
+    cleaned_data["course_end_date"] = validate_course_end_date(
+        batch_status="draft",
+        course_end_date=request.POST.get("course_end_date"),
+        admission_close_datetime=None,
+        required=True,
+    )
 
-    demo_video = _first_file_value(
-        request, "batch_demo_video", "overall_demo_video"
+    cleaned_data["_additional_images"] = validate_additional_images(
+        _get_uploaded_gallery_images(request), require_minimum=False
     )
-    demo_url = _first_post_value(
-        request, "batch_demo_url", "overall_demo_url", "video_url"
-    )
-    cleaned_data["batch_demo_video"], cleaned_data["batch_demo_url"] = validate_batch_demo(
-        demo_video, demo_url, batch_status
-    )
-
-    # This is a helper-only value, not a Batch model field.
-    # helpers.py must consume it to create related BatchImage records.
-    uploaded_images = (
-        request.FILES.getlist("additional_batch_images")
-        or request.FILES.getlist("batch_images")
-    )
-    cleaned_data["_additional_images"] = validate_additional_images(uploaded_images)
-    return cleaned_data
 
 
 
@@ -811,21 +1190,30 @@ def _validate_shared_fields(
     )
     cleaned_data["batch_status"] = batch_status
 
-    publish_type, published_at = validate_publish_settings(
-        batch_status=batch_status,
-        publish_type=request.POST.get("publish_type"),
-        publish_datetime=request.POST.get("publish_datetime"),
-        existing_publish_time=batch.published_at if batch else None,
-    )
+    if batch is not None:
+        (
+            publish_type,
+            published_at,
+            publish_datetime,
+            admission_close,
+        ) = _validate_edit_publish_and_admission(request, batch, batch_status)
+    else:
+        publish_type, published_at = validate_publish_settings(
+            batch_status=batch_status,
+            publish_type=request.POST.get("publish_type"),
+            publish_datetime=request.POST.get("publish_datetime"),
+            existing_publish_time=None,
+        )
+        publish_datetime = published_at if publish_type == "scheduled" else None
+        admission_close = validate_admission(
+            batch_status=batch_status,
+            admission_close_datetime=request.POST.get("admission_close_datetime"),
+            publish_time=published_at,
+        )
+
     cleaned_data["publish_type"] = publish_type
     cleaned_data["published_at"] = published_at
-    cleaned_data["publish_datetime"] = published_at if publish_type == "scheduled" else None
-
-    admission_close = validate_admission(
-        batch_status=batch_status,
-        admission_close_datetime=request.POST.get("admission_close_datetime"),
-        publish_time=published_at,
-    )
+    cleaned_data["publish_datetime"] = publish_datetime
     cleaned_data["admission_close_datetime"] = admission_close
 
     offer_enabled = (
@@ -854,7 +1242,11 @@ def _validate_shared_fields(
     cleaned_data["marketplace_visible"] = parse_checkbox(
         request.POST.get("marketplace_visible")
     )
-    cleaned_data["featured"] = parse_checkbox(request.POST.get("featured"))
+    cleaned_data["featured"] = (
+        parse_checkbox(request.POST.get("featured"))
+        if "featured" in request.POST
+        else bool(getattr(batch, "featured", False))
+    )
     return batch_status
 
 
@@ -874,9 +1266,14 @@ def validate_create_batch(request):
 def validate_edit_batch(request, batch, student_count=0):
     cleaned_data = {}
     batch_status = _validate_shared_fields(
-        request, cleaned_data, batch=batch, student_count=student_count
+        request,
+        cleaned_data,
+        batch=batch,
+        student_count=student_count,
+        require_course_end_date=True,
+        use_limited_offer_toggle=True,
     )
-    _validate_course_fields(request, cleaned_data, batch_status)
+    _validate_course_fields(request, cleaned_data, batch_status, batch=batch)
 
     if cleaned_data["batch_thumbnail"] is None:
         cleaned_data["batch_thumbnail"] = batch.batch_thumbnail
@@ -885,11 +1282,164 @@ def validate_edit_batch(request, batch, student_count=0):
     if not cleaned_data["_additional_images"]:
         cleaned_data["_additional_images"] = None
 
-    if not cleaned_data["batch_demo_video"] and not cleaned_data["batch_demo_url"]:
-        cleaned_data["batch_demo_video"] = batch.batch_demo_video
-        cleaned_data["batch_demo_url"] = batch.batch_demo_url
+    _validate_edit_demo_mode(
+        request=request,
+        batch=batch,
+        batch_status=batch_status,
+        cleaned_data=cleaned_data,
+    )
 
     return cleaned_data
+
+
+# ==========================================================
+# EDIT BATCH — SECTION-BY-SECTION VALIDATION
+# ==========================================================
+
+def validate_edit_batch_step(request, batch, step, student_count=0):
+    """Validate only the active Edit Batch step; never save during Next navigation."""
+    try:
+        step = int(step)
+    except (TypeError, ValueError):
+        raise ValidationError("Invalid batch editing step.")
+
+    if step < 1 or step > 7:
+        raise ValidationError("Invalid batch editing step.")
+
+    if step == 1:
+        validate_batch_name(
+            request.POST.get("batch_name"), batch=batch, student_count=student_count
+        )
+        validate_description(request.POST.get("batch_description"))
+        validate_thumbnail(
+            request.FILES.get("batch_thumbnail"),
+            required=not bool(batch.batch_thumbnail),
+        )
+        return True
+
+    if step == 2:
+        uploaded_images = _get_uploaded_gallery_images(request)
+        validate_additional_images(uploaded_images, require_minimum=False)
+
+        removed_ids = set()
+        for raw_id in _text(request.POST.get("removed_gallery_image_ids")).split(","):
+            raw_id = raw_id.strip()
+            if raw_id.isdigit():
+                removed_ids.add(int(raw_id))
+
+        retained_count = batch.gallery_images.exclude(pk__in=removed_ids).count()
+        total_count = retained_count + len(uploaded_images)
+        if total_count < 2:
+            raise ValidationError(
+                "Add at least 2 additional batch images. Existing saved images count, "
+                "so you only need to upload the missing images."
+            )
+        if total_count > MAX_BATCH_IMAGES:
+            raise ValidationError(
+                "A maximum of 5 additional batch images is allowed. Remove extra images and try again."
+            )
+        return True
+
+    if step == 3:
+        validate_batch_overview(request.POST.get("batch_overview"), required=True)
+        submitted_features = (
+            request.POST.getlist("batch_features")
+            or request.POST.getlist("batch_features[]")
+            or request.POST.getlist("key_features[]")
+        )
+        # Explicit Edit Batch guard: every non-empty feature must be at most
+        # 150 characters, including dynamically added feature rows.
+        for feature_index, raw_feature in enumerate(submitted_features, start=1):
+            if len(_text(raw_feature)) > MAX_FEATURE_LENGTH:
+                raise ValidationError(
+                    f"Key feature {feature_index} cannot exceed 150 characters."
+                )
+        validate_key_features(
+            submitted_features,
+            batch_status="draft",
+            minimum_required=True,
+        )
+        return True
+
+    if step == 4:
+        _validate_create_course_language(request.POST.get("course_language"))
+        validate_course_duration(
+            request.POST.get("course_duration_years"),
+            request.POST.get("course_duration_months"),
+            require_positive=True,
+        )
+        validate_limited_text(request.POST.get("target_audience"), "Target audience", 100)
+        validate_limited_text(request.POST.get("prerequisites"), "Prerequisites", 150)
+        _validate_create_learning_level(request.POST.get("learning_level"))
+        validate_course_end_date(
+            batch_status="draft",
+            course_end_date=request.POST.get("course_end_date"),
+            admission_close_datetime=None,
+            required=True,
+        )
+        return True
+
+    if step == 5:
+        original_price = validate_original_price(request.POST.get("original_price"))
+        discount_type, _discount_value = validate_discount(
+            request.POST.get("discount_type"),
+            request.POST.get("discount_value"),
+            original_price,
+        )
+        offer_enabled = parse_checkbox(request.POST.get("limited_time_offer"))
+        validate_offer_dates(
+            discount_type=discount_type,
+            offer_start_date=request.POST.get("offer_start_date"),
+            offer_end_date=request.POST.get("offer_end_date"),
+            publish_time=None,
+            admission_close_datetime=None,
+            enabled=offer_enabled,
+        )
+        return True
+
+    if step == 6:
+        batch_status = validate_batch_status(
+            request.POST.get("batch_status") or getattr(batch, "batch_status", "draft"),
+            student_count=student_count,
+        )
+        cleaned_data = {}
+        _validate_edit_demo_mode(
+            request=request,
+            batch=batch,
+            batch_status=batch_status,
+            cleaned_data=cleaned_data,
+        )
+        return True
+
+    batch_status = validate_batch_status(
+        request.POST.get("batch_status") or getattr(batch, "batch_status", "draft"),
+        student_count=student_count,
+    )
+    (
+        _publish_type,
+        published_at,
+        _publish_datetime,
+        admission_close,
+    ) = _validate_edit_publish_and_admission(request, batch, batch_status)
+    validate_course_end_date(
+        batch_status=batch_status,
+        course_end_date=request.POST.get("course_end_date"),
+        admission_close_datetime=admission_close,
+        required=True,
+    )
+
+    discount_type = _text(request.POST.get("discount_type")) or "none"
+    offer_enabled = parse_checkbox(request.POST.get("limited_time_offer"))
+    validate_offer_dates(
+        discount_type=discount_type,
+        offer_start_date=request.POST.get("offer_start_date"),
+        offer_end_date=request.POST.get("offer_end_date"),
+        publish_time=published_at,
+        admission_close_datetime=admission_close,
+        enabled=offer_enabled,
+    )
+    return True
+
 
 
 # ==========================================================

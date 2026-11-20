@@ -159,6 +159,15 @@ class Batch(models.Model):
     ]
 
 
+    DEMO_MODE_CHOICES = [
+
+        ("batch", "Batch-wise Demo"),
+
+        ("subject", "Subject-wise Demos"),
+
+    ]
+
+
 
     # --------------------------------------------------
 
@@ -349,6 +358,19 @@ class Batch(models.Model):
         choices=STATUS_CHOICES,
 
         default="draft",
+
+    )
+
+
+    # Determines which demo structure is active for this batch.
+    # Existing batches remain batch-wise by default.
+    demo_mode = models.CharField(
+
+        max_length=20,
+
+        choices=DEMO_MODE_CHOICES,
+
+        default="batch",
 
     )
 
@@ -605,6 +627,19 @@ class Batch(models.Model):
 
 
     # ==================================================
+
+    def get_current_price(self):
+        """
+        Return the price currently applicable to a customer.
+
+        Use final_price only while the configured discount offer is active.
+        Otherwise, return the original price.
+        """
+        if self.is_offer_active:
+            return self.final_price
+
+        return self.original_price
+
 
     # Validation
 
@@ -905,7 +940,7 @@ class BatchDemo(models.Model):
         choices=DEMO_TYPE_CHOICES,
         default="upload",
     )
-    title = models.CharField(max_length=100)
+    title = models.CharField(max_length=150)
     description = models.CharField(max_length=300, blank=True, default="")
     video_file = CloudinaryField(
         "video",
@@ -972,6 +1007,64 @@ class Subject(models.Model):
 
     def __str__(self):
         return f"{self.batch.batch_name} - {self.subject_name}"
+
+class SubjectDemo(models.Model):
+    """One subject-wise demo, stored as an uploaded video or external URL."""
+
+    DEMO_TYPE_CHOICES = [
+        ("upload", "Uploaded Video"),
+        ("external", "External Video URL"),
+    ]
+
+    subject = models.OneToOneField(
+        Subject,
+        on_delete=models.CASCADE,
+        related_name="demo",
+    )
+    demo_type = models.CharField(
+        max_length=20,
+        choices=DEMO_TYPE_CHOICES,
+        default="upload",
+    )
+    title = models.CharField(max_length=150)
+    description = models.CharField(max_length=300, blank=True, default="")
+    video_file = CloudinaryField(
+        "video",
+        resource_type="video",
+        folder="neolearn/subjects/demos",
+        blank=True,
+        null=True,
+    )
+    external_url = models.URLField(blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["subject__subject_name", "id"]
+
+    def __str__(self):
+        return f"{self.subject.subject_name} - {self.title}"
+
+    def clean(self):
+        super().clean()
+
+        if self.demo_type == "upload":
+            if not self.video_file:
+                raise ValidationError({"video_file": "Upload a demo video."})
+            if self.external_url:
+                raise ValidationError({
+                    "external_url": "Remove the external URL when using an uploaded video."
+                })
+        elif self.demo_type == "external":
+            if not self.external_url:
+                raise ValidationError({"external_url": "Enter the external demo video URL."})
+            if self.video_file:
+                raise ValidationError({
+                    "video_file": "Remove the uploaded video when using an external URL."
+                })
+        else:
+            raise ValidationError({"demo_type": "Select a valid demo source type."})
+
 
 class Teacher(models.Model):
 

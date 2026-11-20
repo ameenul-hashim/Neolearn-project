@@ -303,6 +303,9 @@
                                         hover:border-cyan-400/20
                                         hover:bg-[#09172a]
                                     "
+                                    {% if batch.is_offer_active and batch.offer_end_date %}
+                                        data-offer-end="{{ batch.offer_end_date|date:'c' }}"
+                                    {% endif %}
                                 >
 
                                     <!-- SUBTLE ACCENT -->
@@ -570,7 +573,7 @@
 
                                             <div>
 
-                                                {% if batch.original_price > batch.final_price %}
+                                                {% if batch.current_price < batch.original_price %}
 
                                                     <div
                                                         class="
@@ -593,7 +596,7 @@
                                                         text-cyan-400
                                                     "
                                                 >
-                                                    ₹{{ batch.final_price|floatformat:2 }}
+                                                    ₹{{ batch.current_price|floatformat:2 }}
                                                 </div>
 
 
@@ -1640,7 +1643,7 @@
                                         </div>
 
                                         <p class="shrink-0 text-[11px] font-black text-white">
-                                            ₹{{ item.batch.final_price|floatformat:2 }}
+                                            ₹{{ item.batch.current_price|floatformat:2 }}
                                         </p>
 
                                     </div>
@@ -2109,6 +2112,38 @@
 
 <script>
 document.addEventListener("DOMContentLoaded", function () {
+    // ============================================================
+    // REFRESH CART WHEN A TIMED BATCH OFFER EXPIRES
+    // This recalculates server-side cart and coupon totals without
+    // changing the checkout/payment calculation code.
+    // ============================================================
+
+    const offerExpiryElements = document.querySelectorAll("[data-offer-end]");
+    let nextOfferExpiry = null;
+
+    offerExpiryElements.forEach(function (element) {
+        const expiryValue = element.getAttribute("data-offer-end");
+        if (!expiryValue) {
+            return;
+        }
+
+        const expiryTime = new Date(expiryValue).getTime();
+        if (!Number.isFinite(expiryTime)) {
+            return;
+        }
+
+        if (nextOfferExpiry === null || expiryTime < nextOfferExpiry) {
+            nextOfferExpiry = expiryTime;
+        }
+    });
+
+    if (nextOfferExpiry !== null) {
+        const refreshDelay = Math.max(0, nextOfferExpiry - Date.now()) + 500;
+        window.setTimeout(function () {
+            window.location.reload();
+        }, refreshDelay);
+    }
+
     // ============================================================
     // CLEAR CART MODAL
     // ============================================================

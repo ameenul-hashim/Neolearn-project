@@ -974,6 +974,7 @@ aside.batch-section-card[aria-labelledby="livePreviewHeading"] .batch-live-previ
 .batch-pricing-result em{display:block;margin-top:3px;color:#31e98c;font-size:11px;font-style:normal;font-weight:700}
 .batch-pricing-select{appearance:auto;cursor:pointer}
 .batch-offer-card{padding:13px;border:1px solid rgba(168,85,247,.7);border-radius:13px;background:linear-gradient(135deg,rgba(48,22,78,.55),rgba(20,20,52,.58))}
+.batch-offer-card[hidden]{display:none!important}
 .batch-offer-heading{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .batch-offer-heading-main{display:flex;align-items:center;gap:10px;min-width:0}
 .batch-offer-icon{display:flex;align-items:center;justify-content:center;flex:0 0 auto;width:38px;height:38px;border-radius:10px;background:linear-gradient(145deg,#8b35ef,#4d37e8);color:#fff;font-size:21px}
@@ -1195,7 +1196,7 @@ aside.batch-section-card[aria-labelledby="livePreviewHeading"] .batch-live-previ
             <div class="batch-step"><span class="batch-step-number">7</span><span>Publish</span></div>
         </div>
 
-        <form method="POST" enctype="multipart/form-data" action="" id="createBatchForm" novalidate>
+        <form method="POST" enctype="multipart/form-data" action="" id="createBatchForm" data-initial-step="{{ active_step|default:1 }}" novalidate>
             {% csrf_token %}
             <input type="hidden" id="batch_demo_type" name="batch_demo_type" value="upload">
 
@@ -1583,7 +1584,7 @@ aside.batch-section-card[aria-labelledby="livePreviewHeading"] .batch-live-previ
                                 </div>
                             </div>
 
-                            <div class="batch-offer-card">
+                            <div class="batch-offer-card" id="batchOfferCard">
                                 <div class="batch-offer-heading">
                                     <div class="batch-offer-heading-main">
                                         <span class="batch-offer-icon" aria-hidden="true">&#9200;</span>
@@ -1928,7 +1929,12 @@ aside.batch-section-card[aria-labelledby="livePreviewHeading"] .batch-live-previ
     const stepItems = Array.from(document.querySelectorAll(".batch-step"));
     const previousButton = document.getElementById("batchPreviousStep");
     const nextButton = document.getElementById("batchNextStep");
-    let currentStep = 1;
+    const createBatchForm = document.getElementById("createBatchForm");
+    const initialStepValue = Number(createBatchForm?.dataset.initialStep || 1);
+    const initialStep = Number.isInteger(initialStepValue)
+        ? Math.min(7, Math.max(1, initialStepValue))
+        : 1;
+    let currentStep = initialStep;
 
     function showStep(step) {
         currentStep = step;
@@ -1966,8 +1972,8 @@ aside.batch-section-card[aria-labelledby="livePreviewHeading"] .batch-live-previ
         }
     }
 
-    const createBatchForm = document.getElementById("createBatchForm");
     let stepValidationBusy = false;
+    let finalSubmitBusy = false;
 
     // Send AJAX validation notifications through the SAME message container,
     // markup and toast-messages.js handler used by admin_base.html.
@@ -2094,6 +2100,90 @@ aside.batch-section-card[aria-labelledby="livePreviewHeading"] .batch-live-previ
             nextButton.innerHTML = originalText;
         }
     });
+
+    // Final Save Batch submission.
+    // Keep this as an AJAX request so a validation response does not reload
+    // the document. All text/select/radio values and selected File objects
+    // therefore remain in the live form and can be corrected/resubmitted.
+    if (createBatchForm) {
+        createBatchForm.addEventListener("submit", async event => {
+            event.preventDefault();
+
+            if (finalSubmitBusy) return;
+
+            finalSubmitBusy = true;
+            const submitButton = publishSubmitButton;
+            const originalButtonHtml = submitButton
+                ? submitButton.innerHTML
+                : "";
+
+            if (submitButton) {
+                submitButton.disabled = true;
+                submitButton.textContent = "Validating & Saving...";
+            }
+
+            try {
+                const formData = new FormData(createBatchForm);
+                formData.set("current_step", "7");
+
+                const response = await fetch(
+                    createBatchForm.action || window.location.href,
+                    {
+                        method: "POST",
+                        body: formData,
+                        headers: {
+                            "X-Requested-With": "XMLHttpRequest"
+                        },
+                        credentials: "same-origin"
+                    }
+                );
+
+                let result;
+                try {
+                    result = await response.json();
+                } catch (parseError) {
+                    throw new Error(
+                        "The server returned an unexpected response. Your entered details are still on this page. Please try again."
+                    );
+                }
+
+                if (!response.ok || !result.success) {
+                    // A final-submit validation failure belongs to the
+                    // Publish Settings stage. Do not reset or rebuild the form.
+                    showStep(7);
+                    showBaseMessage(
+                        getValidationErrorMessage(result),
+                        "error"
+                    );
+                    return;
+                }
+
+                if (result.redirect_url) {
+                    window.location.assign(result.redirect_url);
+                    return;
+                }
+
+                showBaseMessage(
+                    "Batch created successfully.",
+                    "success"
+                );
+            } catch (error) {
+                showStep(7);
+                showBaseMessage(
+                    error && error.message
+                        ? error.message
+                        : "Unable to save the batch. Your entered details are still on this page. Please try again.",
+                    "error"
+                );
+            } finally {
+                finalSubmitBusy = false;
+                if (submitButton) {
+                    submitButton.disabled = false;
+                    submitButton.innerHTML = originalButtonHtml;
+                }
+            }
+        });
+    }
 
     // Step 1 live fields and thumbnail preview.
     const nameInput = document.getElementById("batch_name");
@@ -2540,7 +2630,7 @@ aside.batch-section-card[aria-labelledby="livePreviewHeading"] .batch-live-previ
         const start = parseLocalDateTime(startValue);
         const end = parseLocalDateTime(endValue);
         const now = new Date();
-        if (!box || !enabled || !start || !end || end <= start || now > end) {
+        if (!box || !enabled || !start || !end || end <= start || now >= end) {
             if (box) box.hidden = true;
             return;
         }
@@ -2567,25 +2657,35 @@ aside.batch-section-card[aria-labelledby="livePreviewHeading"] .batch-live-previ
         let discount = 0;
         if (discountEnabled) discount = type === "percentage" ? original * Math.min(100,enteredDiscount) / 100 : Math.min(original,enteredDiscount);
         const discountedPrice = Math.max(0, original - discount);
-        const offerEnabled = !!limitedOfferToggle?.checked;
+        const discountSelected = type !== "none";
+        // The offer controls are irrelevant when there is no discount.
+        if (!discountSelected && limitedOfferToggle) {
+            limitedOfferToggle.checked = false;
+            if (offerStartInput) offerStartInput.value = "";
+            if (offerEndInput) offerEndInput.value = "";
+        }
+        const offerEnabled = discountSelected && !!limitedOfferToggle?.checked;
         const start = offerStartInput?.value || "";
         const end = offerEndInput?.value || "";
         const now = new Date();
         const startDateTime = parseLocalDateTime(start);
         const endDateTime = parseLocalDateTime(end);
+        // Once the selected start time arrives, the offer becomes active;
+        // do not mark its dates invalid merely because the start is now in the past.
         const validDates = !offerEnabled || (
             !!startDateTime &&
             !!endDateTime &&
-            startDateTime > now &&
-            endDateTime > now &&
             endDateTime > startDateTime
         );
-        const offerActive = !offerEnabled || (validDates && now >= startDateTime && now <= endDateTime);
+        const offerActive = !discountSelected || !offerEnabled ||
+            (validDates && now >= startDateTime && now < endDateTime);
         const finalPrice = offerActive ? discountedPrice : original;
         const appliedDiscount = offerActive ? discount : 0;
         const hasDiscount = appliedDiscount > 0 && original > 0;
 
-        if (discountValueField) discountValueField.hidden = type === "none";
+        const offerCard = document.getElementById("batchOfferCard");
+        if (offerCard) offerCard.hidden = !discountSelected;
+        if (discountValueField) discountValueField.hidden = !discountSelected;
         if (discountValueLabel) discountValueLabel.textContent = type === "fixed" ? "Discount Amount" : "Discount Value";
         if (discountValueSuffix) discountValueSuffix.textContent = type === "fixed" ? "₹" : "%";
         if (discountValueHelp) discountValueHelp.textContent = type === "fixed" ? "This amount will be deducted from the original price." : "Enter a percentage from 0 to 100.";
@@ -2594,8 +2694,8 @@ aside.batch-section-card[aria-labelledby="livePreviewHeading"] .batch-live-previ
         if (offerEndInput) offerEndInput.required = offerEnabled;
 
         const set = (id,value) => { const el=document.getElementById(id); if(el) el.textContent=value; };
-        set("calculatedFinalPrice",money(discountedPrice));
-        set("calculatedSaving",discountEnabled ? `You save ${money(discount)}${type === "percentage" ? ` (${Math.min(100,enteredDiscount)}%)` : ""}` : "No discount applied");
+        set("calculatedFinalPrice",money(finalPrice));
+        set("calculatedSaving",appliedDiscount > 0 ? `You save ${money(appliedDiscount)}${type === "percentage" ? ` (${Math.min(100,enteredDiscount)}%)` : ""}` : "No discount applied");
         set("pricingPreviewFinalPrice",money(finalPrice));
         set("previewOriginalPriceBreakdown",money(original));
         set("previewFinalPriceBreakdown",money(finalPrice));
@@ -2621,22 +2721,16 @@ aside.batch-section-card[aria-labelledby="livePreviewHeading"] .batch-live-previ
                 offerDates.textContent = "Dates required";
             } else if (!validDates) {
                 offerLabel.textContent = "Invalid offer dates";
-                if (startDateTime && startDateTime <= now) {
-                    offerDates.textContent = "Start date and time must be later than now";
-                } else if (endDateTime && endDateTime <= now) {
-                    offerDates.textContent = "End date and time must be later than now";
-                } else {
-                    offerDates.textContent = "End date and time must follow start date and time";
-                }
+                offerDates.textContent = "End date and time must follow start date and time";
             } else if (now < startDateTime) {
-                offerLabel.textContent = "Offer starts on";
+                offerLabel.textContent = "Offer starts in";
                 offerDates.textContent = formatLocalDateTime(start);
                 if (countdown) countdown.hidden = false;
-            } else if (now > endDateTime) {
+            } else if (now >= endDateTime) {
                 offerLabel.textContent = "Offer expired";
                 offerDates.textContent = "Regular price applies";
             } else {
-                offerLabel.textContent = "Offer ends on";
+                offerLabel.textContent = "Offer ends in";
                 offerDates.textContent = formatLocalDateTime(end);
                 if (countdown) countdown.hidden = false;
             }
@@ -2658,10 +2752,10 @@ aside.batch-section-card[aria-labelledby="livePreviewHeading"] .batch-live-previ
     if (thumbnailInput) thumbnailInput.addEventListener("change",syncPricingPreview);
     if (nameInput) nameInput.addEventListener("input",syncPricingPreview);
     syncPricingPreview();
-    window.setInterval(() => {
-        const enabled = !!limitedOfferToggle?.checked;
-        updateOfferCountdown(enabled, offerStartInput?.value || "", offerEndInput?.value || "");
-    }, 1000);
+    // Recalculate the preview every second so the displayed price and status
+    // switch automatically at the exact start/end boundary while this page is open.
+    // This is only a frontend preview; the backend remains authoritative.
+    window.setInterval(syncPricingPreview, 1000);
 
 
 
@@ -2968,7 +3062,7 @@ aside.batch-section-card[aria-labelledby="livePreviewHeading"] .batch-live-previ
     syncPublishPreview();
 
     renderGallery();
-    showStep(1);
+    showStep(initialStep);
 })();
 </script>
 

@@ -34,6 +34,7 @@ from .models import (
     BatchFeature,
     BatchImage,
     BatchDemo,
+    SubjectDemo,
     Coupon,
     CouponUsage,
     CouponBatchRule,
@@ -215,12 +216,105 @@ def create_batch(cleaned_data):
     return batch
 
 
-def update_batch(batch, cleaned_data):
-    for field, value in cleaned_data.items():
-        setattr(batch, field, value)
+def _save_demo_record(demo_model, relation_field, related_object, demo_data):
+    """Create or update one demo record without deleting its media asset."""
+    lookup = {relation_field: related_object}
+    demo, _created = demo_model.objects.get_or_create(**lookup)
 
-    batch.full_clean()
-    batch.save()
+    demo.demo_type = demo_data.get("demo_type", "")
+    demo.title = demo_data.get("title", "")
+    demo.description = demo_data.get("description", "")
+    demo.video_file = demo_data.get("video_file")
+    demo.external_url = demo_data.get("external_url", "")
+    demo.full_clean()
+    demo.save()
+    return demo
+
+
+def update_batch(batch, cleaned_data):
+    """Update a Batch and its selected demo mode as one atomic operation.
+
+    Validator-only keys (for example _batch_demo and _subject_demos) are
+    deliberately excluded from Batch model assignment. The create workflow
+    is separate and remains unchanged.
+    """
+    data = dict(cleaned_data)
+    demo_mode = data.pop("demo_mode", None)
+    batch_demo_data = data.pop("_batch_demo", None)
+    subject_demo_data = data.pop("_subject_demos", None)
+
+    # Remove legacy/helper-only values that are not Batch model fields.
+    data.pop("batch_demo_video", None)
+    data.pop("batch_demo_url", None)
+    data.pop("key_features", None)
+    data.pop("_additional_images", None)
+
+    model_field_names = {
+        field.name
+        for field in Batch._meta.concrete_fields
+        if not field.primary_key
+    }
+
+    with transaction.atomic():
+        for field, value in data.items():
+            if field in model_field_names:
+                setattr(batch, field, value)
+
+        if demo_mode in ("batch", "subject"):
+            batch.demo_mode = demo_mode
+
+        batch.full_clean()
+        batch.save()
+
+        if demo_mode == "batch":
+            # Only one demo scope may exist at a time.
+            SubjectDemo.objects.filter(subject__batch=batch).delete()
+
+            existing_batch_demo = BatchDemo.objects.filter(batch=batch).first()
+            if batch_demo_data:
+                _save_demo_record(
+                    BatchDemo,
+                    "batch",
+                    batch,
+                    batch_demo_data,
+                )
+            elif existing_batch_demo:
+                # Delete the database row only. Do not remove a Cloudinary
+                # asset automatically; it may still be referenced elsewhere.
+                existing_batch_demo.delete()
+
+        elif demo_mode == "subject":
+            # Switching to subject-wise removes the overall BatchDemo row.
+            BatchDemo.objects.filter(batch=batch).delete()
+
+            for item in subject_demo_data or []:
+                subject_id = item.get("subject_id")
+                subject = batch.subjects.filter(pk=subject_id).first()
+                if subject is None:
+                    raise ValidationError(
+                        "A selected subject does not belong to this batch."
+                    )
+
+                existing_subject_demo = SubjectDemo.objects.filter(
+                    subject=subject
+                ).first()
+
+                if item.get("remove"):
+                    if existing_subject_demo:
+                        # Database row only; no automatic Cloudinary deletion.
+                        existing_subject_demo.delete()
+                    continue
+
+                demo_data = item.get("demo")
+                if demo_data:
+                    _save_demo_record(
+                        SubjectDemo,
+                        "subject",
+                        subject,
+                        demo_data,
+                    )
+                elif existing_subject_demo:
+                    existing_subject_demo.delete()
 
     return batch
 

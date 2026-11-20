@@ -82,7 +82,7 @@ from decimal import Decimal
 from django.http import JsonResponse
 from django.utils import timezone
 
-from .validators import (validate_create_batch,validate_create_batch_step,validate_edit_batch,)
+from .validators import (validate_create_batch, validate_create_batch_step, validate_edit_batch, validate_edit_batch_step,)
 from cloudinary.uploader import destroy
 
 
@@ -788,20 +788,50 @@ def delete_student_view(request, user_id):
 @cache_control(no_cache=True, must_revalidate=True, no_store=True)
 @admin_required
 def admin_batches_view(request):
+    """Display batches with prices calculated against the current time.
 
+    The stored ``final_price`` is not used for display because a timed offer
+    can expire without the Batch record being edited or saved again.
+    """
     search = request.GET.get("search", "").strip()
 
     batches = Batch.objects.all().order_by("-id")
 
     if search:
-
         batches = batches.filter(
-            Q(batch_name__icontains=search) |
-            Q(batch_description__icontains=search))
+            Q(batch_name__icontains=search)
+            | Q(batch_description__icontains=search)
+        )
 
-    context = {"batches": batches,}
+    # Evaluate the queryset once and attach display-only values to each object.
+    # This does not modify or save any Batch fields.
+    batches = list(batches)
+    for batch in batches:
+        current_price = batch.get_current_price()
+        original_price = batch.original_price
 
-    return render(request,"admins/batches/batches.html",context,)
+        batch.display_price = current_price
+        batch.has_current_discount = (
+            original_price is not None
+            and current_price is not None
+            and current_price < original_price
+        )
+
+        if batch.has_current_discount:
+            batch.display_discount_amount = original_price - current_price
+        else:
+            batch.display_discount_amount = Decimal("0.00")
+
+    context = {
+        "batches": batches,
+        "now": timezone.now(),
+    }
+
+    return render(
+        request,
+        "admins/batches/batches.html",
+        context,
+    )
 
 
 @cache_control(no_cache=True, must_revalidate=True, no_store=True)
@@ -834,16 +864,45 @@ def create_batch_view(request):
                 )
 
         # Step 7 Save Batch: validate the complete form and save once.
+        # The Create Batch page submits this final request through AJAX. This
+        # keeps the existing browser form (including selected upload files)
+        # alive when server-side validation fails, instead of reloading Step 1.
+        is_ajax_submit = (
+            request.headers.get("x-requested-with") == "XMLHttpRequest"
+        )
+
         try:
             cleaned_data = validate_create_batch(request)
             create_batch(cleaned_data)
 
             messages.success(request, "Batch created successfully.")
+
+            if is_ajax_submit:
+                return JsonResponse({
+                    "success": True,
+                    "redirect_url": redirect("admin_batches").url,
+                })
+
             return redirect("admin_batches")
 
         except ValidationError as exc:
-            messages.error(request, exc.messages[0])
+            error_messages = exc.messages or [
+                "Please correct the batch details and try again."
+            ]
+
+            if is_ajax_submit:
+                return JsonResponse(
+                    {
+                        "success": False,
+                        "errors": {"__all__": error_messages},
+                    },
+                    status=400,
+                )
+
+            messages.error(request, error_messages[0])
             context["form_data"] = request.POST
+            context["active_step"] = 7
+            context["restore_form"] = True
             return render(
                 request,
                 "admins/batches/create_batch.html",
@@ -853,8 +912,24 @@ def create_batch_view(request):
         except Exception as exc:
             import traceback
             traceback.print_exc()
-            messages.error(request, str(exc))
+
+            error_message = str(exc) or (
+                "Unable to save this batch. Please try again."
+            )
+
+            if is_ajax_submit:
+                return JsonResponse(
+                    {
+                        "success": False,
+                        "message": error_message,
+                    },
+                    status=500,
+                )
+
+            messages.error(request, error_message)
             context["form_data"] = request.POST
+            context["active_step"] = 7
+            context["restore_form"] = True
             return render(
                 request,
                 "admins/batches/create_batch.html",
@@ -872,33 +947,59 @@ def create_batch_view(request):
 @admin_required
 def edit_batch_view(request, batch_id):
 
-    batch = get_object_or_404(
-        Batch,
-        id=batch_id,
-    )
+    batch = get_object_or_404(Batch, id=batch_id)
 
-    # ==========================================================
-    # Temporary Student Count
-    # Replace with actual enrollment count later
-    # ==========================================================
-
+    # Temporary Student Count — preserve the existing project behaviour.
+    # Replace with the actual enrollment count only when that workflow is ready.
     student_count = 0
 
     context = build_batch_context(
         batch=batch,
         extra_context={
             "student_count": student_count,
-            "editable_fields": can_edit_batch(
-                batch,
-                student_count,
-            ),
+            "editable_fields": can_edit_batch(batch, student_count),
         },
     )
 
     if request.method == "POST":
 
-        try:
+        # Intermediate Next clicks validate only the requested Edit Batch step.
+        # They do not call update_batch() and do not save any Batch/model data.
+        if request.POST.get("action") == "validate_step":
+            try:
+                validate_edit_batch_step(
+                    request=request,
+                    batch=batch,
+                    step=request.POST.get("current_step"),
+                    student_count=student_count,
+                )
+                return JsonResponse({"success": True})
+            except ValidationError as exc:
+                return JsonResponse(
+                    {
+                        "success": False,
+                        "errors": {"__all__": exc.messages or [str(exc)]},
+                    },
+                    status=400,
+                )
+            except Exception:
+                import traceback
+                traceback.print_exc()
+                return JsonResponse(
+                    {
+                        "success": False,
+                        "message": "Unable to validate this section. Please try again.",
+                    },
+                    status=500,
+                )
 
+        is_ajax_submit = (
+            request.headers.get("x-requested-with") == "XMLHttpRequest"
+        )
+
+        try:
+            # Final Step 7 submission always runs the complete existing Edit
+            # Batch validation again before the existing update helper is used.
             cleaned_data = validate_edit_batch(
                 request=request,
                 batch=batch,
@@ -910,42 +1011,57 @@ def edit_batch_view(request, batch_id):
                 cleaned_data=cleaned_data,
             )
 
-            messages.success(
-                request,
-                "Batch updated successfully.",
-            )
+            messages.success(request, "Batch updated successfully.")
 
-            return redirect(
-                "admin_batches",
-            )
+            if is_ajax_submit:
+                return JsonResponse({
+                    "success": True,
+                    "redirect_url": redirect("admin_batches").url,
+                })
 
-        except ValidationError as e:
+            return redirect("admin_batches")
 
-            messages.error(
-                request,
-                e.messages[0],
-            )
+        except ValidationError as exc:
+            error_messages = exc.messages or [
+                "Please correct the batch details and try again."
+            ]
 
+            if is_ajax_submit:
+                return JsonResponse(
+                    {
+                        "success": False,
+                        "errors": {"__all__": error_messages},
+                    },
+                    status=400,
+                )
+
+            messages.error(request, error_messages[0])
             context["form_data"] = request.POST
-
+            context["active_step"] = 7
+            context["restore_form"] = True
             return render(
                 request,
                 "admins/batches/edit_batch.html",
                 context,
             )
 
-        except Exception as e:
-
+        except Exception as exc:
             import traceback
             traceback.print_exc()
-
-            messages.error(
-                request,
-                str(e),
+            error_message = str(exc) or (
+                "Unable to update this batch. Please try again."
             )
 
-            context["form_data"] = request.POST
+            if is_ajax_submit:
+                return JsonResponse(
+                    {"success": False, "message": error_message},
+                    status=500,
+                )
 
+            messages.error(request, error_message)
+            context["form_data"] = request.POST
+            context["active_step"] = 7
+            context["restore_form"] = True
             return render(
                 request,
                 "admins/batches/edit_batch.html",
@@ -953,7 +1069,6 @@ def edit_batch_view(request, batch_id):
             )
 
     context["form_data"] = batch
-
     return render(
         request,
         "admins/batches/edit_batch.html",

@@ -66,8 +66,8 @@ Marketplace | NeoLearn
                 <span
                     class="rounded-full bg-cyan-500/10 px-4 py-1.5 text-sm font-semibold text-cyan-300"
                 >
-                    {{ batches.count }}
-                    Course{{ batches.count|pluralize }}
+                    {{ batches|length }}
+                    Course{{ batches|length|pluralize }}
                 </span>
 
             </div>
@@ -512,8 +512,8 @@ Marketplace | NeoLearn
             <p class="mt-1 text-xs text-slate-500">
 
                 Showing
-                {{ batches.count }}
-                course{{ batches.count|pluralize }}
+                {{ batches|length }}
+                course{{ batches|length|pluralize }}
 
             </p>
 
@@ -593,7 +593,7 @@ Marketplace | NeoLearn
                                 </span>
 
 
-                            {% elif batch.is_offer_active and batch.discount_type == 'percentage' and batch.discount_value %}
+                            {% elif batch.has_current_discount and batch.discount_type == 'percentage' and batch.discount_value %}
 
                                 <span
                                     class="rounded-full bg-red-500 px-2.5 py-0.5 text-xs font-bold text-white shadow-lg"
@@ -602,7 +602,7 @@ Marketplace | NeoLearn
                                 </span>
 
 
-                            {% elif batch.is_offer_active and batch.discount_type == 'fixed' and batch.discount_value %}
+                            {% elif batch.has_current_discount and batch.discount_type == 'fixed' and batch.discount_value %}
 
                                 <span
                                     class="rounded-full bg-amber-500 px-2.5 py-0.5 text-xs font-bold text-white shadow-lg"
@@ -718,7 +718,7 @@ Marketplace | NeoLearn
                             class="border-t border-white/5 pt-3"
                         >
 
-                            {% if batch.original_price and batch.is_offer_active %}
+                            {% if batch.original_price and batch.has_current_discount %}
 
                                 <div
                                     class="text-xs text-slate-500 line-through"
@@ -736,13 +736,13 @@ Marketplace | NeoLearn
                                 <span
                                     class="text-2xl font-extrabold text-cyan-400"
                                 >
-                                    ₹{{ batch.final_price }}
+                                    ₹{{ batch.current_selling_price }}
                                 </span>
 
                             </div>
 
 
-                            {% if batch.is_offer_active and batch.discount_value %}
+                            {% if batch.has_current_discount and batch.discount_value %}
 
                                 {% if batch.discount_type == 'percentage' %}
 
