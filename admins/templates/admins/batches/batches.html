@@ -1,259 +1,662 @@
 {% extends "admins/admin_base.html" %}
-{% load static  %} 
-{% block title %}
-Batches
+{% load static %}
+
+{% block title %}Batches{% endblock %}
+
+{% block extra_head %}
+{{ block.super }}
+<style>
+#adminBatchesPage{color:#183746}
+#adminBatchesPage .summary-card{min-width:0;border:1px solid #ccecf0;border-radius:15px;background:linear-gradient(145deg,#fff 0%,#f4fdff 100%);box-shadow:0 4px 14px rgba(8,145,160,.055);padding:12px}
+#adminBatchesPage .summary-icon{display:grid;width:34px;height:34px;place-items:center;border-radius:10px;background:#e7fbfd;color:#07899b;font-size:18px}
+#adminBatchesPage .summary-number{margin-top:9px;color:#123746;font-size:24px;font-weight:850;line-height:1}
+#adminBatchesPage .summary-label{margin-top:5px;color:#087f91;font-size:11px;font-weight:800}
+#adminBatchesPage .summary-note{margin-top:2px;color:#718895;font-size:9px}
+#adminBatchesPage .filter-panel{border:1px solid #cdebf0;background:#fff;box-shadow:0 5px 18px rgba(15,75,90,.06)}
+#adminBatchesPage .filter-label{display:block;margin-bottom:6px;color:#54717d;font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
+#adminBatchesPage .filter-control{height:42px;width:100%;border:1px solid #cde4e8;border-radius:11px;background:#f8feff;padding:0 12px;color:#183746;font-size:12px;outline:none;transition:border-color .18s,box-shadow .18s}
+#adminBatchesPage .filter-control:focus{border-color:#22b8c8;box-shadow:0 0 0 3px rgba(34,184,200,.13)}
+#adminBatchesPage .search-wrap{position:relative;display:block}
+#adminBatchesPage .search-wrap .search-icon{position:absolute;left:13px;top:50%;z-index:2;transform:translateY(-50%);pointer-events:none;color:#6b8995;font-size:17px;line-height:1}
+#adminBatchesPage .search-wrap input{padding-left:42px!important;padding-right:12px!important}
+#adminBatchesPage .admin-batch-grid{display:grid;grid-template-columns:repeat(1,minmax(0,1fr));gap:16px;align-items:stretch}
+@media(min-width:640px){#adminBatchesPage .admin-batch-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(min-width:1024px){#adminBatchesPage .admin-batch-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(min-width:1440px){#adminBatchesPage .admin-batch-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
+#adminBatchesPage .admin-batch-card{display:flex;min-width:0;min-height:310px;height:100%;flex-direction:column;overflow:hidden;border:1px solid #ccecf0;border-radius:17px;background:#fff;box-shadow:0 6px 18px rgba(15,75,90,.07);transition:transform .2s,border-color .2s,box-shadow .2s}
+#adminBatchesPage .admin-batch-card:hover,#adminBatchesPage .admin-batch-card:focus-visible{transform:translateY(-3px);border-color:#67d5df;box-shadow:0 12px 25px rgba(8,145,160,.13);outline:none}
+#adminBatchesPage .batch-cover{height:140px;min-height:140px;flex:0 0 140px;background:linear-gradient(135deg,#0e7490,#a5f3fc);border-bottom:2px solid #a5f3fc}
+#adminBatchesPage .batch-cover img{width:100%;height:100%;object-fit:cover;transition:transform .4s}
+#adminBatchesPage .admin-batch-card:hover .batch-cover img{transform:scale(1.04)}
+#adminBatchesPage .batch-card-body{display:flex;min-width:0;flex:1;flex-direction:column;padding:12px 13px;background:#fff}
+#adminBatchesPage .batch-name{min-height:40px;margin:0;color:#123746;font-size:13px;font-weight:850;line-height:1.5}
+#adminBatchesPage .teacher-stack-trigger{display:flex;min-height:40px;width:100%;align-items:center;gap:10px;border:1px solid transparent;border-radius:10px;padding:3px 5px;text-align:left;transition:background .18s,border-color .18s}
+#adminBatchesPage .teacher-stack-trigger:hover{border-color:#d3f1f4;background:#f0fdff}
+#adminBatchesPage .teacher-avatar{display:grid;width:34px;height:34px;flex:0 0 34px;place-items:center;overflow:hidden;border:2px solid #fff;border-radius:50%;background:linear-gradient(145deg,#d9fbff,#a5f3fc);color:#087e91;font-size:10px;font-weight:850;box-shadow:0 0 0 1px #9de5ed,0 3px 8px rgba(8,145,160,.12)}
+#adminBatchesPage .teacher-avatar img{width:100%;height:100%;object-fit:cover}
+#adminBatchesPage .teacher-more{display:grid;min-width:34px;height:34px;place-items:center;border:2px solid #fff;border-radius:50%;background:#cffafe;padding:0 7px;color:#0e7490;font-size:10px;font-weight:900;box-shadow:0 0 0 1px #9de5ed}
+#adminBatchesPage .card-footer{margin-top:auto}
+#adminBatchesPage .teacher-modal-backdrop{position:fixed;inset:0;z-index:10000;display:none;align-items:center;justify-content:center;padding:12px;background:rgba(7,35,47,.68);backdrop-filter:blur(5px)}
+#adminBatchesPage .teacher-modal-backdrop.is-open{display:flex}
+#adminBatchesPage .teacher-modal{display:flex;width:min(100%,900px);max-height:calc(100dvh - 24px);flex-direction:column;overflow:hidden;border:1px solid #9ce4ec;border-radius:18px;background:#fff;box-shadow:0 24px 70px rgba(4,35,48,.3)}
+#adminBatchesPage .teacher-modal-main{display:grid;min-height:0;grid-template-columns:1fr;gap:12px;overflow-y:auto;padding:12px}
+@media(min-width:700px){#adminBatchesPage .teacher-modal-main{grid-template-columns:.85fr 1.15fr;overflow:hidden}}
+#adminBatchesPage .teacher-list-panel{display:flex;min-height:180px;flex-direction:column;overflow:hidden;border:1px solid #d9eff2;border-radius:12px;background:#f8feff}
+#adminBatchesPage .teacher-list-scroll{max-height:210px;overflow-y:auto;padding:7px}
+@media(min-width:700px){#adminBatchesPage .teacher-list-scroll{max-height:none;flex:1}}
+#adminBatchesPage .teacher-list-item{display:flex;width:100%;align-items:center;gap:10px;border:1px solid transparent;border-radius:10px;padding:8px;text-align:left}
+#adminBatchesPage .teacher-list-item:hover,#adminBatchesPage .teacher-list-item[aria-pressed="true"]{border-color:#b8eaf0;background:#eafcff}
+#adminBatchesPage .teacher-detail-panel{min-height:220px;overflow-y:auto;border:1px solid #d9eff2;border-radius:12px;background:linear-gradient(145deg,#fff,#f4fdff);padding:15px}
+#adminBatchesPage .teacher-modal input{height:39px;width:100%;border:1px solid #d3e8eb;border-radius:9px;background:#fff;padding:0 12px 0 36px;color:#183746;font-size:12px;outline:none}
+#adminBatchesPage .teacher-modal input:focus{border-color:#22b8c8;box-shadow:0 0 0 3px rgba(34,184,200,.12)}
+#adminBatchesPage .teacher-modal :is(button,a):focus-visible{outline:3px solid #67e8f9;outline-offset:2px}
+@media(max-width:680px){#adminBatchesPage .admin-batch-card{min-height:0}#adminBatchesPage .batch-cover{height:165px;min-height:165px;flex-basis:165px}}
+
+/* Compact batch filter dropdown with its own scrollable option panel */
+#adminBatchesPage .batch-filter-native{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
+#adminBatchesPage .batch-filter-custom{position:relative;width:100%}
+#adminBatchesPage .batch-filter-trigger{display:flex;height:40px;width:100%;align-items:center;justify-content:space-between;gap:8px;border:1px solid #cde4e8;border-radius:10px;background:#fff;padding:0 11px;color:#183746;font-size:11px;text-align:left}
+#adminBatchesPage .batch-filter-trigger:focus-visible{outline:3px solid rgba(34,184,200,.25);border-color:#22b8c8}
+#adminBatchesPage .batch-filter-menu{position:absolute;top:calc(100% + 6px);left:0;right:0;z-index:80;display:none;max-height:230px;overflow-y:auto;overscroll-behavior:contain;border:1px solid #bfe8ed;border-radius:11px;background:#fff;padding:5px;box-shadow:0 14px 30px rgba(15,75,90,.18)}
+#adminBatchesPage .batch-filter-menu.is-open{display:block}
+#adminBatchesPage .batch-filter-option{display:block;width:100%;border:0;border-radius:7px;background:#fff;padding:8px 9px;color:#31515d;font-size:11px;text-align:left}
+#adminBatchesPage .batch-filter-option:hover,#adminBatchesPage .batch-filter-option[aria-selected="true"]{background:#e8fbfd;color:#087f91;font-weight:800}
+#adminBatchesPage .offer-countdown{display:inline-flex;align-items:center;justify-content:center;gap:4px;margin-top:5px;border:1px solid #ccecf0;border-radius:7px;background:#f0fdff;padding:4px 7px;color:#087f91;font-size:9px;font-weight:800;line-height:1.2}
+#adminBatchesPage .offer-countdown[data-state="ending"]{border-color:#f6d58b;background:#fff8e7;color:#98620a}
+#adminBatchesPage .offer-countdown[data-state="ended"]{border-color:#e2e8f0;background:#f8fafc;color:#64748b}
+#adminBatchesPage .no-teacher-label{display:inline-flex;min-height:30px;align-items:center;gap:6px;border:1px dashed #f2c6a5;border-radius:9px;background:#fff8f2;padding:5px 9px;color:#a34c17;font-size:9px;font-weight:800}
+
+#adminBatchesPage .summary-card{position:relative;overflow:hidden;padding:10px 11px 11px;border-radius:13px;min-height:105px}
+#adminBatchesPage .summary-card:after{content:"";position:absolute;right:-18px;top:-23px;width:66px;height:66px;border-radius:50%;background:var(--metric-soft,#e7fbfd);opacity:.8}
+#adminBatchesPage .summary-card:nth-child(1){--metric:#087e9b;--metric-soft:#b9edf3;background:linear-gradient(145deg,#dff8fb,#c9f0f4);border-color:#a7e3eb}
+#adminBatchesPage .summary-card:nth-child(2){--metric:#087b55;--metric-soft:#b8efd8;background:linear-gradient(145deg,#def8ec,#c8f1df);border-color:#a9e5ca}
+#adminBatchesPage .summary-card:nth-child(3){--metric:#9a5b08;--metric-soft:#f8df9f;background:linear-gradient(145deg,#fff4d7,#fbe8b7);border-color:#f0d68d}
+#adminBatchesPage .summary-card:nth-child(4){--metric:#6741a5;--metric-soft:#ded0fa;background:linear-gradient(145deg,#f0e9ff,#e4d9fb);border-color:#d3c1f4}
+#adminBatchesPage .summary-card:nth-child(5){--metric:#1767a0;--metric-soft:#c5e3fb;background:linear-gradient(145deg,#e3f2ff,#cfe8fc);border-color:#b8dcf7}
+#adminBatchesPage .summary-card:nth-child(6){--metric:#ae3150;--metric-soft:#f7cbd5;background:linear-gradient(145deg,#ffe8ed,#fbd6df);border-color:#f2bdca}
+#adminBatchesPage .summary-icon{position:relative;z-index:1;width:30px;height:30px;background:var(--metric-soft);color:var(--metric);font-size:16px}
+#adminBatchesPage .summary-number{position:relative;z-index:1;margin-top:7px;color:#183746;font-size:21px}
+#adminBatchesPage .summary-label{position:relative;z-index:1;margin-top:4px;color:var(--metric);font-size:10px}
+#adminBatchesPage .summary-note{position:relative;z-index:1;font-size:8px}
+#adminBatchesPage .filter-panel{padding:11px;background:linear-gradient(115deg,#fff 0%,#f1fcfd 100%);border-color:#bfe8ed}
+#adminBatchesPage .filter-control{height:40px;border-radius:10px;background:#fff;font-size:11px}
+#adminBatchesPage .filter-label{font-size:9px;margin-bottom:5px}
+#adminBatchesPage .admin-batch-card{position:relative;min-height:285px;overflow:visible}
+#adminBatchesPage .batch-cover{height:126px;min-height:126px;flex-basis:126px;border-radius:16px 16px 0 0}
+#adminBatchesPage .batch-card-body{padding:10px 11px;border-radius:0 0 16px 16px}
+#adminBatchesPage .batch-name{font-size:12px;min-height:36px}
+#adminBatchesPage .batch-menu-wrap{position:relative;z-index:6}
+#adminBatchesPage .batch-menu-button{display:grid;width:32px;height:32px;place-items:center;border:1px solid #ccecf0;border-radius:10px;background:#f4fdff;color:#087f91;transition:.18s}
+#adminBatchesPage .batch-menu-button:hover,#adminBatchesPage .batch-menu-button[aria-expanded="true"]{background:#dff9fc;border-color:#67d5df;color:#075e6b}
+#adminBatchesPage .batch-menu{position:absolute;right:0;bottom:calc(100% + 7px);z-index:30;display:none;width:190px;padding:6px;border:1px solid #ccecf0;border-radius:12px;background:#fff;box-shadow:0 14px 32px rgba(15,75,90,.16)}
+#adminBatchesPage .batch-menu.is-open{display:block}
+#adminBatchesPage .batch-menu a,#adminBatchesPage .batch-menu button{display:flex;width:100%;align-items:center;gap:9px;border-radius:8px;padding:9px 10px;text-align:left;font-size:11px;font-weight:700;color:#31515d}
+#adminBatchesPage .batch-menu a:hover{background:#eafcff;color:#087f91}
+#adminBatchesPage .batch-menu button:disabled{cursor:not-allowed;opacity:.48}
+#adminBatchesPage .batch-menu .menu-divider{height:1px;margin:4px 2px;background:#e4f2f4}
+#adminBatchesPage .batch-menu .menu-danger{color:#e11d48}
+#adminBatchesPage .batch-menu .menu-danger:hover{background:#fff1f2;color:#be123c}
+@media(min-width:1280px){#adminBatchesPage .filter-panel .filter-control{height:39px}}
+</style>
 {% endblock %}
 
 {% block admin_content %}
+<section id="adminBatchesPage" class="w-full space-y-6">
 
-<div class="space-y-8">
-
-    <!-- ================= HEADER ================= -->
-    <div class="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+    <!-- Page heading -->
+    <header class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-            <h1 class="text-4xl font-bold tracking-tight text-white">Batches</h1>
-            <p class="mt-2 text-slate-400">Manage course batches, pricing, subjects and student access.</p>
+            <h1 class="text-3xl font-extrabold tracking-tight text-white">Batches</h1>
+            <p class="mt-1 text-sm text-slate-300">Manage batches, teachers, pricing and student access.</p>
         </div>
+        <a href="{% url 'create_batch' %}" class="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500 to-teal-400 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-cyan-500/20 transition hover:brightness-110">
+            <i class="ri-add-line text-lg"></i> Create Batch
+        </a>
+    </header>
 
-        <div class="flex flex-col gap-3 lg:flex-row lg:items-center">
-            <form method="GET" class="flex flex-1 flex-col gap-3 sm:flex-row">
-                <div class="relative flex-1">
-                    <input
-                        type="text"
-                        name="search"
-                        value="{{ request.GET.search }}"
-                        placeholder="Search batches..."
-                        class="w-full rounded-xl border border-slate-700 bg-slate-800 py-3 pl-11 pr-4 text-white placeholder-slate-500 outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="absolute left-4 top-3.5 h-5 w-5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4-4m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-                    </svg>
-                </div>
-                <button type="submit" class="rounded-xl bg-cyan-500 px-6 py-3 font-semibold text-slate-900 transition hover:bg-cyan-400">Search</button>
-                <a href="{% url 'admin_batches' %}" class="rounded-xl border border-slate-700 bg-slate-800 px-6 py-3 text-center font-semibold text-white transition hover:border-cyan-500 hover:text-cyan-400">Refresh</a>
-            </form>
-            <a href="{% url 'create_batch' %}" class="inline-flex items-center justify-center gap-2 rounded-xl bg-cyan-500 px-6 py-3 font-semibold text-slate-900 shadow-lg shadow-cyan-500/20 transition hover:bg-cyan-400">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-                </svg>
-                Create Batch
-            </a>
+    <!-- Six compact batch status counters -->
+    <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 2xl:grid-cols-6">
+        <div class="summary-card">
+            <span class="summary-icon"><i class="ri-stack-line"></i></span>
+            <p class="summary-number">{{ total_batches_count|default:batches.count }}</p>
+            <p class="summary-label">Total Batches</p><p class="summary-note">All batches</p>
+        </div>
+        <div class="summary-card">
+            <span class="summary-icon"><i class="ri-checkbox-circle-line"></i></span>
+            <p class="summary-number">{{ active_batches_count|default:0 }}</p>
+            <p class="summary-label">Active Batches</p><p class="summary-note">Currently available</p>
+        </div>
+        <div class="summary-card">
+            <span class="summary-icon"><i class="ri-draft-line"></i></span>
+            <p class="summary-number">{{ draft_batches_count|default:0 }}</p>
+            <p class="summary-label">Drafted</p><p class="summary-note">Not published</p>
+        </div>
+        <div class="summary-card">
+            <span class="summary-icon"><i class="ri-calendar-event-line"></i></span>
+            <p class="summary-number">{{ coming_soon_batches_count|default:0 }}</p>
+            <p class="summary-label">Coming Soon</p><p class="summary-note">Scheduled publishing</p>
+        </div>
+        <div class="summary-card">
+            <span class="summary-icon"><i class="ri-store-2-line"></i></span>
+            <p class="summary-number">{{ published_batches_count|default:0 }}</p>
+            <p class="summary-label">Published</p><p class="summary-note">Published status</p>
+        </div>
+        <div class="summary-card">
+            <span class="summary-icon"><i class="ri-archive-line"></i></span>
+            <p class="summary-number">{{ archived_batches_count|default:0 }}</p>
+            <p class="summary-label">Archived</p><p class="summary-note">Admission closed</p>
         </div>
     </div>
 
-    <!-- ================= BATCH GRID ================= -->
-    <div class="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+    <!-- Search and filters -->
+    <form method="GET" action="{% url 'admin_batches' %}" class="filter-panel rounded-2xl p-3">
+        <div class="grid grid-cols-1 items-end gap-3 sm:grid-cols-2 xl:grid-cols-12">
+            <label class="block min-w-0 xl:col-span-4">
+                <span class="filter-label">Search</span>
+                <span class="search-wrap">
+                    <i class="ri-search-line search-icon"></i>
+                    <input id="batch-search" type="text" name="search" value="{{ request.GET.search|default:'' }}" placeholder="Search batches..." class="filter-control">
+                </span>
+            </label>
+            <label class="block min-w-0 xl:col-span-2">
+                <span class="filter-label">Batch-wise</span>
+                <select id="batchFilterSelect" name="batch" class="filter-control">
+                    <option value="">All Batches</option>
+                    {% for item in batch_filter_options %}
+                    <option value="{{ item.id }}" {% if request.GET.batch == item.id|stringformat:"s" %}selected{% endif %}>{{ item.batch_name }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label class="block min-w-0 xl:col-span-2">
+                <span class="filter-label">Teacher-wise</span>
+                <select name="teacher" class="filter-control">
+                    <option value="">All Teachers</option>
+                    {% for teacher in teacher_filter_options %}
+                    <option value="{{ teacher.id }}" {% if request.GET.teacher == teacher.id|stringformat:"s" %}selected{% endif %}>{{ teacher.name }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label class="block min-w-0 xl:col-span-2">
+                <span class="filter-label">Status</span>
+                <select name="status" class="filter-control">
+                    <option value="">All</option>
+                    <option value="draft" {% if request.GET.status == "draft" %}selected{% endif %}>Drafted</option>
+                    <option value="coming_soon" {% if request.GET.status == "coming_soon" %}selected{% endif %}>Coming Soon</option>
+                    <option value="published" {% if request.GET.status == "published" %}selected{% endif %}>Published</option>
+                    <option value="archived" {% if request.GET.status == "archived" %}selected{% endif %}>Archived</option>
+                </select>
+            </label>
+            <div class="flex items-center gap-2 xl:col-span-2">
+                <a href="{% url 'admin_batches' %}" class="inline-flex h-11 flex-1 items-center justify-center gap-1 rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-600 transition hover:border-cyan-300 hover:bg-cyan-50"><i class="ri-refresh-line"></i> Reset</a>
+                <button type="submit" class="inline-flex h-11 flex-1 items-center justify-center gap-1 rounded-xl bg-gradient-to-r from-cyan-500 to-teal-400 px-3 text-xs font-extrabold text-white shadow-sm shadow-cyan-200 transition hover:brightness-105"><i class="ri-search-line"></i> Search</button>
+            </div>
+        </div>
+    </form>
 
+    <!-- Batch cards -->
+    <div class="grid grid-cols-1 items-stretch gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
         {% for batch in batches %}
+        <article class="admin-batch-card group cursor-pointer" role="link" tabindex="0"
+                 data-batch-url="{% url 'batch_subjects' batch.id %}"
+                 aria-label="Open subjects for {{ batch.batch_name }}">
 
-        <div class="overflow-hidden rounded-2xl border border-slate-700 bg-[#111827] transition duration-300 hover:-translate-y-1 hover:border-cyan-500 hover:shadow-2xl hover:shadow-cyan-500/10">
-
-            <!-- ================= Thumbnail ================= -->
-            <div class="relative overflow-hidden">
-                <img
-                    src="{{ batch.batch_thumbnail.url }}"
-                    alt="{{ batch.batch_name }}"
-                    loading="lazy"
-                    class="h-48 w-full object-cover transition duration-500 hover:scale-105">
-
-                <!-- Status Badge -->
-                {% if batch.batch_status == "published" %}
-                <span class="absolute right-4 top-4 rounded-full bg-green-500/90 px-3 py-1 text-xs font-semibold text-white backdrop-blur-sm">● Published</span>
-                {% elif batch.batch_status == "archived" %}
-                <span class="absolute right-4 top-4 rounded-full bg-red-500/90 px-3 py-1 text-xs font-semibold text-white backdrop-blur-sm">● Archived</span>
+            <div class="batch-cover relative overflow-hidden">
+                {% if batch.batch_thumbnail %}
+                    <img src="{{ batch.batch_thumbnail.url }}" alt="{{ batch.batch_name }}" loading="lazy">
                 {% else %}
-                <span class="absolute right-4 top-4 rounded-full bg-yellow-500/90 px-3 py-1 text-xs font-semibold text-slate-900 backdrop-blur-sm">● Draft</span>
+                    <div class="grid h-full w-full place-items-center bg-gradient-to-br from-cyan-100 via-white to-teal-100 text-5xl text-cyan-700"><i class="ri-book-open-line"></i></div>
+                {% endif %}
+                <div class="absolute inset-0 bg-gradient-to-t from-slate-950/50 via-transparent to-slate-950/10"></div>
+                {% if batch.batch_status == "published" and batch.admission_close_datetime and batch.admission_close_datetime <= now %}
+                <span class="absolute left-3 top-3 rounded-full border border-white/20 bg-slate-950/85 px-3 py-1.5 text-[10px] font-bold text-white backdrop-blur"><i class="ri-archive-fill mr-1 text-rose-300"></i>Archived</span>
+                {% elif batch.batch_status == "published" and batch.publish_type == "scheduled" and batch.publish_datetime and batch.publish_datetime > now %}
+                <span class="absolute left-3 top-3 rounded-full border border-white/20 bg-slate-950/85 px-3 py-1.5 text-[10px] font-bold text-white backdrop-blur"><i class="ri-calendar-event-fill mr-1 text-amber-300"></i>Coming Soon</span>
+                {% elif batch.batch_status == "published" %}
+                <span class="absolute left-3 top-3 rounded-full border border-white/20 bg-slate-950/85 px-3 py-1.5 text-[10px] font-bold text-white backdrop-blur"><i class="ri-checkbox-circle-fill mr-1 text-emerald-400"></i>Published</span>
+                {% elif batch.batch_status == "archived" %}
+                <span class="absolute left-3 top-3 rounded-full border border-white/20 bg-slate-950/85 px-3 py-1.5 text-[10px] font-bold text-white backdrop-blur"><i class="ri-archive-fill mr-1 text-slate-300"></i>Archived</span>
+                {% else %}
+                <span class="absolute left-3 top-3 rounded-full border border-white/20 bg-slate-950/85 px-3 py-1.5 text-[10px] font-bold text-white backdrop-blur"><i class="ri-time-fill mr-1 text-amber-300"></i>Draft</span>
                 {% endif %}
             </div>
 
-            <!-- ================= BODY ================= -->
-            <div class="p-5">
+            <div class="batch-card-body">
+                <h2 class="batch-name line-clamp-2" title="{{ batch.batch_name }}">{{ batch.batch_name }}</h2>
 
-                <!-- Title & Rating -->
-                <div class="flex items-start justify-between">
-                    <h2 class="flex-1 truncate text-xl font-bold text-white">{{ batch.batch_name }}</h2>
-                    <span class="ml-2 text-sm text-yellow-400">★★★★☆</span>
-                </div>
+                <!-- Price and offer stay in their existing position; actions remain on the right -->
+                <div class="mt-3 grid grid-cols-[minmax(0,1fr)_34px] items-center gap-3 border-t border-cyan-100 pt-3">
 
-                <!-- Description -->
-                <p class="mt-2 line-clamp-2 text-sm text-slate-400">{{ batch.batch_description }}</p>
+                    <script type="application/json" class="admin-teacher-data">[
+                        {% for assignment in batch.active_teacher_assignments %}
+                        {
+                            "name":"{{ assignment.teacher.full_name|default:'Teacher'|escapejs }}",
+                            "image":"{% if assignment.teacher.profile_image %}{{ assignment.teacher.profile_image.url|escapejs }}{% endif %}",
+                            "qualification":"{{ assignment.teacher.qualification|default:'Not provided'|escapejs }}",
+                            "specialization":"{{ assignment.teacher.specialization|default:'Teacher'|escapejs }}",
+                            "experience":"{{ assignment.teacher.experience|default_if_none:0|escapejs }}",
+                            "bio":"{{ assignment.teacher.bio|default:''|escapejs }}",
+                            "email":"{{ assignment.teacher.email|default:''|escapejs }}",
+                            "phone":"{{ assignment.teacher.phone_number|default:''|escapejs }}"
+                        }{% if not forloop.last %},{% endif %}
+                        {% endfor %}
+                    ]</script>
 
-                <!-- ================= PRICING & STUDENTS ================= -->
-                <div class="mt-4 flex items-end justify-between">
-                    <div>
+                    <div class="min-w-0 text-center">
                         {% if batch.has_current_discount %}
-                        <div class="flex items-center gap-2">
-                            <span class="text-sm text-slate-400 line-through">₹{{ batch.original_price }}</span>
-                            <span class="text-2xl font-bold text-white">₹{{ batch.display_price }}</span>
-                        </div>
-                        <span class="text-xs font-semibold text-emerald-400">
-                            {% if batch.discount_type == "percentage" %}
-                                {{ batch.discount_value }}% OFF
-                            {% elif batch.discount_type == "fixed" %}
-                                ₹{{ batch.display_discount_amount|floatformat:0 }} OFF
-                            {% else %}
-                                No Offer
-                            {% endif %}
-                        </span>
+                            <div class="flex flex-wrap items-baseline justify-center gap-x-2 gap-y-0.5">
+                                <span class="text-[10px] text-slate-500 line-through">₹{{ batch.original_price }}</span>
+                                <span class="text-lg font-extrabold leading-tight text-slate-900">₹{{ batch.display_price }}</span>
+                            </div>
+                            <span class="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[9px] font-extrabold text-emerald-700">
+                                {% if batch.discount_type == "percentage" %}{{ batch.discount_value }}% OFF{% elif batch.discount_type == "fixed" %}₹{{ batch.display_discount_amount|floatformat:0 }} OFF{% else %}Offer{% endif %}
+                            </span>
                         {% else %}
-                        <div class="flex items-center gap-2">
-                            <span class="text-2xl font-bold text-white">₹{{ batch.display_price }}</span>
-                        </div>
-                        <span class="text-xs font-semibold text-slate-500">No Offer</span>
+                            <span class="block text-lg font-extrabold leading-tight text-slate-900">₹{{ batch.display_price }}</span>
+                            {% if batch.discount_type != "none" and batch.offer_start_date and batch.offer_start_date > now %}
+                                <span class="inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-[9px] font-extrabold text-amber-700">
+                                    {% if batch.discount_type == "percentage" %}{{ batch.discount_value }}% OFF{% elif batch.discount_type == "fixed" %}₹{{ batch.discount_value|floatformat:0 }} OFF{% else %}Offer{% endif %}
+                                </span>
+                            {% else %}
+                                <span class="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[9px] font-bold text-slate-600">No Offer</span>
+                            {% endif %}
+                        {% endif %}
+                        {% if batch.discount_type != "none" and batch.offer_start_date and batch.offer_end_date %}
+                            {% if now < batch.offer_start_date %}
+                                <span class="offer-countdown" data-countdown data-state="upcoming" data-target="{{ batch.offer_start_date|date:'c' }}">
+                                    <i class="ri-time-line"></i><span>Offer starts in</span><strong data-countdown-value>Calculating…</strong>
+                                </span>
+                            {% elif now < batch.offer_end_date %}
+                                <span class="offer-countdown" data-countdown data-state="ending" data-target="{{ batch.offer_end_date|date:'c' }}">
+                                    <i class="ri-timer-flash-line"></i><span>Offer ends in</span><strong data-countdown-value>Calculating…</strong>
+                                </span>
+                            {% else %}
+                                <span class="offer-countdown" data-state="ended"><i class="ri-check-line"></i>Offer ended</span>
+                            {% endif %}
                         {% endif %}
                     </div>
-                    <div class="text-right">
-                        <span class="text-sm font-semibold text-cyan-400">👥 0</span>
-                        <span class="ml-1 text-xs text-slate-500">students</span>
+
+                    <div class="batch-menu-wrap justify-self-end">
+                        <button type="button" class="batch-menu-button" data-batch-menu-toggle
+                                aria-label="Batch actions for {{ batch.batch_name }}" aria-expanded="false">
+                            <i class="ri-more-2-fill text-lg"></i>
+                        </button>
+                        <div class="batch-menu" role="menu">
+                            <button type="button" role="menuitem" disabled title="Student Management will be connected later">
+                                <i class="ri-user-settings-line text-cyan-700"></i> Student Management
+                                <span class="ml-auto text-[8px] text-slate-400">Soon</span>
+                            </button>
+                            <button type="button" role="menuitem" disabled title="Batch Timeline will be connected later">
+                                <i class="ri-calendar-timeline-line text-cyan-700"></i> Batch Timeline
+                                <span class="ml-auto text-[8px] text-slate-400">Soon</span>
+                            </button>
+                            <div class="menu-divider"></div>
+                            <a href="{% url 'edit_batch' batch.id %}" role="menuitem" data-card-action><i class="ri-edit-line text-cyan-700"></i> Edit Batch</a>
+                            <a href="{% url 'delete_batch' batch.id %}" role="menuitem" data-card-action class="menu-danger"><i class="ri-delete-bin-line"></i> Delete Batch</a>
+                        </div>
                     </div>
                 </div>
+                <!-- Teacher icon/avatar stack sits in the marked bottom-left area -->
+                <div class="mt-2 flex min-h-9 items-center justify-between gap-2 px-1">
+                    {% if batch.active_teacher_assignments %}
+                    <button type="button" data-teacher-open data-batch-name="{{ batch.batch_name|escape }}"
+                            class="teacher-stack-trigger !mt-0 !w-auto !min-h-0 !gap-2 !p-0"
+                            aria-label="View assigned teachers for {{ batch.batch_name }}">
+                        <span class="flex shrink-0 items-center -space-x-3">
+                            {% for assignment in batch.active_teacher_assignments|slice:":3" %}
+                                <span class="teacher-avatar" title="{{ assignment.teacher.full_name }}">
+                                    {% if assignment.teacher.profile_image %}<img src="{{ assignment.teacher.profile_image.url }}" alt="{{ assignment.teacher.full_name }}" loading="lazy">{% else %}{{ assignment.teacher.full_name|default:"T"|slice:":1"|upper }}{% endif %}
+                                </span>
+                            {% endfor %}
+                            {% if batch.active_teacher_assignments|length > 3 %}<span class="teacher-more">+{{ batch.active_teacher_assignments|length|add:"-3" }}</span>{% endif %}
+                        </span>
+                        <span class="text-[9px] font-semibold text-slate-500">{{ batch.active_teacher_assignments|length }} teacher{% if batch.active_teacher_assignments|length != 1 %}s{% endif %}</span>
+                    </button>
+                    {% else %}
+                    <span class="no-teacher-label" title="No active teacher is assigned to this batch">
+                        <i class="ri-user-unfollow-line"></i> No Teacher Assigned
+                    </span>
+                    {% endif %}
+                    <span class="text-[10px] font-extrabold text-cyan-800"><i class="ri-group-line"></i> {{ batch.student_count|default:0 }} Student{% if batch.student_count != 1 %}s{% endif %}</span>
+                </div>
 
-                <!-- ================= MARKETPLACE STATUS ================= -->
-                <div class="mt-3 flex items-center gap-2">
-                    <span class="text-xs text-slate-500">Marketplace:</span>
-                    <span class="text-sm font-semibold">
-                        {% if batch.batch_status == "draft" %}
-                        <span class="text-yellow-400">🟡 Draft</span>
-                        {% elif batch.batch_status == "archived" %}
-                        <span class="text-red-400">🔴 Admissions Closed</span>
-                        {% else %}
-                            {% if batch.publish_type == "scheduled" and batch.publish_datetime > now %}
-                            <span class="text-amber-400">🟡 Coming Soon</span>
+                <!-- Marketplace status and relevant publishing / closing dates -->
+                <div class="mt-2 flex min-h-7 flex-wrap items-center justify-between gap-x-2 gap-y-1 border-t border-cyan-100 pt-2">
+                    <div class="flex items-center gap-2">
+                        <span class="shrink-0 text-[9px] font-extrabold uppercase tracking-wider text-slate-500">Marketplace</span>
+                        <span class="text-[11px] font-extrabold">
+                            {% if batch.batch_status == "draft" %}
+                                <span class="text-amber-700"><i class="ri-draft-line"></i> Drafted</span>
+                            {% elif batch.batch_status == "archived" or batch.admission_close_datetime and batch.admission_close_datetime <= now %}
+                                <span class="text-rose-700"><i class="ri-archive-line"></i> Archived</span>
+                            {% elif batch.batch_status == "published" and batch.publish_type == "scheduled" and batch.publish_datetime and batch.publish_datetime > now %}
+                                <span class="text-violet-700"><i class="ri-calendar-event-line"></i> Coming Soon</span>
+                            {% elif batch.batch_status == "published" %}
+                                <span class="text-emerald-700"><i class="ri-shopping-cart-line"></i> Buy Now</span>
                             {% else %}
-                            <span class="text-emerald-400">🟢 Buy Now</span>
+                                <span class="text-slate-500">Not Published</span>
                             {% endif %}
+                        </span>
+                    </div>
+                    <span class="text-[9px] font-semibold text-slate-500">
+                        {% if batch.batch_status == "published" and batch.publish_type == "scheduled" and batch.publish_datetime and batch.publish_datetime > now %}
+                            <i class="ri-calendar-line mr-1 text-violet-600"></i>Publishes {{ batch.publish_datetime|date:"d M Y, h:i A" }}
+                        {% elif batch.batch_status == "published" %}
+                            {% if batch.publish_datetime %}<i class="ri-calendar-check-line mr-1 text-emerald-600"></i>Published {{ batch.publish_datetime|date:"d M Y" }}{% endif %}
+                            {% if batch.admission_close_datetime %}<span class="ml-2"><i class="ri-calendar-close-line mr-1 text-rose-600"></i>Ends {{ batch.admission_close_datetime|date:"d M Y" }}</span>{% endif %}
+                        {% elif batch.batch_status == "archived" and batch.admission_close_datetime %}
+                            <i class="ri-calendar-check-line mr-1 text-rose-600"></i>Closed {{ batch.admission_close_datetime|date:"d M Y" }}
                         {% endif %}
                     </span>
                 </div>
-
-                <!-- ================= ACTIONS ================= -->
-                <div class="mt-4 flex items-center justify-between border-t border-slate-700 pt-4">
-                    <div class="flex items-center gap-3">
-                        <a href="{% url 'edit_batch' batch.id %}" class="text-slate-400 transition hover:text-cyan-400" title="Edit">✏️</a>
-                        <a href="{% url 'delete_batch' batch.id %}" class="text-slate-400 transition hover:text-red-500" title="Delete">🗑️</a>
-                        <a href="{% url 'batch_subjects' batch.id %}" class="rounded-lg border border-slate-700 bg-slate-800 px-3 py-1.5 text-xs font-semibold text-white transition hover:border-cyan-500 hover:text-cyan-400">📚 Subjects</a>
-                    </div>
-                    <button
-                        onclick="toggleDetails('{{ batch.id }}')"
-                        class="flex items-center gap-1 text-xs font-semibold text-cyan-400 transition hover:text-cyan-300"
-                        id="toggle-btn-{{ batch.id }}">
-                        <span>▼</span> Details
-                    </button>
-                </div>
-
-                <!-- ================= EXPANDABLE DETAILS ================= -->
-                <div id="details-{{ batch.id }}" class="mt-4 hidden border-t border-slate-700 pt-4">
-                    <div class="space-y-2 text-sm">
-                        <!-- Publish -->
-                        <div class="flex items-center justify-between">
-                            <span class="flex items-center gap-2 text-slate-400">
-                                <span>📅</span> Publish
-                            </span>
-                            <span class="text-white">
-                                {% if batch.publish_datetime %}
-                                    {{ batch.publish_datetime|date:"d M Y" }} {{ batch.publish_datetime|date:"h:i A" }}
-                                {% else %}
-                                    <span class="text-slate-500">Not Scheduled</span>
-                                {% endif %}
-                            </span>
-                        </div>
-
-                        <!-- Offer -->
-                        <div class="flex items-center justify-between">
-                            <span class="flex items-center gap-2 text-slate-400">
-                                <span>🏷️</span> Offer
-                            </span>
-                            <span class="text-white">
-                                {% if batch.offer_start_date and batch.offer_end_date %}
-                                    {{ batch.offer_start_date|date:"d M" }} → {{ batch.offer_end_date|date:"d M" }}
-                                {% elif batch.offer_start_date %}
-                                    {{ batch.offer_start_date|date:"d M Y" }} →
-                                {% elif batch.offer_end_date %}
-                                    → {{ batch.offer_end_date|date:"d M Y" }}
-                                {% else %}
-                                    <span class="text-slate-500">No Offer</span>
-                                {% endif %}
-                            </span>
-                        </div>
-
-                        <!-- Admissions Close -->
-                        <div class="flex items-center justify-between">
-                            <span class="flex items-center gap-2 text-slate-400">
-                                <span>🚪</span> Admissions Close
-                            </span>
-                            <span class="text-white">
-                                {% if batch.admission_close_datetime %}
-                                    {{ batch.admission_close_datetime|date:"d M Y" }}
-                                {% else %}
-                                    <span class="text-slate-500">Open</span>
-                                {% endif %}
-                            </span>
-                        </div>
-
-                        <!-- Course End -->
-                        <div class="flex items-center justify-between">
-                            <span class="flex items-center gap-2 text-slate-400">
-                                <span>🎓</span> Course Ends
-                            </span>
-                            <span class="text-white">
-                                {% if batch.course_end_date %}
-                                    {{ batch.course_end_date|date:"d M Y" }}
-                                {% else %}
-                                    <span class="text-slate-500">Not Set</span>
-                                {% endif %}
-                            </span>
-                        </div>
-
-                        <!-- Marketplace Status (repeated for clarity) -->
-                        <div class="flex items-center justify-between border-t border-slate-700/50 pt-2">
-                            <span class="flex items-center gap-2 text-slate-400">
-                                <span>🛒</span> Marketplace
-                            </span>
-                            <span class="font-semibold">
-                                {% if batch.batch_status == "draft" %}
-                                <span class="text-yellow-400">Draft</span>
-                                {% elif batch.batch_status == "archived" %}
-                                <span class="text-red-400">Admissions Closed</span>
-                                {% else %}
-                                    {% if batch.publish_type == "scheduled" and batch.publish_datetime > now %}
-                                    <span class="text-amber-400">Coming Soon</span>
-                                    {% else %}
-                                    <span class="text-emerald-400">Buy Now</span>
-                                    {% endif %}
-                                {% endif %}
-                            </span>
-                        </div>
-                    </div>
-                </div>
-
             </div>
-        </div>
-
+        </article>
         {% empty %}
-
-        <div class="col-span-full">
-            <div class="rounded-2xl border-2 border-dashed border-slate-700 bg-[#111827] py-20 text-center">
-                <div class="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-slate-800">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-                    </svg>
-                </div>
-                <h2 class="mt-6 text-2xl font-bold text-white">No Batches Found</h2>
-                <p class="mt-3 text-slate-400">No batches are available. Create your first batch to get started.</p>
-                <a href="{% url 'create_batch' %}" class="mt-8 inline-flex items-center gap-2 rounded-xl bg-cyan-500 px-6 py-3 font-semibold text-slate-900 shadow-lg shadow-cyan-500/20 transition hover:bg-cyan-400">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-                    </svg>
-                    Create First Batch
-                </a>
-            </div>
+        <div class="col-span-full rounded-2xl border-2 border-dashed border-cyan-100 bg-white py-16 text-center">
+            <i class="ri-inbox-archive-line text-4xl text-cyan-600"></i>
+            <h2 class="mt-4 text-xl font-bold text-slate-800">No Batches Found</h2>
+            <p class="mt-2 text-sm text-slate-500">No batches match your current search or filters.</p>
+            <a href="{% url 'admin_batches' %}" class="mt-5 inline-flex rounded-xl border border-slate-600 bg-slate-800 px-5 py-2.5 text-sm font-semibold text-white hover:bg-slate-700">Reset Filters</a>
         </div>
-
         {% endfor %}
-
     </div>
 
-</div>
+    <!-- Assigned teachers popup: teacher-area list + selected teacher profile -->
+    <div id="assignedTeachersModal" class="teacher-modal-backdrop" aria-hidden="true">
+        <section class="teacher-modal" role="dialog" aria-modal="true" aria-labelledby="mbModalTitle">
+            <header class="flex items-center justify-between gap-4 border-b border-cyan-100 bg-gradient-to-r from-cyan-50 to-white px-5 py-4">
+                <div class="flex min-w-0 items-center gap-3">
+                    <span class="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-cyan-100 text-xl text-cyan-800"><i class="ri-team-line"></i></span>
+                    <div class="min-w-0">
+                        <h2 id="mbModalTitle" class="truncate text-base font-extrabold text-slate-800">Assigned Teachers</h2>
+                        <p id="mbModalBatchName" class="mt-0.5 truncate text-[11px] text-slate-500"></p>
+                        <p id="mbTeacherTotal" class="mt-0.5 text-[10px] font-semibold text-cyan-700"></p>
+                    </div>
+                </div>
+                <button type="button" data-modal-close class="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-xl text-slate-500 transition hover:bg-cyan-50 hover:text-cyan-800" aria-label="Close teachers"><i class="ri-close-line"></i></button>
+            </header>
+            <div class="teacher-modal-main">
+                <div class="teacher-list-panel">
+                    <div class="border-b border-cyan-100 p-3">
+                        <label class="relative block">
+                            <span class="sr-only">Search teachers</span>
+                            <i class="ri-search-line pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                            <input id="teacherModalSearch" type="search" placeholder="Search teacher..." autocomplete="off">
+                        </label>
+                    </div>
+                    <div id="mbTeacherList" class="teacher-list-scroll space-y-1"></div>
+                    <p id="mbTeacherEmpty" class="hidden px-3 py-5 text-center text-xs text-slate-500">No teachers match your search.</p>
+                </div>
+                <div id="mbTeacherDetail" class="teacher-detail-panel">
+                    <div class="flex h-full min-h-[180px] flex-col items-center justify-center text-center">
+                        <i class="ri-user-search-line text-3xl text-cyan-600"></i>
+                        <strong class="mt-3 text-sm text-slate-700">Select a teacher</strong>
+                        <span class="mt-1 max-w-xs text-[11px] leading-5 text-slate-500">Choose a teacher from the list to view their profile and contact information.</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+</section>
 
+<script>
+(() => {
+    "use strict";
+    const page = document.getElementById("adminBatchesPage");
+    if (!page) return;
+
+    // Live limited-time offer countdowns (browser-local display, server timestamps).
+    function formatCountdown(milliseconds) {
+        const totalSeconds = Math.max(0, Math.floor(milliseconds / 1000));
+        const days = Math.floor(totalSeconds / 86400);
+        const hours = Math.floor((totalSeconds % 86400) / 3600);
+        const minutes = Math.floor((totalSeconds % 3600) / 60);
+        const seconds = totalSeconds % 60;
+        return `${days ? `${days}d ` : ""}${String(hours).padStart(2,"0")}:${String(minutes).padStart(2,"0")}:${String(seconds).padStart(2,"0")}`;
+    }
+    function updateOfferCountdowns() {
+        const now = Date.now();
+        page.querySelectorAll("[data-countdown][data-target]").forEach(node => {
+            const target = new Date(node.dataset.target).getTime();
+            const output = node.querySelector("[data-countdown-value]");
+            if (!Number.isFinite(target) || !output) return;
+            const remaining = target - now;
+            if (remaining <= 0) {
+                window.location.reload();
+                return;
+            }
+            output.textContent = formatCountdown(remaining);
+        });
+    }
+    updateOfferCountdowns();
+    window.setInterval(updateOfferCountdowns, 1000);
+
+    // Compact custom batch selector: fixed-height menu with internal scrolling.
+    const batchSelect = page.querySelector("#batchFilterSelect");
+    if (batchSelect) {
+        const wrapper = document.createElement("div");
+        wrapper.className = "batch-filter-custom";
+        const trigger = document.createElement("button");
+        trigger.type = "button";
+        trigger.className = "batch-filter-trigger";
+        trigger.setAttribute("aria-haspopup", "listbox");
+        trigger.setAttribute("aria-expanded", "false");
+        const triggerText = document.createElement("span");
+        const arrow = document.createElement("i");
+        arrow.className = "ri-arrow-down-s-line text-base";
+        trigger.append(triggerText, arrow);
+        const menu = document.createElement("div");
+        menu.className = "batch-filter-menu";
+        menu.setAttribute("role", "listbox");
+        menu.setAttribute("aria-label", "Choose batch");
+        Array.from(batchSelect.options).forEach(option => {
+            const item = document.createElement("button");
+            item.type = "button";
+            item.className = "batch-filter-option";
+            item.textContent = option.textContent.trim();
+            item.dataset.value = option.value;
+            item.setAttribute("role", "option");
+            item.setAttribute("aria-selected", String(option.selected));
+            item.addEventListener("click", () => {
+                batchSelect.value = option.value;
+                triggerText.textContent = option.textContent.trim();
+                menu.querySelectorAll(".batch-filter-option").forEach(entry =>
+                    entry.setAttribute("aria-selected", String(entry === item))
+                );
+                menu.classList.remove("is-open");
+                trigger.setAttribute("aria-expanded", "false");
+            });
+            menu.appendChild(item);
+        });
+        triggerText.textContent = batchSelect.selectedOptions[0]?.textContent.trim() || "All Batches";
+        trigger.addEventListener("click", () => {
+            const open = !menu.classList.contains("is-open");
+            menu.classList.toggle("is-open", open);
+            trigger.setAttribute("aria-expanded", String(open));
+        });
+        document.addEventListener("click", event => {
+            if (!wrapper.contains(event.target)) {
+                menu.classList.remove("is-open");
+                trigger.setAttribute("aria-expanded", "false");
+            }
+        });
+        trigger.addEventListener("keydown", event => {
+            if (event.key === "Escape") {
+                menu.classList.remove("is-open");
+                trigger.setAttribute("aria-expanded", "false");
+                trigger.focus();
+            }
+        });
+        batchSelect.classList.add("batch-filter-native");
+        batchSelect.parentNode.insertBefore(wrapper, batchSelect.nextSibling);
+        wrapper.append(trigger, menu);
+    }
+
+    const cards = Array.from(page.querySelectorAll(".admin-batch-card"));
+    const modal = document.getElementById("assignedTeachersModal");
+    const teacherList = document.getElementById("mbTeacherList");
+    const detail = document.getElementById("mbTeacherDetail");
+    const batchName = document.getElementById("mbModalBatchName");
+    const teacherTotal = document.getElementById("mbTeacherTotal");
+    const teacherSearch = document.getElementById("teacherModalSearch");
+    const teacherEmpty = document.getElementById("mbTeacherEmpty");
+    if (!modal || !teacherList || !detail) return;
+
+    let previousFocus = null, teachers = [], filteredTeachers = [];
+    const escapeHTML = value => String(value ?? "").replace(/[&<>"']/g, char => ({
+        "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+    })[char]);
+    const initials = name => String(name || "T").trim().split(/\s+/).slice(0,2).map(part => part[0] || "").join("").toUpperCase() || "T";
+
+    function avatarHTML(teacher, large = false) {
+        const size = large ? "h-20 w-20 text-xl" : "h-10 w-10 text-xs";
+        const content = teacher.image
+            ? `<img src="${escapeHTML(teacher.image)}" alt="" class="h-full w-full object-cover">`
+            : escapeHTML(initials(teacher.name));
+        return `<span class="teacher-avatar ${size}">${content}</span>`;
+    }
+
+    function showTeacher(index) {
+        const teacher = filteredTeachers[index];
+        if (!teacher) return;
+        teacherList.querySelectorAll("[data-teacher-index]").forEach(button => {
+            const selected = Number(button.dataset.teacherIndex) === index;
+            button.setAttribute("aria-pressed", String(selected));
+        });
+        const email = String(teacher.email || "").trim();
+        const phone = String(teacher.phone || "").trim();
+        const experience = String(teacher.experience ?? "0").trim();
+        detail.innerHTML = `
+            <div class="flex flex-col gap-3 border-b border-cyan-100 pb-4 sm:flex-row sm:items-center">
+                ${avatarHTML(teacher, true)}
+                <div class="min-w-0">
+                    <h3 class="break-words text-lg font-extrabold text-slate-800">${escapeHTML(teacher.name)}</h3>
+                    <p class="mt-1 text-xs text-cyan-800">${escapeHTML(teacher.specialization || "Teacher")}</p>
+                    <span class="mt-2 inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[9px] font-bold text-emerald-700">Assigned to this batch</span>
+                </div>
+            </div>
+            <div class="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
+                <div class="rounded-xl border border-cyan-100 bg-cyan-50/70 p-3 text-center"><i class="ri-graduation-cap-line text-lg text-cyan-700"></i><small class="mt-1.5 block text-[9px] font-bold uppercase text-slate-500">Qualification</small><span class="mt-1 block break-words text-[11px] font-semibold text-slate-800">${escapeHTML(teacher.qualification || "Not provided")}</span></div>
+                <div class="rounded-xl border border-cyan-100 bg-cyan-50/70 p-3 text-center"><i class="ri-briefcase-4-line text-lg text-cyan-700"></i><small class="mt-1.5 block text-[9px] font-bold uppercase text-slate-500">Experience</small><span class="mt-1 block text-[11px] font-semibold text-slate-800">${escapeHTML(experience)} ${Number(experience) === 1 ? "Year" : "Years"}</span></div>
+                <div class="rounded-xl border border-cyan-100 bg-cyan-50/70 p-3 text-center"><i class="ri-book-open-line text-lg text-cyan-700"></i><small class="mt-1.5 block text-[9px] font-bold uppercase text-slate-500">Specialization</small><span class="mt-1 block break-words text-[11px] font-semibold text-slate-800">${escapeHTML(teacher.specialization || "Not provided")}</span></div>
+            </div>
+            <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div><h4 class="mb-2 flex items-center gap-2 text-xs font-extrabold text-slate-800"><i class="ri-user-line text-cyan-700"></i> About</h4><p class="text-[11px] leading-5 text-slate-600">${escapeHTML(teacher.bio || "No biography provided.")}</p></div>
+                <div class="border-t border-cyan-100 pt-3 sm:border-l sm:border-t-0 sm:pl-4 sm:pt-0"><h4 class="mb-2 flex items-center gap-2 text-xs font-extrabold text-slate-800"><i class="ri-contacts-line text-cyan-700"></i> Contact Information</h4>
+                    <p class="mb-2 break-all text-[11px] text-slate-600"><i class="ri-mail-line mr-2 text-cyan-700"></i>${email ? `<a class="hover:text-cyan-800" href="mailto:${escapeHTML(email)}">${escapeHTML(email)}</a>` : "Not provided"}</p>
+                    <p class="break-all text-[11px] text-slate-600"><i class="ri-phone-line mr-2 text-cyan-700"></i>${phone ? `<a class="hover:text-cyan-800" href="tel:${escapeHTML(phone)}">${escapeHTML(phone)}</a>` : "Not provided"}</p>
+                </div>
+            </div>`;
+        teacherList.querySelectorAll("[data-teacher-index]").forEach(button => {
+            const selected = Number(button.dataset.teacherIndex) === index;
+            button.classList.toggle("bg-cyan-50", selected);
+            button.classList.toggle("border-cyan-200", selected);
+        });
+    }
+
+    function renderTeacherList() {
+        const query = (teacherSearch?.value || "").trim().toLowerCase();
+        filteredTeachers = teachers.filter(teacher =>
+            `${teacher.name || ""} ${teacher.qualification || ""} ${teacher.specialization || ""}`.toLowerCase().includes(query)
+        );
+        teacherList.replaceChildren();
+        if (teacherTotal) teacherTotal.textContent = `${filteredTeachers.length} of ${teachers.length} teachers assigned`;
+        teacherEmpty?.classList.toggle("hidden", filteredTeachers.length !== 0);
+        filteredTeachers.forEach((teacher, index) => {
+            const button = document.createElement("button");
+            button.type = "button";
+            button.dataset.teacherIndex = String(index);
+            button.className = "teacher-list-item";
+            button.setAttribute("aria-pressed", "false");
+            button.innerHTML = `${avatarHTML(teacher)}<span class="min-w-0 flex-1"><strong class="block truncate text-xs font-extrabold text-slate-800">${escapeHTML(teacher.name)}</strong><small class="mt-1 block truncate text-[10px] text-slate-500">${escapeHTML(teacher.specialization || teacher.qualification || "Teacher")}</small></span><i class="ri-arrow-right-s-line text-cyan-700"></i>`;
+            button.addEventListener("click", () => showTeacher(index));
+            teacherList.appendChild(button);
+        });
+        detail.innerHTML = `<div class="flex h-full min-h-[180px] flex-col items-center justify-center text-center"><i class="ri-user-search-line text-3xl text-cyan-600"></i><strong class="mt-3 text-sm text-slate-700">Select a teacher</strong><span class="mt-1 max-w-xs text-[11px] leading-5 text-slate-500">Choose a teacher from the list to view their profile and contact information.</span></div>`;
+    }
+
+    function openModal(card, trigger) {
+        previousFocus = trigger;
+        try { teachers = JSON.parse(card.querySelector(".admin-teacher-data")?.textContent || "[]"); }
+        catch (_error) { teachers = []; }
+        if (batchName) batchName.textContent = `Batch: ${trigger.dataset.batchName || ""}`;
+        if (teacherSearch) teacherSearch.value = "";
+        renderTeacherList();
+        modal.classList.add("is-open");
+        modal.setAttribute("aria-hidden", "false");
+        document.body.style.overflow = "hidden";
+        modal.querySelector("[data-modal-close]")?.focus();
+    }
+    function closeModal() {
+        if (!modal.classList.contains("is-open")) return;
+        modal.classList.remove("is-open");
+        modal.setAttribute("aria-hidden", "true");
+        document.body.style.overflow = "";
+        previousFocus?.focus();
+        previousFocus = null;
+        teachers = [];
+        filteredTeachers = [];
+    }
+
+    teacherSearch?.addEventListener("input", renderTeacherList);
+
+    // Batch three-dot action menus.
+    page.querySelectorAll("[data-batch-menu-toggle]").forEach(toggle => {
+        toggle.addEventListener("click", event => {
+            event.preventDefault();
+            event.stopPropagation();
+            const menu = toggle.nextElementSibling;
+            const willOpen = !menu.classList.contains("is-open");
+            page.querySelectorAll(".batch-menu.is-open").forEach(openMenu => {
+                openMenu.classList.remove("is-open");
+                openMenu.previousElementSibling?.setAttribute("aria-expanded", "false");
+            });
+            if (willOpen) {
+                menu.classList.add("is-open");
+                toggle.setAttribute("aria-expanded", "true");
+            }
+        });
+    });
+    page.querySelectorAll(".batch-menu").forEach(menu => {
+        menu.addEventListener("click", event => event.stopPropagation());
+    });
+    document.addEventListener("click", () => {
+        page.querySelectorAll(".batch-menu.is-open").forEach(menu => {
+            menu.classList.remove("is-open");
+            menu.previousElementSibling?.setAttribute("aria-expanded", "false");
+        });
+    });
+    document.addEventListener("keydown", event => {
+        if (event.key === "Escape") {
+            page.querySelectorAll(".batch-menu.is-open").forEach(menu => {
+                menu.classList.remove("is-open");
+                menu.previousElementSibling?.setAttribute("aria-expanded", "false");
+            });
+        }
+    });
+    cards.forEach(card => {
+        card.addEventListener("click", event => {
+            if (event.target.closest("[data-teacher-open],[data-batch-menu-toggle],.batch-menu,a,button,input,select,label")) return;
+            if (card.dataset.batchUrl) window.location.assign(card.dataset.batchUrl);
+        });
+        card.addEventListener("keydown", event => {
+            if (event.target !== card) return;
+            if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                if (card.dataset.batchUrl) window.location.assign(card.dataset.batchUrl);
+            }
+        });
+        card.querySelector("[data-teacher-open]")?.addEventListener("click", event => {
+            event.preventDefault();
+            event.stopPropagation();
+            openModal(card, event.currentTarget);
+        });
+    });
+    modal.querySelectorAll("[data-modal-close]").forEach(button => button.addEventListener("click", closeModal));
+    modal.addEventListener("click", event => { if (event.target === modal) closeModal(); });
+    document.addEventListener("keydown", event => {
+        if (event.key === "Escape") closeModal();
+    });
+})();
+</script>
 <script src="{% static 'admins/js/main_batches.js' %}"></script>
-
 {% endblock %}

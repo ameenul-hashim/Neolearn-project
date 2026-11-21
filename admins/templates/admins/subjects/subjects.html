@@ -62,6 +62,349 @@
     @media (max-width:1024px) { .subjects-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
     @media (max-width:640px) { .subjects-grid { grid-template-columns:minmax(0,1fr); } .subject-card-media { height:175px; } .subject-modal { padding:12px; } .subject-modal-panel { max-height:72vh; } .subject-modal-list { grid-template-columns:minmax(0,1fr); padding:10px; } }
     @media (prefers-reduced-motion:reduce) { .subject-card,.subject-card-media img,.subject-tool,.subject-avatar-button,.subject-teacher-card { transition:none!important; } }
+
+
+    /* =========================================================
+       NEOLEARN ADMIN SUBJECTS — WHITE / AQUA CONTRAST THEME
+       Styling only. Existing template logic and JavaScript stay intact.
+       ========================================================= */
+    .subjects-page { color:#172033 !important; }
+
+    .subjects-stat {
+        background:linear-gradient(145deg,#ffffff 0%,#f5fbff 100%) !important;
+        border:1px solid #d8e7f1 !important;
+        box-shadow:0 5px 18px rgba(15,45,70,.06) !important;
+    }
+    .subjects-stat .text-slate-400 { color:#526579 !important; }
+    .subjects-stat .text-white { color:#142338 !important; }
+    .subjects-stat .text-emerald-300 { color:#087d5b !important; }
+    .subjects-stat .text-amber-300 { color:#a66a00 !important; }
+    .subjects-stat .text-violet-300 { color:#6842a5 !important; }
+    .subjects-stat .bg-cyan-500\/15 { background:#e1f8fc !important; }
+    .subjects-stat .bg-emerald-500\/15 { background:#e5f8ef !important; }
+    .subjects-stat .bg-amber-500\/15 { background:#fff5dc !important; }
+    .subjects-stat .bg-violet-500\/15 { background:#f1eaff !important; }
+
+    .subjects-filter-panel {
+        background:#ffffff !important;
+        border:1px solid #d7e4ee !important;
+        box-shadow:0 5px 18px rgba(15,45,70,.055) !important;
+    }
+    .subjects-search-input {
+        color:#172b43 !important;
+        background:#f8fbfe !important;
+        border:1px solid #cbd9e5 !important;
+        box-shadow:inset 0 1px 2px rgba(15,45,70,.025);
+    }
+    .subjects-search-input::placeholder { color:#718398 !important; opacity:1; }
+    .subjects-search-input:focus {
+        background:#ffffff !important;
+        border-color:#089bb5 !important;
+        box-shadow:0 0 0 3px rgba(8,155,181,.13) !important;
+    }
+    .subjects-search-input option { color:#172b43; background:#ffffff; }
+    .subjects-batch-trigger {
+        color:#18344c !important;
+        border-color:#b8dce7 !important;
+        background:linear-gradient(135deg,#f0fbfd,#ffffff) !important;
+    }
+    .subjects-batch-trigger .text-cyan-300 { color:#078ba5 !important; }
+    .subjects-batch-menu {
+        background:#ffffff !important;
+        border:1px solid #c9e1e9 !important;
+        box-shadow:0 18px 42px rgba(15,45,70,.18) !important;
+        scrollbar-color:#72cbd8 #edf5f8 !important;
+    }
+    .subjects-batch-option { color:#334b61 !important; }
+    .subjects-batch-option:hover,
+    .subjects-batch-option[aria-selected="true"] {
+        color:#087e96 !important;
+        background:#e8f8fb !important;
+    }
+    #subjectsResetButton {
+        color:#40566c !important;
+        background:#f5f8fb !important;
+        border-color:#cbd8e3 !important;
+    }
+    #subjectsResetButton:hover {
+        color:#b4233b !important;
+        background:#fff1f2 !important;
+        border-color:#f3b4bf !important;
+    }
+
+    .subjects-page h1,
+    .subjects-page h2,
+    .subjects-page h3 { color:#142338; }
+    .subjects-page .text-white { color:#142338 !important; }
+    .subjects-page .text-slate-400 { color:#596d81 !important; }
+    .subjects-page .text-slate-500 { color:#687d91 !important; }
+    .subjects-page .text-slate-300 { color:#40566c !important; }
+    .subjects-page .text-cyan-300 { color:#078ba5 !important; }
+    .subjects-page .text-emerald-300 { color:#087d5b !important; }
+    .subjects-page .text-amber-300 { color:#9b6500 !important; }
+    .subjects-page .text-violet-300 { color:#6842a5 !important; }
+
+    .subject-card {
+        background:#ffffff !important;
+        border:1px solid #d6e3ed !important;
+        box-shadow:0 7px 22px rgba(15,45,70,.075) !important;
+    }
+    .subject-card:hover,
+    .subject-card:focus-visible {
+        border-color:#68cbd9 !important;
+        box-shadow:0 14px 30px rgba(15,45,70,.13),0 0 0 1px rgba(8,155,181,.12) !important;
+    }
+    .subject-card-media { background:linear-gradient(135deg,#dff7fb,#eaf1ff) !important; }
+    .subject-card-media::after {
+        background:linear-gradient(transparent,rgba(10,28,45,.28)) !important;
+    }
+    .subject-card-body { background:#ffffff !important; }
+    .subject-symbol {
+        color:#087f99 !important;
+        border-color:#c8eaf0 !important;
+        background:#e8f8fb !important;
+    }
+    .subject-card-title { color:#142338 !important; }
+    .subject-batch-line {
+        color:#40566c !important;
+        border-color:#dce7ef !important;
+        background:#f5f9fc !important;
+    }
+    .subject-batch-line .text-cyan-300 { color:#078ba5 !important; }
+    .subject-avatar-button {
+        color:#29445c !important;
+        border-color:#ffffff !important;
+        background:#e8f1f6 !important;
+    }
+    .subject-avatar-button:hover,
+    .subject-avatar-button:focus-visible {
+        border-color:#20b8ce !important;
+        box-shadow:0 0 0 2px rgba(8,155,181,.15) !important;
+    }
+    .subject-avatar-more {
+        color:#087e96 !important;
+        border-color:#ffffff !important;
+        background:linear-gradient(135deg,#d9f5f8,#eaf4ff) !important;
+    }
+    .subject-teacher-count { color:#52697e !important; }
+
+    .subject-modal {
+        background:rgba(12,29,45,.58) !important;
+        backdrop-filter:blur(7px);
+    }
+    .subject-modal-panel {
+        background:#ffffff !important;
+        border:1px solid #c8e5eb !important;
+        box-shadow:0 25px 70px rgba(8,30,48,.28) !important;
+    }
+    .subject-modal-header { border-bottom:1px solid #e0eaf0 !important; }
+    .subject-modal-header h3 { color:#142338 !important; }
+    .subject-modal-header p { color:#5c7185 !important; }
+    .subject-modal-header .text-cyan-300 { color:#078ba5 !important; }
+    .subject-modal-header button { color:#61758a !important; }
+    .subject-modal-header button:hover {
+        color:#142338 !important;
+        background:#edf4f8 !important;
+    }
+    .subject-modal-list {
+        background:#f8fbfd !important;
+        scrollbar-color:#72cbd8 #edf5f8 !important;
+    }
+    .subject-teacher-card {
+        background:#ffffff !important;
+        border:1px solid #dce7ee !important;
+        box-shadow:0 2px 8px rgba(15,45,70,.035);
+    }
+    .subject-teacher-card:hover {
+        background:#f5fcfd !important;
+        border-color:#a9dce5 !important;
+    }
+    .subject-teacher-photo {
+        color:#29445c !important;
+        background:#e8f3f7 !important;
+        border-color:#c5e7ed !important;
+    }
+    .subject-teacher-meta h4 { color:#172b43 !important; }
+    .subject-teacher-meta p { color:#52697e !important; }
+    .subject-teacher-meta .text-cyan-300 { color:#078ba5 !important; }
+
+    .subjects-page .border-dashed {
+        border-color:#cbdbe5 !important;
+    }
+    .subjects-page .bg-slate-900\/70 {
+        background:#f7fbfd !important;
+    }
+    .subjects-page .text-slate-950 { color:#10283b !important; }
+
+    @media (max-width:640px) {
+        .subjects-filter-panel { padding:12px !important; }
+        .subject-card { border-radius:16px !important; }
+    }
+
+
+    /* =========================================================
+       SUBJECTS PAGE — RESTORE DARK SECTION HEADERS + DISTINCT
+       STAT CARD COLOURS. Keep the rest of the white/aqua UI.
+       ========================================================= */
+
+    /* Green-marked page heading: match the original dark admin
+       surface so the heading is visible without changing the
+       global sidebar or top navigation. */
+    .subjects-page > header .text-cyan-300 {
+        color:#22d3ee !important;
+    }
+    .subjects-page > header h1 {
+        color:#f1f5f9 !important;
+        text-shadow:0 1px 10px rgba(0,0,0,.18);
+    }
+    .subjects-page > header p {
+        color:#94a3b8 !important;
+    }
+
+    /* Green-marked Subject Library heading and helper text. */
+    .subjects-page section > .mb-3 h2 {
+        color:#f1f5f9 !important;
+    }
+    .subjects-page section > .mb-3 p {
+        color:#94a3b8 !important;
+    }
+    .subjects-page section > .mb-3 > span {
+        color:#8495aa !important;
+    }
+
+    /* Orange-marked count cards: retain the light card design,
+       but give each metric a clear, matching tinted surface. */
+    .subjects-page .subjects-stat:nth-child(1) {
+        background:linear-gradient(145deg,#effbff 0%,#ffffff 100%) !important;
+        border-color:#b9e8f1 !important;
+    }
+    .subjects-page .subjects-stat:nth-child(2) {
+        background:linear-gradient(145deg,#edfbf4 0%,#ffffff 100%) !important;
+        border-color:#bcebd4 !important;
+    }
+    .subjects-page .subjects-stat:nth-child(3) {
+        background:linear-gradient(145deg,#fff8e8 0%,#ffffff 100%) !important;
+        border-color:#f1dca8 !important;
+    }
+    .subjects-page .subjects-stat:nth-child(4) {
+        background:linear-gradient(145deg,#f5f0ff 0%,#ffffff 100%) !important;
+        border-color:#d9cafa !important;
+    }
+    .subjects-page .subjects-stat {
+        box-shadow:0 5px 16px rgba(15,45,70,.075) !important;
+    }
+    .subjects-page .subjects-stat p {
+        color:#526579;
+    }
+    .subjects-page .subjects-stat .text-white {
+        color:#142338 !important;
+    }
+
+
+
+    /* =========================================================
+       SUBJECTS PAGE — FINAL HEADER EMPHASIS, RICH STAT COLOURS
+       AND COMPACT SINGLE-LINE FILTER BAR
+       ========================================================= */
+
+    /* Keep the page header on the dark admin canvas and make the
+       title unmistakably readable. Add a restrained aqua marker. */
+    .subjects-page > header > div:first-child > div {
+        color:#22d3ee !important;
+        opacity:1 !important;
+        text-shadow:0 0 12px rgba(34,211,238,.20);
+    }
+    .subjects-page > header > div:first-child h1 {
+        color:#f8fafc !important;
+        opacity:1 !important;
+        text-shadow:0 2px 14px rgba(0,0,0,.42);
+        position:relative;
+        width:fit-content;
+    }
+    .subjects-page > header > div:first-child h1::after {
+        content:"";
+        display:block;
+        width:54px;
+        height:3px;
+        margin-top:7px;
+        border-radius:999px;
+        background:linear-gradient(90deg,#22d3ee,#0e7490);
+        box-shadow:0 0 12px rgba(34,211,238,.28);
+    }
+    .subjects-page > header > div:first-child p {
+        color:#a6b5c7 !important;
+        opacity:1 !important;
+    }
+
+    /* Stronger coloured surfaces for all four metric cards.
+       Avoid plain white while keeping labels and numbers legible. */
+    .subjects-page .subjects-stat:nth-child(1) {
+        background:linear-gradient(135deg,#d9f5fb 0%,#eafaff 58%,#dff3ff 100%) !important;
+        border:1px solid #8bd8e8 !important;
+        box-shadow:inset 0 1px 0 rgba(255,255,255,.78),0 8px 20px rgba(8,145,178,.10) !important;
+    }
+    .subjects-page .subjects-stat:nth-child(2) {
+        background:linear-gradient(135deg,#d9f7e8 0%,#e9fff3 58%,#d8f4e7 100%) !important;
+        border:1px solid #8edbb5 !important;
+        box-shadow:inset 0 1px 0 rgba(255,255,255,.78),0 8px 20px rgba(5,150,105,.09) !important;
+    }
+    .subjects-page .subjects-stat:nth-child(3) {
+        background:linear-gradient(135deg,#fff0c9 0%,#fff8e6 58%,#ffedc2 100%) !important;
+        border:1px solid #eacb78 !important;
+        box-shadow:inset 0 1px 0 rgba(255,255,255,.78),0 8px 20px rgba(180,120,0,.09) !important;
+    }
+    .subjects-page .subjects-stat:nth-child(4) {
+        background:linear-gradient(135deg,#e9ddff 0%,#f5efff 58%,#e8ddff 100%) !important;
+        border:1px solid #c2a9f1 !important;
+        box-shadow:inset 0 1px 0 rgba(255,255,255,.78),0 8px 20px rgba(109,40,217,.09) !important;
+    }
+    .subjects-page .subjects-stat p:first-child {
+        color:#42566c !important;
+        font-weight:800 !important;
+    }
+    .subjects-page .subjects-stat .text-2xl {
+        font-weight:900 !important;
+    }
+    .subjects-page .subjects-stat:nth-child(1) .text-2xl { color:#075985 !important; }
+    .subjects-page .subjects-stat:nth-child(2) .text-2xl { color:#047857 !important; }
+    .subjects-page .subjects-stat:nth-child(3) .text-2xl { color:#a16207 !important; }
+    .subjects-page .subjects-stat:nth-child(4) .text-2xl { color:#6b3db5 !important; }
+    .subjects-page .subjects-stat:nth-child(1) span { background:#bcecf5 !important; color:#087e99 !important; }
+    .subjects-page .subjects-stat:nth-child(2) span { background:#bdeed5 !important; color:#07845d !important; }
+    .subjects-page .subjects-stat:nth-child(3) span { background:#ffe3a0 !important; color:#a16207 !important; }
+    .subjects-page .subjects-stat:nth-child(4) span { background:#d9c7ff !important; color:#7042b5 !important; }
+
+    /* Keep all filters in one balanced row on desktop. The search
+       field gets roughly one-third of the available filter width. */
+    @media (min-width:1280px) {
+        #subjectsFilterForm {
+            grid-template-columns:minmax(280px,1.35fr) minmax(190px,1.05fr) minmax(145px,.78fr) minmax(155px,.86fr) auto !important;
+            gap:10px !important;
+            padding:12px !important;
+        }
+        #subjectsFilterForm > label:first-child {
+            min-width:0;
+        }
+        #subjectsFilterForm .subjects-search-input,
+        #subjectsFilterForm select {
+            min-height:46px;
+        }
+        #subjectsFilterForm > div:last-child {
+            gap:8px !important;
+            white-space:nowrap;
+        }
+    }
+    @media (min-width:768px) and (max-width:1279px) {
+        #subjectsFilterForm {
+            grid-template-columns:minmax(220px,1.2fr) minmax(180px,1fr) !important;
+        }
+    }
+    @media (max-width:767px) {
+        #subjectsFilterForm {
+            grid-template-columns:minmax(0,1fr) !important;
+        }
+    }
+
 </style>
 
 <div class="subjects-page mx-auto w-full max-w-[1600px] space-y-5 pl-2 pr-3 pt-0 pb-4 sm:pl-3 sm:pr-5 2xl:pl-3 2xl:pr-6">

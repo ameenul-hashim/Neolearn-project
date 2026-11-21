@@ -61,6 +61,360 @@
     @media(max-width:1350px){.batch-subjects-grid{grid-template-columns:repeat(3,minmax(0,1fr));}}
     @media(max-width:1024px){.batch-subjects-grid{grid-template-columns:repeat(2,minmax(0,1fr));}}
     @media(max-width:640px){.batch-subjects-grid{grid-template-columns:minmax(0,1fr);}.batch-subject-media{height:175px;}.batch-teacher-modal{padding:10px}.batch-teacher-modal-list{grid-template-columns:minmax(0,1fr);}}
+
+
+    /* NeoLearner Admin — clean white and aqua visual system */
+    .batch-subjects-page { color:#334155 !important; }
+    .batch-subjects-page .batch-subjects-panel { border:1px solid #dbeafe !important; background:#ffffff !important; box-shadow:0 5px 18px rgba(15,23,42,.045); }
+    .batch-subjects-page .batch-subjects-input { border:1px solid #dbe4ef !important; background:#ffffff !important; color:#0f172a !important; }
+    .batch-subjects-page .batch-subjects-input::placeholder { color:#94a3b8 !important; }
+    .batch-subjects-page .bg-blue-600 { background:#0891b2 !important; }
+    .batch-subjects-page .hover\:bg-blue-700:hover { background:#0e7490 !important; }
+    .batch-subjects-page .batch-subjects-input:focus { border-color:#22c5d9 !important; box-shadow:0 0 0 3px rgba(34,197,217,.13) !important; }
+    .batch-subjects-page .batch-subject-card { border:1px solid #dce8f0 !important; background:#ffffff !important; box-shadow:0 5px 18px rgba(15,23,42,.055) !important; }
+    .batch-subjects-page .batch-subject-card:hover,.batch-subjects-page .batch-subject-card:focus-visible { border-color:#67d9e5 !important; box-shadow:0 12px 25px rgba(8,145,178,.12) !important; }
+    .batch-subjects-page .batch-subject-media { background:linear-gradient(135deg,#dff8fb,#eaf6ff) !important; }
+    .batch-subjects-page .batch-subject-media:after { background:linear-gradient(transparent,rgba(15,23,42,.12)) !important; }
+    .batch-subjects-page .batch-subject-title { color:#0f172a !important; }
+    .batch-subjects-page .batch-subject-description { color:#64748b !important; }
+    .batch-subjects-page .batch-subject-symbol { border:1px solid #bcecf1 !important; background:#e8fbfd !important; color:#0891b2 !important; }
+    .batch-subjects-page .batch-subject-teachers { border-color:#e2e8f0; }
+    .batch-subjects-page .batch-teacher-avatar { border-color:#ffffff !important; background:#dff7fa !important; color:#0e7490 !important; box-shadow:0 0 0 1px #ccecf0; }
+    .batch-subjects-page .batch-teacher-avatar:hover,.batch-subjects-page .batch-teacher-avatar:focus-visible { border-color:#67d9e5 !important; }
+    .batch-subjects-page .batch-teacher-more { border-color:#a5e8ef !important; background:#e5fafc !important; color:#0e7490 !important; }
+    .batch-subjects-page .batch-teacher-count { color:#64748b !important; }
+    .batch-subjects-page .batch-subject-tools .batch-subject-tool { border-color:#dbe5ee !important; background:rgba(255,255,255,.96) !important; color:#475569 !important; backdrop-filter:blur(8px); }
+    .batch-subjects-page .batch-subject-tools .batch-subject-tool.edit { color:#0284c7 !important; border-color:#bae6fd !important; }
+    .batch-subjects-page .batch-subject-tools .batch-subject-tool.delete { color:#e11d48 !important; border-color:#fecdd3 !important; }
+    .batch-subjects-page .batch-subject-status { backdrop-filter:blur(8px); }
+    .batch-subjects-page .batch-status-published { color:#047857 !important; border:1px solid #a7f3d0 !important; background:rgba(236,253,245,.96) !important; }
+    .batch-subjects-page .batch-status-draft { color:#a16207 !important; border:1px solid #fde68a !important; background:rgba(255,251,235,.97) !important; }
+    .batch-subjects-page .batch-status-archived { color:#475569 !important; border:1px solid #cbd5e1 !important; background:rgba(248,250,252,.97) !important; }
+    .batch-subjects-page .batch-subject-body > div:last-child { border-color:#e2e8f0 !important; color:#64748b !important; }
+    .batch-subjects-page .batch-subject-body > div:last-child i { color:#0891b2 !important; }
+    .batch-subjects-page .batch-teacher-modal { background:rgba(15,23,42,.42) !important; backdrop-filter:blur(5px); }
+    .batch-subjects-page .batch-teacher-modal-panel { border:1px solid #bcecf1 !important; background:#ffffff !important; box-shadow:0 24px 70px rgba(15,23,42,.2) !important; }
+    .batch-subjects-page .batch-teacher-modal-head { border-color:#e2e8f0 !important; }
+    .batch-subjects-page .batch-teacher-detail { border:1px solid #e2e8f0 !important; background:#f8fcfd !important; }
+    .batch-subjects-page .batch-teacher-photo { border-color:#bcecf1 !important; background:#e6f9fb !important; color:#0e7490 !important; }
+    .batch-subjects-page .batch-coupon-strip > article { border-color:#bcecf1 !important; background:linear-gradient(110deg,#ffffff,#f0fcfd) !important; box-shadow:0 5px 18px rgba(15,23,42,.045) !important; }
+    .batch-subjects-page .batch-coupon-strip > article p:first-child { color:#0f766e !important; }
+    .batch-subjects-page .batch-coupon-strip > article p { color:#475569 !important; }
+    .batch-subjects-page .batch-coupon-strip > article span { background:#e6f9fb !important; color:#0e7490 !important; }
+    .batch-subjects-page #openBatchCoupons { border:1px dashed #67cbd7 !important; background:linear-gradient(110deg,#ffffff,#effcfd) !important; }
+    .batch-subjects-page #openBatchCoupons span { color:#0f766e !important; }
+    .batch-subjects-page #openBatchCoupons span span { color:#0e7490 !important; }
+    .batch-subjects-page .batch-coupon-modal { background:rgba(15,23,42,.42) !important; backdrop-filter:blur(5px); }
+    .batch-subjects-page .batch-coupon-panel { border:1px solid #bcecf1 !important; background:#ffffff !important; box-shadow:0 24px 70px rgba(15,23,42,.2) !important; }
+    .batch-subjects-page .batch-coupon-panel header,.batch-subjects-page .batch-coupon-panel footer { border-color:#e2e8f0 !important; }
+    .batch-subjects-page .batch-coupon-panel .batch-coupon-row { border-color:#e2e8f0 !important; background:#f8fcfd !important; }
+    .batch-subjects-page .batch-coupon-code { border-color:#a5dfe6 !important; color:#0f172a !important; background:#ffffff !important; }
+    .batch-subjects-page .batch-coupon-panel .text-white { color:#0f172a !important; }
+    .batch-subjects-page .batch-coupon-panel .text-slate-400,.batch-subjects-page .batch-coupon-panel .text-slate-500 { color:#64748b !important; }
+    .batch-subjects-page .batch-coupon-panel .text-cyan-300 { color:#0e7490 !important; }
+    .batch-subjects-page .batch-coupon-panel .bg-slate-800,.batch-subjects-page .batch-coupon-panel .bg-slate-900\/45 { background:#f1f8fa !important; }
+    .batch-subjects-page .batch-coupon-panel .border-slate-700,.batch-subjects-page .batch-coupon-panel .border-slate-700\/70,.batch-subjects-page .batch-coupon-panel .border-slate-700\/80 { border-color:#e2e8f0 !important; }
+    .batch-subjects-page .text-white { color:#0f172a !important; }
+    .batch-subjects-page .text-slate-300 { color:#475569 !important; }
+    .batch-subjects-page .text-slate-400 { color:#64748b !important; }
+    .batch-subjects-page .text-slate-500 { color:#718096 !important; }
+    .batch-subjects-page .bg-slate-900 { background:#f1f8fa !important; }
+    .batch-subjects-page .bg-slate-800 { background:#f1f8fa !important; }
+    .batch-subjects-page .border-slate-700,.batch-subjects-page .border-slate-700\/70,.batch-subjects-page .border-slate-700\/80 { border-color:#e2e8f0 !important; }
+    .batch-subjects-page .hover\:bg-slate-800:hover { background:#eaf8fa !important; }
+    .batch-subjects-page .hover\:text-white:hover { color:#0f172a !important; }
+    .batch-subjects-page .bg-cyan-500\/10,.batch-subjects-page .bg-cyan-400\/10 { background:#e8fbfd !important; }
+    .batch-subjects-page .text-cyan-300,.batch-subjects-page .text-cyan-200 { color:#0e879b !important; }
+    .batch-subjects-page .border-dashed.border-slate-700 { border-color:#cbdde5 !important; }
+    @media(max-width:640px){
+        .batch-subjects-page .batch-subjects-grid { gap:12px; }
+        .batch-subjects-page .batch-subject-body { padding:13px; }
+    }
+
+
+    /* Contrast refinement: keep the white/aqua layout, but make every label,
+       helper text, border and action clearly readable. */
+    .batch-subjects-page { color:#1e293b !important; }
+
+    .batch-subjects-page .text-white { color:#0f172a !important; }
+    .batch-subjects-page .text-slate-300 { color:#334155 !important; }
+    .batch-subjects-page .text-slate-400 { color:#475569 !important; }
+    .batch-subjects-page .text-slate-500 { color:#526174 !important; }
+    .batch-subjects-page .text-cyan-300,
+    .batch-subjects-page .text-cyan-200 { color:#087e96 !important; }
+
+    .batch-subjects-page .batch-subjects-panel {
+        border-color:#b8dce5 !important;
+        background:#ffffff !important;
+        box-shadow:0 5px 18px rgba(15,23,42,.07) !important;
+    }
+    .batch-subjects-page .batch-subjects-input {
+        border-color:#b8cbd8 !important;
+        background:#ffffff !important;
+        color:#102033 !important;
+    }
+    .batch-subjects-page .batch-subjects-input::placeholder { color:#64748b !important; opacity:1; }
+    .batch-subjects-page .batch-subjects-input:focus {
+        border-color:#0891b2 !important;
+        box-shadow:0 0 0 3px rgba(8,145,178,.18) !important;
+    }
+    .batch-subjects-page .bg-blue-600 { background:#0787a5 !important; }
+    .batch-subjects-page .hover\:bg-blue-700:hover { background:#066b85 !important; }
+
+    .batch-subjects-page a[href*="create_subject"] {
+        background:linear-gradient(110deg,#0891b2,#0e7490) !important;
+        color:#ffffff !important;
+        box-shadow:0 5px 14px rgba(8,145,178,.2) !important;
+    }
+    .batch-subjects-page a[href*="create_subject"]:hover {
+        background:linear-gradient(110deg,#0e7490,#155e75) !important;
+    }
+
+    .batch-subjects-page .batch-subject-card {
+        border-color:#c8dce5 !important;
+        background:#ffffff !important;
+        box-shadow:0 5px 18px rgba(15,23,42,.075) !important;
+    }
+    .batch-subjects-page .batch-subject-card:hover,
+    .batch-subjects-page .batch-subject-card:focus-visible {
+        border-color:#0891b2 !important;
+        box-shadow:0 12px 26px rgba(8,145,178,.16) !important;
+    }
+    .batch-subjects-page .batch-subject-media {
+        background:linear-gradient(135deg,#c9f1f5,#dceefa) !important;
+    }
+    .batch-subjects-page .batch-subject-media:after {
+        background:linear-gradient(transparent,rgba(15,23,42,.18)) !important;
+    }
+    .batch-subjects-page .batch-subject-title { color:#102033 !important; }
+    .batch-subjects-page .batch-subject-description { color:#475569 !important; }
+    .batch-subjects-page .batch-subject-symbol {
+        border-color:#8bd7e1 !important;
+        background:#dff7fa !important;
+        color:#087e96 !important;
+    }
+    .batch-subjects-page .batch-subject-tool {
+        border-color:#c5d5df !important;
+        background:#ffffff !important;
+        color:#334155 !important;
+        box-shadow:0 2px 6px rgba(15,23,42,.10);
+    }
+    .batch-subjects-page .batch-subject-tool.edit {
+        color:#0369a1 !important;
+        border-color:#93c5fd !important;
+    }
+    .batch-subjects-page .batch-subject-tool.delete {
+        color:#be123c !important;
+        border-color:#fda4af !important;
+    }
+
+    .batch-subjects-page .batch-status-published {
+        color:#065f46 !important;
+        border-color:#6ee7b7 !important;
+        background:#d1fae5 !important;
+    }
+    .batch-subjects-page .batch-status-draft {
+        color:#854d0e !important;
+        border-color:#facc15 !important;
+        background:#fef3c7 !important;
+    }
+    .batch-subjects-page .batch-status-archived {
+        color:#334155 !important;
+        border-color:#cbd5e1 !important;
+        background:#e2e8f0 !important;
+    }
+
+    .batch-subjects-page .batch-teacher-count { color:#475569 !important; }
+    .batch-subjects-page .batch-teacher-avatar {
+        border-color:#ffffff !important;
+        background:#c9f0f4 !important;
+        color:#075985 !important;
+        box-shadow:0 0 0 1px #9bd5df !important;
+    }
+    .batch-subjects-page .batch-teacher-more {
+        border-color:#70cbd7 !important;
+        background:#c9f0f4 !important;
+        color:#075985 !important;
+    }
+
+    .batch-subjects-page .batch-teacher-modal,
+    .batch-subjects-page .batch-coupon-modal {
+        background:rgba(15,23,42,.58) !important;
+    }
+    .batch-subjects-page .batch-teacher-modal-panel,
+    .batch-subjects-page .batch-coupon-panel {
+        border-color:#83cbd7 !important;
+        background:#ffffff !important;
+        box-shadow:0 24px 70px rgba(15,23,42,.28) !important;
+    }
+    .batch-subjects-page .batch-teacher-modal-head,
+    .batch-subjects-page .batch-coupon-panel header,
+    .batch-subjects-page .batch-coupon-panel footer {
+        border-color:#d3e1e8 !important;
+    }
+    .batch-subjects-page .batch-teacher-detail,
+    .batch-subjects-page .batch-coupon-panel .batch-coupon-row {
+        border-color:#d3e1e8 !important;
+        background:#f5fbfc !important;
+    }
+    .batch-subjects-page .batch-teacher-photo {
+        border-color:#8bd7e1 !important;
+        background:#dff7fa !important;
+        color:#075985 !important;
+    }
+    .batch-subjects-page .batch-coupon-code {
+        border-color:#67c5d2 !important;
+        background:#ffffff !important;
+        color:#102033 !important;
+    }
+    .batch-subjects-page .batch-coupon-status-active {
+        color:#065f46 !important; background:#d1fae5 !important; border-color:#6ee7b7 !important;
+    }
+    .batch-subjects-page .batch-coupon-status-upcoming {
+        color:#075985 !important; background:#dbeafe !important; border-color:#93c5fd !important;
+    }
+    .batch-subjects-page .batch-coupon-status-expired {
+        color:#9f1239 !important; background:#ffe4e6 !important; border-color:#fda4af !important;
+    }
+    .batch-subjects-page .batch-coupon-status-inactive {
+        color:#334155 !important; background:#e2e8f0 !important; border-color:#cbd5e1 !important;
+    }
+
+    .batch-subjects-page .batch-coupon-strip > article {
+        border-color:#9bd5df !important;
+        background:linear-gradient(110deg,#ffffff,#e9f9fb) !important;
+        box-shadow:0 5px 16px rgba(15,23,42,.07) !important;
+    }
+    .batch-subjects-page .batch-coupon-strip > article p:first-child { color:#075985 !important; }
+    .batch-subjects-page .batch-coupon-strip > article p { color:#334155 !important; }
+    .batch-subjects-page #openBatchCoupons {
+        border-color:#36aebe !important;
+        background:linear-gradient(110deg,#ffffff,#e5f8fa) !important;
+    }
+    .batch-subjects-page #openBatchCoupons span { color:#102033 !important; }
+    .batch-subjects-page #openBatchCoupons span span { color:#075985 !important; }
+    .batch-subjects-page #openBatchCoupons > span:last-child > span {
+        background:#0e879b !important;
+        color:#ffffff !important;
+    }
+
+    .batch-subjects-page .bg-slate-900,
+    .batch-subjects-page .bg-slate-800 { background:#f1f8fa !important; }
+    .batch-subjects-page .border-slate-700,
+    .batch-subjects-page .border-slate-700\/70,
+    .batch-subjects-page .border-slate-700\/80 { border-color:#d3e1e8 !important; }
+    .batch-subjects-page .hover\:bg-slate-800:hover { background:#e2f4f7 !important; }
+    .batch-subjects-page .hover\:text-white:hover { color:#102033 !important; }
+    .batch-subjects-page .bg-cyan-500\/10,
+    .batch-subjects-page .bg-cyan-400\/10 { background:#dff7fa !important; }
+    .batch-subjects-page .border-dashed.border-slate-700 { border-color:#a9c5d0 !important; }
+
+    .batch-subjects-page .batch-coupon-panel button,
+    .batch-subjects-page .batch-teacher-modal-panel button {
+        color:#334155;
+    }
+    .batch-subjects-page .batch-coupon-panel button:hover,
+    .batch-subjects-page .batch-teacher-modal-panel button:hover {
+        color:#075985 !important;
+        background:#e5f8fa !important;
+    }
+    .batch-subjects-page .batch-subject-body > div:last-child {
+        border-color:#d3e1e8 !important;
+        color:#526174 !important;
+    }
+    .batch-subjects-page .batch-subject-body > div:last-child i { color:#087e96 !important; }
+
+    @media(max-width:640px) {
+        .batch-subjects-page .batch-subjects-grid { gap:12px; }
+        .batch-subjects-page .batch-subject-body { padding:13px; }
+    }
+
+
+    /* Header: retain the original dark breadcrumb/header contrast. */
+    .batch-subjects-page > header nav a.text-cyan-300 {
+        color:#22d3ee !important;
+        opacity:1 !important;
+    }
+    .batch-subjects-page > header nav span.text-slate-400 {
+        color:#a8b6c8 !important;
+        opacity:1 !important;
+    }
+    .batch-subjects-page > header nav span.text-white {
+        color:#f8fafc !important;
+        opacity:1 !important;
+    }
+    .batch-subjects-page > header > div:first-child > div.text-cyan-300 {
+        color:#22d3ee !important;
+        opacity:1 !important;
+    }
+    .batch-subjects-page > header > div:first-child > p.text-slate-400 {
+        color:#a7b5c8 !important;
+        opacity:1 !important;
+    }
+
+    /* Keep the batch offer and coupon shortcut in their original dark theme.
+       The white/aqua refresh applies to the rest of the page only. */
+    .batch-subjects-page .batch-coupon-strip > article {
+        border-color:rgba(217,70,239,.60) !important;
+        background:linear-gradient(100deg,rgba(74,20,91,.82),#0f172a 58%,rgba(8,47,73,.88)) !important;
+        box-shadow:0 10px 28px rgba(0,0,0,.22) !important;
+    }
+    .batch-subjects-page .batch-coupon-strip > article > div > span {
+        border-color:rgba(232,121,249,.30) !important;
+        background:rgba(217,70,239,.15) !important;
+        color:#f5d0fe !important;
+    }
+    .batch-subjects-page .batch-coupon-strip > article > div > div p.text-white {
+        color:#f8fafc !important;
+    }
+    .batch-subjects-page .batch-coupon-strip > article > div > div p.text-slate-400 {
+        color:#a8b4c5 !important;
+    }
+    .batch-subjects-page .batch-coupon-strip > article > div > span:first-child {
+        color:#f0abfc !important;
+    }
+    .batch-subjects-page .batch-coupon-strip > article > div > span i,
+    .batch-subjects-page .batch-coupon-strip > article > div > span.text-cyan-300 {
+        color:#67e8f9 !important;
+    }
+    .batch-subjects-page .batch-coupon-strip > article > span {
+        border-color:rgba(217,70,239,.18) !important;
+        background:rgba(217,70,239,.15) !important;
+        color:#f0abfc !important;
+    }
+    .batch-subjects-page .batch-coupon-strip > article:not(:has(.ri-gift-line)) {
+        border-color:rgba(71,85,105,.70) !important;
+        background:rgba(15,23,42,.62) !important;
+    }
+    .batch-subjects-page #openBatchCoupons {
+        border:1px dashed rgba(34,211,238,.55) !important;
+        background:linear-gradient(100deg,rgba(8,47,73,.62),rgba(15,23,42,.92)) !important;
+        box-shadow:none !important;
+    }
+    .batch-subjects-page #openBatchCoupons:hover {
+        border-color:#67e8f9 !important;
+        background:rgba(8,47,73,.72) !important;
+    }
+    .batch-subjects-page #openBatchCoupons > span:first-child > span:first-child {
+        background:rgba(34,211,238,.15) !important;
+        color:#67e8f9 !important;
+    }
+    .batch-subjects-page #openBatchCoupons > span:first-child > span:last-child > span:first-child {
+        color:#f8fafc !important;
+    }
+    .batch-subjects-page #openBatchCoupons > span:first-child > span:last-child > span:last-child {
+        color:#a8b4c5 !important;
+    }
+    .batch-subjects-page #openBatchCoupons > span:last-child > span:first-child {
+        background:#06b6d4 !important;
+        color:#082f49 !important;
+    }
+    .batch-subjects-page #openBatchCoupons > span:last-child > span:last-child {
+        border-color:rgba(34,211,238,.50) !important;
+        background:rgba(6,182,212,.14) !important;
+        color:#a5f3fc !important;
+    }
+
 </style>
 
 <div class="batch-subjects-page mx-auto w-full max-w-[1600px] space-y-5 pb-5">
