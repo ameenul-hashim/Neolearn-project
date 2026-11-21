@@ -1910,11 +1910,26 @@ aside.batch-section-card[aria-labelledby="livePreviewHeading"] .batch-live-previ
                                 <div class="batch-field">
                                     <label for="batch_status">Batch Status <span class="batch-required">*</span></label>
                                     <select id="batch_status" name="batch_status" class="batch-input batch-select">
-                                        <option value="draft" {% if batch.batch_status == "draft" %}selected{% endif %}>Draft</option>
-                                        <option value="published" {% if batch.batch_status == "published" %}selected{% endif %}>Publish</option>
-                                        {% if batch.batch_status == "archived" %}<option value="archived" selected>Archived</option>{% endif %}
+                                        {% if batch.batch_status == "archived" %}
+                                            <option value="archived" selected>Archived</option>
+                                            <option value="published">Publish</option>
+                                        {% elif student_count > 0 %}
+                                            <option value="published" selected>Publish</option>
+                                            <option value="archived">Archive</option>
+                                        {% else %}
+                                            <option value="draft" {% if batch.batch_status == "draft" %}selected{% endif %}>Draft</option>
+                                            <option value="published" {% if batch.batch_status == "published" %}selected{% endif %}>Publish</option>
+                                        {% endif %}
                                     </select>
-                                    <small class="batch-pricing-help">Draft batches remain hidden from students. Published batches can appear on the marketplace.</small>
+                                    <small class="batch-pricing-help">
+                                        {% if batch.batch_status == "archived" %}
+                                            This batch is archived. Choose Publish to reopen admissions with new publishing settings.
+                                        {% elif student_count > 0 %}
+                                            This batch has purchase history, so it cannot return to Draft. Choose Archive to close admissions.
+                                        {% else %}
+                                            Draft batches remain hidden from students. Publish makes the batch available according to its publishing settings.
+                                        {% endif %}
+                                    </small>
                                 </div>
                                 <div class="batch-field" id="publishTypeField" hidden>
                                     <label>Publish Type <span class="batch-required">*</span></label>
@@ -3232,6 +3247,7 @@ aside.batch-section-card[aria-labelledby="livePreviewHeading"] .batch-live-previ
     function syncPublishPreview() {
         const status = batchStatusSelect?.value || "draft";
         const published = status === "published";
+        const archived = status === "archived";
         const type = selectedPublishType();
         const scheduled = published && type === "scheduled";
         // Draft selection intentionally keeps the editor minimal: only the
@@ -3244,19 +3260,22 @@ aside.batch-section-card[aria-labelledby="livePreviewHeading"] .batch-live-previ
         if (draftPublishInfo) draftPublishInfo.hidden = true;
         if (immediatePublishInfo) immediatePublishInfo.hidden = !published || scheduled;
 
-        const statusLabel = published ? (scheduled ? "Scheduled" : "Published") : "Draft";
+        const statusLabel = archived ? "Archived" :
+            (published ? (scheduled ? "Scheduled" : "Published") : "Draft");
         const statusPill = document.getElementById("publishPreviewStatus");
         if (statusPill) {
             statusPill.textContent = statusLabel;
             statusPill.classList.toggle("is-published", published);
+            statusPill.classList.toggle("is-archived", archived);
         }
         const setText = (id, value) => {
             const el = document.getElementById(id);
             if (el) el.textContent = value;
         };
         setText("publishPreviewStatusDetail", statusLabel);
-        setText("publishPreviewType", !published ? "Not applicable for draft" :
-            (type === "scheduled" ? "Schedule for Later" : "Publish Immediately"));
+        setText("publishPreviewType", archived ? "Not applicable while archived" :
+            (!published ? "Not applicable for draft" :
+                (type === "scheduled" ? "Schedule for Later" : "Publish Immediately")));
         setText("publishPreviewDate", formatPublishDateTime(publishDateTimeInput?.value || ""));
         setText("publishPreviewAdmission", formatPublishDateTime(admissionCloseInput?.value || ""));
         const dateRow = document.getElementById("publishPreviewDateRow");

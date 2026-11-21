@@ -415,6 +415,14 @@
         color:#a5f3fc !important;
     }
 
+    /* Subject Library label only — retain the existing layout and all other styling. */
+    .batch-subjects-page section > .mb-3 h2 {
+        color:#ffffff !important;
+    }
+    .batch-subjects-page section > .mb-3 p {
+        color:#e2e8f0 !important;
+    }
+
 </style>
 
 <div class="batch-subjects-page mx-auto w-full max-w-[1600px] space-y-5 pb-5">
@@ -472,22 +480,27 @@
                 <div class="min-w-0 flex-1">
                     <div class="flex flex-wrap items-center gap-2">
                         <h2 class="text-xl font-extrabold text-slate-900">{{ batch.batch_name }}</h2>
-                        {% if batch.batch_status == "published" %}
-                            <span class="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[10px] font-bold text-emerald-700">● Published</span>
+                        {# Keep batch status separate from subject status. Use the model's existing marketplace_status property for scheduled publication and closed admissions. #}
+                        {% if batch.batch_status == "draft" %}
+                            <span class="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[10px] font-bold text-amber-700">● Draft</span>
                         {% elif batch.batch_status == "archived" %}
                             <span class="rounded-full border border-slate-200 bg-slate-100 px-2.5 py-1 text-[10px] font-bold text-slate-600">● Archived</span>
+                        {% elif batch.marketplace_status == "coming_soon" %}
+                            <span class="rounded-full border border-sky-200 bg-sky-50 px-2.5 py-1 text-[10px] font-bold text-sky-700">● Coming Soon</span>
+                        {% elif batch.marketplace_status == "admissions_closed" %}
+                            <span class="rounded-full border border-orange-200 bg-orange-50 px-2.5 py-1 text-[10px] font-bold text-orange-700">● Admission Closed</span>
                         {% else %}
-                            <span class="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[10px] font-bold text-amber-700">● Draft</span>
+                            <span class="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[10px] font-bold text-emerald-700">● Published</span>
                         {% endif %}
                     </div>
                     <p class="mt-2 text-xs leading-5 text-slate-500">
                         {% if batch.batch_description %}{{ batch.batch_description|truncatechars:180 }}{% else %}No batch description has been added.{% endif %}
                     </p>
                     <div class="mt-3 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                        {% if batch.original_price %}
+                        {% if batch.is_offer_active %}
                             <span class="text-xs text-slate-400 line-through">₹{{ batch.original_price }}</span>
                         {% endif %}
-                        <span class="text-xl font-extrabold text-blue-700">₹{{ batch.final_price|default:batch.original_price|default:"0.00" }}</span>
+                        <span class="text-xl font-extrabold text-blue-700">₹{{ batch.get_current_price|default:"0.00" }}</span>
                         <span class="text-[10px] font-medium text-slate-400">Batch price</span>
                     </div>
                 </div>

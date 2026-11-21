@@ -232,11 +232,16 @@ def _save_demo_record(demo_model, relation_field, related_object, demo_data):
 
 
 def update_batch(batch, cleaned_data):
-    """Update a Batch and its selected demo mode as one atomic operation.
+    """Update a Batch and its selected demo mode atomically.
 
-    Validator-only keys (for example _batch_demo and _subject_demos) are
-    deliberately excluded from Batch model assignment. The create workflow
-    is separate and remains unchanged.
+    Only actual Batch model fields are assigned. Related demo records are
+    handled separately. This function intentionally does not modify purchase
+    records, student access, course dates, or the automatic Archive process.
+
+    An Archived batch can be republished by passing the new publication
+    fields (publish_type, publish_datetime and admission_close_datetime) in
+    cleaned_data. The validator/view remains responsible for validating those
+    submitted values before this helper is called.
     """
     data = dict(cleaned_data)
     demo_mode = data.pop("demo_mode", None)
@@ -365,6 +370,7 @@ def can_delete_batch(batch, student_count=0):
 
 
 def can_archive_batch(batch, student_count=0):
+    """Manual Archive is available only for published batches with purchases."""
     return (
         batch.batch_status == "published"
         and student_count > 0
@@ -372,21 +378,31 @@ def can_archive_batch(batch, student_count=0):
 
 
 def can_publish_batch(batch):
-    return batch.batch_status == "draft"
+    """Allow publishing a Draft or republishing an Archived batch."""
+    return batch.batch_status in {"draft", "archived"}
 
 
 def can_edit_batch(batch, student_count=0):
+    """Return field-level edit permissions for the current batch state.
+
+    Batches with historical purchases cannot return to Draft. Archived
+    batches can edit publication scheduling so they can be republished with
+    a fresh admission-close datetime.
+    """
+    has_purchase_history = student_count > 0
+    is_archived = batch.batch_status == "archived"
+
     return {
-        "batch_name": student_count == 0,
+        "batch_name": not has_purchase_history,
         "batch_description": True,
         "batch_thumbnail": True,
-        "original_price": student_count == 0,
+        "original_price": not has_purchase_history,
         "discount_type": True,
         "discount_value": True,
         "offer_start_date": True,
         "offer_end_date": True,
-        "publish_type": student_count == 0,
-        "publish_datetime": student_count == 0,
+        "publish_type": (not has_purchase_history) or is_archived,
+        "publish_datetime": (not has_purchase_history) or is_archived,
         "admission_close_datetime": True,
         "course_end_date": True,
         "batch_status": True,

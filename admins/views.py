@@ -1169,9 +1169,12 @@ def edit_batch_view(request, batch_id):
 
     batch = get_object_or_404(Batch, id=batch_id)
 
-    # Temporary Student Count — preserve the existing project behaviour.
-    # Replace with the actual enrollment count only when that workflow is ready.
-    student_count = 0
+    # Count every historical purchase record for this batch.
+    # Refunded or revoked purchases still count as a past purchase, so a batch
+    # with purchase history cannot be moved back to Draft.
+    student_count = StudentBatchPurchase.objects.filter(
+        batch_id=batch.id
+    ).count()
 
     context = build_batch_context(
         batch=batch,

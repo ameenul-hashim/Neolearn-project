@@ -239,14 +239,31 @@ def _same_local_minute(value, existing_value):
 
 
 def _validate_edit_publish_and_admission(request, batch, batch_status):
-    """Keep an already-published batch published without re-validating its old publish time.
+    """Validate Edit Batch publication settings while preserving publication history.
 
-    A previously closed admission window remains closed when its existing date is
-    left unchanged. Supplying a different admission-close date reopens admission
-    only when the new date is in the future.
+    An already-published batch keeps its original publication timestamp. Its
+    admission-close date can remain unchanged, or be moved to a new future date.
+
+    An archived batch keeps its historical publication and admission dates while
+    it remains archived. When it is republished, the new Immediate/Scheduled
+    choice is validated as a fresh publication and requires a new admission-close
+    date. Existing course dates and student access are not changed here.
     """
+    current_status = getattr(batch, "batch_status", None)
+
+    # Keep the original publication/admission history when the batch is being
+    # saved as Archived. Archiving must not erase the dates needed for history
+    # or for a later republish.
+    if batch_status == "archived":
+        return (
+            getattr(batch, "publish_type", None) or "immediate",
+            getattr(batch, "published_at", None),
+            getattr(batch, "publish_datetime", None),
+            getattr(batch, "admission_close_datetime", None),
+        )
+
     already_published = (
-        getattr(batch, "batch_status", None) == "published"
+        current_status == "published"
         and batch_status == "published"
     )
 
@@ -282,11 +299,17 @@ def _validate_edit_publish_and_admission(request, batch, batch_status):
 
         return publish_type, published_at, publish_datetime, admission_close
 
+    # Draft -> Published and Archived -> Published both use a fresh publication
+    # setting. In particular, Immediate republishing must use the current time,
+    # not the archived batch's old published_at timestamp.
+    is_republishing = current_status == "archived" and batch_status == "published"
     publish_type, published_at = validate_publish_settings(
         batch_status=batch_status,
         publish_type=request.POST.get("publish_type"),
         publish_datetime=request.POST.get("publish_datetime"),
-        existing_publish_time=getattr(batch, "published_at", None),
+        existing_publish_time=(
+            None if is_republishing else getattr(batch, "published_at", None)
+        ),
     )
     admission_close = validate_admission(
         batch_status=batch_status,
