@@ -45,14 +45,14 @@
             {% for subject in subjects %}
 
                 <article
-                    class="group flex h-full min-h-[360px] min-w-0 flex-col overflow-hidden rounded-[18px] border border-white/10 bg-[#071224] transition-all duration-300 hover:-translate-y-1 hover:border-cyan-400/40 hover:shadow-[0_18px_45px_rgba(0,0,0,0.30)]"
+                    class="group flex h-full min-h-[360px] min-w-0 flex-col overflow-hidden rounded-[18px] border border-slate-200 bg-white transition-all duration-300 hover:-translate-y-1 hover:border-emerald-400 hover:shadow-[0_20px_48px_rgba(16,185,129,0.22)]"
                 >
 
                     <!-- THUMBNAIL -->
                     <a
                         href="{% url 'my_learning_subject' batch.id subject.id %}"
                         aria-label="Open {{ subject.subject_name }}"
-                        class="relative block aspect-[16/9] w-full shrink-0 overflow-hidden bg-[#0B172A]"
+                        class="relative block aspect-[16/9] w-full shrink-0 overflow-hidden bg-slate-100"
                     >
 
                         {% if subject.subject_thumbnail %}
@@ -63,8 +63,8 @@
                                 class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
                             >
                         {% else %}
-                            <div class="flex h-full w-full items-center justify-center bg-gradient-to-br from-cyan-500/10 via-[#071224] to-blue-500/10">
-                                <i class="ri-book-open-line text-[44px] text-cyan-400/40"></i>
+                            <div class="flex h-full w-full items-center justify-center bg-gradient-to-br from-emerald-50 via-white to-teal-50">
+                                <i class="ri-book-open-line text-[44px] text-emerald-400/60"></i>
                             </div>
                         {% endif %}
 
@@ -87,12 +87,12 @@
                             href="{% url 'my_learning_subject' batch.id subject.id %}"
                             class="block"
                         >
-                            <h2 class="min-h-[40px] line-clamp-2 text-[15px] font-bold leading-[1.35] text-white transition-colors group-hover:text-cyan-300">
+                            <h2 class="min-h-[40px] line-clamp-2 text-[15px] font-bold leading-[1.35] text-emerald-700 transition-colors duration-200 group-hover:text-cyan-600">
                                 {{ subject.subject_name }}
                             </h2>
                         </a>
 
-                        <p class="mt-2 min-h-[40px] line-clamp-2 text-[11px] leading-5 {% if subject.subject_description %}text-[#94A3B8]{% else %}text-slate-600{% endif %}">
+                        <p class="mt-2 min-h-[40px] line-clamp-2 text-[11px] leading-5 {% if subject.subject_description %}text-slate-600{% else %}text-slate-400{% endif %}">
                             {% if subject.subject_description %}
                                 {{ subject.subject_description }}
                             {% else %}
@@ -102,7 +102,7 @@
 
                         <!-- FOOTER: TEACHER AVATARS + OPEN SUBJECT -->
                         <div class="mt-auto pt-4">
-                            <div class="flex min-h-[35px] items-center justify-between gap-2 border-t border-white/10 pt-3">
+                            <div class="flex min-h-[35px] items-center justify-between gap-2 border-t border-slate-200 pt-3">
 
                                 <!-- ASSIGNED TEACHERS -->
                                 <div class="flex min-w-0 items-center">
@@ -111,7 +111,7 @@
 
                                         <button
                                             type="button"
-                                            class="subject-teacher-trigger inline-flex min-w-0 items-center gap-2 rounded-full text-left outline-none transition hover:opacity-90 focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#071224]"
+                                            class="subject-teacher-trigger inline-flex min-w-0 items-center gap-2 rounded-full text-left outline-none transition hover:opacity-90 focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
                                             data-subject-teacher-modal="subjectTeachers{{ subject.id }}"
                                             aria-label="View {{ subject.card_teacher_count }} assigned teachers for {{ subject.subject_name }}"
                                             aria-haspopup="dialog"
@@ -119,7 +119,7 @@
                                             <span class="flex items-center -space-x-2.5">
 
                                                 {% for teacher in subject.card_teacher_preview %}
-                                                    <span class="relative flex h-[34px] w-[34px] shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-[#071224] bg-[#12334A] text-[11px] font-extrabold text-cyan-300">
+                                                    <span class="relative flex h-[34px] w-[34px] shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-white bg-emerald-50 text-[11px] font-extrabold text-emerald-700 shadow-sm">
                                                         {% if teacher.profile_image %}
                                                             <img
                                                                 src="{{ teacher.profile_image.url }}"
@@ -134,14 +134,14 @@
                                                 {% endfor %}
 
                                                 {% if subject.card_teacher_extra_count %}
-                                                    <span class="relative flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-full border-2 border-[#071224] bg-[#123B50] text-[10px] font-extrabold text-cyan-300">
+                                                    <span class="relative flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-full border-2 border-white bg-emerald-600 text-[10px] font-extrabold text-white shadow-sm">
                                                         +{{ subject.card_teacher_extra_count }}
                                                     </span>
                                                 {% endif %}
 
                                             </span>
 
-                                            <span class="whitespace-nowrap text-[10px] font-semibold text-slate-400">
+                                            <span class="whitespace-nowrap text-[10px] font-semibold text-slate-600">
                                                 {{ subject.card_teacher_count }}
                                                 {% if subject.card_teacher_count == 1 %}assigned{% else %}assigned{% endif %}
                                             </span>
@@ -161,7 +161,7 @@
                                 <!-- OPEN SUBJECT -->
                                 <a
                                     href="{% url 'my_learning_subject' batch.id subject.id %}"
-                                    class="shrink-0 whitespace-nowrap text-[11px] font-semibold text-slate-400 transition-colors hover:text-cyan-400"
+                                    class="shrink-0 whitespace-nowrap text-[11px] font-semibold text-cyan-600 transition-colors duration-200 hover:text-emerald-600"
                                 >
                                     Open Subject
                                 </a>

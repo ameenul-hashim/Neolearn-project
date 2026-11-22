@@ -1,1630 +1,454 @@
 {% extends 'students/base_student.html' %}
 {% load static %}
 
-{% block title %}
-Marketplace | NeoLearn
-{% endblock %}
+{% block title %}Marketplace | NeoLearner{% endblock %}
 
 {% block student_content %}
+<div class="nl-marketplace">
 
-<div class="space-y-6">
-
-    <!-- =========================================================
-         MARKETPLACE HERO
-    ========================================================== -->
-
-    <section
-        class="relative overflow-hidden rounded-2xl border border-cyan-500/10 bg-gradient-to-r from-cyan-500/10 via-slate-900 to-blue-900/40 px-5 py-6 sm:px-6 lg:px-8 lg:py-8"
-    >
-
-        <!-- Decorative Glow -->
-
-        <div
-            class="absolute right-[-80px] top-[-80px] h-[200px] w-[200px] rounded-full bg-cyan-400/10 blur-3xl"
-        ></div>
-
-        <div
-            class="absolute bottom-[-100px] left-[-60px] h-[180px] w-[180px] rounded-full bg-blue-500/10 blur-3xl"
-        ></div>
-
-
-        <div
-            class="relative z-10 flex flex-col gap-4 md:flex-row md:items-center md:justify-between"
+    <!-- Banner: keep this image in students/static/students/images/marketplace-banner.png -->
+    <section class="nl-marketplace-banner" aria-label="NeoLearner Marketplace">
+        <img
+            src="{% static 'students/images/marketplace-banner.png' %}"
+            alt="Discover Your Next Skill — NeoLearner"
+            class="nl-marketplace-banner-image"
+            fetchpriority="high"
         >
-
-            <!-- HERO CONTENT -->
-
-            <div class="min-w-0">
-
-                <span
-                    class="inline-flex items-center gap-2 rounded-full bg-cyan-500/10 px-3 py-1 text-xs font-semibold text-cyan-300"
-                >
-                    <i class="ri-graduation-cap-line"></i>
-                    NeoLearn Marketplace
-                </span>
-
-
-                <h1
-                    class="mt-2 text-2xl font-extrabold leading-tight text-white sm:text-3xl"
-                >
-                    Discover Your
-                    <span class="text-cyan-400">Next Skill</span>
-                </h1>
-
-
-                <p class="mt-1 max-w-2xl text-sm text-slate-300">
-                    Explore batches and learning opportunities from NeoLearn.
-                </p>
-
-            </div>
-
-
-            <!-- COURSE COUNT -->
-
-            <div class="flex shrink-0 items-center gap-2">
-
-                <span
-                    class="rounded-full bg-cyan-500/10 px-4 py-1.5 text-sm font-semibold text-cyan-300"
-                >
-                    {{ batches|length }}
-                    Course{{ batches|length|pluralize }}
-                </span>
-
-            </div>
-
-        </div>
-
     </section>
 
+    <!-- Search and filter controls -->
+    <div class="nl-marketplace-toolbar">
+        <form method="get" action="{% url 'marketplace' %}" id="marketplaceSearchForm" class="nl-search-form">
+            <input type="hidden" name="status" value="{{ current_status }}">
+            {% if batch_id %}<input type="hidden" name="batch_id" value="{{ batch_id }}">{% endif %}
+            {% if request.GET.sort %}<input type="hidden" name="sort" value="{{ request.GET.sort }}">{% endif %}
+            {% if request.GET.discount %}<input type="hidden" name="discount" value="{{ request.GET.discount }}">{% endif %}
+            {% if request.GET.min_price %}<input type="hidden" name="min_price" value="{{ request.GET.min_price }}">{% endif %}
+            {% if request.GET.max_price %}<input type="hidden" name="max_price" value="{{ request.GET.max_price }}">{% endif %}
 
-
-    <!-- =========================================================
-         SEARCH / STATUS / FILTER
-    ========================================================== -->
-
-    <form
-        method="get"
-        action="{% url 'marketplace' %}"
-        class="w-full"
-        id="marketplaceSearchForm"
-    >
-
-        <!-- =====================================================
-             PRESERVE EXISTING FILTER VALUES
-        ====================================================== -->
-
-        {% if request.GET.search %}
+            <span class="nl-search-leading"><i class="ri-search-line"></i></span>
             <input
-                type="hidden"
+                id="marketplaceSearchInput"
+                type="search"
                 name="search"
-                value="{{ request.GET.search }}"
+                value="{{ search_query|default:'' }}"
+                placeholder="Search batches..."
+                autocomplete="off"
+                aria-label="Search batches"
             >
-        {% endif %}
+            {% if search_query %}
+                <button type="button" id="marketplaceSearchReset" class="nl-search-action" aria-label="Clear search" title="Clear search">
+                    <i class="ri-refresh-line"></i>
+                </button>
+            {% else %}
+                <button type="submit" class="nl-search-action" aria-label="Search" title="Search">
+                    <i class="ri-search-line"></i>
+                </button>
+            {% endif %}
+        </form>
 
+        <button type="button" id="marketplaceFilterOpen" class="nl-filter-open">
+            <i class="ri-equalizer-3-line"></i><span>Filters</span>
+            <i class="ri-arrow-right-s-line nl-filter-open-arrow"></i>
+        </button>
+    </div>
 
-        {% if request.GET.batch_id %}
-            <input
-                type="hidden"
-                name="batch_id"
-                value="{{ request.GET.batch_id }}"
+    <!-- Existing batch-name chips; no invented category list -->
+    <nav class="nl-batch-chips" aria-label="Filter by batch">
+        <a
+            href="?status={{ current_status }}"
+            class="nl-batch-chip {% if not batch_id %}is-active{% endif %}"
+        >All</a>
+        {% for filter_batch in marketplace_filter_batches %}
+            <a
+                href="?status={{ current_status }}&batch_id={{ filter_batch.id }}{% if search_query %}&search={{ search_query|urlencode }}{% endif %}{% if sort_option %}&sort={{ sort_option|urlencode }}{% endif %}{% if discount_option %}&discount={{ discount_option|urlencode }}{% endif %}{% if min_price %}&min_price={{ min_price|urlencode }}{% endif %}{% if max_price %}&max_price={{ max_price|urlencode }}{% endif %}"
+                class="nl-batch-chip {% if batch_id == filter_batch.id|stringformat:'s' %}is-active{% endif %}"
+                title="{{ filter_batch.batch_name }}"
             >
-        {% endif %}
+                <i class="ri-stack-line"></i><span>{{ filter_batch.batch_name }}</span>
+            </a>
+        {% endfor %}
+    </nav>
 
+    <!-- Results heading; status selection lives inside the filter drawer -->
+    <div class="nl-results-heading">
+        <div>
+            <h1>
+                {% if current_status == 'buy_now' %}Buy Now
+                {% elif current_status == 'coming_soon' %}Coming Soon
+                {% elif current_status == 'admissions_closed' %}Admissions Closed
+                {% elif current_status == 'purchased' %}Purchased
+                {% else %}All Batches{% endif %}
+            </h1>
+            <p>
+                {% if paginator.count %}
+                    Showing {{ page_obj.start_index }}–{{ page_obj.end_index }} of {{ paginator.count }} batches
+                {% else %}
+                    No batches found
+                {% endif %}
+            </p>
+        </div>
+    </div>
 
-        {% if request.GET.sort %}
-            <input
-                type="hidden"
-                name="sort"
-                value="{{ request.GET.sort }}"
-            >
-        {% endif %}
-
-
-        {% if request.GET.discount %}
-            <input
-                type="hidden"
-                name="discount"
-                value="{{ request.GET.discount }}"
-            >
-        {% endif %}
-
-
-        {% if request.GET.min_price %}
-            <input
-                type="hidden"
-                name="min_price"
-                value="{{ request.GET.min_price }}"
-            >
-        {% endif %}
-
-
-        {% if request.GET.max_price %}
-            <input
-                type="hidden"
-                name="max_price"
-                value="{{ request.GET.max_price }}"
-            >
-        {% endif %}
-
-
-        <!-- =====================================================
-             MAIN CONTROL ROW
-        ====================================================== -->
-
-        <div
-            class="grid grid-cols-[minmax(0,1fr)_auto_auto] gap-2 sm:gap-3"
-        >
-
-            <!-- =================================================
-                 SEARCH
-            ================================================== -->
-
-            <div class="relative min-w-0">
-
-                <input
-                    id="searchInput"
-                    name="search"
-                    type="search"
-                    value="{{ request.GET.search|default:'' }}"
-                    placeholder="Search batches..."
-                    autocomplete="off"
-                    aria-label="Search batches"
-                    class="h-12 w-full rounded-xl border border-white/10 bg-[#111827] pl-11 pr-10 text-sm text-white outline-none transition-all placeholder:text-slate-500 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400/20"
-                >
-
-
-                <i
-                    class="ri-search-line absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
-                ></i>
-
-
-                {% if request.GET.search %}
-
-                    <a
-                        href="?status={{ current_status }}"
-                        class="absolute right-3 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg text-slate-400 transition hover:bg-white/5 hover:text-white"
-                        aria-label="Clear search"
-                    >
-                        <i class="ri-close-line text-lg"></i>
+    <!-- Compact equal-height batch cards -->
+    <div class="nl-marketplace-grid" id="marketplaceCourseGrid">
+        {% for batch in batches %}
+            <article class="nl-batch-card">
+                <div class="nl-batch-card-media">
+                    <a href="{% url 'marketplace_detail' batch.id %}" class="nl-batch-image-link" aria-label="View {{ batch.batch_name }}">
+                        {% if batch.batch_thumbnail %}
+                            <img src="{{ batch.batch_thumbnail.url }}" alt="{{ batch.batch_name }}" loading="lazy">
+                        {% else %}
+                            <div class="nl-no-image"><i class="ri-graduation-cap-line"></i></div>
+                        {% endif %}
                     </a>
 
-                {% endif %}
-
-            </div>
-
-
-
-            <!-- =================================================
-                 STATUS
-            ================================================== -->
-
-            <select
-                name="status"
-                aria-label="Batch status"
-                onchange="this.form.submit()"
-                class="h-12 w-[118px] min-w-0 rounded-xl border border-white/10 bg-[#111827] px-2 text-xs font-semibold text-white outline-none transition focus:border-cyan-400 sm:w-48 sm:px-4 sm:text-sm"
-            >
-
-                <option
-                    value="all"
-                    {% if current_status == 'all' %}
-                        selected
+                    {% if batch.id in purchased_batch_ids %}
+                        <span class="nl-card-status is-purchased"><i class="ri-check-line"></i> Purchased</span>
+                    {% elif batch.marketplace_card_status == 'coming_soon' %}
+                        <span class="nl-card-status is-coming"><i class="ri-calendar-line"></i> Coming Soon</span>
+                    {% elif batch.marketplace_card_status == 'admissions_closed' %}
+                        <span class="nl-card-status is-closed"><i class="ri-lock-line"></i> Admissions Closed</span>
+                    {% elif batch.marketplace_card_status == 'buy_now' %}
+                        <span class="nl-card-status is-buy-now"><i class="ri-shopping-bag-line"></i> Buy Now</span>
                     {% endif %}
-                >
-                    All Batches
-                </option>
 
+                    {# Wishlist is available for Buy Now, Coming Soon and Admissions Closed batches. #}
+                    <form method="post" action="{% url 'toggle_wishlist' batch.id %}" class="nl-wishlist-form">
+                        {% csrf_token %}
+                        <button type="submit" class="nl-wishlist-button" aria-label="{% if batch.id in wishlisted_batch_ids %}Remove {{ batch.batch_name }} from wishlist{% else %}Add {{ batch.batch_name }} to wishlist{% endif %}">
+                            {% if batch.id in wishlisted_batch_ids %}
+                                <i class="ri-heart-3-fill is-wishlisted"></i>
+                            {% else %}
+                                <i class="ri-heart-3-line"></i>
+                            {% endif %}
+                        </button>
+                    </form>
+                </div>
 
-                <option
-                    value="buy_now"
-                    {% if current_status == 'buy_now' %}
-                        selected
-                    {% endif %}
-                >
-                    Active Batches
-                </option>
+                <div class="nl-batch-card-body">
+                    <a href="{% url 'marketplace_detail' batch.id %}" class="nl-batch-title">{{ batch.batch_name }}</a>
 
+                    <div class="nl-batch-meta">
+                        <span><i class="ri-user-line"></i> {{ batch.assigned_teachers.count }} Teacher{{ batch.assigned_teachers.count|pluralize }}</span>
+                        <span><i class="ri-book-2-line"></i> {{ batch.subjects.count }} Subject{{ batch.subjects.count|pluralize }}</span>
+                    </div>
 
-                <option
-                    value="coming_soon"
-                    {% if current_status == 'coming_soon' %}
-                        selected
-                    {% endif %}
-                >
-                    Coming Soon
-                </option>
-
-
-                <option
-                    value="admissions_closed"
-                    {% if current_status == 'admissions_closed' %}
-                        selected
-                    {% endif %}
-                >
-                    Admissions Closed
-                </option>
-
-            </select>
-
-
-
-            <!-- =================================================
-                 FILTER BUTTON
-            ================================================== -->
-
-            <button
-                type="button"
-                id="filterToggle"
-                aria-label="Open filters"
-                class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-[#111827] text-white transition-all hover:border-cyan-400 hover:bg-white/5 sm:w-auto sm:px-5"
-            >
-
-                <i class="ri-equalizer-3-line text-lg sm:mr-1"></i>
-
-                <span class="hidden sm:inline">
-                    Filters
-                </span>
-
-            </button>
-
-        </div>
-
-    </form>
-
-
-
-    <!-- =========================================================
-         BATCH FILTER BUBBLES
-
-         Small horizontal scrollable bubbles.
-         No dropdown.
-         No "Filter by Batch" text.
-         No subjects.
-    ========================================================== -->
-
-    <div class="relative">
-
-        <div
-            class="batch-filter-pills flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide"
-            aria-label="Filter batches"
-        >
-
-            <!-- =================================================
-                 ALL BATCHES
-            ================================================== -->
-
-            <a
-                href="?status={{ current_status }}"
-                class="
-                    inline-flex
-                    shrink-0
-                    items-center
-                    justify-center
-                    rounded-full
-                    border
-                    px-4
-                    py-2
-                    text-xs
-                    font-bold
-                    transition-all
-                    duration-200
-                    {% if not batch_id %}
-                        border-cyan-400/40
-                        bg-cyan-400/15
-                        text-cyan-300
-                        shadow-sm
-                        shadow-cyan-400/10
-                    {% else %}
-                        border-white/10
-                        bg-[#111827]
-                        text-slate-400
-                        hover:border-cyan-400/30
-                        hover:bg-cyan-400/5
-                        hover:text-cyan-300
-                    {% endif %}
-                "
-            >
-                All
-            </a>
-
-
-
-            <!-- =================================================
-                 DYNAMIC BATCHES
-            ================================================== -->
-
-            {% for batch in marketplace_filter_batches %}
-
-                <a
-                    href="?status={{ current_status }}&batch_id={{ batch.id }}"
-                    class="
-                        inline-flex
-                        shrink-0
-                        max-w-[220px]
-                        items-center
-                        justify-center
-                        rounded-full
-                        border
-                        px-4
-                        py-2
-                        text-xs
-                        font-bold
-                        transition-all
-                        duration-200
-                        {% if batch_id == batch.id|stringformat:'s' %}
-                            border-cyan-400/40
-                            bg-cyan-400/15
-                            text-cyan-300
-                            shadow-sm
-                            shadow-cyan-400/10
-                        {% else %}
-                            border-white/10
-                            bg-[#111827]
-                            text-slate-400
-                            hover:border-cyan-400/30
-                            hover:bg-cyan-400/5
-                            hover:text-cyan-300
+                    {% if batch.id in purchased_batch_ids %}
+                        {% if batch.student_purchase_date %}
+                            <div class="nl-admission-date nl-purchased-date"><i class="ri-calendar-check-line"></i> Purchased on: {{ batch.student_purchase_date|date:"d M Y" }}</div>
                         {% endif %}
-                    "
-                    title="{{ batch.batch_name }}"
-                >
+                    {% elif batch.marketplace_card_status == 'coming_soon' %}
+                        {% if batch.publish_datetime %}
+                            <div class="nl-admission-date nl-coming-date"><i class="ri-rocket-line"></i> Launches on: {{ batch.publish_datetime|date:"d M Y" }}</div>
+                        {% endif %}
+                    {% elif batch.marketplace_card_status == 'buy_now' %}
+                        {% if batch.admission_close_datetime %}
+                            <div class="nl-admission-date nl-buy-date"><i class="ri-calendar-event-line"></i> Admission closes on: {{ batch.admission_close_datetime|date:"d M Y" }}</div>
+                        {% endif %}
+                    {% elif batch.marketplace_card_status == 'admissions_closed' %}
+                        {% if batch.admission_close_datetime %}
+                            <div class="nl-admission-date nl-closed-date"><i class="ri-lock-line"></i> Admission closed on: {{ batch.admission_close_datetime|date:"d M Y" }}</div>
+                        {% endif %}
+                    {% endif %}
 
-                    <i class="ri-stack-line mr-1.5 shrink-0"></i>
+                    <div class="nl-price-block">
+                        <div class="nl-price-line">
+                            <strong>₹{{ batch.current_selling_price }}</strong>
+                            {% if batch.has_current_discount %}
+                                <del>₹{{ batch.original_price }}</del>
+                            {% endif %}
+                        </div>
+                        {% if batch.has_current_discount and batch.discount_value %}
+                            {% if batch.discount_type == 'percentage' %}
+                                <span class="nl-discount-label">🔥 {{ batch.discount_value }}% OFF</span>
+                            {% elif batch.discount_type == 'fixed' %}
+                                <span class="nl-discount-label">🔥 SAVE ₹{{ batch.discount_value }}</span>
+                            {% endif %}
+                        {% endif %}
+                        {% if batch.offer_end_date and batch.is_offer_active %}
+                            <span class="nl-offer-date">Offer ends {{ batch.offer_end_date|date:"d M Y" }}</span>
+                        {% endif %}
+                    </div>
+                </div>
 
-                    <span class="truncate">
-                        {{ batch.batch_name }}
-                    </span>
-
-                </a>
-
-            {% endfor %}
-
-        </div>
-
+                <div class="nl-batch-card-actions">
+                    {% if batch.id in purchased_batch_ids %}
+                        <a href="{% url 'my_learning' %}" class="nl-card-button nl-learning-button">
+                            <i class="ri-play-circle-line"></i> Go to Learning
+                        </a>
+                    {% elif batch.marketplace_card_status == 'buy_now' %}
+                        {% if batch.id in cart_batch_ids %}
+                            <div class="nl-card-button nl-added-button"><i class="ri-check-line"></i> Added to Cart</div>
+                        {% else %}
+                            <form method="post" action="{% url 'add_to_cart' batch.id %}" class="nl-card-action-form">
+                                {% csrf_token %}
+                                <button type="submit" class="nl-card-button nl-cart-button">
+                                    <i class="ri-shopping-cart-line"></i> Add to Cart
+                                </button>
+                            </form>
+                        {% endif %}
+                        <form method="post" action="{% url 'add_to_cart' batch.id %}" class="nl-card-action-form nl-buy-now-form">
+                            {% csrf_token %}
+                            <input type="hidden" name="buy_now" value="1">
+                            <button type="submit" class="nl-card-button nl-buy-button">
+                                <i class="ri-flashlight-line"></i> Buy Now
+                            </button>
+                        </form>
+                    {% elif batch.marketplace_card_status == 'coming_soon' %}
+                        <div class="nl-card-button nl-state-button nl-coming-button"><i class="ri-calendar-line"></i> Coming Soon</div>
+                    {% else %}
+                        <div class="nl-card-button nl-state-button nl-closed-button"><i class="ri-lock-line"></i> Admissions Closed</div>
+                    {% endif %}
+                </div>
+            </article>
+        {% empty %}
+            <div class="nl-empty-state">
+                <i class="ri-book-open-line"></i>
+                <h2>No batches found</h2>
+                <p>Try changing your search or marketplace filters.</p>
+            </div>
+        {% endfor %}
     </div>
 
-
-
-    <!-- =========================================================
-         ACTIVE FILTER INDICATOR
-    ========================================================== -->
-
-    {% if request.GET.search or batch_id or request.GET.sort or request.GET.discount or request.GET.min_price or request.GET.max_price %}
-
-        <div
-            class="flex flex-wrap items-center gap-2"
-        >
-
-            <span
-                class="text-xs font-semibold text-slate-500"
-            >
-                Active filters:
-            </span>
-
-
-            {% if request.GET.search %}
-
-                <span
-                    class="inline-flex items-center gap-1 rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1 text-xs font-medium text-cyan-300"
-                >
-
-                    <i class="ri-search-line"></i>
-
-                    {{ request.GET.search }}
-
-                </span>
-
-            {% endif %}
-
-
-
-            {% if batch_id %}
-
-                <span
-                    class="inline-flex items-center gap-1 rounded-full border border-blue-400/20 bg-blue-400/10 px-3 py-1 text-xs font-medium text-blue-300"
-                >
-
-                    <i class="ri-stack-line"></i>
-
-                    {% for batch in marketplace_filter_batches %}
-
-                        {% if batch.id|stringformat:'s' == batch_id %}
-                            {{ batch.batch_name }}
-                        {% endif %}
-
-                    {% endfor %}
-
-                </span>
-
-            {% endif %}
-
-
-
-            {% if request.GET.sort %}
-
-                <span
-                    class="inline-flex items-center gap-1 rounded-full border border-purple-400/20 bg-purple-400/10 px-3 py-1 text-xs font-medium text-purple-300"
-                >
-
-                    <i class="ri-sort-desc"></i>
-
-                    {{ request.GET.sort }}
-
-                </span>
-
-            {% endif %}
-
-
-
-            {% if request.GET.discount %}
-
-                <span
-                    class="inline-flex items-center gap-1 rounded-full border border-red-400/20 bg-red-400/10 px-3 py-1 text-xs font-medium text-red-300"
-                >
-
-                    <i class="ri-price-tag-3-line"></i>
-
-                    {{ request.GET.discount }}
-
-                </span>
-
-            {% endif %}
-
-        </div>
-
+    <!-- Pagination: 12 batches per page -->
+    {% if page_obj.paginator.num_pages > 1 %}
+        <nav class="nl-pagination" aria-label="Marketplace pagination">
+            <span>Showing {{ page_obj.start_index }}–{{ page_obj.end_index }} of {{ paginator.count }} batches</span>
+            <div class="nl-pagination-links">
+                {% if page_obj.has_previous %}
+                    <a href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value|urlencode }}&{% endif %}{% endfor %}page=1" aria-label="First page">«</a>
+                    <a href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value|urlencode }}&{% endif %}{% endfor %}page={{ page_obj.previous_page_number }}" aria-label="Previous page">‹</a>
+                {% endif %}
+                {% for number in page_obj.paginator.page_range %}
+                    {% if number >= page_obj.number|add:'-2' and number <= page_obj.number|add:'2' %}
+                        <a href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value|urlencode }}&{% endif %}{% endfor %}page={{ number }}" class="{% if number == page_obj.number %}is-current{% endif %}">{{ number }}</a>
+                    {% endif %}
+                {% endfor %}
+                {% if page_obj.has_next %}
+                    <a href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value|urlencode }}&{% endif %}{% endfor %}page={{ page_obj.next_page_number }}" aria-label="Next page">›</a>
+                    <a href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value|urlencode }}&{% endif %}{% endfor %}page={{ page_obj.paginator.num_pages }}" aria-label="Last page">»</a>
+                {% endif %}
+            </div>
+        </nav>
     {% endif %}
 
-
-
-    <!-- =========================================================
-         RESULT HEADER
-    ========================================================== -->
-
-    <div
-        class="flex items-center justify-between gap-4"
-    >
-
-        <div class="min-w-0">
-
-            <h2 class="text-xl font-bold text-white">
-
-                {% if current_status == 'all' %}
-
-                    All Batches
-
-                {% elif current_status == 'buy_now' %}
-
-                    Active Batches
-
-                {% elif current_status == 'coming_soon' %}
-
-                    Coming Soon
-
-                {% else %}
-
-                    Admissions Closed
-
-                {% endif %}
-
-            </h2>
-
-
-            <p class="mt-1 text-xs text-slate-500">
-
-                Showing
-                {{ batches|length }}
-                course{{ batches|length|pluralize }}
-
-            </p>
-
-        </div>
-
-    </div>
-
-
-
-    <!-- =========================================================
-         COURSE GRID
-    ========================================================== -->
-
-    <div
-        id="courseGrid"
-        class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
-    >
-
-        {% for batch in batches %}
-
-            <article
-                class="course-card group relative min-w-0"
-            >
-
-                <!-- =================================================
-                     CLICKABLE COURSE CARD
-                ================================================== -->
-
-                <a
-                    href="{% url 'marketplace_detail' batch.id %}"
-                    class="block overflow-hidden rounded-xl border border-white/10 bg-[#111827] transition-all duration-300 hover:-translate-y-1.5 hover:border-cyan-400/30 hover:shadow-[0_20px_60px_rgba(6,182,212,0.15)]"
-                >
-
-                    <!-- IMAGE -->
-
-                    <div
-                        class="relative aspect-video overflow-hidden"
-                    >
-
-                        {% if batch.batch_thumbnail %}
-
-                            <img
-                                src="{{ batch.batch_thumbnail.url }}"
-                                alt="{{ batch.batch_name }}"
-                                loading="lazy"
-                                class="h-full w-full object-cover transition-all duration-500 group-hover:scale-105"
-                            >
-
-                        {% else %}
-
-                            <div
-                                class="flex h-full w-full items-center justify-center bg-slate-800"
-                            >
-
-                                <i
-                                    class="ri-graduation-cap-line text-5xl text-slate-600"
-                                ></i>
-
-                            </div>
-
-                        {% endif %}
-
-
-
-                        <!-- OFFER / NEW -->
-
-                        <div
-                            class="absolute left-3 top-3"
-                        >
-
-                            {% if batch.is_new %}
-
-                                <span
-                                    class="rounded-full bg-blue-500 px-2.5 py-0.5 text-xs font-bold text-white shadow-lg"
-                                >
-                                    ✨ NEW
-                                </span>
-
-
-                            {% elif batch.has_current_discount and batch.discount_type == 'percentage' and batch.discount_value %}
-
-                                <span
-                                    class="rounded-full bg-red-500 px-2.5 py-0.5 text-xs font-bold text-white shadow-lg"
-                                >
-                                    🔥 {{ batch.discount_value }}% OFF
-                                </span>
-
-
-                            {% elif batch.has_current_discount and batch.discount_type == 'fixed' and batch.discount_value %}
-
-                                <span
-                                    class="rounded-full bg-amber-500 px-2.5 py-0.5 text-xs font-bold text-white shadow-lg"
-                                >
-                                    💰 SAVE ₹{{ batch.discount_value }}
-                                </span>
-
-                            {% endif %}
-
-                        </div>
-
-
-
-                        <!-- STATUS -->
-
-                        <div
-                            class="absolute bottom-3 right-3"
-                        >
-
-                            {% if batch.marketplace_status == 'buy_now' %}
-
-                                <span
-                                    class="rounded-full bg-emerald-500 px-2.5 py-0.5 text-xs font-bold text-white shadow-lg"
-                                >
-                                    🛒 Buy Now
-                                </span>
-
-
-                            {% elif batch.marketplace_status == 'coming_soon' %}
-
-                                <span
-                                    class="rounded-full bg-indigo-500 px-2.5 py-0.5 text-xs font-bold text-white shadow-lg"
-                                >
-                                    📅 Coming Soon
-                                </span>
-
-
-                            {% elif batch.marketplace_status == 'admissions_closed' %}
-
-                                <span
-                                    class="rounded-full bg-gray-500 px-2.5 py-0.5 text-xs font-bold text-white shadow-lg"
-                                >
-                                    🔒 Admissions Closed
-                                </span>
-
-                            {% endif %}
-
-                        </div>
-
-                    </div>
-
-
-
-                    <!-- CARD CONTENT -->
-
-                    <div class="p-4">
-
-                        <h3
-                            class="mb-2 line-clamp-2 text-base font-bold leading-tight text-white"
-                        >
-                            {{ batch.batch_name }}
-                        </h3>
-
-
-                        <div
-                            class="mb-2 flex items-center justify-between gap-3"
-                        >
-
-                            <span
-                                class="min-w-0 truncate text-xs text-slate-400"
-                            >
-
-                                <i class="ri-user-line mr-1"></i>
-
-                                {{ batch.assigned_teachers.first.full_name|default:"Multiple Teachers" }}
-
-                            </span>
-
-
-                            <span
-                                class="shrink-0 text-xs text-yellow-400"
-                            >
-
-                                <i class="ri-star-fill mr-1"></i>
-
-                                4.9
-
-                            </span>
-
-                        </div>
-
-
-
-                        <!-- SUBJECT COUNT -->
-
-                        <div
-                            class="mb-3 text-xs text-slate-400"
-                        >
-
-                            <i class="ri-book-2-line mr-1"></i>
-
-                            {{ batch.subjects.count }}
-
-                            Subject{{ batch.subjects.count|pluralize }}
-
-                        </div>
-
-
-
-                        <!-- PRICE -->
-
-                        <div
-                            class="border-t border-white/5 pt-3"
-                        >
-
-                            {% if batch.original_price and batch.has_current_discount %}
-
-                                <div
-                                    class="text-xs text-slate-500 line-through"
-                                >
-                                    ₹{{ batch.original_price }}
-                                </div>
-
-                            {% endif %}
-
-
-                            <div
-                                class="mt-0.5 flex items-center gap-2"
-                            >
-
-                                <span
-                                    class="text-2xl font-extrabold text-cyan-400"
-                                >
-                                    ₹{{ batch.current_selling_price }}
-                                </span>
-
-                            </div>
-
-
-                            {% if batch.has_current_discount and batch.discount_value %}
-
-                                {% if batch.discount_type == 'percentage' %}
-
-                                    <div
-                                        class="mt-0.5 text-xs font-semibold text-red-400"
-                                    >
-                                        🔥 {{ batch.discount_value }}% OFF
-                                    </div>
-
-
-                                {% elif batch.discount_type == 'fixed' %}
-
-                                    <div
-                                        class="mt-0.5 text-xs font-semibold text-red-400"
-                                    >
-                                        💰 SAVE ₹{{ batch.discount_value }}
-                                    </div>
-
-                                {% endif %}
-
-                            {% endif %}
-
-
-                            {% if batch.offer_end_date and batch.is_offer_active %}
-
-                                <div
-                                    class="mt-1 text-[10px] text-slate-500"
-                                >
-
-                                    📅 Offer Ends:
-
-                                    {{ batch.offer_end_date|date:"d M Y" }}
-
-                                </div>
-
-                            {% endif %}
-
-                        </div>
-
-                    </div>
-
-                </a>
-
-
-
-                <!-- =================================================
-                     WISHLIST
-                ================================================== -->
-
-                <form
-                    method="post"
-                    action="{% url 'toggle_wishlist' batch.id %}"
-                    class="absolute right-3 top-3 z-20"
-                >
-
-                    {% csrf_token %}
-
-                    <button
-                        type="submit"
-                        class="wishlist-btn flex h-9 w-9 items-center justify-center rounded-full transition-all duration-300"
-                        aria-label="Toggle wishlist for {{ batch.batch_name }}"
-                    >
-
-                        {% if batch.id in wishlisted_batch_ids %}
-
-                            <i
-                                class="ri-heart-3-fill wishlist-icon text-lg text-red-500"
-                            ></i>
-
-                        {% else %}
-
-                            <i
-                                class="ri-heart-3-line wishlist-icon text-lg text-gray-300"
-                            ></i>
-
-                        {% endif %}
-
-                    </button>
-
-                </form>
-
-
-
-                <!-- =================================================
-                     CART BUTTON
-                ================================================== -->
-
-                <div class="mt-3">
-
-                    {% if batch.marketplace_status == 'buy_now' %}
-
-
-                        {% if batch.id in cart_batch_ids %}
-
-                            <!-- =====================================
-                                 ALREADY IN CART
-                            ====================================== -->
-
-                            <div
-                                class="flex w-full items-center justify-center gap-2 rounded-full border border-emerald-400/30 bg-emerald-500/15 py-2.5 text-sm font-bold text-emerald-400"
-                                aria-label="Already added to cart"
-                            >
-
-                                <i
-                                    class="ri-check-line text-lg"
-                                ></i>
-
-                                Added to Cart
-
-                            </div>
-
-
-                        {% else %}
-
-                            <!-- =====================================
-                                 ADD TO CART
-                            ====================================== -->
-
-                            <form
-                                method="post"
-                                action="{% url 'add_to_cart' batch.id %}"
-                            >
-
-                                {% csrf_token %}
-
-                                <button
-                                    type="submit"
-                                    class="w-full rounded-full bg-gradient-to-r from-cyan-400 to-blue-400 py-2.5 text-sm font-bold text-black transition-all duration-300 hover:scale-[1.02] hover:shadow-lg hover:shadow-cyan-500/25"
-                                >
-
-                                    <i
-                                        class="ri-shopping-cart-line mr-1"
-                                    ></i>
-
-                                    Add to Cart
-
-                                </button>
-
-                            </form>
-
-                        {% endif %}
-
-
-                    {% elif batch.marketplace_status == 'coming_soon' %}
-
-                        <button
-                            type="button"
-                            disabled
-                            class="w-full cursor-not-allowed rounded-full bg-indigo-500/20 py-2.5 text-sm font-semibold text-indigo-400"
-                        >
-
-                            <i
-                                class="ri-calendar-schedule-line mr-1"
-                            ></i>
-
-                            Coming Soon
-
-                        </button>
-
-
-                    {% else %}
-
-                        <button
-                            type="button"
-                            disabled
-                            class="w-full cursor-not-allowed rounded-full bg-gray-600/30 py-2.5 text-sm font-semibold text-gray-400"
-                        >
-
-                            <i
-                                class="ri-lock-line mr-1"
-                            ></i>
-
-                            Admissions Closed
-
-                        </button>
-
-                    {% endif %}
-
-                </div>
-
-            </article>
-
-
-        {% empty %}
-
-            <!-- =================================================
-                 EMPTY STATE
-            ================================================== -->
-
-            <div
-                class="col-span-full rounded-2xl border border-dashed border-cyan-500/20 bg-[#111827] px-6 py-16 text-center sm:px-8"
-            >
-
-                <div
-                    class="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-cyan-500/10"
-                >
-
-                    <i
-                        class="ri-book-open-line text-4xl text-cyan-400"
-                    ></i>
-
-                </div>
-
-
-                <h3
-                    class="mt-6 text-2xl font-bold text-white"
-                >
-
-                    {% if current_status == 'all' %}
-
-                        No Batches Available
-
-                    {% elif current_status == 'buy_now' %}
-
-                        No Active Batches Available
-
-                    {% elif current_status == 'coming_soon' %}
-
-                        No Upcoming Batches
-
-                    {% else %}
-
-                        No Closed Batches
-
-                    {% endif %}
-
-                </h3>
-
-
-                <p
-                    class="mx-auto mt-2 max-w-md text-sm leading-relaxed text-slate-400"
-                >
-
-                    {% if current_status == 'all' %}
-
-                        There are currently no marketplace batches to display.
-
-                    {% elif current_status == 'buy_now' %}
-
-                        There are currently no batches available for purchase.
-
-                    {% elif current_status == 'coming_soon' %}
-
-                        There are currently no upcoming batches.
-
-                    {% else %}
-
-                        There are currently no admissions-closed batches to display.
-
-                    {% endif %}
-
-                </p>
-
+    <!-- Filter drawer: status filters are here, not on the main page -->
+    <div id="nlFilterPanel" class="nl-filter-panel" aria-hidden="true">
+        <button type="button" class="nl-filter-overlay" id="nlFilterOverlay" aria-label="Close filters"></button>
+        <aside class="nl-filter-drawer" id="nlFilterDrawer" aria-label="Marketplace filters">
+            <div class="nl-filter-header">
+                <div><h2>Filters</h2><p>Refine your marketplace results.</p></div>
+                <button type="button" id="nlFilterClose" aria-label="Close filters"><i class="ri-close-line"></i></button>
             </div>
 
-        {% endfor %}
+            <form method="get" action="{% url 'marketplace' %}" id="nlFilterForm" class="nl-filter-form">
+                <input type="hidden" name="search" value="{{ search_query }}">
+                {% if batch_id %}<input type="hidden" name="batch_id" value="{{ batch_id }}">{% endif %}
 
-    </div>
+                <section class="nl-filter-section">
+                    <h3>Batch Status</h3>
+                    <label class="nl-status-option"><input type="radio" name="status" value="all" {% if current_status == 'all' %}checked{% endif %}><span>All Batches</span></label>
+                    <label class="nl-status-option"><input type="radio" name="status" value="buy_now" {% if current_status == 'buy_now' %}checked{% endif %}><span>Buy Now</span></label>
+                    <label class="nl-status-option"><input type="radio" name="status" value="coming_soon" {% if current_status == 'coming_soon' %}checked{% endif %}><span>Coming Soon</span></label>
+                    <label class="nl-status-option"><input type="radio" name="status" value="admissions_closed" {% if current_status == 'admissions_closed' %}checked{% endif %}><span>Admissions Closed</span></label>
+                    <label class="nl-status-option"><input type="radio" name="status" value="purchased" {% if current_status == 'purchased' %}checked{% endif %}><span>Purchased</span></label>
+                </section>
 
+                <section class="nl-filter-section">
+                    <h3>Sort By</h3>
+                    {% for value, label in sort_choices %}
+                    <label class="nl-radio-option"><input type="radio" name="sort" value="{{ value }}" {% if sort_option == value %}checked{% endif %}><span>{{ label }}</span></label>
+                    {% endfor %}
+                    {% if not sort_choices %}
+                    <label class="nl-radio-option"><input type="radio" name="sort" value="newest" {% if sort_option == 'newest' %}checked{% endif %}><span>Newest</span></label>
+                    <label class="nl-radio-option"><input type="radio" name="sort" value="oldest" {% if sort_option == 'oldest' %}checked{% endif %}><span>Oldest</span></label>
+                    <label class="nl-radio-option"><input type="radio" name="sort" value="a_z" {% if sort_option == 'a_z' %}checked{% endif %}><span>A → Z</span></label>
+                    <label class="nl-radio-option"><input type="radio" name="sort" value="z_a" {% if sort_option == 'z_a' %}checked{% endif %}><span>Z → A</span></label>
+                    <label class="nl-radio-option"><input type="radio" name="sort" value="price_low" {% if sort_option == 'price_low' %}checked{% endif %}><span>Price: Low → High</span></label>
+                    <label class="nl-radio-option"><input type="radio" name="sort" value="price_high" {% if sort_option == 'price_high' %}checked{% endif %}><span>Price: High → Low</span></label>
+                    <label class="nl-radio-option"><input type="radio" name="sort" value="discount" {% if sort_option == 'discount' %}checked{% endif %}><span>Highest Discount</span></label>
+                    {% endif %}
+                </section>
 
+                <section class="nl-filter-section">
+                    <h3>Discount</h3>
+                    <label class="nl-radio-option"><input type="radio" name="discount" value="" {% if not discount_option %}checked{% endif %}><span>All Discounts</span></label>
+                    <label class="nl-radio-option"><input type="radio" name="discount" value="percentage" {% if discount_option == 'percentage' %}checked{% endif %}><span>🔥 Percentage Offers</span></label>
+                    <label class="nl-radio-option"><input type="radio" name="discount" value="fixed" {% if discount_option == 'fixed' %}checked{% endif %}><span>💰 Fixed Offers</span></label>
+                    <label class="nl-radio-option"><input type="radio" name="discount" value="none" {% if discount_option == 'none' %}checked{% endif %}><span>No Offer</span></label>
+                </section>
 
-    <!-- =========================================================
-         FILTER DRAWER
-    ========================================================== -->
-
-    <div
-        id="filterPanel"
-        class="pointer-events-none fixed inset-0 z-[9999] m-0 p-0 opacity-0 transition-all duration-300"
-        aria-hidden="true"
-    >
-
-        <!-- OVERLAY -->
-
-        <div
-            id="filterOverlay"
-            class="absolute inset-0 m-0 bg-black/60 p-0 backdrop-blur-sm"
-        ></div>
-
-
-
-        <!-- DRAWER -->
-
-        <aside
-            id="filterDrawer"
-            class="absolute inset-y-0 right-0 m-0 h-[100dvh] w-full max-w-sm translate-x-full overflow-y-auto rounded-none border-l border-white/10 bg-[#0a1628] p-0 transition-transform duration-300 sm:max-w-md"
-        >
-
-            <div
-                class="min-h-full p-5 sm:p-6"
-            >
-
-                <!-- =================================================
-                     HEADER
-                ================================================== -->
-
-                <div
-                    class="mb-6 flex items-center justify-between"
-                >
-
-                    <div>
-
-                        <h3
-                            class="text-lg font-bold text-white"
-                        >
-                            Filters
-                        </h3>
-
-                        <p
-                            class="mt-1 text-xs text-slate-500"
-                        >
-                            Refine your marketplace results.
-                        </p>
-
+                <section class="nl-filter-section">
+                    <h3>Price Range</h3>
+                    <div class="nl-price-inputs">
+                        <label><span>₹</span><input type="number" min="0" step="0.01" name="min_price" value="{{ min_price }}" placeholder="Min"></label>
+                        <label><span>₹</span><input type="number" min="0" step="0.01" name="max_price" value="{{ max_price }}" placeholder="Max"></label>
                     </div>
+                </section>
 
-
-                    <button
-                        type="button"
-                        id="filterClose"
-                        class="flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 transition hover:bg-white/5 hover:text-white"
-                        aria-label="Close filters"
-                    >
-
-                        <i class="ri-close-line text-xl"></i>
-
-                    </button>
-
+                <div class="nl-filter-actions">
+                    <button type="submit" class="nl-apply-filters"><i class="ri-equalizer-line"></i> Apply Filters</button>
+                    <a href="{% url 'marketplace' %}" class="nl-reset-filters"><i class="ri-refresh-line"></i> Reset Filters</a>
                 </div>
-
-
-
-                <!-- =================================================
-                     FILTER FORM
-                ================================================== -->
-
-                <form
-                    method="get"
-                    action="{% url 'marketplace' %}"
-                    class="space-y-6"
-                >
-
-                    <!-- STATUS -->
-
-                    <input
-                        type="hidden"
-                        name="status"
-                        value="{{ current_status }}"
-                    >
-
-
-                    <!-- SEARCH -->
-
-                    {% if request.GET.search %}
-
-                        <input
-                            type="hidden"
-                            name="search"
-                            value="{{ request.GET.search }}"
-                        >
-
-                    {% endif %}
-
-
-                    <!-- BATCH -->
-
-                    {% if batch_id %}
-
-                        <input
-                            type="hidden"
-                            name="batch_id"
-                            value="{{ batch_id }}"
-                        >
-
-                    {% endif %}
-
-
-
-                    <!-- =================================================
-                         SORT
-                    ================================================== -->
-
-                    <div>
-
-                        <h4
-                            class="mb-3 text-sm font-semibold text-slate-300"
-                        >
-                            Sort By
-                        </h4>
-
-
-                        <div class="space-y-2.5">
-
-                            <label
-                                class="flex cursor-pointer items-center gap-3 text-sm text-slate-300 hover:text-white"
-                            >
-
-                                <input
-                                    type="radio"
-                                    name="sort"
-                                    value="newest"
-                                    {% if request.GET.sort == 'newest' or not request.GET.sort %}
-                                        checked
-                                    {% endif %}
-                                    class="h-4 w-4 accent-cyan-400"
-                                >
-
-                                Newest
-
-                            </label>
-
-
-                            <label
-                                class="flex cursor-pointer items-center gap-3 text-sm text-slate-300 hover:text-white"
-                            >
-
-                                <input
-                                    type="radio"
-                                    name="sort"
-                                    value="oldest"
-                                    {% if request.GET.sort == 'oldest' %}
-                                        checked
-                                    {% endif %}
-                                    class="h-4 w-4 accent-cyan-400"
-                                >
-
-                                Oldest
-
-                            </label>
-
-
-                            <label
-                                class="flex cursor-pointer items-center gap-3 text-sm text-slate-300 hover:text-white"
-                            >
-
-                                <input
-                                    type="radio"
-                                    name="sort"
-                                    value="a_z"
-                                    {% if request.GET.sort == 'a_z' %}
-                                        checked
-                                    {% endif %}
-                                    class="h-4 w-4 accent-cyan-400"
-                                >
-
-                                A → Z
-
-                            </label>
-
-
-                            <label
-                                class="flex cursor-pointer items-center gap-3 text-sm text-slate-300 hover:text-white"
-                            >
-
-                                <input
-                                    type="radio"
-                                    name="sort"
-                                    value="z_a"
-                                    {% if request.GET.sort == 'z_a' %}
-                                        checked
-                                    {% endif %}
-                                    class="h-4 w-4 accent-cyan-400"
-                                >
-
-                                Z → A
-
-                            </label>
-
-
-                            <label
-                                class="flex cursor-pointer items-center gap-3 text-sm text-slate-300 hover:text-white"
-                            >
-
-                                <input
-                                    type="radio"
-                                    name="sort"
-                                    value="price_low"
-                                    {% if request.GET.sort == 'price_low' %}
-                                        checked
-                                    {% endif %}
-                                    class="h-4 w-4 accent-cyan-400"
-                                >
-
-                                Price: Low → High
-
-                            </label>
-
-
-                            <label
-                                class="flex cursor-pointer items-center gap-3 text-sm text-slate-300 hover:text-white"
-                            >
-
-                                <input
-                                    type="radio"
-                                    name="sort"
-                                    value="price_high"
-                                    {% if request.GET.sort == 'price_high' %}
-                                        checked
-                                    {% endif %}
-                                    class="h-4 w-4 accent-cyan-400"
-                                >
-
-                                Price: High → Low
-
-                            </label>
-
-
-                            <label
-                                class="flex cursor-pointer items-center gap-3 text-sm text-slate-300 hover:text-white"
-                            >
-
-                                <input
-                                    type="radio"
-                                    name="sort"
-                                    value="discount"
-                                    {% if request.GET.sort == 'discount' %}
-                                        checked
-                                    {% endif %}
-                                    class="h-4 w-4 accent-cyan-400"
-                                >
-
-                                Highest Discount
-
-                            </label>
-
-                        </div>
-
-                    </div>
-
-
-
-                    <hr class="border-white/5">
-
-
-
-                    <!-- =================================================
-                         DISCOUNT
-                    ================================================== -->
-
-                    <div>
-
-                        <h4
-                            class="mb-3 text-sm font-semibold text-slate-300"
-                        >
-                            Discount
-                        </h4>
-
-
-                        <div class="space-y-2.5">
-
-                            <label
-                                class="flex cursor-pointer items-center gap-3 text-sm text-slate-300 hover:text-white"
-                            >
-
-                                <input
-                                    type="radio"
-                                    name="discount"
-                                    value="percentage"
-                                    {% if request.GET.discount == 'percentage' %}
-                                        checked
-                                    {% endif %}
-                                    class="h-4 w-4 accent-cyan-400"
-                                >
-
-                                🔥 Percentage Offers
-
-                            </label>
-
-
-                            <label
-                                class="flex cursor-pointer items-center gap-3 text-sm text-slate-300 hover:text-white"
-                            >
-
-                                <input
-                                    type="radio"
-                                    name="discount"
-                                    value="fixed"
-                                    {% if request.GET.discount == 'fixed' %}
-                                        checked
-                                    {% endif %}
-                                    class="h-4 w-4 accent-cyan-400"
-                                >
-
-                                💰 Fixed Offers
-
-                            </label>
-
-
-                            <label
-                                class="flex cursor-pointer items-center gap-3 text-sm text-slate-300 hover:text-white"
-                            >
-
-                                <input
-                                    type="radio"
-                                    name="discount"
-                                    value="none"
-                                    {% if request.GET.discount == 'none' %}
-                                        checked
-                                    {% endif %}
-                                    class="h-4 w-4 accent-cyan-400"
-                                >
-
-                                No Offer
-
-                            </label>
-
-                        </div>
-
-                    </div>
-
-
-
-                    <hr class="border-white/5">
-
-
-
-                    <!-- =================================================
-                         PRICE
-                    ================================================== -->
-
-                    <div>
-
-                        <h4
-                            class="mb-3 text-sm font-semibold text-slate-300"
-                        >
-                            Price
-                        </h4>
-
-
-                        <div class="flex gap-2">
-
-                            <input
-                                type="number"
-                                name="min_price"
-                                value="{{ request.GET.min_price|default:'' }}"
-                                min="0"
-                                step="0.01"
-                                placeholder="Min"
-                                class="h-10 w-1/2 rounded-lg border border-white/10 bg-[#111827] px-3 text-sm text-white outline-none transition focus:border-cyan-400"
-                            >
-
-
-                            <input
-                                type="number"
-                                name="max_price"
-                                value="{{ request.GET.max_price|default:'' }}"
-                                min="0"
-                                step="0.01"
-                                placeholder="Max"
-                                class="h-10 w-1/2 rounded-lg border border-white/10 bg-[#111827] px-3 text-sm text-white outline-none transition focus:border-cyan-400"
-                            >
-
-                        </div>
-
-                    </div>
-
-
-
-                    <!-- =================================================
-                         ACTIONS
-                    ================================================== -->
-
-                    <div class="space-y-3 pt-2">
-
-                        <button
-                            type="submit"
-                            class="w-full rounded-xl bg-gradient-to-r from-cyan-400 to-cyan-300 py-3 text-sm font-bold text-black transition-all hover:shadow-lg hover:shadow-cyan-500/25"
-                        >
-
-                            <i class="ri-filter-3-line mr-1"></i>
-
-                            Apply Filters
-
-                        </button>
-
-
-                        <a
-                            href="?status={{ current_status }}"
-                            class="flex w-full items-center justify-center rounded-xl border border-white/10 py-3 text-sm font-bold text-slate-300 transition-all hover:bg-white/5 hover:text-white"
-                        >
-
-                            Reset Filters
-
-                        </a>
-
-                    </div>
-
-                </form>
-
-            </div>
-
+            </form>
         </aside>
-
     </div>
-
 </div>
 
-
-
-<!-- =============================================================
-     MARKETPLACE JAVASCRIPT
-============================================================= -->
-
-<script src="{% static 'students/js/marketplace.js' %}"></script>
-
-
-
-<!-- =============================================================
-     LOCAL MARKETPLACE STYLES
-============================================================= -->
-
 <style>
+.nl-marketplace{display:flex;flex-direction:column;gap:16px;min-width:0;color:#e8f0fa}
+.nl-marketplace-banner{width:100%;aspect-ratio:4.72/1;height:auto;overflow:hidden;border:1px solid rgba(16,185,129,.28);border-radius:16px;background:#003c2c;position:relative;display:block;line-height:0}
+.nl-marketplace-banner-image{
+    display:block;
+    width:100%;
+    height:100%;
+    max-width:100%;
+}
+.nl-marketplace-toolbar{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center}
+.nl-search-form{height:48px;display:flex;align-items:center;position:relative;min-width:0;border:1px solid #26384d;border-radius:12px;background:#111b2b}
+.nl-search-form:focus-within{border-color:#10b981;box-shadow:0 0 0 2px rgba(16,185,129,.12)}
+.nl-search-leading{padding-left:15px;color:#8da2ba;font-size:17px}
+.nl-search-form input[type=search]{height:100%;width:100%;min-width:0;border:0;outline:0;background:transparent;color:#f8fafc;padding:0 10px;font-size:13px}
+.nl-search-form input::placeholder{color:#8193aa}
+.nl-search-action{width:42px;height:40px;flex:0 0 42px;margin-right:4px;border:0;border-radius:9px;background:transparent;color:#b9c8d9;display:grid;place-items:center;font-size:18px;cursor:pointer}
+.nl-search-action:hover{background:rgba(16,185,129,.12);color:#34d399}
+.nl-filter-open{height:48px;min-width:112px;padding:0 16px;border:1px solid #10b981;border-radius:12px;background:rgba(16,185,129,.08);color:#34d399;font-weight:750;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer}
+.nl-filter-open:hover{background:#059669;color:#fff}
+.nl-filter-open-arrow{display:none}
+.nl-batch-chips{display:flex;align-items:center;gap:8px;overflow-x:auto;padding:1px 0 5px;scrollbar-width:none}
+.nl-batch-chips::-webkit-scrollbar{display:none}
+.nl-batch-chip{height:36px;max-width:235px;flex:0 0 auto;display:inline-flex;align-items:center;gap:7px;padding:0 13px;border:1px solid #29384b;border-radius:999px;background:#111b2b;color:#a8b8cc;font-size:11px;font-weight:700;text-decoration:none;white-space:nowrap}
+.nl-batch-chip span{overflow:hidden;text-overflow:ellipsis}
+.nl-batch-chip:hover,.nl-batch-chip.is-active{border-color:#0d9488;background:rgba(13,148,136,.18);color:#5eead4}
+.nl-results-heading{display:flex;align-items:center;justify-content:space-between;margin-top:1px}
+.nl-results-heading h1{margin:0;color:#f8fafc;font-size:20px;font-weight:800}
+.nl-results-heading p{margin:3px 0 0;color:#8ca0b8;font-size:11px}
+.nl-marketplace-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;align-items:stretch}
+.nl-batch-card{min-width:0;display:flex;flex-direction:column;overflow:hidden;border:1px solid rgba(16,185,129,.34);border-radius:14px;background:#fff;color:#0f172a;box-shadow:0 3px 13px rgba(0,0,0,.13);transition:transform .2s ease,border-color .2s ease,box-shadow .2s ease}
+.nl-batch-card:hover{transform:translateY(-3px);border-color:#10b981;box-shadow:0 9px 24px rgba(16,185,129,.18)}
+.nl-batch-card-media{height:clamp(112px,11vw,158px);position:relative;overflow:hidden;background:#071426}
+.nl-batch-image-link{display:block;width:100%;height:100%}
+.nl-batch-image-link img{display:block;width:100%;height:100%;object-fit:cover;transition:transform .35s ease}
+.nl-batch-card:hover .nl-batch-image-link img{transform:scale(1.035)}
+.nl-no-image{width:100%;height:100%;display:grid;place-items:center;background:#e2e8f0;color:#64748b;font-size:42px}
+.nl-card-status{position:absolute;top:9px;left:9px;display:inline-flex;align-items:center;gap:4px;padding:5px 9px;border-radius:999px;font-size:10px;font-weight:850;box-shadow:0 2px 7px rgba(0,0,0,.16)}
+.nl-card-status.is-buy-now{background:#d1fae5;color:#065f46}
+.nl-card-status.is-purchased{background:#cffafe;color:#0e7490}
+.nl-card-status.is-coming{background:#fef3c7;color:#92400e}
+.nl-card-status.is-closed{background:#fee2e2;color:#991b1b}
+.nl-card-status.is-new{background:#d1fae5;color:#065f46}
+.nl-wishlist-form{position:absolute;top:8px;right:8px}
+.nl-wishlist-button{width:34px;height:34px;border:1px solid rgba(255,255,255,.65);border-radius:50%;background:rgba(15,23,42,.48);color:white;display:grid;place-items:center;font-size:17px;backdrop-filter:blur(7px);cursor:pointer}
+.nl-wishlist-button:hover,.nl-wishlist-button .is-wishlisted{color:#fb7185}
+.nl-batch-card-body{display:flex;flex:1;flex-direction:column;gap:8px;padding:10px 11px 8px}
+.nl-batch-title{display:-webkit-box;min-height:34px;overflow:hidden;-webkit-box-orient:vertical;-webkit-line-clamp:2;color:#101827;text-decoration:none;font-size:12px;font-weight:850;line-height:1.35}
+.nl-batch-title:hover{color:#047857}
+.nl-batch-meta{display:flex;flex-wrap:wrap;gap:5px 12px;color:#64748b;font-size:10px;line-height:1.4}
+.nl-batch-meta span{display:inline-flex;align-items:center;gap:4px}
+.nl-batch-meta i{color:#64748b}
+.nl-price-block{margin-top:auto;padding-top:7px;border-top:1px solid #e8edf2;display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-height:50px}
+.nl-price-line{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.nl-price-line strong{color:#047857;font-size:19px;font-weight:900;line-height:1.2}
+.nl-price-line del{color:#64748b;font-size:10px}
+.nl-discount-label{color:#dc2626;font-size:9px;font-weight:800}
+.nl-offer-date{color:#64748b;font-size:9px}
+.nl-admission-date{display:flex;align-items:center;gap:5px;margin-top:2px;color:#0f766e;font-size:10px;font-weight:750;line-height:1.35}.nl-admission-date i{font-size:12px;flex:0 0 auto}
+.nl-admission-date.nl-coming-date{color:#b45309}.nl-admission-date.nl-buy-date{color:#047857}.nl-admission-date.nl-closed-date{color:#b91c1c}.nl-admission-date.nl-purchased-date{color:#0891b2}
+.nl-batch-card-actions{display:flex;gap:7px;padding:0 9px 9px;margin-top:auto}
+.nl-card-action-form{display:flex;flex:1;min-width:0}
+.nl-buy-now-form{flex:1;min-width:0}
+.nl-card-button{height:34px;min-width:0;flex:1;display:flex;align-items:center;justify-content:center;gap:5px;padding:0 7px;border:1px solid transparent;border-radius:9px;font-size:10px;font-weight:850;text-decoration:none;white-space:nowrap;cursor:pointer}
+.nl-cart-button{width:100%;background:#fff;border-color:#cbd5e1;color:#111827}
+.nl-cart-button:hover{background:#f0fdf4;border-color:#10b981}
+.nl-buy-button{background:#059669;color:#fff}
+.nl-buy-button:hover{background:#047857;color:#fff}
+.nl-learning-button{
+    background:#1e40af;
+    color:#ffffff;
+    border-color:#1d4ed8;
+}
+.nl-learning-button:hover{
+    background:#1e3a8a;
+    color:#ffffff;
+    border-color:#1e40af;
+}
+.nl-added-button{background:#dcfce7;color:#047857}
+.nl-state-button{width:100%;font-size:10px}
+.nl-coming-button{background:#fef3c7;color:#92400e}
+.nl-closed-button{background:#fee2e2;color:#991b1b}
+.nl-empty-state{grid-column:1/-1;padding:54px 20px;text-align:center;border:1px dashed #334155;border-radius:14px;background:#0f172a}
+.nl-empty-state>i{font-size:38px;color:#34d399}
+.nl-empty-state h2{margin:10px 0 4px;color:#f8fafc;font-size:18px}
+.nl-empty-state p{margin:0;color:#94a3b8;font-size:12px}
+.nl-pagination{display:flex;align-items:center;justify-content:space-between;gap:12px;color:#a5b4c7;font-size:11px}
+.nl-pagination-links{display:flex;align-items:center;gap:6px}
+.nl-pagination-links a{min-width:34px;height:34px;display:grid;place-items:center;border:1px solid #34465b;border-radius:9px;background:#111b2b;color:#dbe7f5;text-decoration:none;font-weight:750}
+.nl-pagination-links a:hover,.nl-pagination-links a.is-current{border-color:#10b981;background:#10b981;color:#052e25}
+.nl-filter-panel{position:fixed;inset:0;z-index:99999;visibility:hidden;pointer-events:none}
+.nl-filter-panel.is-open{visibility:visible;pointer-events:auto}
+.nl-filter-overlay{position:absolute;inset:0;width:100%;height:100%;border:0;background:rgba(0,0,0,.62);opacity:0;transition:opacity .25s;backdrop-filter:blur(3px)}
+.nl-filter-panel.is-open .nl-filter-overlay{opacity:1}
+.nl-filter-drawer{position:absolute;top:0;right:0;width:min(390px,92vw);height:100%;overflow-y:auto;padding:20px;background:#0b1728;border-left:1px solid #26384d;transform:translateX(100%);transition:transform .28s ease}
+.nl-filter-panel.is-open .nl-filter-drawer{transform:translateX(0)}
+.nl-filter-header{display:flex;align-items:flex-start;justify-content:space-between;padding-bottom:15px;border-bottom:1px solid #26384d}
+.nl-filter-header h2{margin:0;color:#f8fafc;font-size:20px;font-weight:850}
+.nl-filter-header p{margin:4px 0 0;color:#9aabc0;font-size:11px}
+.nl-filter-header button{width:36px;height:36px;border:1px solid #64748b;border-radius:9px;background:transparent;color:#e2e8f0;font-size:22px}
+.nl-filter-section{padding:15px 0;border-bottom:1px solid #26384d}
+.nl-filter-section h3{margin:0 0 9px;color:#f1f5f9;font-size:13px;font-weight:850}
+.nl-radio-option,.nl-status-option{display:flex;align-items:center;gap:9px;margin:8px 0;color:#d5dfeb;font-size:12px;cursor:pointer}
+.nl-radio-option input,.nl-status-option input{width:16px;height:16px;margin:0;accent-color:#10b981}
+.nl-price-inputs{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.nl-price-inputs label{height:40px;display:flex;align-items:center;gap:6px;padding:0 10px;border:1px solid #42536a;border-radius:9px;color:#cbd5e1}
+.nl-price-inputs input{width:100%;min-width:0;border:0;outline:0;background:transparent;color:#fff;font-size:12px}
+.nl-price-inputs input::placeholder{color:#94a3b8}
+.nl-filter-actions{display:flex;flex-direction:column;gap:9px;padding-top:16px}
+.nl-apply-filters,.nl-reset-filters{height:43px;display:flex;align-items:center;justify-content:center;gap:8px;border-radius:10px;font-size:12px;font-weight:850;text-decoration:none;cursor:pointer}
+.nl-apply-filters{border:0;background:#10b981;color:#042f2e}
+.nl-apply-filters:hover{background:#34d399}
+.nl-reset-filters{border:1px solid #10b981;background:transparent;color:#e2e8f0}
+.nl-reset-filters:hover{background:rgba(16,185,129,.1);color:#34d399}
 
-    /* =========================================================
-       HORIZONTAL BATCH PILLS
-    ========================================================== */
-
-    .batch-filter-pills {
-        scroll-behavior: smooth;
-        -webkit-overflow-scrolling: touch;
-        scrollbar-width: none;
-    }
-
-
-    .batch-filter-pills::-webkit-scrollbar {
-        display: none;
-    }
-
-
-    .scrollbar-hide {
-        -ms-overflow-style: none;
-        scrollbar-width: none;
-    }
-
-
-    .scrollbar-hide::-webkit-scrollbar {
-        display: none;
-    }
-
-
-
-    /* =========================================================
-       WISHLIST BUTTON
-    ========================================================== */
-
-    .wishlist-btn {
-        background: rgba(255, 255, 255, 0.18);
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
-        border: 1px solid rgba(255, 255, 255, 0.25);
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    }
-
-
-    .wishlist-btn:hover {
-        background: rgba(255, 255, 255, 0.30);
-        border-color: rgba(255, 255, 255, 0.40);
-    }
-
-
-
-    /* =========================================================
-       FILTER PANEL
-
-       Force the drawer to start from the actual
-       viewport top.
-    ========================================================== */
-
-    #filterPanel {
-        position: fixed !important;
-
-        inset: 0 !important;
-
-        top: 0 !important;
-        right: 0 !important;
-        bottom: 0 !important;
-        left: 0 !important;
-
-        margin: 0 !important;
-        padding: 0 !important;
-
-        width: 100vw !important;
-        height: 100dvh !important;
-    }
-
-
-
-    /* =========================================================
-       FILTER DRAWER
-    ========================================================== */
-
-    #filterDrawer {
-        position: absolute !important;
-
-        top: 0 !important;
-        right: 0 !important;
-        bottom: 0 !important;
-
-        margin: 0 !important;
-
-        height: 100dvh !important;
-        max-height: 100dvh !important;
-
-        padding-top: 0 !important;
-
-        overflow-y: auto;
-
-        overscroll-behavior: contain;
-    }
-
-
-
-    /* =========================================================
-       MOBILE DRAWER
-    ========================================================== */
-
-    @media (max-width: 639px) {
-
-        #filterDrawer {
-            width: 100% !important;
-            max-width: 100% !important;
-
-            border-left: 0 !important;
-            border-radius: 0 !important;
-        }
-
-    }
-
-
-
-    /* =========================================================
-       SMALL MOBILE
-    ========================================================== */
-
-    @media (max-width: 380px) {
-
-        #searchInput {
-            font-size: 12px;
-        }
-
-
-        select[name="status"] {
-            width: 108px;
-            padding-left: 8px;
-            padding-right: 8px;
-            font-size: 11px;
-        }
-
-    }
-
-
-
-    /* =========================================================
-       TOUCH
-    ========================================================== */
-
-    @media (max-width: 639px) {
-
-        button,
-        select,
-        input,
-        a {
-            -webkit-tap-highlight-color: transparent;
-        }
-
-    }
-
-
-
-    /* =========================================================
-       BATCH PILL TOUCH FEEDBACK
-    ========================================================== */
-
-    .batch-filter-pills a {
-        touch-action: manipulation;
-        user-select: none;
-    }
-
-
-    .batch-filter-pills a:active {
-        transform: scale(0.96);
-    }
-
+@media(max-width:850px){.nl-marketplace-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.nl-marketplace-banner{aspect-ratio:4.72/1;height:auto}}
+@media(max-width:560px){.nl-marketplace{gap:12px}.nl-marketplace-banner{aspect-ratio:4.72/1;height:auto;border-radius:12px}.nl-marketplace-toolbar{grid-template-columns:minmax(0,1fr) 48px}.nl-filter-open{min-width:48px;width:48px;padding:0}.nl-filter-open span{display:none}.nl-batch-chip{height:33px;padding:0 11px}.nl-marketplace-grid{grid-template-columns:1fr;gap:12px}.nl-batch-card-media{height:clamp(100px,31vw,135px)}.nl-batch-card-body{padding:8px 8px 6px;gap:6px}.nl-batch-title{font-size:11px;min-height:30px}.nl-batch-meta{font-size:9px;gap:4px 7px}.nl-admission-date{font-size:9px}.nl-price-line strong{font-size:16px}.nl-batch-card-actions{gap:5px;padding:0 6px 7px}.nl-card-button{height:32px;padding:0 4px;font-size:9px}.nl-card-button i{display:none}.nl-results-heading h1{font-size:17px}.nl-pagination{align-items:flex-start;flex-direction:column}.nl-pagination-links{flex-wrap:wrap}}
+@media(max-width:360px){.nl-marketplace-grid{grid-template-columns:1fr}.nl-batch-card-media{height:170px}.nl-card-button{font-size:10px}}
 </style>
 
+<script>
+(function () {
+    const panel = document.getElementById('nlFilterPanel');
+    const openButton = document.getElementById('marketplaceFilterOpen');
+    const closeButton = document.getElementById('nlFilterClose');
+    const overlay = document.getElementById('nlFilterOverlay');
+    const searchInput = document.getElementById('marketplaceSearchInput');
+    const resetSearch = document.getElementById('marketplaceSearchReset');
+
+    function openFilters() {
+        if (!panel) return;
+        panel.classList.add('is-open');
+        panel.setAttribute('aria-hidden', 'false');
+        document.body.style.overflow = 'hidden';
+    }
+    function closeFilters() {
+        if (!panel) return;
+        panel.classList.remove('is-open');
+        panel.setAttribute('aria-hidden', 'true');
+        document.body.style.overflow = '';
+    }
+
+    openButton?.addEventListener('click', openFilters);
+    closeButton?.addEventListener('click', closeFilters);
+    overlay?.addEventListener('click', closeFilters);
+    document.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape') closeFilters();
+    });
+
+    resetSearch?.addEventListener('click', function () {
+        if (!searchInput) return;
+        searchInput.value = '';
+        searchInput.form?.submit();
+    });
+})();
+</script>
 {% endblock %}

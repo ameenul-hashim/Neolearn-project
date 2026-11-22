@@ -613,610 +613,276 @@ def student_settings_view(request):
 # ============================================================
 
 @login_required(login_url='signin')
-@cache_control(
-    no_cache=True,
-    must_revalidate=True,
-    no_store=True
-)
+@cache_control(no_cache=True, must_revalidate=True, no_store=True)
 def marketplace_view(request):
-
-    # ========================================================
-    # STUDENT ACCESS
-    # ========================================================
+    """Render all visible Marketplace batches with student-specific status and filters."""
 
     if not is_student_user(request.user):
-
         messages.error(
             request,
             'Admin login is not allowed here. Please use the admin login area.'
         )
-
         return redirect('signin')
-
-    # ========================================================
-    # CURRENT TIME
-    # ========================================================
 
     now = timezone.now()
 
-    # ========================================================
-    # QUERY PARAMETERS
-    # ========================================================
-
-    current_status = request.GET.get(
-        'status',
-        'all'
-    ).strip().lower()
-
-    search_query = request.GET.get(
-        'search',
-        ''
-    ).strip()
-
-    # --------------------------------------------------------
-    # SUBJECT FILTER
-    # --------------------------------------------------------
-
-    subject_id = request.GET.get(
-        'subject',
-        ''
-    ).strip()
-
-    # --------------------------------------------------------
-    # BATCH FILTER
-    # --------------------------------------------------------
-
-    batch_id = request.GET.get(
-        'batch_id',
-        ''
-    ).strip()
-
-    # --------------------------------------------------------
-    # SORT
-    # --------------------------------------------------------
-
-    sort_option = request.GET.get(
-        'sort',
-        'newest'
-    ).strip().lower()
-
-    # --------------------------------------------------------
-    # DISCOUNT
-    # --------------------------------------------------------
-
-    discount_option = request.GET.get(
-        'discount',
-        ''
-    ).strip().lower()
-
-    # --------------------------------------------------------
-    # PRICE
-    # --------------------------------------------------------
-
-    min_price = request.GET.get(
-        'min_price',
-        ''
-    ).strip()
-
-    max_price = request.GET.get(
-        'max_price',
-        ''
-    ).strip()
-
-    # ========================================================
-    # VALID STATUS
-    # ========================================================
+    # All Batches is the default and includes every marketplace-visible
+    # published or archived batch. Draft/hidden batches remain excluded.
+    current_status = request.GET.get('status', 'all').strip().lower()
+    search_query = request.GET.get('search', '').strip()
+    subject_id = request.GET.get('subject', '').strip()
+    batch_id = request.GET.get('batch_id', '').strip()
+    teacher_id = request.GET.get('teacher', '').strip()
+    sort_option = request.GET.get('sort', 'newest').strip().lower()
+    discount_option = request.GET.get('discount', '').strip().lower()
+    min_price = request.GET.get('min_price', '').strip()
+    max_price = request.GET.get('max_price', '').strip()
 
     allowed_statuses = {
-        'all',
-        'buy_now',
-        'coming_soon',
-        'admissions_closed',
+        'all', 'buy_now', 'coming_soon', 'admissions_closed', 'purchased'
     }
-
     if current_status not in allowed_statuses:
-
         current_status = 'all'
 
-    # ========================================================
-    # MARKETPLACE FILTER OPTIONS
-    #
-    # These are dynamic database values.
-    # ========================================================
+    allowed_discounts = {'', 'percentage', 'fixed', 'none'}
+    if discount_option not in allowed_discounts:
+        discount_option = ''
 
+    # Keep the actual purchase timestamp for this student, not the batch's
+    # creation/publish date. If multiple active records exist, use the latest.
+    active_purchases = (
+        StudentBatchPurchase.objects.filter(
+            student=request.user,
+            status=StudentBatchPurchase.Status.ACTIVE,
+        )
+        .order_by('purchased_at')
+        .values_list('batch_id', 'purchased_at')
+    )
+    purchased_batch_dates = {
+        batch_pk: purchased_at
+        for batch_pk, purchased_at in active_purchases
+    }
+    purchased_batch_ids = set(purchased_batch_dates.keys())
+
+    # Dynamic batch-name chips only use real visible Marketplace batches.
     marketplace_filter_batches = (
         Batch.objects.filter(
-            marketplace_visible=True
+            marketplace_visible=True,
+            batch_status__in=('published', 'archived'),
         )
-        .exclude(
-            batch_status='draft'
-        )
-        .prefetch_related(
-            'subjects'
-        )
-        .order_by(
-            'batch_name'
-        )
+        .order_by('batch_name')
     )
 
-    # ========================================================
-    # BASE MARKETPLACE QUERY
-    #
-    # Only marketplace-visible, non-draft batches.
-    # ========================================================
-
-    batches = (
-        Batch.objects.filter(
-            marketplace_visible=True
-        )
-        .exclude(
-            batch_status='draft'
-        )
+    batch_queryset = Batch.objects.filter(
+        marketplace_visible=True,
+        batch_status__in=('published', 'archived'),
     )
-
-    # ========================================================
-    # STATUS FILTER
-    # ========================================================
-
-    if current_status == 'buy_now':
-
-        batches = (
-            batches
-            .filter(
-                batch_status='published'
-            )
-            .filter(
-                Q(
-                    publish_type='immediate'
-                )
-                |
-                Q(
-                    publish_type='scheduled',
-                    publish_datetime__lte=now
-                )
-            )
-            .filter(
-                Q(
-                    admission_close_datetime__isnull=True
-                )
-                |
-                Q(
-                    admission_close_datetime__gt=now
-                )
-            )
-        )
-
-    elif current_status == 'coming_soon':
-
-        batches = batches.filter(
-            batch_status='published',
-            publish_type='scheduled',
-            publish_datetime__gt=now
-        )
-
-    elif current_status == 'admissions_closed':
-
-        batches = batches.filter(
-            Q(
-                batch_status='archived'
-            )
-            |
-            Q(
-                batch_status='published',
-                admission_close_datetime__isnull=False,
-                admission_close_datetime__lte=now
-            )
-        )
-
-    else:
-
-        # ----------------------------------------------------
-        # ALL BATCHES
-        #
-        # Every marketplace-visible, non-draft batch.
-        # ----------------------------------------------------
-
-        pass
-
-    # ========================================================
-    # BATCH FILTER
-    #
-    # If a specific Batch is selected, only that Batch
-    # is displayed.
-    # ========================================================
 
     if batch_id:
-
         try:
-
-            batch_id_value = int(batch_id)
-
-            batches = batches.filter(
-                id=batch_id_value
-            )
-
+            batch_queryset = batch_queryset.filter(pk=int(batch_id))
         except (TypeError, ValueError):
-
             batch_id = ''
 
-    # ========================================================
-    # SUBJECT FILTER
-    #
-    # The subject ID comes from the real Subject table.
-    # ========================================================
+    if teacher_id:
+        try:
+            batch_queryset = batch_queryset.filter(assigned_teachers__pk=int(teacher_id))
+        except (TypeError, ValueError):
+            teacher_id = ''
 
     if subject_id:
-
         try:
-
-            subject_id_value = int(subject_id)
-
-            batches = batches.filter(
-                subjects__id=subject_id_value
-            )
-
+            batch_queryset = batch_queryset.filter(subjects__pk=int(subject_id))
         except (TypeError, ValueError):
-
             subject_id = ''
 
-    # ========================================================
-    # SEARCH
-    #
-    # Search dynamically across:
-    #
-    #   Batch name
-    #   Batch description
-    #   Subject name
-    # ========================================================
-
     if search_query:
-
-        batches = batches.filter(
-            Q(
-                batch_name__icontains=search_query
-            )
-            |
-            Q(
-                batch_description__icontains=search_query
-            )
-            |
-            Q(
-                subjects__subject_name__icontains=search_query
-            )
+        batch_queryset = batch_queryset.filter(
+            Q(batch_name__icontains=search_query)
+            | Q(batch_description__icontains=search_query)
+            | Q(subjects__subject_name__icontains=search_query)
         )
 
-    # ========================================================
-    # CURRENT SELLING PRICE, DISCOUNT FILTERS AND PRICE SORTING
-    # ========================================================
-    #
-    # IMPORTANT:
-    # final_price is a stored value. It can still contain an old
-    # discounted price after a timed offer expires.
-    #
-    # Use the Batch model's existing get_current_price() method.
-    # for marketplace filtering and sorting instead.
-    # ========================================================
+    # Convert to a list so the existing model status property and the exact
+    # active offer price are evaluated consistently for each Marketplace card.
+    batches = list(
+        batch_queryset.distinct().prefetch_related('subjects', 'assigned_teachers')
+    )
 
-    # Validate the optional price filters first.
+    for batch in batches:
+        batch.marketplace_card_status = batch.marketplace_status
+        batch.student_purchase_date = purchased_batch_dates.get(batch.pk)
+        batch.current_selling_price = batch.get_current_price()
+        original_price_value = float(batch.original_price or 0)
+        current_price_value = float(batch.current_selling_price or 0)
+        batch.has_current_discount = current_price_value < original_price_value
+        batch.current_discount_amount = max(
+            original_price_value - current_price_value, 0
+        )
+
+    # A student's purchase takes priority over the batch's current public status.
+    if current_status == 'purchased':
+        batches = [b for b in batches if b.pk in purchased_batch_ids]
+    elif current_status == 'buy_now':
+        batches = [
+            b for b in batches
+            if b.pk not in purchased_batch_ids and b.marketplace_card_status == 'buy_now'
+        ]
+    elif current_status == 'coming_soon':
+        batches = [
+            b for b in batches
+            if b.pk not in purchased_batch_ids and b.marketplace_card_status == 'coming_soon'
+        ]
+    elif current_status == 'admissions_closed':
+        batches = [
+            b for b in batches
+            if b.pk not in purchased_batch_ids and b.marketplace_card_status == 'admissions_closed'
+        ]
+    # current_status == 'all': deliberately do not remove any visible status.
+
+    # Discount filter: blank means All Discounts (no discount filtering).
+    if discount_option == 'percentage':
+        batches = [
+            b for b in batches
+            if b.discount_type == 'percentage' and b.has_current_discount
+        ]
+    elif discount_option == 'fixed':
+        batches = [
+            b for b in batches
+            if b.discount_type == 'fixed' and b.has_current_discount
+        ]
+    elif discount_option == 'none':
+        batches = [b for b in batches if not b.has_current_discount]
+
     min_price_value = None
     max_price_value = None
-
     if min_price:
         try:
             min_price_value = float(min_price)
             if min_price_value < 0:
-                min_price = ''
-                min_price_value = None
+                min_price, min_price_value = '', None
         except (TypeError, ValueError):
-            min_price = ''
-            min_price_value = None
-
+            min_price, min_price_value = '', None
     if max_price:
         try:
             max_price_value = float(max_price)
             if max_price_value < 0:
-                max_price = ''
-                max_price_value = None
+                max_price, max_price_value = '', None
         except (TypeError, ValueError):
-            max_price = ''
-            max_price_value = None
+            max_price, max_price_value = '', None
 
-    if discount_option not in {'percentage', 'fixed', 'none', ''}:
-        discount_option = ''
-
-    # Evaluate the filtered queryset once, with related marketplace data
-    # prefetched. The current selling price is time-dependent and is
-    # calculated by the existing Batch model method.
-    batches = list(
-        batches
-        .distinct()
-        .prefetch_related(
-            'subjects',
-            'assigned_teachers',
-        )
-    )
-
-    for batch in batches:
-        current_selling_price = batch.get_current_price()
-
-        # Keep a display-friendly attribute for the Marketplace template
-        # update that follows this view change.
-        batch.current_selling_price = current_selling_price
-
-        original_price_value = float(batch.original_price or 0)
-        current_price_value = float(current_selling_price or 0)
-
-        batch.has_current_discount = (
-            current_price_value < original_price_value
-        )
-
-        batch.current_discount_amount = max(
-            original_price_value - current_price_value,
-            0,
-        )
-
-    # Discount filter must reflect the effective price at the current time.
-    # An expired timed offer is therefore treated as having no active discount.
-    if discount_option == 'percentage':
-        batches = [
-            batch for batch in batches
-            if batch.discount_type == 'percentage'
-            and batch.has_current_discount
-        ]
-
-    elif discount_option == 'fixed':
-        batches = [
-            batch for batch in batches
-            if batch.discount_type == 'fixed'
-            and batch.has_current_discount
-        ]
-
-    elif discount_option == 'none':
-        batches = [
-            batch for batch in batches
-            if not batch.has_current_discount
-        ]
-
-    # Apply minimum and maximum filters using the current selling price,
-    # never the stored final_price.
     if min_price_value is not None:
         batches = [
-            batch for batch in batches
-            if float(batch.current_selling_price or 0) >= min_price_value
+            b for b in batches
+            if float(b.current_selling_price or 0) >= min_price_value
         ]
-
     if max_price_value is not None:
         batches = [
-            batch for batch in batches
-            if float(batch.current_selling_price or 0) <= max_price_value
+            b for b in batches
+            if float(b.current_selling_price or 0) <= max_price_value
         ]
 
-    # Sort using the current selling price for price-based sorting.
-    # Other sorting options retain their existing behaviour.
-    if sort_option == 'newest':
-        batches.sort(
-            key=lambda batch: batch.created_at,
-            reverse=True,
-        )
+    sort_choices = [
+        ('newest', 'Newest'),
+        ('oldest', 'Oldest'),
+        ('a_z', 'A → Z'),
+        ('z_a', 'Z → A'),
+        ('price_low', 'Price: Low → High'),
+        ('price_high', 'Price: High → Low'),
+        ('discount', 'Highest Discount'),
+    ]
+    allowed_sorts = {value for value, _label in sort_choices}
+    if sort_option not in allowed_sorts:
+        sort_option = 'newest'
 
-    elif sort_option == 'oldest':
-        batches.sort(
-            key=lambda batch: batch.created_at,
-        )
-
+    if sort_option == 'oldest':
+        batches.sort(key=lambda b: b.created_at)
     elif sort_option == 'a_z':
-        batches.sort(
-            key=lambda batch: (batch.batch_name or '').lower(),
-        )
-
+        batches.sort(key=lambda b: (b.batch_name or '').lower())
     elif sort_option == 'z_a':
-        batches.sort(
-            key=lambda batch: (batch.batch_name or '').lower(),
-            reverse=True,
-        )
-
+        batches.sort(key=lambda b: (b.batch_name or '').lower(), reverse=True)
     elif sort_option == 'price_low':
-        batches.sort(
-            key=lambda batch: float(batch.current_selling_price or 0),
-        )
-
+        batches.sort(key=lambda b: float(b.current_selling_price or 0))
     elif sort_option == 'price_high':
         batches.sort(
-            key=lambda batch: float(batch.current_selling_price or 0),
-            reverse=True,
+            key=lambda b: float(b.current_selling_price or 0), reverse=True
         )
-
     elif sort_option == 'discount':
         batches.sort(
-            key=lambda batch: (
-                batch.current_discount_amount,
-                batch.created_at,
-            ),
+            key=lambda b: (b.current_discount_amount, b.created_at),
             reverse=True,
         )
-
     else:
-        sort_option = 'newest'
-        batches.sort(
-            key=lambda batch: batch.created_at,
-            reverse=True,
-        )
+        batches.sort(key=lambda b: b.created_at, reverse=True)
 
-    # ========================================================
-    # WISHLIST IDS
-    #
-    # Used by Marketplace to determine whether a batch
-    # is already in the student's wishlist.
-    # ========================================================
+    # Keep the agreed 12 cards per page.
+    paginator = Paginator(batches, 12)
+    page_obj = paginator.get_page(request.GET.get('page'))
+    batches = page_obj.object_list
 
     wishlisted_batch_ids = set(
-        StudentWishlist.objects.filter(
-            student=request.user
-        ).values_list(
-            'batch_id',
-            flat=True
-        )
+        StudentWishlist.objects.filter(student=request.user)
+        .values_list('batch_id', flat=True)
     )
-
-    # ========================================================
-    # CART BATCH IDS
-    #
-    # IMPORTANT:
-    #
-    # This is different from cart_count.
-    #
-    # cart_count = number of items in the cart.
-    #
-    # cart_batch_ids = IDs of the actual batches currently
-    # inside the cart.
-    #
-    # Marketplace uses this to show:
-    #
-    #   🛒 Add to Cart
-    #
-    # or
-    #
-    #   ✓ Added to Cart
-    # ========================================================
 
     try:
-
-        cart = Cart.objects.get(
-            student=request.user
-        )
-
-        cart_batch_ids = set(
-            cart.items.values_list(
-                'batch_id',
-                flat=True
-            )
-        )
-
+        cart = Cart.objects.get(student=request.user)
+        cart_batch_ids = set(cart.items.values_list('batch_id', flat=True))
     except Cart.DoesNotExist:
-
         cart_batch_ids = set()
-
-    # ========================================================
-    # PURCHASED BATCH IDS
-    #
-    # These are the batches already purchased by the
-    # currently logged-in student.
-    #
-    # Marketplace will use this to show:
-    #
-    #   ✓ Purchased
-    #   View My Learning
-    #
-    # instead of Add to Cart.
-    # ========================================================
-
-    purchased_batch_ids = set(
-        StudentBatchPurchase.objects.filter(
-            student=request.user,
-            status=StudentBatchPurchase.Status.ACTIVE,
-        ).values_list(
-            'batch_id',
-            flat=True,
-        )
-    )
-
-    # ========================================================
-    # FLAT SUBJECT LIST
-    #
-    # Kept for compatibility with existing templates.
-    #
-    # Do not remove this.
-    # ========================================================
 
     subjects = (
         Subject.objects.filter(
-            batch__marketplace_visible=True
+            batch__marketplace_visible=True,
+            batch__batch_status__in=('published', 'archived'),
         )
-        .exclude(
-            batch__batch_status='draft'
-        )
-        .order_by(
-            'subject_name'
-        )
+        .order_by('subject_name')
         .distinct()
     )
 
-    # ========================================================
-    # RENDER MARKETPLACE
-    # ========================================================
+    # Teacher filter data is retained for compatibility with existing views/templates.
+    filter_batch_rows = list(
+        marketplace_filter_batches.prefetch_related('assigned_teachers')
+    )
+    teacher_batch_counts = {}
+    for filter_batch in filter_batch_rows:
+        for assigned_teacher in filter_batch.assigned_teachers.all():
+            teacher_batch_counts[assigned_teacher.pk] = (
+                teacher_batch_counts.get(assigned_teacher.pk, 0) + 1
+            )
+    marketplace_filter_teachers = list(
+        Teacher.objects.filter(pk__in=teacher_batch_counts.keys()).order_by('full_name')
+    )
+    for marketplace_teacher in marketplace_filter_teachers:
+        marketplace_teacher.marketplace_batch_count = teacher_batch_counts.get(
+            marketplace_teacher.pk, 0
+        )
 
     return render(
         request,
         'students/marketplace/marketplace.html',
         {
-            # ------------------------------------------------
-            # MAIN MARKETPLACE RESULTS
-            # ------------------------------------------------
-
             'batches': batches,
-
-            # ------------------------------------------------
-            # DYNAMIC FILTER BATCHES
-            # ------------------------------------------------
-
             'marketplace_filter_batches': marketplace_filter_batches,
-
-            # ------------------------------------------------
-            # SUBJECTS
-            # ------------------------------------------------
-
             'subjects': subjects,
-
-            # ------------------------------------------------
-            # CURRENT FILTER STATE
-            # ------------------------------------------------
-
             'current_status': current_status,
-
             'search_query': search_query,
-
             'subject_id': subject_id,
-
             'batch_id': batch_id,
-
+            'teacher_id': teacher_id,
+            'marketplace_filter_teachers': marketplace_filter_teachers,
             'sort_option': sort_option,
-
+            'sort_choices': sort_choices,
             'discount_option': discount_option,
-
             'min_price': min_price,
-
             'max_price': max_price,
-
-            # ------------------------------------------------
-            # WISHLIST
-            #
-            # Page-specific wishlist state.
-            # ------------------------------------------------
-
             'wishlisted_batch_ids': wishlisted_batch_ids,
-
-            # ------------------------------------------------
-            # CART
-            #
-            # Page-specific cart state.
-            #
-            # This is what Marketplace needs for the
-            # Add to Cart / Added to Cart button.
-            # ------------------------------------------------
-
             'cart_batch_ids': cart_batch_ids,
-
-            # ------------------------------------------------
-            # PURCHASED BATCHES
-            #
-            # Page-specific purchased state.
-            #
-            # This is what Marketplace needs to determine
-            # whether the student already owns the batch.
-            # ------------------------------------------------
-
             'purchased_batch_ids': purchased_batch_ids,
-        }
+            'purchased_batch_dates': purchased_batch_dates,
+            'page_obj': page_obj,
+            'paginator': paginator,
+        },
     )
 
 # ============================================================
@@ -1248,7 +914,7 @@ def marketplace_detail_view(request, batch_id):
 
     batch = get_object_or_404(
         Batch.objects.filter(
-            batch_status='published',
+            batch_status__in=('published', 'archived'),
             marketplace_visible=True,
         ).prefetch_related(
             'gallery_images',
@@ -1417,29 +1083,57 @@ def marketplace_detail_view(request, batch_id):
     no_store=True
 )
 def wishlist_view(request):
+    """Show saved batches in every marketplace status for this student."""
 
     if not is_student_user(request.user):
-
         messages.error(
             request,
             'Admin login is not allowed here. Please use the admin login area.'
         )
-
         return redirect('signin')
 
-    wishlist_items = (
+    # A successfully purchased batch no longer needs to remain in Wishlist.
+    # This deletes only StudentWishlist rows; cart records are never touched.
+    active_purchased_ids = set(
+        StudentBatchPurchase.objects.filter(
+            student=request.user,
+            status=StudentBatchPurchase.Status.ACTIVE,
+        ).values_list('batch_id', flat=True)
+    )
+    if active_purchased_ids:
         StudentWishlist.objects.filter(
-            student=request.user
-        )
-        .select_related(
-            'batch'
-        )
-        .order_by(
-            '-created_at'
-        )
+            student=request.user,
+            batch_id__in=active_purchased_ids,
+        ).delete()
+
+    wishlist_items = list(
+        StudentWishlist.objects.filter(student=request.user)
+        .select_related('batch')
+        .prefetch_related('batch__subjects', 'batch__assigned_teachers')
+        .order_by('-created_at')
     )
 
-    wishlist_count = wishlist_items.count()
+    wishlist_batch_ids = [item.batch_id for item in wishlist_items]
+    purchased_batch_ids = set(active_purchased_ids.intersection(wishlist_batch_ids))
+
+    for item in wishlist_items:
+        batch = item.batch
+        batch.marketplace_card_status = batch.marketplace_status
+        batch.is_already_purchased = batch.pk in purchased_batch_ids
+        batch.current_selling_price = batch.get_current_price()
+        batch.has_current_discount = (
+            float(batch.current_selling_price or 0) < float(batch.original_price or 0)
+        )
+
+    cart_batch_ids = set(
+        CartItem.objects.filter(
+            cart__student=request.user,
+            batch_id__in=wishlist_batch_ids,
+        ).values_list('batch_id', flat=True)
+    )
+
+    wishlist_count = len(wishlist_items)
+    cart_count = CartItem.objects.filter(cart__student=request.user).count()
 
     return render(
         request,
@@ -1447,6 +1141,9 @@ def wishlist_view(request):
         {
             'wishlist_items': wishlist_items,
             'wishlist_count': wishlist_count,
+            'purchased_batch_ids': purchased_batch_ids,
+            'cart_batch_ids': cart_batch_ids,
+            'cart_count': cart_count,
         },
     )
 
@@ -1514,13 +1211,49 @@ def toggle_wishlist_view(request, batch_id):
         return redirect('marketplace')
 
     # ========================================================
+    # EXPLICIT REMOVE (works for every saved batch status)
+    # ========================================================
+
+    if request.POST.get('wishlist_action') == 'remove' or request.POST.get('action') == 'remove':
+        # Do not fetch/validate the Batch here. A saved wishlist row must be
+        # removable even if its batch is Coming Soon, Admissions Closed,
+        # archived, hidden from Marketplace, or otherwise unavailable.
+        deleted_count, _ = StudentWishlist.objects.filter(
+            student=request.user,
+            batch_id=batch_id,
+        ).delete()
+
+        wishlist_count = StudentWishlist.objects.filter(
+            student=request.user
+        ).count()
+        cart_count = CartItem.objects.filter(
+            cart__student=request.user
+        ).count()
+
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            if deleted_count:
+                messages.info(request, 'Batch removed from your wishlist.')
+            return JsonResponse({
+                'success': True,
+                'wishlisted': False,
+                'removed': bool(deleted_count),
+                'wishlist_count': wishlist_count,
+                'cart_count': cart_count,
+                'batch_id': batch_id,
+            })
+
+        if deleted_count:
+            messages.info(request, 'Batch removed from your wishlist.')
+        return redirect(request.META.get('HTTP_REFERER') or 'marketplace')
+
+    # ========================================================
     # VALID MARKETPLACE BATCH
     # ========================================================
 
     batch = get_object_or_404(
         Batch,
         id=batch_id,
-        batch_status='published',
+        batch_status__in=('published', 'archived'),
         marketplace_visible=True,
     )
 
@@ -1572,12 +1305,29 @@ def toggle_wishlist_view(request, batch_id):
         'X-Requested-With'
     ) == 'XMLHttpRequest':
 
+        if wishlisted:
+            messages.success(
+                request,
+                f'\"{batch.batch_name}\" has been added to your wishlist.'
+            )
+        else:
+            messages.info(
+                request,
+                f'\"{batch.batch_name}\" has been removed from your wishlist.'
+            )
+
         return JsonResponse(
             {
                 'success': True,
                 'wishlisted': wishlisted,
                 'wishlist_count': wishlist_count,
+                'cart_count': CartItem.objects.filter(cart__student=request.user).count(),
                 'batch_id': batch.id,
+                'message': (
+                    f'\"{batch.batch_name}\" has been added to your wishlist.'
+                    if wishlisted else
+                    f'\"{batch.batch_name}\" has been removed from your wishlist.'
+                ),
             }
         )
 
@@ -1648,88 +1398,78 @@ def wishlist_count_view(request):
     no_store=True
 )
 def add_to_cart_view(request, batch_id):
+    """Add a purchasable batch to the cart; supports AJAX and normal POST."""
+
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+
+    def cart_response(success, message, status=200, redirect_url=None):
+        if is_ajax:
+            # The Wishlist reloads after a successful AJAX action, so the
+            # existing base_student message/toast UI can display this message.
+            if success:
+                messages.success(request, message)
+            else:
+                messages.error(request, message)
+
+            cart_count = CartItem.objects.filter(cart__student=request.user).count()
+            wishlist_count = StudentWishlist.objects.filter(student=request.user).count()
+            return JsonResponse({
+                'success': success,
+                'message': message,
+                'cart_count': cart_count,
+                'wishlist_count': wishlist_count,
+                'batch_id': batch_id,
+                'redirect_url': reverse(redirect_url) if redirect_url else None,
+            }, status=status)
+        if success:
+            messages.success(request, message)
+        else:
+            messages.info(request, message)
+        return redirect(redirect_url or 'marketplace')
 
     if not is_student_user(request.user):
-
-        messages.error(
-            request,
-            'Admin login is not allowed here. Please use the admin login area.'
-        )
-
+        if is_ajax:
+            return JsonResponse({'success': False, 'message': 'Student access required.'}, status=403)
+        messages.error(request, 'Admin login is not allowed here. Please use the admin login area.')
         return redirect('signin')
 
     if request.method != 'POST':
+        return cart_response(False, 'Invalid cart request.', status=400)
 
-        messages.error(
-            request,
-            'Invalid cart request.'
-        )
-
-        return redirect('marketplace')
+    # Buy Now uses the same cart rules, then opens the cart immediately.
+    buy_now = request.POST.get('buy_now') == '1'
 
     batch = get_object_or_404(
-        Batch,
-        id=batch_id,
-        batch_status='published',
-        marketplace_visible=True,
+        Batch, id=batch_id, batch_status='published', marketplace_visible=True
     )
 
     if batch.marketplace_status != 'buy_now':
-
-        messages.warning(
-            request,
-            'This batch is not currently available for purchase.'
-        )
-
-        return redirect('marketplace')
-
-    # ========================================================
-    # ALREADY PURCHASED
-    # ========================================================
-    # A student who already owns an active purchase must never
-    # be able to add the same batch to the cart again.
-    #
-    # This is enforced server-side so it cannot be bypassed by
-    # manually submitting the add-to-cart request.
-    # ========================================================
+        return cart_response(False, 'This batch is not currently available for purchase.', status=400)
 
     if StudentBatchPurchase.objects.filter(
         student=request.user,
         batch=batch,
         status=StudentBatchPurchase.Status.ACTIVE,
     ).exists():
-
-        messages.info(
-            request,
-            f'"{batch.batch_name}" is already in your learning.'
+        return cart_response(
+            True,
+            f'"{batch.batch_name}" is already in your learning.',
+            redirect_url='my_learning',
         )
 
-        return redirect('my_learning')
-
-    cart, created = Cart.objects.get_or_create(
-        student=request.user
-    )
-
-    cart_item, item_created = CartItem.objects.get_or_create(
-        cart=cart,
-        batch=batch,
-    )
+    cart, _ = Cart.objects.get_or_create(student=request.user)
+    _, item_created = CartItem.objects.get_or_create(cart=cart, batch=batch)
 
     if item_created:
-
-        messages.success(
-            request,
-            f'"{batch.batch_name}" has been added to your cart.'
-        )
-
+        message = f'"{batch.batch_name}" has been added to your cart.'
     else:
+        message = f'"{batch.batch_name}" is already in your cart.'
 
-        messages.info(
-            request,
-            f'"{batch.batch_name}" is already in your cart.'
-        )
-
-    return redirect('marketplace')
+    return cart_response(
+        True,
+        message,
+        redirect_url='cart' if buy_now else None,
+    )
 
 
 @login_required(login_url="signin")

@@ -1504,6 +1504,8 @@ def delete_batch_view(request, batch_id):
 
         # =====================================================
         # Archived Batch Validation
+        # Preserve the existing rule: archived batches cannot
+        # be permanently deleted through this view.
         # =====================================================
 
         if batch.batch_status == "archived":
@@ -1516,50 +1518,125 @@ def delete_batch_view(request, batch_id):
             return redirect("admin_batches")
 
         # =====================================================
-        # Student Enrollment Validation
-        # =====================================================
-        #
-        # Add your enrollment/purchase check here later.
-        #
-        # Example:
-        #
-        # if StudentEnrollment.objects.filter(batch=batch).exists():
-        #
-        #     messages.error(
-        #         request,
-        #         "Students are already enrolled in this batch. Deletion is not allowed."
-        #     )
-        #
-        #     return redirect("admin_batches")
-        #
+        # SUBJECT PROTECTION
+        # A batch containing even one subject cannot be deleted.
         # =====================================================
 
+        if Subject.objects.filter(batch_id=batch.pk).exists():
+
+            messages.error(
+                request,
+                "This batch has subjects. Remove or transfer its subjects "
+                "before deleting the batch."
+            )
+
+            return redirect("admin_batches")
+
         # =====================================================
-        # Delete Cloudinary Image (Safe)
+        # STUDENT PURCHASE / ACTIVE LEARNING PROTECTION
+        # Protect all purchase history, including active, revoked
+        # and refunded purchases. This preserves order history too.
+        # =====================================================
+
+        if StudentBatchPurchase.objects.filter(batch_id=batch.pk).exists():
+
+            messages.error(
+                request,
+                "Students have purchased this batch. It cannot be "
+                "permanently deleted."
+            )
+
+            return redirect("admin_batches")
+
+        # Save the Cloudinary public ID before deleting the database row.
+        # Cloudinary cleanup happens only after the database deletion
+        # succeeds, so the batch never loses its image before a blocked
+        # database deletion.
+        thumbnail_public_id = None
+
+        if batch.batch_thumbnail:
+            thumbnail_public_id = getattr(
+                batch.batch_thumbnail,
+                "public_id",
+                None,
+            )
+
+        # =====================================================
+        # FINAL CHECKS + DATABASE DELETE
+        # Recheck related records while the batch row is locked.
         # =====================================================
 
         try:
 
-            if batch.batch_thumbnail:
+            with transaction.atomic():
 
-                public_id = getattr(
-                    batch.batch_thumbnail,
-                    "public_id",
-                    None,
+                batch = Batch.objects.select_for_update().get(
+                    pk=batch.pk
                 )
 
-                if public_id:
-                    destroy(public_id)
+                # Recheck the archived rule in case the batch status
+                # changed after the initial page validation.
+                if batch.batch_status == "archived":
 
-        except Exception:
-            # Ignore Cloudinary errors and continue deleting batch
-            pass
+                    messages.error(
+                        request,
+                        "Archived batches cannot be deleted."
+                    )
+
+                    return redirect("admin_batches")
+
+                # Final subject check inside the transaction.
+                if Subject.objects.filter(batch_id=batch.pk).exists():
+
+                    messages.error(
+                        request,
+                        "This batch has subjects. Remove or transfer its "
+                        "subjects before deleting the batch."
+                    )
+
+                    return redirect("admin_batches")
+
+                # Final purchase-history check inside the transaction.
+                if StudentBatchPurchase.objects.filter(
+                    batch_id=batch.pk
+                ).exists():
+
+                    messages.error(
+                        request,
+                        "Students have purchased this batch. It cannot be "
+                        "permanently deleted."
+                    )
+
+                    return redirect("admin_batches")
+
+                batch.delete()
+
+        except (ProtectedError, IntegrityError):
+            messages.error(
+                request,
+                "This batch has related student, purchase, or protected "
+                "records and cannot be deleted."
+            )
+
+            return redirect("admin_batches")
 
         # =====================================================
-        # Delete Batch
+        # CLOUDINARY CLEANUP
+        # Run only after the database deletion has succeeded.
+        # A Cloudinary failure must not undo or misreport the
+        # successful database deletion.
         # =====================================================
 
-        batch.delete()
+        if thumbnail_public_id:
+
+            try:
+                destroy(thumbnail_public_id)
+
+            except Exception:
+                logging.exception(
+                    "Unable to delete Cloudinary thumbnail for batch %s",
+                    batch_id,
+                )
 
         messages.success(
             request,

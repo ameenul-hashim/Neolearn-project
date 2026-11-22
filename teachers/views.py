@@ -13,6 +13,7 @@ from django.contrib.auth.models import User
 from django.views.decorators.cache import cache_control
 from PIL import Image, UnidentifiedImageError
 from django.core.exceptions import ValidationError
+from django.http import Http404
 import re
 from django.db import transaction
 from admins.models import (Batch,Subject,FAQVideo,CouponBatchRule,)
@@ -443,15 +444,32 @@ def teacher_batches_view(request):
         .distinct()
     )
 
-    # Total assigned count is not affected by search or selected filters.
-    batch_count = assigned_batches.count()
+    # Marketplace status is an existing Batch model property, so it is
+    # evaluated on the assigned Batch objects rather than incorrectly
+    # filtering the database batch_status field.
+    visible_assigned_batches = [
+        batch
+        for batch in assigned_batches
+        if batch.marketplace_status != "hidden"
+    ]
+    visible_batch_ids = [
+        batch.pk for batch in visible_assigned_batches
+    ]
+
+    # Total visible assigned count is not affected by search or filters.
+    batch_count = len(visible_assigned_batches)
 
     # Read and validate filters.
     search_query = request.GET.get("q", "").strip()
     selected_status = request.GET.get("status", "all").strip().lower()
     selected_sort = request.GET.get("sort", "name").strip().lower()
 
-    allowed_statuses = {"all", "published", "draft", "archived"}
+    allowed_statuses = {
+        "all",
+        "buy_now",
+        "coming_soon",
+        "admissions_closed",
+    }
     allowed_sorts = {
         "name",
         "name_desc",
@@ -466,17 +484,17 @@ def teacher_batches_view(request):
     if selected_sort not in allowed_sorts:
         selected_sort = "name"
 
+    # Start with visible batches only. Draft/hidden batches are excluded
+    # from the listing and from every status filter.
+    assigned_batches = assigned_batches.filter(
+        pk__in=visible_batch_ids
+    )
+
     # Search batch name and description.
     if search_query:
         assigned_batches = assigned_batches.filter(
             Q(batch_name__icontains=search_query)
             | Q(batch_description__icontains=search_query)
-        )
-
-    # Status filtering.
-    if selected_status != "all":
-        assigned_batches = assigned_batches.filter(
-            batch_status=selected_status
         )
 
     # Sorting: Most teachers uses the correlated active teacher count.
@@ -507,7 +525,18 @@ def teacher_batches_view(request):
 
     batch_cards = []
 
-    for batch in assigned_batches:
+    # Apply the marketplace status filter after loading the model objects,
+    # because marketplace_status is a Python property, not a DB field.
+    filtered_batches = list(assigned_batches)
+
+    if selected_status != "all":
+        filtered_batches = [
+            batch
+            for batch in filtered_batches
+            if batch.marketplace_status == selected_status
+        ]
+
+    for batch in filtered_batches:
         # Use this exact list as the source of truth for:
         # 1) displayed teacher total,
         # 2) first three avatars,
@@ -594,6 +623,11 @@ def teacher_subjects_view(request, batch_id):
         assigned_teachers__teacher=teacher,
         assigned_teachers__is_active=True,
     )
+
+    # Draft/hidden batches must not be accessible through a manually entered
+    # URL, even when an old active teacher assignment still exists.
+    if batch.marketplace_status == "hidden":
+        raise Http404("This batch is not available.")
 
     # Search is restricted to subjects actively assigned to this teacher.
     search = request.GET.get("search", "").strip()
@@ -821,6 +855,10 @@ def teacher_course_builder_entry_view(
         Batch,
         id=batch_id,
     )
+
+    # Prevent direct Course Builder entry for hidden/draft batches.
+    if batch.marketplace_status == "hidden":
+        raise Http404("This batch is not available.")
 
     # ========================================================
     # SUBJECT
