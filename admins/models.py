@@ -589,40 +589,25 @@ class Batch(models.Model):
 
 
     @property
-
     def is_offer_active(self):
-
         """
-
-        Returns True if offer is currently active.
-
+        Both dates blank = permanent discount.
+        Both dates present = limited-time discount [start, end).
+        A partially configured date range is inactive.
         """
+        if self.discount_type == "none" or self.discount_value <= 0:
+            return False
 
+        start = self.offer_start_date
+        end = self.offer_end_date
 
+        if start is None and end is None:
+            return True
+        if start is None or end is None:
+            return False
 
         now = timezone.now()
-
-
-
-        if self.discount_type == "none":
-
-            return False
-
-
-
-        if self.offer_start_date and now < self.offer_start_date:
-
-            return False
-
-
-
-        if self.offer_end_date and now > self.offer_end_date:
-
-            return False
-
-
-
-        return True
+        return start <= now < end
 
 
 
@@ -649,7 +634,14 @@ class Batch(models.Model):
 
     def clean(self):
 
-
+        # Both blank = permanent discount; one missing = invalid limited offer.
+        if (
+            (self.offer_start_date is None)
+            != (self.offer_end_date is None)
+        ):
+            raise ValidationError(
+                "A limited-time offer requires both start and end dates."
+            )
 
         if (
 

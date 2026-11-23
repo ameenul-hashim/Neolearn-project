@@ -1503,6 +1503,24 @@ def cart_view(request):
     )
 
     # --------------------------------------------------------
+    # CART-ONLY CURRENT BATCH PRICES
+    # --------------------------------------------------------
+    # The shared cart coupon helpers read batch.final_price.
+    # That stored field can still contain an expired offer price.
+    # Resolve the time-aware selling price for this Cart request and
+    # override final_price only on these in-memory Batch instances.
+    # Nothing is saved to the database, and no shared pricing logic
+    # or Marketplace/Admin/Checkout code is changed.
+    #
+    # Active offer: get_current_price() returns the offer price.
+    # Expired/no offer: get_current_price() returns original_price.
+    # --------------------------------------------------------
+
+    for cart_item in cart_items:
+        batch = cart_item.batch
+        batch.final_price = batch.get_current_price()
+
+    # --------------------------------------------------------
     # CALCULATE CURRENT CART TOTALS
     # --------------------------------------------------------
 

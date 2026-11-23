@@ -39,9 +39,9 @@
                     justify-center
                     rounded-full
                     border
-                    border-cyan-400/20
-                    bg-cyan-400/[0.06]
-                    text-cyan-400
+                    border-emerald-400/20
+                    bg-emerald-400/[0.06]
+                    text-emerald-400
                 "
             >
                 <i class="ri-shopping-cart-2-line text-3xl"></i>
@@ -67,17 +67,17 @@
                     gap-2
                     rounded-xl
                     bg-gradient-to-r
-                    from-cyan-400
-                    to-sky-400
+                    from-emerald-400
+                    to-teal-400
                     px-6
                     text-[11px]
                     font-black
                     text-slate-950
                     shadow-lg
-                    shadow-cyan-500/10
+                    shadow-emerald-500/10
                     transition-all
                     hover:-translate-y-0.5
-                    hover:shadow-cyan-500/20
+                    hover:shadow-emerald-500/20
                 "
             >
                 <i class="ri-store-2-line text-base"></i>
@@ -145,9 +145,9 @@
                                     justify-center
                                     rounded-2xl
                                     border
-                                    border-cyan-400/30
-                                    bg-cyan-400/[0.07]
-                                    text-cyan-400
+                                    border-emerald-400/30
+                                    bg-emerald-400/[0.07]
+                                    text-emerald-400
                                     shadow-[0_0_30px_rgba(0,245,212,0.08)]
                                     sm:h-12
                                     sm:w-12
@@ -158,7 +158,7 @@
 
                             <div class="min-w-0">
                                 <h1 class="text-2xl font-black tracking-tight text-white sm:text-3xl">
-                                    Your <span class="text-cyan-400">Cart</span>
+                                    Your <span class="text-emerald-400">Cart</span>
                                 </h1>
 
                                 <p class="mt-1 text-xs text-slate-400 sm:text-sm">
@@ -187,7 +187,7 @@
                                     border-emerald-400/20
                                     bg-emerald-400/[0.055]
                                 {% else %}
-                                    border-cyan-400/10
+                                    border-emerald-400/10
                                     bg-white/[0.018]
                                 {% endif %}
                             "
@@ -222,7 +222,7 @@
                                 </div>
                             {% else %}
                                 <div class="flex items-center gap-3">
-                                    <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-cyan-400/15 bg-cyan-400/[0.05] text-cyan-400/80">
+                                    <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-emerald-400/15 bg-emerald-400/[0.05] text-emerald-400/80">
                                         <i class="ri-coupon-3-line text-lg"></i>
                                     </div>
 
@@ -254,7 +254,7 @@
                             overflow-hidden
                             rounded-2xl
                             border
-                            border-cyan-400/15
+                            border-emerald-400/15
                             bg-[#071224]/90
                             shadow-2xl
                             shadow-black/10
@@ -300,7 +300,7 @@
                                         shadow-black/10
                                         transition-all
                                         duration-300
-                                        hover:border-cyan-400/20
+                                        hover:border-emerald-400/20
                                         hover:bg-[#09172a]
                                     "
                                     {% if batch.is_offer_active and batch.offer_end_date %}
@@ -318,8 +318,8 @@
                                             left-0
                                             w-1
                                             bg-gradient-to-b
-                                            from-cyan-400
-                                            via-cyan-400/40
+                                            from-emerald-400
+                                            via-emerald-400/40
                                             to-transparent
                                             opacity-0
                                             transition-opacity
@@ -386,9 +386,9 @@
                                                         items-center
                                                         justify-center
                                                         bg-gradient-to-br
-                                                        from-cyan-400/10
-                                                        to-sky-500/5
-                                                        text-cyan-400/60
+                                                        from-emerald-400/10
+                                                        to-teal-500/5
+                                                        text-emerald-400/60
                                                     "
                                                 >
                                                     <i class="ri-image-line text-3xl"></i>
@@ -411,7 +411,7 @@
                                                     font-bold
                                                     uppercase
                                                     tracking-wide
-                                                    text-cyan-300
+                                                    text-emerald-300
                                                     backdrop-blur-md
                                                 "
                                             >
@@ -446,7 +446,7 @@
                                                             leading-6
                                                             text-white
                                                             transition-colors
-                                                            group-hover:text-cyan-100
+                                                            group-hover:text-emerald-100
                                                         "
                                                     >
                                                         {{ batch.batch_name }}
@@ -491,7 +491,7 @@
 
                                                         <div class="flex items-center gap-2">
 
-                                                            <i class="ri-user-star-line text-[11px] text-cyan-400"></i>
+                                                            <i class="ri-user-star-line text-[11px] text-emerald-400"></i>
 
                                                             <span>
                                                                 {{ teacher_assignment.teacher.full_name }}
@@ -518,7 +518,7 @@
 
                                                 <div class="flex items-center gap-2">
 
-                                                    <i class="ri-book-open-line text-[11px] text-cyan-400"></i>
+                                                    <i class="ri-book-open-line text-[11px] text-emerald-400"></i>
 
                                                     <span>
                                                         {{ batch.subjects.all|length }}
@@ -536,7 +536,7 @@
 
                                                     <div class="flex items-center gap-2">
 
-                                                        <i class="ri-calendar-line text-[11px] text-cyan-400"></i>
+                                                        <i class="ri-calendar-line text-[11px] text-emerald-400"></i>
 
                                                         <span>
                                                             Ends {{ batch.course_end_date|date:"d M Y" }}
@@ -573,7 +573,7 @@
 
                                             <div>
 
-                                                {% if batch.current_price < batch.original_price %}
+                                                {% if batch.final_price and batch.final_price < batch.original_price %}
 
                                                     <div
                                                         class="
@@ -593,10 +593,10 @@
                                                         mt-0.5
                                                         text-base
                                                         font-black
-                                                        text-cyan-400
+                                                        text-emerald-400
                                                     "
                                                 >
-                                                    ₹{{ batch.current_price|floatformat:2 }}
+                                                    ₹{{ batch.final_price|default:batch.original_price|floatformat:2 }}
                                                 </div>
 
 
@@ -975,7 +975,7 @@
                             overflow-hidden
                             rounded-2xl
                             border
-                            border-cyan-400/15
+                            border-emerald-400/15
                             bg-[#071224]/90
                             shadow-2xl
                             shadow-black/10
@@ -1007,9 +1007,9 @@
                                         justify-center
                                         rounded-xl
                                         border
-                                        border-cyan-400/25
-                                        bg-cyan-400/[0.06]
-                                        text-cyan-400
+                                        border-emerald-400/25
+                                        bg-emerald-400/[0.06]
+                                        text-emerald-400
                                     "
                                 >
                                     <i class="ri-price-tag-3-line text-base"></i>
@@ -1035,13 +1035,13 @@
                                     shrink-0
                                     rounded-full
                                     border
-                                    border-cyan-400/10
-                                    bg-cyan-400/[0.05]
+                                    border-emerald-400/10
+                                    bg-emerald-400/[0.05]
                                     px-2.5
                                     py-1
                                     text-[9px]
                                     font-black
-                                    text-cyan-300
+                                    text-emerald-300
                                 "
                             >
                                 0 offers
@@ -1199,7 +1199,7 @@
                                                 p-2.5
                                                 transition
                                                 {% if coupon.is_available %}
-                                                    border-white/10 bg-[#08182b]/80 hover:border-cyan-400/20 hover:bg-[#091a2e]
+                                                    border-white/10 bg-[#08182b]/80 hover:border-emerald-400/20 hover:bg-[#091a2e]
                                                 {% else %}
                                                     border-white/5 bg-white/[0.018] opacity-75
                                                 {% endif %}
@@ -1230,7 +1230,7 @@
                                                             class="h-full w-full object-cover"
                                                         >
                                                     {% else %}
-                                                        <div class="flex h-full w-full items-center justify-center bg-cyan-400/[0.04] text-cyan-400/60">
+                                                        <div class="flex h-full w-full items-center justify-center bg-emerald-400/[0.04] text-emerald-400/60">
                                                             <i class="ri-coupon-3-line text-base"></i>
                                                         </div>
                                                     {% endif %}
@@ -1243,7 +1243,7 @@
                                                         </p>
 
                                                         {% if coupon.coupon.coupon_type == "batch_specific" %}
-                                                            <span class="rounded-md bg-cyan-400/10 px-2 py-0.5 text-[9px] font-black text-cyan-300">Batch</span>
+                                                            <span class="rounded-md bg-emerald-400/10 px-2 py-0.5 text-[9px] font-black text-emerald-300">Batch</span>
                                                         {% elif coupon.coupon.coupon_type == "multi_checkout" %}
                                                             <span class="rounded-md bg-violet-400/10 px-2 py-0.5 text-[9px] font-black text-violet-300">Multi</span>
                                                         {% else %}
@@ -1266,7 +1266,7 @@
                                                     {% if coupon.is_available %}
                                                         <div class="mt-1.5 flex flex-wrap items-center gap-1.5 text-[8px] font-semibold text-slate-500">
                                                             {% if coupon.coupon.minimum_order_amount %}
-                                                                <span class="inline-flex items-center gap-1 rounded-md border border-cyan-400/10 bg-cyan-400/[0.035] px-1.5 py-1 text-cyan-300/80">
+                                                                <span class="inline-flex items-center gap-1 rounded-md border border-emerald-400/10 bg-emerald-400/[0.035] px-1.5 py-1 text-emerald-300/80">
                                                                     <i class="ri-shopping-bag-3-line"></i>
                                                                     Min ₹{{ coupon.coupon.minimum_order_amount|floatformat:0 }}
                                                                 </span>
@@ -1303,9 +1303,9 @@
                                                                 type="submit"
                                                                 class="
                                                                     inline-flex h-9 min-w-[70px] items-center justify-center gap-1.5
-                                                                    rounded-xl bg-gradient-to-r from-cyan-400 to-sky-400
+                                                                    rounded-xl bg-gradient-to-r from-emerald-400 to-teal-400
                                                                     px-2.5 text-[11px] font-black text-slate-950 transition
-                                                                    hover:-translate-y-0.5 hover:shadow-lg hover:shadow-cyan-500/10
+                                                                    hover:-translate-y-0.5 hover:shadow-lg hover:shadow-emerald-500/10
                                                                 "
                                                             >
                                                                 <i class="ri-send-plane-line"></i>
@@ -1379,7 +1379,7 @@
 
                         <div class="px-2.5 pb-4">
 
-                            <p class="text-[11px] font-black text-cyan-300">
+                            <p class="text-[11px] font-black text-emerald-300">
                                 Have a different coupon code?
                             </p>
 
@@ -1421,9 +1421,9 @@
                                         placeholder:normal-case
                                         placeholder:tracking-normal
                                         placeholder:text-slate-600
-                                        focus:border-cyan-400/40
+                                        focus:border-emerald-400/40
                                         focus:ring-2
-                                        focus:ring-cyan-400/10
+                                        focus:ring-emerald-400/10
                                     "
                                 >
 
@@ -1440,8 +1440,8 @@
                                         gap-2
                                         rounded-xl
                                         bg-gradient-to-r
-                                        from-cyan-400
-                                        to-sky-400
+                                        from-emerald-400
+                                        to-teal-400
                                         px-2.5
                                         text-[11px]
                                         font-black
@@ -1449,10 +1449,10 @@
                                         transition-all
                                         hover:-translate-y-0.5
                                         hover:shadow-lg
-                                        hover:shadow-cyan-500/10
+                                        hover:shadow-emerald-500/10
                                         focus:outline-none
                                         focus:ring-2
-                                        focus:ring-cyan-300/30
+                                        focus:ring-emerald-300/30
                                         sm:w-auto
                                     "
                                 >
@@ -1498,7 +1498,7 @@
                         overflow-hidden
                         rounded-2xl
                         border
-                        border-cyan-400/15
+                        border-emerald-400/15
                         bg-[#071224]/95
                         shadow-2xl
                         shadow-black/20
@@ -1530,9 +1530,9 @@
                                 justify-center
                                 rounded-xl
                                 border
-                                border-cyan-400/25
-                                bg-cyan-400/[0.06]
-                                text-cyan-400
+                                border-emerald-400/25
+                                bg-emerald-400/[0.06]
+                                text-emerald-400
                             "
                         >
                             <i class="ri-bill-line text-base"></i>
@@ -1643,7 +1643,7 @@
                                         </div>
 
                                         <p class="shrink-0 text-[11px] font-black text-white">
-                                            ₹{{ item.batch.current_price|floatformat:2 }}
+                                            ₹{{ item.batch.final_price|default:item.batch.original_price|floatformat:2 }}
                                         </p>
 
                                     </div>
@@ -1823,7 +1823,7 @@
                                 class="
                                     text-base
                                     font-black
-                                    text-cyan-400
+                                    text-emerald-400
                                     sm:text-base
                                 "
                             >
@@ -1848,18 +1848,18 @@
         gap-2
         rounded-xl
         bg-gradient-to-r
-        from-cyan-400
-        to-sky-400
+        from-emerald-400
+        to-teal-400
         px-2.5
         text-[11px]
         font-black
         text-slate-950
         transition
         duration-200
-        hover:from-cyan-300
-        hover:to-sky-300
+        hover:from-emerald-300
+        hover:to-teal-300
         hover:shadow-lg
-        hover:shadow-cyan-400/20
+        hover:shadow-emerald-400/20
     "
 >
     <i class="ri-lock-line text-base"></i>
@@ -1938,8 +1938,8 @@
                         justify-center
                         rounded-full
                         border
-                        border-cyan-400/30
-                        text-cyan-400
+                        border-emerald-400/30
+                        text-emerald-400
                     "
                 >
                     <i class="ri-shield-check-line text-base"></i>
@@ -1983,8 +1983,8 @@
                         justify-center
                         rounded-full
                         border
-                        border-cyan-400/30
-                        text-cyan-400
+                        border-emerald-400/30
+                        text-emerald-400
                     "
                 >
                     <i class="ri-bank-card-line text-base"></i>
@@ -2028,8 +2028,8 @@
                         justify-center
                         rounded-full
                         border
-                        border-cyan-400/30
-                        text-cyan-400
+                        border-emerald-400/30
+                        text-emerald-400
                     "
                 >
                     <i class="ri-graduation-cap-line text-base"></i>
@@ -2070,8 +2070,8 @@
                         justify-center
                         rounded-full
                         border
-                        border-cyan-400/30
-                        text-cyan-400
+                        border-emerald-400/30
+                        text-emerald-400
                     "
                 >
                     <i class="ri-infinity-line text-base"></i>
@@ -2108,10 +2108,100 @@
 
 
 
-{% endblock %}
+<!-- COUPON SUCCESS CELEBRATION -->
+<div
+    id="couponSuccessModal"
+    class="coupon-success-overlay hidden"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="couponSuccessTitle"
+    aria-describedby="couponSuccessMessage"
+>
+    <div class="coupon-success-card">
+        <button type="button" id="closeCouponSuccess" class="coupon-success-close" aria-label="Close">&times;</button>
+        <div class="coupon-success-icon"><i class="ri-gift-2-fill"></i></div>
+        <p class="coupon-success-eyebrow">A little win for your learning journey</p>
+        <h2 id="couponSuccessTitle">Coupon applied!</h2>
+        <p id="couponSuccessMessage">Your savings have been added to the cart.</p>
+        <div class="coupon-success-code" id="couponSuccessCode"></div>
+        <button type="button" id="couponSuccessContinue" class="coupon-success-continue">Awesome, continue <i class="ri-arrow-right-line"></i></button>
+        <div class="coupon-sparkles" aria-hidden="true"></div>
+    </div>
+</div>
+
+<style>
+    .coupon-success-overlay{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;padding:18px;background:rgba(2,12,8,.76);backdrop-filter:blur(9px);}
+    .coupon-success-overlay.hidden{display:none;}
+    .coupon-success-card{position:relative;isolation:isolate;width:min(100%,410px);overflow:hidden;border:1px solid rgba(52,211,153,.34);border-radius:26px;background:linear-gradient(145deg,#09251b 0%,#071a14 58%,#0b2b20 100%);padding:34px 28px 28px;text-align:center;box-shadow:0 28px 90px rgba(0,0,0,.48),0 0 55px rgba(16,185,129,.13);animation:couponPop .42s cubic-bezier(.2,.85,.25,1.2) both;}
+    .coupon-success-card:before{position:absolute;z-index:-1;inset:-50% auto auto -20%;width:140%;height:85%;content:"";background:radial-gradient(ellipse,rgba(16,185,129,.2),transparent 65%);pointer-events:none;}
+    .coupon-success-close{position:absolute;top:12px;right:15px;width:32px;height:32px;border:1px solid rgba(255,255,255,.12);border-radius:11px;background:rgba(255,255,255,.05);color:#d1fae5;font-size:23px;line-height:1;}
+    .coupon-success-icon{display:grid;width:76px;height:76px;margin:0 auto 18px;place-items:center;border:1px solid rgba(110,231,183,.35);border-radius:24px;background:linear-gradient(145deg,rgba(52,211,153,.22),rgba(16,185,129,.08));color:#6ee7b7;font-size:36px;box-shadow:0 0 38px rgba(16,185,129,.2);animation:couponGlow 1.8s ease-in-out infinite;}
+    .coupon-success-eyebrow{color:#6ee7b7;font-size:9px;font-weight:900;letter-spacing:.16em;text-transform:uppercase;}
+    .coupon-success-card h2{margin-top:8px;color:#f0fdf4;font-size:26px;font-weight:950;letter-spacing:-.04em;}
+    .coupon-success-card p#couponSuccessMessage{margin:8px auto 0;max-width:290px;color:#a7c8b7;font-size:12px;line-height:1.7;}
+    .coupon-success-code{display:inline-flex;min-height:34px;align-items:center;justify-content:center;margin-top:18px;border:1px dashed rgba(110,231,183,.42);border-radius:11px;background:rgba(16,185,129,.1);padding:0 16px;color:#a7f3d0;font-size:12px;font-weight:900;letter-spacing:.12em;}
+    .coupon-success-continue{display:flex;width:100%;height:44px;align-items:center;justify-content:center;gap:8px;margin-top:22px;border-radius:13px;background:linear-gradient(100deg,#34d399,#10b981);color:#032016;font-size:12px;font-weight:950;box-shadow:0 10px 25px rgba(16,185,129,.18);transition:transform .2s,filter .2s;}
+    .coupon-success-continue:hover{transform:translateY(-2px);filter:brightness(1.06);}
+    .coupon-sparkles{position:absolute;inset:0;z-index:-1;overflow:hidden;pointer-events:none;}
+    .coupon-sparkle{position:absolute;top:-12px;width:7px;height:12px;border-radius:2px;background:#6ee7b7;opacity:0;animation:couponFall 1.65s ease-out forwards;}
+    @keyframes couponPop{from{opacity:0;transform:translateY(18px) scale(.92)}to{opacity:1;transform:translateY(0) scale(1)}}
+    @keyframes couponGlow{0%,100%{box-shadow:0 0 22px rgba(16,185,129,.14)}50%{box-shadow:0 0 42px rgba(16,185,129,.32)}}
+    @keyframes couponFall{0%{opacity:0;transform:translate3d(0,-10px,0) rotate(0)}12%{opacity:1}100%{opacity:0;transform:translate3d(var(--drift),360px,0) rotate(540deg)}}
+    @media(prefers-reduced-motion:reduce){.coupon-success-card,.coupon-success-icon,.coupon-sparkle{animation:none!important}.coupon-success-continue{transition:none}}
+</style>
 
 <script>
 document.addEventListener("DOMContentLoaded", function () {
+    // Celebrate only when this submission actually added a new applied coupon.
+    // This avoids showing a false success popup after an invalid coupon attempt.
+    const couponModal = document.getElementById("couponSuccessModal");
+    const couponCodeLabel = document.getElementById("couponSuccessCode");
+    const appliedCouponCodes = Array.from(document.querySelectorAll('[data-coupon-card][data-applied="true"]'))
+        .map(card => (card.dataset.couponCode || "").trim().toUpperCase())
+        .filter(Boolean);
+    const pendingCoupon = sessionStorage.getItem("neolearner_pending_cart_coupon");
+
+    if (pendingCoupon) {
+        sessionStorage.removeItem("neolearner_pending_cart_coupon");
+        const previousCodes = JSON.parse(sessionStorage.getItem("neolearner_previous_cart_coupons") || "[]");
+        sessionStorage.removeItem("neolearner_previous_cart_coupons");
+        if (appliedCouponCodes.includes(pendingCoupon) && !previousCodes.includes(pendingCoupon) && couponModal) {
+            if (couponCodeLabel) couponCodeLabel.textContent = pendingCoupon;
+            couponModal.classList.remove("hidden");
+            const sparkleLayer = couponModal.querySelector(".coupon-sparkles");
+            if (sparkleLayer && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+                const colors = ["#6ee7b7", "#34d399", "#a7f3d0", "#facc15", "#ffffff"];
+                for (let i = 0; i < 30; i++) {
+                    const bit = document.createElement("span");
+                    bit.className = "coupon-sparkle";
+                    bit.style.left = `${Math.random() * 100}%`;
+                    bit.style.background = colors[i % colors.length];
+                    bit.style.setProperty("--drift", `${Math.round(Math.random() * 150 - 75)}px`);
+                    bit.style.animationDelay = `${Math.random() * 0.55}s`;
+                    sparkleLayer.appendChild(bit);
+                }
+            }
+        }
+    }
+
+    function closeCouponCelebration() {
+        if (couponModal) couponModal.classList.add("hidden");
+    }
+    document.getElementById("closeCouponSuccess")?.addEventListener("click", closeCouponCelebration);
+    document.getElementById("couponSuccessContinue")?.addEventListener("click", closeCouponCelebration);
+    couponModal?.addEventListener("click", event => {
+        if (event.target === couponModal) closeCouponCelebration();
+    });
+
+    function rememberCouponSubmission(form) {
+        const field = form.querySelector('[name="coupon_code"]');
+        const code = (field?.value || "").trim().toUpperCase();
+        if (!code) return;
+        const existing = Array.from(document.querySelectorAll('[data-coupon-card][data-applied="true"]'))
+            .map(card => (card.dataset.couponCode || "").trim().toUpperCase()).filter(Boolean);
+        sessionStorage.setItem("neolearner_previous_cart_coupons", JSON.stringify(existing));
+        sessionStorage.setItem("neolearner_pending_cart_coupon", code);
+    }
     // ============================================================
     // REFRESH CART WHEN A TIMED BATCH OFFER EXPIRES
     // This recalculates server-side cart and coupon totals without
@@ -2515,14 +2605,22 @@ document.addEventListener("DOMContentLoaded", function () {
     // AVAILABLE COUPON APPLY - PREVENT DOUBLE SUBMISSION
     // ============================================================
 
-    const availableCouponForms = document.querySelectorAll(
+    const manualCouponForm = document.getElementById("couponApplyForm");
+    if (manualCouponForm) {
+        manualCouponForm.addEventListener("submit", function () {
+            rememberCouponSubmission(manualCouponForm);
+        });
+    }
+
+    const dataApplyCouponForms = document.querySelectorAll(
         "[data-apply-coupon-form]"
     );
 
-    availableCouponForms.forEach(function (form) {
+    dataApplyCouponForms.forEach(function (form) {
 
         form.addEventListener("submit", function () {
 
+            rememberCouponSubmission(form);
             const button = form.querySelector(
                 'button[type="submit"]'
             );
@@ -2625,3 +2723,5 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 });
 </script>
+
+{% endblock %}

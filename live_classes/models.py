@@ -144,6 +144,10 @@ class LiveClass(models.Model):
     )
     start_at = models.DateTimeField(db_index=True)
     end_at = models.DateTimeField(db_index=True)
+    # Actual session lifecycle timestamps are separate from the scheduled times.
+    # A class is never considered live merely because start_at has arrived.
+    actual_start_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    actual_end_at = models.DateTimeField(null=True, blank=True, db_index=True)
     status = models.CharField(
         max_length=15,
         choices=LiveClassStatus.choices,

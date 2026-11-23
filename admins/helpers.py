@@ -48,58 +48,71 @@ from .models import (
 
 # FINAL PRICE CALCULATOR
 def calculate_final_price(batch):
-    original_price = batch.original_price or Decimal("0")
+    """
+    Return the currently applicable selling price for a batch.
 
-    if (
-        batch.discount_type == "none"
-        or batch.discount_value <= 0
-        or not is_offer_active(batch)
-    ):
+    Both offer dates blank means a permanent discount. A limited-time
+    discount requires both dates and is active in [start, end).
+    """
+    if batch is None:
+        return Decimal("0.00")
+
+    current_price = getattr(batch, "get_current_price", None)
+    if callable(current_price):
+        return _money(current_price())
+
+    original_price = _money(
+        getattr(batch, "original_price", None) or Decimal("0")
+    )
+    discount_type = getattr(batch, "discount_type", "none")
+    discount_value = _money(
+        getattr(batch, "discount_value", None) or Decimal("0")
+    )
+
+    if discount_type == "none" or discount_value <= 0:
+        return original_price
+    if not is_offer_active(batch):
         return original_price
 
-    if batch.discount_type == "percentage":
-        discount_amount = (
-            original_price
-            * batch.discount_value
-            / Decimal("100")
-        )
-
-        final_price = (
-            original_price
-            - discount_amount
-        )
-
-    elif batch.discount_type == "fixed":
-        final_price = (
-            original_price
-            - batch.discount_value
-        )
-
+    if discount_type == "percentage":
+        discount_amount = original_price * discount_value / Decimal("100")
+        final_price = original_price - discount_amount
+    elif discount_type == "fixed":
+        final_price = original_price - discount_value
     else:
-        final_price = original_price
+        return original_price
 
-    if final_price < Decimal("0"):
-        final_price = Decimal("0")
-
-    return final_price.quantize(
-        Decimal("0.01")
-    )
+    return max(Decimal("0"), final_price).quantize(Decimal("0.01"))
 
 
 def is_offer_active(batch):
-    if batch.discount_type == "none":
+    """
+    Shared equivalent of Batch.is_offer_active.
+
+    Both dates blank = permanent discount.
+    Both dates present = time-limited discount.
+    Exactly one date present = invalid configuration and inactive.
+    """
+    if batch is None:
+        return False
+
+    discount_type = getattr(batch, "discount_type", "none")
+    discount_value = _money(
+        getattr(batch, "discount_value", None) or Decimal("0")
+    )
+    if discount_type == "none" or discount_value <= 0:
+        return False
+
+    start = getattr(batch, "offer_start_date", None)
+    end = getattr(batch, "offer_end_date", None)
+
+    if start is None and end is None:
+        return True
+    if start is None or end is None:
         return False
 
     now = timezone.now()
-
-    if batch.offer_start_date and now < batch.offer_start_date:
-        return False
-
-    if batch.offer_end_date and now > batch.offer_end_date:
-        return False
-
-    return True
-
+    return start <= now < end
 
 def is_publish_active(batch):
     if batch.batch_status != "published":
@@ -734,19 +747,21 @@ def get_coupon_batches():
 # =========================================================
 
 def get_batch_selling_price(batch):
+    """
+    Return the current time-aware selling price.
+
+    Batch.final_price stores the calculated discount candidate and can
+    remain discounted after a timed offer expires. Always ask the Batch
+    model for its current price so expired offers use original_price.
+    """
     if batch is None:
-        return Decimal("0")
+        return Decimal("0.00")
 
-    price = getattr(batch, "final_price", None)
+    current_price = getattr(batch, "get_current_price", None)
+    if callable(current_price):
+        return _money(current_price())
 
-    if price is None or price <= Decimal("0"):
-        price = getattr(
-            batch,
-            "original_price",
-            Decimal("0"),
-        )
-
-    return _money(price)
+    return _money(calculate_final_price(batch))
 
 
 def get_batch_current_price(batch):
