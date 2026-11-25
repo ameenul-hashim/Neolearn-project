@@ -12,6 +12,7 @@ from django.views.decorators.http import require_POST
 from courses.models import CourseChapter
 from admins.decorators import admin_required
 from admins.models import Batch, Subject, Teacher, TeacherBatch, TeacherSubject
+from django.db import transaction
 from django.db.models import Exists, OuterRef, Q
 from django.core.paginator import Paginator
 from .forms import LiveClassBookingForm
@@ -591,7 +592,9 @@ def teacher_upcoming_classes_view(request):
         LiveClass.objects.filter(
             teacher=teacher,
             status=LiveClassStatus.CONFIRMED,
-            start_at__gt=now,
+            actual_start_at__isnull=True,
+            actual_end_at__isnull=True,
+            start_at__gt=now + timedelta(minutes=5),
         )
         .annotate(
             has_pending_cancellation=Exists(pending_cancellation_requests)
@@ -646,7 +649,9 @@ def teacher_upcoming_classes_view(request):
     this_week_count = LiveClass.objects.filter(
         teacher=teacher,
         status=LiveClassStatus.CONFIRMED,
-        start_at__gt=now,
+        actual_start_at__isnull=True,
+        actual_end_at__isnull=True,
+        start_at__gt=now + timedelta(minutes=5),
         start_at__gte=week_start_at,
         start_at__lt=week_end_at,
     ).count()
@@ -701,6 +706,157 @@ def teacher_upcoming_classes_view(request):
         "live_classes/teacher_upcoming_classes.html",
         context,
     )
+
+
+# ============================================================
+# TEACHER: LIVE NOW DASHBOARD
+# ============================================================
+
+@login_required(login_url="teacher_login")
+@cache_control(no_cache=True, must_revalidate=True, no_store=True)
+def teacher_live_now_view(request):
+    """Show only this teacher's classes inside the five-minute start window or already running."""
+    teacher = getattr(request.user, "teacher_profile", None)
+    if teacher is None:
+        messages.error(request, "Access denied.")
+        return redirect("teacher_login")
+    if not request.user.is_active or teacher.is_blocked:
+        messages.error(request, "Your account cannot access Live Classes.")
+        return redirect("teacher_login")
+    if teacher.is_first_login:
+        return redirect("teacher_change_password")
+
+    now = timezone.now()
+    today = timezone.localdate()
+    day_start = timezone.make_aware(
+        datetime.combine(today, datetime.min.time()),
+        timezone.get_current_timezone(),
+    )
+    day_end = day_start + timedelta(days=1)
+
+    # Filter dropdowns are limited to this teacher's active assignments.
+    assigned_batch_ids = TeacherBatch.objects.filter(
+        teacher=teacher, is_active=True
+    ).values_list("batch_id", flat=True)
+    batches = Batch.objects.filter(
+        pk__in=assigned_batch_ids,
+        batch_status__in=ALLOWED_BATCH_STATUSES,
+    ).order_by("batch_name", "pk")
+
+    assigned_subject_ids = TeacherSubject.objects.filter(
+        teacher=teacher, is_active=True
+    ).values_list("subject_id", flat=True)
+    subjects = Subject.objects.filter(
+        pk__in=assigned_subject_ids,
+        subject_status="published",
+        batch__batch_status__in=ALLOWED_BATCH_STATUSES,
+    ).order_by("subject_name", "pk")
+
+    search_query = request.GET.get("search", "").strip()
+    batch_value = request.GET.get("batch", "").strip()
+    subject_value = request.GET.get("subject", "").strip()
+    selected_batch = ""
+    selected_subject = ""
+    if batch_value.isdigit() and batches.filter(pk=int(batch_value)).exists():
+        selected_batch = batch_value
+        subjects = subjects.filter(batch_id=int(batch_value))
+    if subject_value.isdigit() and subjects.filter(pk=int(subject_value)).exists():
+        selected_subject = subject_value
+
+    today_classes = LiveClass.objects.filter(
+        teacher=teacher,
+        status__in=[LiveClassStatus.CONFIRMED, LiveClassStatus.COMPLETED],
+        start_at__gte=day_start,
+        start_at__lt=day_end,
+    )
+    live_base = today_classes.filter(
+        status=LiveClassStatus.CONFIRMED,
+        actual_start_at__isnull=False,
+        actual_end_at__isnull=True,
+    )
+    can_start_base = today_classes.filter(
+        status=LiveClassStatus.CONFIRMED,
+        actual_start_at__isnull=True,
+        actual_end_at__isnull=True,
+        start_at__lte=now + timedelta(minutes=5),
+        end_at__gt=now,
+    )
+    completed_today = today_classes.filter(
+        actual_end_at__gte=day_start,
+        actual_end_at__lt=day_end,
+    )
+
+    # A class moves from Upcoming to Live Now at exactly T-5 minutes.
+    # Once started, it remains visible until its actual end is recorded.
+    classes = today_classes.filter(
+        status=LiveClassStatus.CONFIRMED,
+        actual_end_at__isnull=True,
+    ).filter(
+        Q(actual_start_at__isnull=False)
+        | Q(
+            actual_start_at__isnull=True,
+            start_at__lte=now + timedelta(minutes=5),
+            end_at__gt=now,
+        )
+    ).select_related("batch", "subject", "chapter", "teacher")
+
+    if selected_batch:
+        classes = classes.filter(batch_id=int(selected_batch))
+    if selected_subject:
+        classes = classes.filter(subject_id=int(selected_subject))
+    if search_query:
+        classes = classes.filter(
+            Q(batch__batch_name__icontains=search_query)
+            | Q(subject__subject_name__icontains=search_query)
+            | Q(chapter__chapter_name__icontains=search_query)
+        )
+
+    classes = classes.order_by("start_at", "pk")
+    paginator = Paginator(classes, 20)
+    page_obj = paginator.get_page(request.GET.get("page", 1))
+    live_now_classes = list(page_obj.object_list)
+
+    for item in live_now_classes:
+        item.local_start = timezone.localtime(item.start_at)
+        item.local_end = timezone.localtime(item.end_at)
+        item.time_range = f"{_format_time(item.start_at)} – {_format_time(item.end_at)}"
+        item.duration_minutes = int((item.end_at - item.start_at).total_seconds() // 60)
+        item.is_live_now = bool(item.actual_start_at and not item.actual_end_at)
+        item.can_start_now = bool(
+            not item.actual_start_at
+            and not item.actual_end_at
+            and item.start_at <= now + timedelta(minutes=5)
+            and item.end_at > now
+        )
+        item.start_window_opens_at = item.start_at - timedelta(minutes=5)
+        item.seconds_until_start_window = max(
+            0, int((item.start_window_opens_at - now).total_seconds())
+        )
+        item.actual_elapsed_seconds = (
+            max(0, int((now - item.actual_start_at).total_seconds()))
+            if item.is_live_now else 0
+        )
+
+    pagination_params = request.GET.copy()
+    pagination_params.pop("page", None)
+    context = {
+        "teacher": teacher,
+        "live_now_classes": live_now_classes,
+        "page_obj": page_obj,
+        "paginator": paginator,
+        "today_classes_count": today_classes.count(),
+        "live_now_count": live_base.count(),
+        "can_start_now_count": can_start_base.count(),
+        "completed_today_count": completed_today.count(),
+        "batches": batches,
+        "subjects": subjects,
+        "selected_batch": selected_batch,
+        "selected_subject": selected_subject,
+        "search_query": search_query,
+        "pagination_query": pagination_params.urlencode(),
+        "now": now,
+    }
+    return render(request, "live_classes/teacher_live_now.html", context)
 
 
 # ============================================================
@@ -990,7 +1146,8 @@ def admin_upcoming_classes_view(request):
         LiveClass.objects
         .filter(
             status=LiveClassStatus.CONFIRMED,
-            start_at__gt=now,
+            actual_start_at__isnull=True,
+            start_at__gt=now + timedelta(minutes=5),
         )
         .select_related(
             "batch",
@@ -1079,7 +1236,8 @@ def admin_upcoming_classes_view(request):
         LiveClass.objects
         .filter(
             status=LiveClassStatus.CONFIRMED,
-            start_at__gt=now,
+            actual_start_at__isnull=True,
+            start_at__gt=now + timedelta(minutes=5),
         )
     )
 
@@ -1599,3 +1757,200 @@ def admin_cancellation_requests_view(request):
         "admins/live_classes/cancellation_requests.html",
         context,
     )
+
+# ============================================================
+# ADMIN: LIVE NOW DASHBOARD AND SESSION START
+# ============================================================
+
+@admin_required
+@cache_control(no_cache=True, must_revalidate=True, no_store=True)
+def admin_live_now_view(request):
+    """Today's confirmed classes, live sessions and operational counts."""
+    now = timezone.now()
+    today = timezone.localdate()
+    day_start = timezone.make_aware(
+        datetime.combine(today, datetime.min.time()),
+        timezone.get_current_timezone(),
+    )
+    day_end = day_start + timedelta(days=1)
+
+    today_classes = LiveClass.objects.filter(
+        start_at__gte=day_start,
+        start_at__lt=day_end,
+    ).filter(
+        Q(status=LiveClassStatus.CONFIRMED)
+        | Q(status=LiveClassStatus.COMPLETED)
+    )
+
+    live_base = today_classes.filter(
+        status=LiveClassStatus.CONFIRMED,
+        actual_start_at__isnull=False,
+        actual_end_at__isnull=True,
+    )
+    completed_today = LiveClass.objects.filter(
+        status=LiveClassStatus.COMPLETED,
+        actual_end_at__gte=day_start,
+        actual_end_at__lt=day_end,
+    )
+    can_start_base = today_classes.filter(
+        status=LiveClassStatus.CONFIRMED,
+        actual_start_at__isnull=True,
+        actual_end_at__isnull=True,
+        start_at__lte=now + timedelta(minutes=5),
+        end_at__gt=now,
+    )
+
+    search_query = request.GET.get("q", "").strip()
+    batch_value = request.GET.get("batch", "").strip()
+    subject_value = request.GET.get("subject", "").strip()
+    teacher_value = request.GET.get("teacher", "").strip()
+
+    # Only show classes that have crossed the five-minute start boundary,
+    # or sessions that have actually started and have not ended. Classes
+    # more than five minutes away remain exclusively on Upcoming Classes.
+    classes = today_classes.filter(
+        status=LiveClassStatus.CONFIRMED,
+        actual_end_at__isnull=True,
+    ).filter(
+        Q(
+            actual_start_at__isnull=False,
+        )
+        | Q(
+            actual_start_at__isnull=True,
+            start_at__lte=now + timedelta(minutes=5),
+            end_at__gt=now,
+        )
+    ).select_related("batch", "subject", "chapter", "teacher")
+
+    if search_query:
+        classes = classes.filter(
+            Q(batch__batch_name__icontains=search_query)
+            | Q(subject__subject_name__icontains=search_query)
+            | Q(chapter__chapter_name__icontains=search_query)
+            | Q(teacher__full_name__icontains=search_query)
+        )
+    if batch_value.isdigit():
+        classes = classes.filter(batch_id=int(batch_value))
+    if subject_value.isdigit():
+        classes = classes.filter(subject_id=int(subject_value))
+    if teacher_value.isdigit():
+        classes = classes.filter(teacher_id=int(teacher_value))
+
+    filter_base = today_classes.filter(status=LiveClassStatus.CONFIRMED)
+    batches = Batch.objects.filter(
+        pk__in=filter_base.values_list("batch_id", flat=True)
+    ).order_by("batch_name", "pk")
+    subjects = Subject.objects.filter(
+        pk__in=filter_base.values_list("subject_id", flat=True)
+    ).order_by("subject_name", "pk")
+    teachers = Teacher.objects.filter(
+        pk__in=filter_base.values_list("teacher_id", flat=True)
+    ).order_by("full_name", "pk")
+
+    paginator = Paginator(classes.order_by("start_at", "pk"), 20)
+    page_obj = paginator.get_page(request.GET.get("page", 1))
+    live_now_classes = list(page_obj.object_list)
+
+    for item in live_now_classes:
+        item.local_start = timezone.localtime(item.start_at)
+        item.time_range = f"{_format_time(item.start_at)} – {_format_time(item.end_at)}"
+        item.duration_minutes = int((item.end_at - item.start_at).total_seconds() // 60)
+        item.is_live_now = bool(item.actual_start_at and not item.actual_end_at)
+        item.can_start_now = (
+            item.status == LiveClassStatus.CONFIRMED
+            and item.actual_start_at is None
+            and item.actual_end_at is None
+            and item.start_at <= now + timedelta(minutes=5)
+            and item.end_at > now
+        )
+        item.start_window_opens_at = item.start_at - timedelta(minutes=5)
+        item.seconds_until_start_window = max(
+            0, int((item.start_window_opens_at - now).total_seconds())
+        )
+        item.actual_elapsed_seconds = (
+            max(0, int((now - item.actual_start_at).total_seconds()))
+            if item.is_live_now else 0
+        )
+
+    context = {
+        "live_now_classes": live_now_classes,
+        "page_obj": page_obj,
+        "paginator": paginator,
+        "today_classes_count": today_classes.count(),
+        "live_now_count": live_base.count(),
+        "can_start_now_count": can_start_base.count(),
+        "completed_today_count": completed_today.count(),
+        "batches": batches,
+        "subjects": subjects,
+        "teachers": teachers,
+        "search_query": search_query,
+        "selected_batch": batch_value,
+        "selected_subject": subject_value,
+        "selected_teacher": teacher_value,
+        "now": now,
+    }
+    return render(request, "admins/live_classes/admin_live_now.html", context)
+
+
+@admin_required
+@require_POST
+@cache_control(no_cache=True, must_revalidate=True, no_store=True)
+def admin_start_live_class_view(request, class_id):
+    """Start a confirmed class during its five-minute early-start window."""
+    now = timezone.now()
+    with transaction.atomic():
+        live_class = (
+            LiveClass.objects.select_for_update()
+            .filter(pk=class_id)
+            .first()
+        )
+        if live_class is None:
+            messages.error(request, "The requested live class was not found.")
+            return redirect("live_classes:admin_live_now")
+        if live_class.status != LiveClassStatus.CONFIRMED:
+            messages.error(request, "Only confirmed classes can be started.")
+        elif live_class.actual_start_at is not None or live_class.actual_end_at is not None:
+            messages.error(request, "This class session has already been started or ended.")
+        elif now < live_class.start_at - timedelta(minutes=5):
+            messages.error(request, "This class can only be started within five minutes of its scheduled start.")
+        elif now >= live_class.end_at:
+            messages.error(request, "The scheduled class time has ended. Reschedule it before starting.")
+        else:
+            live_class.actual_start_at = now
+            live_class.save(update_fields=["actual_start_at", "updated_at"])
+            messages.success(request, "Class started. It is now marked Live Now.")
+    return redirect("live_classes:admin_live_now")
+
+
+@login_required(login_url="teacher_login")
+@require_POST
+@cache_control(no_cache=True, must_revalidate=True, no_store=True)
+def teacher_start_live_class_view(request, class_id):
+    """Allow only the assigned active teacher to start their confirmed class."""
+    teacher = getattr(request.user, "teacher_profile", None)
+    if teacher is None or not request.user.is_active or teacher.is_blocked:
+        messages.error(request, "You are not permitted to start this class.")
+        return redirect("live_classes:teacher_upcoming_classes")
+
+    now = timezone.now()
+    with transaction.atomic():
+        live_class = (
+            LiveClass.objects.select_for_update()
+            .filter(pk=class_id, teacher=teacher)
+            .first()
+        )
+        if live_class is None:
+            messages.error(request, "This class is not assigned to your teacher account.")
+        elif live_class.status != LiveClassStatus.CONFIRMED:
+            messages.error(request, "Only confirmed classes can be started.")
+        elif live_class.actual_start_at is not None or live_class.actual_end_at is not None:
+            messages.error(request, "This class session has already been started or ended.")
+        elif now < live_class.start_at - timedelta(minutes=5):
+            messages.error(request, "You can start this class within five minutes of its scheduled start.")
+        elif now >= live_class.end_at:
+            messages.error(request, "The scheduled class time has ended. Contact Admin to reschedule.")
+        else:
+            live_class.actual_start_at = now
+            live_class.save(update_fields=["actual_start_at", "updated_at"])
+            messages.success(request, "Your class has started successfully.")
+    return redirect("live_classes:teacher_upcoming_classes")

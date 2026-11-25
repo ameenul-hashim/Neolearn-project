@@ -650,12 +650,12 @@
                         <span class="truncate">Upcoming Classes</span>
                     </a>
 
-                    <div class="admin-nav-link teacher-placeholder" aria-disabled="true"
-                         title="This page has not been connected yet">
+                    <a href="{% url 'live_classes:teacher_live_now' %}"
+                       class="admin-nav-link {% if request.resolver_match.url_name == 'teacher_live_now' %}active{% endif %}"
+                       {% if request.resolver_match.url_name == 'teacher_live_now' %}aria-current="page"{% endif %}>
                         <i class="ri-broadcast-line nav-icon"></i>
                         <span class="truncate">Live Now</span>
-                        <span class="teacher-coming-soon">Soon</span>
-                    </div>
+                    </a>
 
                     <a href="{% url 'live_classes:teacher_cancellation_requests' %}"
                        class="admin-nav-link {% if request.resolver_match.url_name == 'teacher_cancellation_requests' %}active{% endif %}"

@@ -1,0 +1,137 @@
+{% extends "admins/admin_base.html" %}
+
+{% block title %}Live Now | NeoLearn Admin{% endblock %}
+
+{% block extra_head %}
+<style>
+    .ln-page{color:#e2e8f0;display:flex;flex-direction:column;gap:14px}
+    .ln-panel{background:linear-gradient(145deg,rgba(5,31,49,.96),rgba(3,19,34,.96));border:1px solid rgba(14,165,233,.28);border-radius:14px}
+    .ln-stat{min-width:0;padding:12px 14px;border:1px solid rgba(14,165,233,.25);border-radius:12px;background:linear-gradient(145deg,rgba(7,43,62,.9),rgba(3,22,38,.95))}
+    .ln-input,.ln-select{width:100%;height:40px;border:1px solid #155274;border-radius:9px;background:#071c30;color:#e2e8f0;padding:0 12px;font-size:12px;outline:none}
+    .ln-input:focus,.ln-select:focus{border-color:#22d3ee;box-shadow:0 0 0 2px rgba(34,211,238,.12)}
+    .ln-label{display:block;margin-bottom:5px;color:#a9c0d2;font-size:10px;font-weight:700}
+    .ln-btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:38px;border:1px solid #155274;border-radius:9px;padding:0 13px;background:#082238;color:#dbeafe;font-size:11px;font-weight:800;text-decoration:none;cursor:pointer}
+    .ln-btn:hover{filter:brightness(1.12)}
+    .ln-btn-start{width:100%;border-color:#eab308;background:#facc15;color:#111827}
+    .ln-btn-start:disabled{border-color:#475569;background:#334155;color:#94a3b8;cursor:not-allowed;filter:none}
+    .ln-btn-live{width:100%;border-color:#06b6d4;background:#06d6e4;color:#04202b}
+    .ln-card-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;align-items:stretch}
+    .ln-card{display:flex;min-width:0;min-height:370px;flex-direction:column;overflow:hidden;border:1px solid rgba(14,165,233,.3);border-radius:17px;background:linear-gradient(155deg,#06243a,#031525);box-shadow:0 8px 22px rgba(0,0,0,.16)}
+    .ln-media{position:relative;height:136px;flex:0 0 136px;overflow:hidden;background:linear-gradient(135deg,#0e7490,#172554)}
+    .ln-media img{width:100%;height:100%;object-fit:cover}
+    .ln-state{position:absolute;top:10px;left:10px;border-radius:999px;padding:5px 9px;background:#1d4ed8;color:#fff;font-size:10px;font-weight:900}
+    .ln-state.live{background:#dc2626}.ln-state.ready{background:#eab308;color:#111827}.ln-state.wait{background:#1d4ed8}
+    .ln-body{display:flex;flex:1;flex-direction:column;gap:8px;padding:12px}
+    .ln-title{overflow:hidden;color:#f8fafc;font-size:14px;font-weight:900;text-overflow:ellipsis;white-space:nowrap}
+    .ln-batch{display:flex;align-items:center;gap:7px;min-width:0;padding:7px 9px;border:1px solid rgba(14,165,233,.2);border-radius:9px;background:rgba(3,19,34,.65);color:#cbd5e1;font-size:10px}
+    .ln-batch span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .ln-details{display:grid;gap:7px;margin:2px 0 8px}
+    .ln-meta{display:flex;align-items:center;gap:8px;min-width:0;color:#c0d2df;font-size:11px;line-height:1.4}
+    .ln-meta i{width:14px;flex:0 0 14px;color:#67e8f9;font-size:14px}
+    .ln-action{margin-top:auto;padding-top:5px}
+    .ln-empty{padding:52px 16px;text-align:center}
+    @media(max-width:1350px){.ln-card-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+    @media(max-width:1024px){.ln-card-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media(max-width:640px){.ln-card-grid{grid-template-columns:1fr}}
+</style>
+{% endblock %}
+
+{% block admin_content %}
+<div class="ln-page">
+    <header class="flex flex-wrap items-center justify-between gap-3">
+        <div class="flex items-center gap-3">
+            <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-cyan-500/15 text-2xl text-cyan-300"><i class="ri-broadcast-line"></i></div>
+            <div><h1 class="text-xl font-extrabold text-white sm:text-2xl">Live Now</h1><p class="mt-1 text-xs text-slate-400">Manage and conduct today's live classes</p></div>
+        </div>
+        <div class="rounded-xl border border-cyan-500/60 bg-cyan-950/30 px-4 py-3 text-xs text-slate-200"><i class="ri-information-line mr-2 text-cyan-300"></i>Admin or assigned Teacher can start up to <strong class="text-yellow-300">5 minutes before</strong> scheduled time.</div>
+    </header>
+
+    <section class="grid grid-cols-2 gap-3 xl:grid-cols-4">
+        <div class="ln-stat flex items-center gap-3"><span class="flex h-12 w-12 items-center justify-center rounded-xl bg-cyan-500/15 text-2xl text-cyan-300"><i class="ri-calendar-event-line"></i></span><div><p class="text-[11px] font-semibold text-cyan-200">Today's Classes</p><p class="text-2xl font-extrabold text-white">{{ today_classes_count }}</p></div></div>
+        <div class="ln-stat flex items-center gap-3 border-emerald-500/30 bg-emerald-950/20"><span class="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500/15 text-2xl text-emerald-300"><i class="ri-broadcast-line"></i></span><div><p class="text-[11px] font-semibold text-emerald-200">Live Now</p><p class="text-2xl font-extrabold text-white">{{ live_now_count }}</p></div></div>
+        <div class="ln-stat flex items-center gap-3 border-amber-500/30 bg-amber-950/20"><span class="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-500/15 text-2xl text-amber-300"><i class="ri-play-circle-line"></i></span><div><p class="text-[11px] font-semibold text-amber-200">Can Start Now</p><p class="text-2xl font-extrabold text-white">{{ can_start_now_count }}</p></div></div>
+        <div class="ln-stat flex items-center gap-3 border-violet-500/30 bg-violet-950/20"><span class="flex h-12 w-12 items-center justify-center rounded-xl bg-violet-500/15 text-2xl text-violet-300"><i class="ri-checkbox-circle-line"></i></span><div><p class="text-[11px] font-semibold text-violet-200">Completed Today</p><p class="text-2xl font-extrabold text-white">{{ completed_today_count }}</p></div></div>
+    </section>
+
+    <section class="ln-panel p-3">
+        <form method="get" class="grid grid-cols-1 items-end gap-3 sm:grid-cols-2 xl:grid-cols-5">
+            <div><label class="ln-label" for="ln-q">Search</label><input class="ln-input" id="ln-q" name="q" value="{{ search_query }}" placeholder="Search batch, subject or teacher..."></div>
+            <div><label class="ln-label" for="ln-batch">Batch</label><select class="ln-select" id="ln-batch" name="batch"><option value="">All batches</option>{% for item in batches %}<option value="{{ item.pk }}" {% if selected_batch == item.pk|stringformat:'s' %}selected{% endif %}>{{ item.batch_name }}</option>{% endfor %}</select></div>
+            <div><label class="ln-label" for="ln-subject">Subject</label><select class="ln-select" id="ln-subject" name="subject"><option value="">All subjects</option>{% for item in subjects %}<option value="{{ item.pk }}" {% if selected_subject == item.pk|stringformat:'s' %}selected{% endif %}>{{ item.subject_name }}</option>{% endfor %}</select></div>
+            <div><label class="ln-label" for="ln-teacher">Teacher</label><select class="ln-select" id="ln-teacher" name="teacher"><option value="">All teachers</option>{% for item in teachers %}<option value="{{ item.pk }}" {% if selected_teacher == item.pk|stringformat:'s' %}selected{% endif %}>{{ item.full_name }}</option>{% endfor %}</select></div>
+            <div class="flex gap-2"><a class="ln-btn flex-1" href="{% url 'live_classes:admin_live_now' %}">Reset</a><button class="ln-btn flex-1 border-cyan-500 bg-cyan-500 text-slate-950" type="submit"><i class="ri-search-line"></i>Apply</button></div>
+        </form>
+    </section>
+
+    <section>
+        <div class="mb-3 flex flex-wrap items-center justify-between gap-2"><div><h2 class="text-base font-extrabold text-white">Today's Live Classes</h2><p class="mt-1 text-[10px] text-slate-400">Showing {{ page_obj.start_index }}–{{ page_obj.end_index }} of {{ paginator.count }} classes · 20 per page</p></div><a class="ln-btn" href="{% url 'live_classes:admin_live_now' %}"><i class="ri-refresh-line"></i>Refresh</a></div>
+        {% if live_now_classes %}
+        <div class="ln-card-grid">
+            {% for item in live_now_classes %}
+            <article class="ln-card">
+                <div class="ln-media">
+                    {% if item.subject.subject_thumbnail %}<img src="{{ item.subject.subject_thumbnail.url }}" alt="{{ item.subject.subject_name }}" loading="lazy">{% else %}<div class="flex h-full items-center justify-center text-5xl text-cyan-200"><i class="ri-book-open-line"></i></div>{% endif %}
+                    {% if item.is_live_now %}<span class="ln-state live"><i class="ri-broadcast-line"></i> LIVE NOW</span>{% elif item.can_start_now %}<span class="ln-state ready"><i class="ri-play-fill"></i> CAN START NOW</span>{% else %}<span class="ln-state wait" data-start-window="{{ item.start_window_opens_at|date:'c' }}">Starts in <span data-window-countdown>…</span></span>{% endif %}
+                </div>
+                <div class="ln-body">
+                    <div><h3 class="ln-title" title="{{ item.subject.subject_name }}">{{ item.subject.subject_name }}</h3><p class="mt-1 truncate text-[10px] text-cyan-200">Chapter: {{ item.chapter.chapter_name }}</p></div>
+                    <div class="ln-batch"><i class="ri-stack-line text-cyan-300"></i><span>{{ item.batch.batch_name }}</span></div>
+                    <div class="ln-details">
+                        <div class="ln-meta"><i class="ri-user-line"></i><span class="truncate">{{ item.teacher.full_name }}</span></div>
+                        <div class="ln-meta"><i class="ri-calendar-line"></i><span>{{ item.local_start|date:'D, d M Y' }}</span></div>
+                        <div class="ln-meta"><i class="ri-time-line"></i><span>{{ item.time_range }}</span><span class="ml-auto shrink-0 text-[10px] text-slate-400">{{ item.duration_minutes }} min</span></div>
+                    </div>
+                    <div class="ln-action">
+                        {% if item.is_live_now %}
+                            <button type="button" class="ln-btn ln-btn-live" data-classroom-pending><i class="ri-broadcast-line"></i>Join Now</button>
+                            <p class="mt-1 text-center text-[9px] text-emerald-300">Session started · {{ item.actual_start_at|date:'g:i A' }}</p>
+                        {% elif item.can_start_now %}
+                            <form method="post" action="{% url 'live_classes:admin_start_live_class' item.pk %}">{% csrf_token %}<button class="ln-btn ln-btn-start" type="submit"><i class="ri-play-fill"></i>Start Class</button></form>
+                            <p class="mt-1 text-center text-[9px] text-emerald-300">Can start now · within 5-minute window</p>
+                        {% else %}
+                            <button class="ln-btn ln-btn-start" type="button" disabled><i class="ri-play-fill"></i>Start Class</button>
+                            <p class="mt-1 text-center text-[9px] text-blue-300">Start available 5 minutes before</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </article>
+            {% endfor %}
+        </div>
+        {% if page_obj.has_other_pages %}
+        <nav class="mt-4 flex flex-wrap items-center justify-between gap-3" aria-label="Live Now pages">
+            <p class="text-[10px] text-slate-400">Page {{ page_obj.number }} of {{ paginator.num_pages }}</p>
+            <div class="flex items-center gap-2">
+                {% if page_obj.has_previous %}<a class="ln-btn" href="?q={{ search_query|urlencode }}&batch={{ selected_batch }}&subject={{ selected_subject }}&teacher={{ selected_teacher }}&page={{ page_obj.previous_page_number }}">‹ Previous</a>{% endif %}
+                {% if page_obj.has_next %}<a class="ln-btn" href="?q={{ search_query|urlencode }}&batch={{ selected_batch }}&subject={{ selected_subject }}&teacher={{ selected_teacher }}&page={{ page_obj.next_page_number }}">Next ›</a>{% endif %}
+            </div>
+        </nav>
+        {% endif %}
+        {% else %}
+        <div class="ln-panel ln-empty"><i class="ri-calendar-check-line text-4xl text-slate-500"></i><h3 class="mt-3 text-sm font-bold text-white">No classes scheduled for today</h3><p class="mt-1 text-xs text-slate-400">Today's confirmed classes will appear here.</p></div>
+        {% endif %}
+    </section>
+</div>
+<script>
+(function(){
+    const updateCountdowns=()=>{
+        const now=Date.now();
+        document.querySelectorAll('[data-start-window]').forEach(el=>{
+            const target=Date.parse(el.dataset.startWindow);
+            const remaining=Math.max(0,Math.ceil((target-now)/1000));
+            const node=el.querySelector('[data-window-countdown]');
+            if(!node)return;
+            if(remaining<=0){node.textContent='now';return;}
+            const mins=Math.floor(remaining/60), secs=remaining%60;
+            node.textContent=mins?`${mins}m ${secs}s`:`${secs}s`;
+        });
+    };
+    updateCountdowns();
+    setInterval(updateCountdowns,1000);
+    // Re-fetch server-side eligibility and counts regularly; the backend remains authoritative.
+    setTimeout(()=>window.location.reload(),15000);
+    document.querySelectorAll('[data-classroom-pending]').forEach(button=>button.addEventListener('click',()=>{
+        alert('The live classroom and streaming connection will be connected in the next development phase. This class is already marked as live.');
+    }));
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,503 @@
+{% extends "students/base_student.html" %}
+
+{% block title %}My Timetable | NeoLearn
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const picker = document.querySelector(".student-timetable .tt-batch-picker");
+    if (!picker) return;
+
+    // Close the batch menu whenever the user clicks anywhere outside it.
+    document.addEventListener("click", function (event) {
+        if (picker.open && !picker.contains(event.target)) {
+            picker.open = false;
+        }
+    });
+
+    // Also allow the user to dismiss the menu with the Escape key.
+    document.addEventListener("keydown", function (event) {
+        if (event.key === "Escape" && picker.open) {
+            picker.open = false;
+        }
+    });
+});
+</script>
+
+{% endblock %}
+
+{% block student_content %}
+<style>
+    .student-timetable {
+        --tt-line: rgba(16, 185, 129, .20);
+        --tt-muted: #94a3a8;
+        color: #ecfdf5;
+        font-size: 12px;
+    }
+
+    /* Enlarged weekly timetable layout with visually hidden scrollbars. */
+    .student-timetable .tt-panel {
+        background: linear-gradient(145deg, rgba(4, 28, 32, .97), rgba(3, 16, 29, .98));
+        border: 1px solid var(--tt-line);
+        box-shadow: 0 7px 19px rgba(0,0,0,.16), inset 0 1px 0 rgba(255,255,255,.025);
+    }
+
+    .student-timetable .tt-stat {
+        min-height: 54px;
+        border: 1px solid;
+        border-radius: 10px;
+        padding: 7px 9px;
+    }
+    .student-timetable .tt-stat-total { background: rgba(8, 91, 115, .20); border-color: rgba(34,211,238,.28); }
+    .student-timetable .tt-stat-upcoming { background: rgba(6, 95, 70, .20); border-color: rgba(52,211,153,.28); }
+    .student-timetable .tt-stat-live { background: rgba(136, 19, 55, .20); border-color: rgba(251,113,133,.30); }
+    .student-timetable .tt-stat-completed { background: rgba(91, 33, 182, .18); border-color: rgba(167,139,250,.30); }
+    .student-timetable .tt-stat-cancelled { background: rgba(120, 73, 8, .20); border-color: rgba(251,191,36,.30); }
+
+    .student-timetable .tt-stat-number {
+        font-size: 19px;
+        line-height: 1.1;
+        font-weight: 800;
+    }
+    .student-timetable .tt-stat-label {
+        margin-top: 3px;
+        font-size: 10px;
+        line-height: 1.2;
+        font-weight: 650;
+    }
+
+    .student-timetable .tt-select,
+    .student-timetable .tt-nav {
+        color: #ecfdf5;
+        background: #071d29;
+        border: 1px solid rgba(52,211,153,.35);
+        border-radius: 8px;
+        min-height: 30px;
+        font-size: 11px;
+    }
+    .student-timetable .tt-select {
+        width: 100%;
+        padding: 5px 28px 5px 9px;
+    }
+    .student-timetable .tt-nav {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 5px 9px;
+        text-decoration: none;
+    }
+    .student-timetable .tt-nav:hover {
+        background: rgba(16,185,129,.14);
+        border-color: rgba(52,211,153,.7);
+    }
+
+    /* Compact custom batch picker with its own scrollable option list. */
+    .student-timetable .tt-batch-picker {
+        position: relative;
+        width: 100%;
+        max-width: 360px;
+        min-width: 0;
+    }
+    .student-timetable .tt-batch-picker summary {
+        display: flex;
+        min-height: 30px;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        padding: 5px 9px;
+        border: 1px solid rgba(52,211,153,.35);
+        border-radius: 8px;
+        background: #071d29;
+        color: #ecfdf5;
+        cursor: pointer;
+        font-size: 11px;
+        line-height: 1.25;
+        list-style: none;
+    }
+    .student-timetable .tt-batch-picker summary::-webkit-details-marker { display: none; }
+    .student-timetable .tt-batch-picker summary:focus-visible,
+    .student-timetable .tt-batch-option:focus-visible {
+        outline: 2px solid #34d399;
+        outline-offset: 2px;
+    }
+    .student-timetable .tt-batch-picker[open] summary {
+        border-color: rgba(52,211,153,.75);
+        border-radius: 8px 8px 0 0;
+    }
+    .student-timetable .tt-batch-current {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .student-timetable .tt-batch-menu {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        z-index: 30;
+        max-height: 176px;
+        overflow-y: auto;
+        overscroll-behavior-y: contain;
+        -webkit-overflow-scrolling: touch;
+        border: 1px solid rgba(52,211,153,.45);
+        border-top: 0;
+        border-radius: 0 0 8px 8px;
+        background: #071d29;
+        box-shadow: 0 10px 22px rgba(0,0,0,.35);
+        scrollbar-width: thin;
+        scrollbar-color: #047857 #061a22;
+    }
+    .student-timetable .tt-batch-option {
+        display: block;
+        padding: 7px 9px;
+        border-bottom: 1px solid rgba(16,185,129,.12);
+        color: #d1fae5;
+        font-size: 11px;
+        line-height: 1.3;
+        text-decoration: none;
+        overflow-wrap: anywhere;
+    }
+    .student-timetable .tt-batch-option:last-child { border-bottom: 0; }
+    .student-timetable .tt-batch-option:hover,
+    .student-timetable .tt-batch-option.is-selected {
+        background: rgba(16,185,129,.18);
+        color: #ffffff;
+    }
+
+    .student-timetable .tt-calendar-scroll {
+        max-height: min(88vh, 900px);
+        overflow: auto;
+        scrollbar-width: thin;
+        scrollbar-color: #047857 #061a22;
+        /* Let page scrolling continue when the calendar reaches its top/bottom edge. */
+        overscroll-behavior-y: auto;
+        overscroll-behavior-x: contain;
+        -webkit-overflow-scrolling: touch;
+        touch-action: pan-x pan-y;
+    }
+
+    .student-timetable .tt-calendar {
+        width: 100%;
+        min-width: 820px;
+        table-layout: fixed;
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+    .student-timetable .tt-calendar th,
+    .student-timetable .tt-calendar td {
+        border-right: 1px solid rgba(16,185,129,.16);
+        border-bottom: 1px solid rgba(16,185,129,.16);
+    }
+    .student-timetable .tt-calendar th:first-child,
+    .student-timetable .tt-calendar td:first-child {
+        border-left: 1px solid rgba(16,185,129,.16);
+    }
+    .student-timetable .tt-calendar thead th { border-top: 1px solid rgba(16,185,129,.16); }
+    .student-timetable .tt-calendar thead th {
+        position: sticky;
+        top: 0;
+        z-index: 5;
+        background: #082331;
+    }
+    .student-timetable .tt-calendar .time-heading { width: 76px; }
+    .student-timetable .tt-time {
+        position: sticky;
+        left: 0;
+        z-index: 3;
+        width: 76px;
+        background: #082331;
+        color: #d1fae5;
+        font-size: 9px;
+        font-weight: 700;
+        white-space: nowrap;
+    }
+    .student-timetable .tt-calendar thead .time-heading { left: 0; z-index: 7; }
+    .student-timetable .tt-day-cell {
+        height: 29px;
+        padding: 2px;
+        vertical-align: top;
+        background: rgba(2,17,29,.45);
+    }
+
+    .student-timetable .tt-class {
+        display: block;
+        border: 1px solid;
+        border-radius: 5px;
+        padding: 2px 3px;
+        margin: 1px 0 2px;
+        overflow-wrap: anywhere;
+        line-height: 1.2;
+    }
+    .student-timetable .tt-class.scheduled {
+        background: rgba(8,91,115,.25);
+        border-color: rgba(34,211,238,.65);
+        color: #cffafe;
+    }
+    .student-timetable .tt-class.live {
+        background: rgba(136,19,55,.28);
+        border-color: rgba(251,113,133,.75);
+        color: #ffe4e6;
+    }
+    .student-timetable .tt-class.completed {
+        background: rgba(91,33,182,.25);
+        border-color: rgba(167,139,250,.72);
+        color: #ede9fe;
+    }
+    .student-timetable .tt-class.cancelled {
+        background: rgba(120,73,8,.27);
+        border-color: rgba(251,191,36,.75);
+        color: #fef3c7;
+    }
+    .student-timetable .tt-class .tt-class-title {
+        display: block;
+        font-size: 8px;
+        font-weight: 800;
+    }
+    .student-timetable .tt-class .tt-class-meta {
+        display: block;
+        margin-top: 1px;
+        font-size: 7px;
+        opacity: .9;
+    }
+
+    .student-timetable .tt-legend-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        min-width: 0;
+        font-size: 10px;
+        color: #dbeafe;
+    }
+    .student-timetable .tt-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        flex: 0 0 8px;
+    }
+    .student-timetable .tt-dot.scheduled { background: #22d3ee; }
+    .student-timetable .tt-dot.live { background: #fb7185; }
+    .student-timetable .tt-dot.completed { background: #a78bfa; }
+    .student-timetable .tt-dot.cancelled { background: #fbbf24; }
+
+
+    /* Keep internal scrolling functional while hiding scrollbar tracks and thumbs. */
+    .student-timetable .tt-calendar-scroll,
+    .student-timetable .tt-batch-menu {
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+    }
+    .student-timetable .tt-calendar-scroll::-webkit-scrollbar,
+    .student-timetable .tt-batch-menu::-webkit-scrollbar {
+        display: none;
+        width: 0;
+        height: 0;
+    }
+
+    @media (max-width: 640px) {
+        .student-timetable .tt-calendar-scroll { max-height: 82vh; }
+        .student-timetable .tt-stat { min-height: 50px; padding: 6px 7px; }
+        .student-timetable .tt-stat-number { font-size: 17px; }
+        .student-timetable .tt-stat-label { font-size: 9px; }
+    }
+</style>
+
+<div class="student-timetable space-y-2">
+    <section class="tt-panel rounded-xl px-3 py-3 md:px-4">
+        <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div class="flex items-center gap-2">
+                <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-emerald-300/30 bg-emerald-400/10 text-emerald-300">
+                    <i class="ri-calendar-schedule-line text-lg"></i>
+                </div>
+                <div>
+                    <div class="text-[10px] font-semibold uppercase tracking-wider text-emerald-300/80">My Learning</div>
+                    <h1 class="text-lg font-extrabold leading-tight text-white">My Timetable</h1>
+                    <p class="text-[11px] text-slate-300">Scheduled live classes from your purchased batch.</p>
+                </div>
+            </div>
+            <div class="text-[10px] font-semibold text-emerald-200">
+                {{ week_start|date:"d M Y" }} – {{ week_end|date:"d M Y" }}
+            </div>
+        </div>
+    </section>
+
+    {% if not purchased_batches %}
+        <section class="tt-panel rounded-xl px-4 py-7 text-center">
+            <i class="ri-calendar-close-line text-3xl text-emerald-300"></i>
+            <h2 class="mt-2 text-base font-bold text-white">No purchased batches yet</h2>
+            <p class="mt-1 text-xs text-slate-400">Your scheduled classes will appear here after you purchase a batch.</p>
+            <a href="{% url 'marketplace' %}" class="mt-3 inline-flex rounded-lg border border-emerald-400/40 bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-200">Explore Marketplace</a>
+        </section>
+    {% else %}
+        <div class="mb-1 text-[11px] font-bold uppercase tracking-wider text-emerald-200">Today's Summary · {{ today|date:"D, d M Y" }}</div>
+        <section class="grid grid-cols-2 gap-1.5 sm:grid-cols-3 xl:grid-cols-5">
+            <div class="tt-stat tt-stat-total">
+                <div class="tt-stat-number text-cyan-300">{{ class_counts.total }}</div>
+                <div class="tt-stat-label text-cyan-100">Total Sessions Today</div>
+            </div>
+            <div class="tt-stat tt-stat-upcoming">
+                <div class="tt-stat-number text-emerald-300">{{ class_counts.upcoming }}</div>
+                <div class="tt-stat-label text-emerald-100">Upcoming Today</div>
+            </div>
+            <div class="tt-stat tt-stat-live">
+                <div class="tt-stat-number text-rose-300">{{ class_counts.live }}</div>
+                <div class="tt-stat-label text-rose-100">Live Now Today</div>
+            </div>
+            <div class="tt-stat tt-stat-completed">
+                <div class="tt-stat-number text-violet-300">{{ class_counts.completed }}</div>
+                <div class="tt-stat-label text-violet-100">Completed Today</div>
+            </div>
+            <div class="tt-stat tt-stat-cancelled">
+                <div class="tt-stat-number text-amber-300">{{ class_counts.cancelled }}</div>
+                <div class="tt-stat-label text-amber-100">Cancelled / No Show Today</div>
+            </div>
+        </section>
+
+        <section class="tt-panel rounded-lg p-2.5">
+            <div class="flex flex-col gap-1.5 sm:flex-row sm:items-center">
+                <div class="shrink-0 text-xs font-bold text-white">
+                    <i class="ri-stack-line mr-1 text-emerald-300"></i>Purchased Batch
+                </div>
+                <details class="tt-batch-picker">
+                    <summary>
+                        <span class="tt-batch-current">
+                            {% if selected_batch %}{{ selected_batch.batch_name }}{% else %}Select a purchased batch{% endif %}
+                        </span>
+                        <i class="ri-arrow-down-s-line shrink-0 text-base text-emerald-300"></i>
+                    </summary>
+                    <div class="tt-batch-menu" role="list">
+                        {% for batch in purchased_batches %}
+                            <a
+                                class="tt-batch-option{% if selected_batch and batch.pk == selected_batch.pk %} is-selected{% endif %}"
+                                href="?batch={{ batch.pk }}&week={{ week_start|date:'Y-m-d' }}"
+                                role="listitem"
+                                {% if selected_batch and batch.pk == selected_batch.pk %}aria-current="true"{% endif %}
+                            >{{ batch.batch_name }}{% if selected_batch and batch.pk == selected_batch.pk %}<span class="float-right text-emerald-300">✓</span>{% endif %}</a>
+                        {% endfor %}
+                    </div>
+                </details>
+            </div>
+        </section>
+
+        <section class="tt-panel overflow-hidden rounded-xl">
+            <div class="flex flex-col gap-3 border-b border-emerald-400/15 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                    <h2 class="text-lg font-extrabold text-white">
+                        <i class="ri-calendar-week-line mr-1 text-emerald-300"></i>Weekly Timetable
+                    </h2>
+                    <p class="text-xs text-slate-400">Seven-day schedule · 5:00 AM – 12:00 midnight</p>
+                </div>
+                <div class="flex items-center gap-1.5">
+                    <a class="tt-nav" href="?batch={{ selected_batch_id }}&week={{ previous_week|date:'Y-m-d' }}" aria-label="Previous week">
+                        <i class="ri-arrow-left-s-line text-base"></i>
+                    </a>
+                    <a class="tt-nav text-[10px] font-bold" href="?batch={{ selected_batch_id }}&week={{ today|date:'Y-m-d' }}">This Week</a>
+                    <a class="tt-nav" href="?batch={{ selected_batch_id }}&week={{ next_week|date:'Y-m-d' }}" aria-label="Next week">
+                        <i class="ri-arrow-right-s-line text-base"></i>
+                    </a>
+                </div>
+            </div>
+
+            <div class="tt-calendar-scroll">
+                <table class="tt-calendar">
+                    <thead>
+                        <tr>
+                            <th class="time-heading px-1.5 py-2 text-center text-[10px] font-bold text-emerald-100">Time</th>
+                            {% for day in days %}
+                                <th class="px-1 py-2 text-center">
+                                    <div class="text-[10px] font-extrabold text-white">{{ day|date:"D" }}</div>
+                                    <div class="text-[10px] text-slate-300">{{ day|date:"d M" }}</div>
+                                    {% if day == today %}
+                                        <span class="mt-0.5 inline-block rounded-full bg-emerald-400/20 px-1.5 py-0.5 text-[9px] font-bold text-emerald-200">Today</span>
+                                    {% endif %}
+                                </th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for hour in time_slots %}
+                            <tr>
+                                <td class="tt-time px-1.5 py-2">
+                                    {% if hour < 12 %}
+                                        {{ hour|stringformat:"02d" }}:00 AM
+                                    {% elif hour == 12 %}
+                                        12:00 PM
+                                    {% else %}
+                                        {{ hour|add:"-12" }}:00 PM
+                                    {% endif %}
+                                </td>
+                                {% for day in days %}
+                                    <td class="tt-day-cell">
+                                        {% for live_class in classes %}
+                                            {% if live_class.local_start.date == day and live_class.local_start.hour == hour %}
+                                                {% if live_class.display_status == "live" %}
+                                                    <div class="tt-class live">
+                                                {% elif live_class.display_status == "completed" %}
+                                                    <div class="tt-class completed">
+                                                {% elif live_class.display_status == "cancelled" or live_class.display_status == "no_show" %}
+                                                    <div class="tt-class cancelled">
+                                                {% else %}
+                                                    <div class="tt-class scheduled">
+                                                {% endif %}
+                                                    <span class="tt-class-title">{{ live_class.subject.subject_name|default:"Live Class" }}</span>
+                                                    <span class="tt-class-meta">{{ live_class.local_start|date:"g:i A" }} – {{ live_class.local_end|date:"g:i A" }}</span>
+                                                    <span class="tt-class-meta">{{ live_class.batch.batch_name }}</span>
+                                                    {% if live_class.chapter %}
+                                                        <span class="tt-class-meta">{{ live_class.chapter.chapter_name }}</span>
+                                                    {% endif %}
+                                                    <span class="tt-class-meta">{{ live_class.teacher.full_name|default:live_class.teacher.user.username }}</span>
+                                                    <span class="tt-class-meta">{{ live_class.display_status|title }}</span>
+                                                </div>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </td>
+                                {% endfor %}
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="tt-panel rounded-lg px-2.5 py-2.5">
+            <div class="grid grid-cols-2 gap-2 md:grid-cols-4">
+                <div class="tt-legend-item">
+                    <span class="tt-dot scheduled"></span>
+                    <div><strong>Scheduled Class</strong><div class="text-[9px] text-slate-400">Confirmed class</div></div>
+                </div>
+                <div class="tt-legend-item">
+                    <span class="tt-dot live"></span>
+                    <div><strong>Live Now</strong><div class="text-[9px] text-slate-400">Class in progress</div></div>
+                </div>
+                <div class="tt-legend-item">
+                    <span class="tt-dot completed"></span>
+                    <div><strong>Completed Class</strong><div class="text-[9px] text-slate-400">Class finished</div></div>
+                </div>
+                <div class="tt-legend-item">
+                    <span class="tt-dot cancelled"></span>
+                    <div><strong>Cancelled / No Show</strong><div class="text-[9px] text-slate-400">Historical status</div></div>
+                </div>
+            </div>
+        </section>
+    {% endif %}
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const picker = document.querySelector(".student-timetable .tt-batch-picker");
+    if (!picker) return;
+
+    // Close the batch menu whenever the user clicks anywhere outside it.
+    document.addEventListener("click", function (event) {
+        if (picker.open && !picker.contains(event.target)) {
+            picker.open = false;
+        }
+    });
+
+    // Also allow the user to dismiss the menu with the Escape key.
+    document.addEventListener("keydown", function (event) {
+        if (event.key === "Escape" && picker.open) {
+            picker.open = false;
+        }
+    });
+});
+</script>
+
+{% endblock %}

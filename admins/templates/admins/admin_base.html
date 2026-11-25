@@ -348,9 +348,9 @@
                     <i class="nav-icon ri-calendar-event-line shrink-0 text-[18px]"></i>
                     <span class="truncate">Upcoming Classes</span>
                     </a>
-                    <div class="admin-nav-link live-sub-disabled" aria-disabled="true" title="This page is not connected yet.">
+                    <a href="{% url 'live_classes:admin_live_now' %}" class="admin-nav-link {% if request.resolver_match.url_name == 'admin_live_now' %}active{% endif %}" {% if request.resolver_match.url_name == 'admin_live_now' %}aria-current="page"{% endif %}>
                         <i class="nav-icon ri-broadcast-line shrink-0 text-[18px]"></i><span class="truncate">Live Now</span>
-                    </div>
+                    </a>
                     <a href="{% url 'live_classes:admin_cancellation_requests' %}"
                     class="admin-nav-link {% if request.resolver_match.url_name == 'admin_cancellation_requests' %}active{% endif %}"
                     {% if request.resolver_match.url_name == 'admin_cancellation_requests' %}aria-current="page"{% endif %}>

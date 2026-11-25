@@ -31,6 +31,10 @@ from orders.helpers import (
 
 from .models import (
     Batch,
+    BatchFeature,
+    BatchImage,
+    BatchDemo,
+    SubjectDemo,
     Coupon,
     CouponUsage,
     CouponBatchRule,
@@ -44,58 +48,71 @@ from .models import (
 
 # FINAL PRICE CALCULATOR
 def calculate_final_price(batch):
-    original_price = batch.original_price or Decimal("0")
+    """
+    Return the currently applicable selling price for a batch.
 
-    if (
-        batch.discount_type == "none"
-        or batch.discount_value <= 0
-        or not is_offer_active(batch)
-    ):
+    Both offer dates blank means a permanent discount. A limited-time
+    discount requires both dates and is active in [start, end).
+    """
+    if batch is None:
+        return Decimal("0.00")
+
+    current_price = getattr(batch, "get_current_price", None)
+    if callable(current_price):
+        return _money(current_price())
+
+    original_price = _money(
+        getattr(batch, "original_price", None) or Decimal("0")
+    )
+    discount_type = getattr(batch, "discount_type", "none")
+    discount_value = _money(
+        getattr(batch, "discount_value", None) or Decimal("0")
+    )
+
+    if discount_type == "none" or discount_value <= 0:
+        return original_price
+    if not is_offer_active(batch):
         return original_price
 
-    if batch.discount_type == "percentage":
-        discount_amount = (
-            original_price
-            * batch.discount_value
-            / Decimal("100")
-        )
-
-        final_price = (
-            original_price
-            - discount_amount
-        )
-
-    elif batch.discount_type == "fixed":
-        final_price = (
-            original_price
-            - batch.discount_value
-        )
-
+    if discount_type == "percentage":
+        discount_amount = original_price * discount_value / Decimal("100")
+        final_price = original_price - discount_amount
+    elif discount_type == "fixed":
+        final_price = original_price - discount_value
     else:
-        final_price = original_price
+        return original_price
 
-    if final_price < Decimal("0"):
-        final_price = Decimal("0")
-
-    return final_price.quantize(
-        Decimal("0.01")
-    )
+    return max(Decimal("0"), final_price).quantize(Decimal("0.01"))
 
 
 def is_offer_active(batch):
-    if batch.discount_type == "none":
+    """
+    Shared equivalent of Batch.is_offer_active.
+
+    Both dates blank = permanent discount.
+    Both dates present = time-limited discount.
+    Exactly one date present = invalid configuration and inactive.
+    """
+    if batch is None:
+        return False
+
+    discount_type = getattr(batch, "discount_type", "none")
+    discount_value = _money(
+        getattr(batch, "discount_value", None) or Decimal("0")
+    )
+    if discount_type == "none" or discount_value <= 0:
+        return False
+
+    start = getattr(batch, "offer_start_date", None)
+    end = getattr(batch, "offer_end_date", None)
+
+    if start is None and end is None:
+        return True
+    if start is None or end is None:
         return False
 
     now = timezone.now()
-
-    if batch.offer_start_date and now < batch.offer_start_date:
-        return False
-
-    if batch.offer_end_date and now > batch.offer_end_date:
-        return False
-
-    return True
-
+    return start <= now < end
 
 def is_publish_active(batch):
     if batch.batch_status != "published":
@@ -151,19 +168,171 @@ def get_batch_marketplace_status(batch):
 
 
 def create_batch(cleaned_data):
-    batch = Batch(**cleaned_data)
-    batch.full_clean()
-    batch.save()
+    """
+    Create a Batch and its Create-form related records.
+
+    The validator returns normal Batch model fields together with
+    three helper-only values:
+        key_features
+        _additional_images
+        _batch_demo
+
+    Those helper-only values must not be passed to Batch(**kwargs).
+    They are saved to their own related models after the Batch exists.
+    """
+    data = dict(cleaned_data)
+
+    # Separate related-model payloads from actual Batch model fields.
+    key_features = data.pop("key_features", [])
+    additional_images = data.pop("_additional_images", [])
+    demo_data = data.pop("_batch_demo", None)
+
+    with transaction.atomic():
+        batch = Batch(**data)
+        batch.full_clean()
+        batch.save()
+
+        # Save the key features in their submitted order.
+        for order, feature_text in enumerate(key_features or [], start=1):
+            feature = BatchFeature(
+                batch=batch,
+                feature_text=feature_text,
+                display_order=order,
+            )
+            feature.full_clean()
+            feature.save()
+
+        # Save the additional gallery images in their submitted order.
+        for order, image_file in enumerate(additional_images or [], start=1):
+            gallery_image = BatchImage(
+                batch=batch,
+                image=image_file,
+                display_order=order,
+            )
+            gallery_image.full_clean()
+            gallery_image.save()
+
+        # A draft may have no demo. When a demo payload exists, save
+        # exactly one BatchDemo record for this Batch.
+        if demo_data:
+            demo = BatchDemo(
+                batch=batch,
+                demo_type=demo_data.get("demo_type", ""),
+                title=demo_data.get("title", ""),
+                description=demo_data.get("description", ""),
+                video_file=demo_data.get("video_file"),
+                external_url=demo_data.get("external_url", ""),
+            )
+            demo.full_clean()
+            demo.save()
 
     return batch
 
 
-def update_batch(batch, cleaned_data):
-    for field, value in cleaned_data.items():
-        setattr(batch, field, value)
+def _save_demo_record(demo_model, relation_field, related_object, demo_data):
+    """Create or update one demo record without deleting its media asset."""
+    lookup = {relation_field: related_object}
+    demo, _created = demo_model.objects.get_or_create(**lookup)
 
-    batch.full_clean()
-    batch.save()
+    demo.demo_type = demo_data.get("demo_type", "")
+    demo.title = demo_data.get("title", "")
+    demo.description = demo_data.get("description", "")
+    demo.video_file = demo_data.get("video_file")
+    demo.external_url = demo_data.get("external_url", "")
+    demo.full_clean()
+    demo.save()
+    return demo
+
+
+def update_batch(batch, cleaned_data):
+    """Update a Batch and its selected demo mode atomically.
+
+    Only actual Batch model fields are assigned. Related demo records are
+    handled separately. This function intentionally does not modify purchase
+    records, student access, course dates, or the automatic Archive process.
+
+    An Archived batch can be republished by passing the new publication
+    fields (publish_type, publish_datetime and admission_close_datetime) in
+    cleaned_data. The validator/view remains responsible for validating those
+    submitted values before this helper is called.
+    """
+    data = dict(cleaned_data)
+    demo_mode = data.pop("demo_mode", None)
+    batch_demo_data = data.pop("_batch_demo", None)
+    subject_demo_data = data.pop("_subject_demos", None)
+
+    # Remove legacy/helper-only values that are not Batch model fields.
+    data.pop("batch_demo_video", None)
+    data.pop("batch_demo_url", None)
+    data.pop("key_features", None)
+    data.pop("_additional_images", None)
+
+    model_field_names = {
+        field.name
+        for field in Batch._meta.concrete_fields
+        if not field.primary_key
+    }
+
+    with transaction.atomic():
+        for field, value in data.items():
+            if field in model_field_names:
+                setattr(batch, field, value)
+
+        if demo_mode in ("batch", "subject"):
+            batch.demo_mode = demo_mode
+
+        batch.full_clean()
+        batch.save()
+
+        if demo_mode == "batch":
+            # Only one demo scope may exist at a time.
+            SubjectDemo.objects.filter(subject__batch=batch).delete()
+
+            existing_batch_demo = BatchDemo.objects.filter(batch=batch).first()
+            if batch_demo_data:
+                _save_demo_record(
+                    BatchDemo,
+                    "batch",
+                    batch,
+                    batch_demo_data,
+                )
+            elif existing_batch_demo:
+                # Delete the database row only. Do not remove a Cloudinary
+                # asset automatically; it may still be referenced elsewhere.
+                existing_batch_demo.delete()
+
+        elif demo_mode == "subject":
+            # Switching to subject-wise removes the overall BatchDemo row.
+            BatchDemo.objects.filter(batch=batch).delete()
+
+            for item in subject_demo_data or []:
+                subject_id = item.get("subject_id")
+                subject = batch.subjects.filter(pk=subject_id).first()
+                if subject is None:
+                    raise ValidationError(
+                        "A selected subject does not belong to this batch."
+                    )
+
+                existing_subject_demo = SubjectDemo.objects.filter(
+                    subject=subject
+                ).first()
+
+                if item.get("remove"):
+                    if existing_subject_demo:
+                        # Database row only; no automatic Cloudinary deletion.
+                        existing_subject_demo.delete()
+                    continue
+
+                demo_data = item.get("demo")
+                if demo_data:
+                    _save_demo_record(
+                        SubjectDemo,
+                        "subject",
+                        subject,
+                        demo_data,
+                    )
+                elif existing_subject_demo:
+                    existing_subject_demo.delete()
 
     return batch
 
@@ -214,6 +383,7 @@ def can_delete_batch(batch, student_count=0):
 
 
 def can_archive_batch(batch, student_count=0):
+    """Manual Archive is available only for published batches with purchases."""
     return (
         batch.batch_status == "published"
         and student_count > 0
@@ -221,21 +391,31 @@ def can_archive_batch(batch, student_count=0):
 
 
 def can_publish_batch(batch):
-    return batch.batch_status == "draft"
+    """Allow publishing a Draft or republishing an Archived batch."""
+    return batch.batch_status in {"draft", "archived"}
 
 
 def can_edit_batch(batch, student_count=0):
+    """Return field-level edit permissions for the current batch state.
+
+    Batches with historical purchases cannot return to Draft. Archived
+    batches can edit publication scheduling so they can be republished with
+    a fresh admission-close datetime.
+    """
+    has_purchase_history = student_count > 0
+    is_archived = batch.batch_status == "archived"
+
     return {
-        "batch_name": student_count == 0,
+        "batch_name": not has_purchase_history,
         "batch_description": True,
         "batch_thumbnail": True,
-        "original_price": student_count == 0,
+        "original_price": not has_purchase_history,
         "discount_type": True,
         "discount_value": True,
         "offer_start_date": True,
         "offer_end_date": True,
-        "publish_type": student_count == 0,
-        "publish_datetime": student_count == 0,
+        "publish_type": (not has_purchase_history) or is_archived,
+        "publish_datetime": (not has_purchase_history) or is_archived,
         "admission_close_datetime": True,
         "course_end_date": True,
         "batch_status": True,
@@ -567,19 +747,21 @@ def get_coupon_batches():
 # =========================================================
 
 def get_batch_selling_price(batch):
+    """
+    Return the current time-aware selling price.
+
+    Batch.final_price stores the calculated discount candidate and can
+    remain discounted after a timed offer expires. Always ask the Batch
+    model for its current price so expired offers use original_price.
+    """
     if batch is None:
-        return Decimal("0")
+        return Decimal("0.00")
 
-    price = getattr(batch, "final_price", None)
+    current_price = getattr(batch, "get_current_price", None)
+    if callable(current_price):
+        return _money(current_price())
 
-    if price is None or price <= Decimal("0"):
-        price = getattr(
-            batch,
-            "original_price",
-            Decimal("0"),
-        )
-
-    return _money(price)
+    return _money(calculate_final_price(batch))
 
 
 def get_batch_current_price(batch):

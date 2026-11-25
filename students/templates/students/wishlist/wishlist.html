@@ -1,1043 +1,387 @@
 {% extends 'students/base_student.html' %}
-
 {% load static %}
 
-{% block title %}
-My Wishlist | NeoLearn
-{% endblock %}
+{% block title %}My Wishlist | NeoLearner{% endblock %}
 
 {% block student_content %}
+<div class="nl-wishlist">
 
-<div class="space-y-6">
-
-    <!-- =========================================================
-         HERO - WISHLIST
-    ========================================================== -->
-    <section class="relative overflow-hidden rounded-2xl border border-cyan-500/10 bg-gradient-to-r from-cyan-500/10 via-slate-900 to-blue-900/40 px-6 lg:px-8 py-6 lg:py-8">
-
-        <div class="absolute right-[-80px] top-[-80px] w-[200px] h-[200px] rounded-full bg-cyan-400/10 blur-3xl"></div>
-
-        <div class="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-
-            <div>
-
-                <span class="inline-flex items-center gap-2 rounded-full bg-cyan-500/10 px-3 py-1 text-cyan-300 text-xs font-semibold">
-                    <i class="ri-heart-3-line"></i>
-                    My Wishlist
-                </span>
-
-                <h1 class="mt-2 text-2xl lg:text-3xl font-extrabold leading-tight">
-                    Keep track of the courses
-                    <span class="text-cyan-400">you want to learn</span>
-                </h1>
-
-                <p class="mt-1 text-slate-300 text-sm">
-                    Save your favourite courses and come back to them anytime
-                </p>
-
-            </div>
-
-            <div class="flex items-center gap-2">
-
-                <span
-                    class="rounded-full bg-cyan-500/10 px-4 py-1 text-cyan-300 text-sm font-semibold"
-                    id="totalCourses"
-                >
-                    {{ wishlist_items.count }} Saved Courses
-                </span>
-
-            </div>
-
+    <section class="nl-wishlist-header">
+        <div>
+            <span class="nl-wishlist-eyebrow"><i class="ri-heart-3-line"></i> MY WISHLIST</span>
+            <h1>Courses You Saved</h1>
+            <p>Your favourite batches, ready whenever you are.</p>
         </div>
-
+        <div class="nl-wishlist-count" id="totalCourses">
+            <i class="ri-heart-3-fill"></i>
+            <span>{{ wishlist_items.count }}</span>
+            <span>Saved</span>
+        </div>
     </section>
 
-
-    <!-- =========================================================
-         SECTION HEADER
-    ========================================================== -->
-    <div class="flex items-center justify-between">
-
-        <h2
-            class="text-xl font-bold"
-            id="resultsCount"
-        >
-            Showing {{ wishlist_items.count }} Courses
-        </h2>
-
-
-        <!-- BACK TO MARKETPLACE -->
-        <a
-            href="{% url 'marketplace' %}"
-            class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#111827] border border-white/10 text-sm text-slate-300 hover:text-white hover:border-cyan-400 transition-all duration-300"
-        >
-            <i class="ri-arrow-left-line"></i>
-            Back to Marketplace
-        </a>
-
+    <div class="nl-wishlist-heading">
+        <div>
+            <h2>Saved Batches</h2>
+            <p id="resultsCount">Showing {{ wishlist_items.count }} {% if wishlist_items.count == 1 %}batch{% else %}batches{% endif %}</p>
+        </div>
     </div>
 
-
-    <!-- =========================================================
-         COURSE GRID
-    ========================================================== -->
-    <div
-        class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5"
-        id="courseGrid"
-    >
-
+    <div class="nl-marketplace-grid nl-wishlist-grid" id="courseGrid">
         {% for item in wishlist_items %}
-
-        <!-- =====================================================
-             COURSE CARD
-        ====================================================== -->
-        <div
-            class="course-card group cursor-pointer"
-            data-id="{{ item.batch.id }}"
-            data-name="{{ item.batch.batch_name|lower }}"
-            data-price="{{ item.batch.final_price }}"
-            data-discount="{{ item.batch.discount_value|default:0 }}"
-            data-discount-type="{{ item.batch.discount_type }}"
-            data-offer-active="{{ item.batch.is_offer_active|yesno:'true,false' }}"
-            data-featured="{{ item.batch.featured|yesno:'true,false' }}"
-            data-status="{{ item.batch.marketplace_status }}"
-            data-category="{% for subject in item.batch.subjects.all %}{{ subject.id }} {% endfor %}"
-        >
-
-            <div
-                class="overflow-hidden rounded-xl border border-white/10 bg-[#111827] transition-all duration-300 hover:-translate-y-1.5 hover:border-cyan-400/30 hover:shadow-[0_20px_60px_rgba(6,182,212,0.15)]"
+            {% with batch=item.batch %}
+            <article
+                class="nl-batch-card nl-wishlist-card"
+                data-wishlist-card
+                data-id="{{ batch.id }}"
+                data-detail-url="{% url 'marketplace_detail' batch.id %}"
+                tabindex="0"
+                role="link"
+                aria-label="Open {{ batch.batch_name }}"
             >
-
-                <!-- =================================================
-                     THUMBNAIL
-                ================================================== -->
-                <div class="relative overflow-hidden aspect-video">
-
-                    <img
-                        src="{{ item.batch.batch_thumbnail.url }}"
-                        alt="{{ item.batch.batch_name }}"
-                        class="w-full h-full object-cover transition-all duration-500 group-hover:scale-105"
-                    >
-
-
-                    <!-- =================================================
-                         BADGE - TOP LEFT
-                    ================================================== -->
-                    <div class="absolute top-3 left-3">
-
-                        {% if item.batch.is_new %}
-
-                        <span class="px-2.5 py-0.5 rounded-full bg-blue-500 text-white text-xs font-bold shadow-lg">
-                            ✨ NEW
-                        </span>
-
-                        {% elif item.batch.is_offer_active and item.batch.discount_type == 'percentage' and item.batch.discount_value %}
-
-                        <span class="px-2.5 py-0.5 rounded-full bg-red-500 text-white text-xs font-bold shadow-lg">
-                            🔥 {{ item.batch.discount_value }}% OFF
-                        </span>
-
-                        {% elif item.batch.is_offer_active and item.batch.discount_type == 'fixed' and item.batch.discount_value %}
-
-                        <span class="px-2.5 py-0.5 rounded-full bg-amber-500 text-white text-xs font-bold shadow-lg">
-                            💰 SAVE ₹{{ item.batch.discount_value }}
-                        </span>
-
+                <div class="nl-batch-card-media">
+                    <div class="nl-batch-image-link">
+                        {% if batch.batch_thumbnail %}
+                            <img src="{{ batch.batch_thumbnail.url }}" alt="{{ batch.batch_name }}" loading="lazy">
+                        {% else %}
+                            <div class="nl-no-image"><i class="ri-graduation-cap-line"></i></div>
                         {% endif %}
-
                     </div>
 
-
-                    <!-- =================================================
-                         NO REMOVE BUTTON HERE
-                    ================================================== -->
-
-
-                    <!-- =================================================
-                         STATUS BADGE - BOTTOM RIGHT
-                    ================================================== -->
-                    {% if item.batch.marketplace_status == 'buy_now' %}
-
-                    <span class="absolute bottom-3 right-3 px-2.5 py-0.5 rounded-full bg-emerald-500 text-white text-xs font-bold shadow-lg">
-                        🛒 Buy Now
-                    </span>
-
-                    {% elif item.batch.marketplace_status == 'coming_soon' %}
-
-                    <span class="absolute bottom-3 right-3 px-2.5 py-0.5 rounded-full bg-indigo-500 text-white text-xs font-bold shadow-lg">
-                        📅 Coming Soon
-                    </span>
-
-                    {% elif item.batch.marketplace_status == 'admissions_closed' %}
-
-                    <span class="absolute bottom-3 right-3 px-2.5 py-0.5 rounded-full bg-gray-500 text-white text-xs font-bold shadow-lg">
-                        🔒 Admissions Closed
-                    </span>
-
+                    {% if batch.is_new %}
+                        <span class="nl-card-status is-new"><i class="ri-sparkling-line"></i> NEW</span>
                     {% endif %}
 
+                    {% if batch.marketplace_status == 'buy_now' %}
+                        <span class="nl-card-status is-buy-now"><i class="ri-shopping-bag-line"></i> Buy Now</span>
+                    {% elif batch.marketplace_status == 'coming_soon' %}
+                        <span class="nl-card-status is-coming"><i class="ri-calendar-line"></i> Coming Soon</span>
+                    {% elif batch.marketplace_status == 'admissions_closed' %}
+                        <span class="nl-card-status is-closed"><i class="ri-lock-line"></i> Admissions Closed</span>
+                    {% else %}
+                        <span class="nl-card-status is-unavailable"><i class="ri-information-line"></i> Unavailable</span>
+                    {% endif %}
                 </div>
 
+                <div class="nl-batch-card-body">
+                    <h3 class="nl-batch-title">{{ batch.batch_name }}</h3>
 
-                <!-- =================================================
-                     CARD CONTENT
-                ================================================== -->
-                <div class="p-4">
-
-                    <!-- BATCH NAME -->
-                    <h3 class="text-base font-bold text-white line-clamp-2 leading-tight mb-2">
-                        {{ item.batch.batch_name }}
-                    </h3>
-
-
-                    <!-- =================================================
-                         TEACHER & RATING
-                    ================================================== -->
-                    <div class="flex items-center justify-between mb-2">
-
-                        <span class="text-xs text-slate-400">
-
-                            <i class="ri-user-line mr-1"></i>
-
-                            {{ item.batch.assigned_teachers.first.full_name|default:"Multiple Teachers" }}
-
-                        </span>
-
-                        <span class="text-xs text-yellow-400">
-
-                            <i class="ri-star-fill mr-1"></i>
-
-                            4.9
-
-                        </span>
-
+                    <div class="nl-batch-meta">
+                        <span><i class="ri-user-line"></i> {{ batch.assigned_teachers.count }} Teacher{{ batch.assigned_teachers.count|pluralize }}</span>
+                        <span><i class="ri-book-2-line"></i> {{ batch.subjects.count }} Subject{{ batch.subjects.count|pluralize }}</span>
                     </div>
 
+                    {% if batch.marketplace_status == 'coming_soon' and batch.publish_datetime %}
+                        <div class="nl-admission-date nl-coming-date"><i class="ri-rocket-line"></i> Launches on: {{ batch.publish_datetime|date:"d M Y" }}</div>
+                    {% elif batch.marketplace_status == 'buy_now' and batch.admission_close_datetime %}
+                        <div class="nl-admission-date nl-buy-date"><i class="ri-calendar-event-line"></i> Admission closes on: {{ batch.admission_close_datetime|date:"d M Y" }}</div>
+                    {% elif batch.marketplace_status == 'admissions_closed' and batch.admission_close_datetime %}
+                        <div class="nl-admission-date nl-closed-date"><i class="ri-lock-line"></i> Admission closed on: {{ batch.admission_close_datetime|date:"d M Y" }}</div>
+                    {% endif %}
 
-                    <!-- =================================================
-                         SUBJECT COUNT
-                    ================================================== -->
-                    <div class="text-xs text-slate-400 mb-3">
-
-                        <i class="ri-book-2-line mr-1"></i>
-
-                        {{ item.batch.subjects.count }} Subjects
-
-                    </div>
-
-
-                    <!-- =================================================
-                         PRICE SECTION
-                    ================================================== -->
-                    <div class="border-t border-white/5 pt-3">
-
-                        {% if item.batch.original_price and item.batch.is_offer_active %}
-
-                        <div class="text-slate-500 text-xs line-through">
-                            ₹{{ item.batch.original_price }}
-                        </div>
-
-                        {% endif %}
-
-
-                        <div class="flex items-center gap-2 mt-0.5">
-
-                            <span class="text-2xl font-extrabold text-cyan-400">
-                                ₹{{ item.batch.final_price }}
-                            </span>
-
-                        </div>
-
-
-                        {% if item.batch.is_offer_active and item.batch.discount_value %}
-
-                            {% if item.batch.discount_type == 'percentage' %}
-
-                            <div class="text-xs text-red-400 font-semibold mt-0.5">
-                                🔥 {{ item.batch.discount_value }}% OFF
-                            </div>
-
-                            {% else %}
-
-                            <div class="text-xs text-red-400 font-semibold mt-0.5">
-                                💰 SAVE ₹{{ item.batch.discount_value }}
-                            </div>
-
+                    <div class="nl-price-block">
+                        <div class="nl-price-line">
+                            <strong>₹{{ batch.current_selling_price|default:batch.original_price }}</strong>
+                            {% if batch.has_current_discount %}
+                                <del>₹{{ batch.original_price }}</del>
                             {% endif %}
-
-                        {% endif %}
-
-
-                        {% if item.batch.offer_end_date and item.batch.is_offer_active %}
-
-                        <div class="text-[10px] text-slate-500 mt-1">
-
-                            📅 Offer Ends:
-                            {{ item.batch.offer_end_date|date:"d M Y" }}
-
                         </div>
-
+                        {% if batch.has_current_discount and batch.discount_value %}
+                            {% if batch.discount_type == 'percentage' %}
+                                <span class="nl-discount-label">{{ batch.discount_value }}% OFF</span>
+                            {% elif batch.discount_type == 'fixed' %}
+                                <span class="nl-discount-label">SAVE ₹{{ batch.discount_value }}</span>
+                            {% endif %}
                         {% endif %}
-
+                        {% if batch.offer_end_date and batch.has_current_discount %}
+                            <span class="nl-offer-date">Offer ends {{ batch.offer_end_date|date:"d M Y" }}</span>
+                        {% endif %}
                     </div>
-
-
-                    <!-- =================================================
-                         VIEW COURSE
-                    ================================================== -->
-                    <div class="mt-3">
-
-                        <a
-                            href="{% url 'marketplace_detail' item.batch.id %}"
-                            class="block w-full py-2 rounded-full bg-gradient-to-r from-cyan-400 to-blue-400 text-black text-sm font-bold text-center transition-all duration-300 hover:scale-[1.03] hover:shadow-lg hover:shadow-cyan-500/25"
-                            onclick="event.stopPropagation();"
-                        >
-
-                            📖 View Course
-
-                        </a>
-
-                    </div>
-
-
-                    <!-- =================================================
-                         REMOVE FROM WISHLIST
-                         ONLY REMOVE BUTTON
-                    ================================================== -->
-                    <div class="mt-2">
-
-                        <button
-                            type="button"
-                            class="remove-wishlist-btn w-full py-2 rounded-full bg-red-500/10 border border-red-400/30 text-red-400 text-sm font-bold text-center transition-all duration-300 hover:bg-red-500/20 hover:border-red-400/60 hover:text-red-300 hover:scale-[1.02]"
-                            data-batch-id="{{ item.batch.id }}"
-                            data-toggle-url="{% url 'toggle_wishlist' item.batch.id %}"
-                        >
-
-                            <i class="ri-delete-bin-6-line mr-1"></i>
-
-                            Remove from Wishlist
-
-                        </button>
-
-                    </div>
-
                 </div>
 
-            </div>
+                <div class="nl-batch-card-actions nl-wishlist-actions">
+                    {% if batch.marketplace_status == 'buy_now' %}
+                        {% if batch.id in cart_batch_ids %}
+                            <button type="button" class="nl-card-button nl-added-button" disabled>
+                                <i class="ri-check-line"></i> Added to Cart
+                            </button>
+                        {% else %}
+                            <form method="post"
+                                  action="{% url 'add_to_cart' batch.id %}"
+                                  class="nl-card-action-form nl-wishlist-cart-form"
+                                  data-wishlist-cart-form>
+                                {% csrf_token %}
+                                <button type="submit" class="nl-card-button nl-cart-button">
+                                    <i class="ri-shopping-cart-line"></i> Add to Cart
+                                </button>
+                            </form>
+                        {% endif %}
+                    {% elif batch.marketplace_status == 'coming_soon' %}
+                        <div class="nl-card-button nl-state-button nl-coming-button">
+                            <i class="ri-calendar-line"></i> Coming Soon
+                        </div>
+                    {% elif batch.marketplace_status == 'admissions_closed' %}
+                        <div class="nl-card-button nl-state-button nl-closed-button">
+                            <i class="ri-lock-line"></i> Admissions Closed
+                        </div>
+                    {% else %}
+                        <div class="nl-card-button nl-state-button nl-unavailable-button">
+                            <i class="ri-information-line"></i> Not Available
+                        </div>
+                    {% endif %}
 
-        </div>
-
-
+                    <form
+                        method="post"
+                        action="{% url 'toggle_wishlist' batch.id %}"
+                        class="nl-card-action-form nl-wishlist-remove-form"
+                        data-wishlist-remove-form
+                    >
+                        {% csrf_token %}
+                        <input type="hidden" name="wishlist_action" value="remove">
+                        <button
+                            type="submit"
+                            class="nl-card-button nl-remove-button"
+                        >
+                            <i class="ri-delete-bin-6-line"></i> Remove
+                        </button>
+                    </form>
+                </div>
+            </article>
+            {% endwith %}
         {% empty %}
-
-        <!-- =========================================================
-             EMPTY STATE
-        ========================================================== -->
-        <div
-            class="wishlist-empty-state col-span-full rounded-2xl border border-dashed border-cyan-500/20 bg-[#111827] py-16 px-8 text-center"
-        >
-
-            <div
-                class="mx-auto w-20 h-20 rounded-full bg-cyan-500/10 flex items-center justify-center"
-            >
-
-                <i class="ri-heart-3-line text-4xl text-cyan-400"></i>
-
+            <div class="nl-wishlist-empty" id="wishlistEmptyState">
+                <div class="nl-wishlist-empty-icon"><i class="ri-heart-3-line"></i></div>
+                <h2>Your wishlist is empty</h2>
+                <p>Save batches from the Marketplace and they will appear here.</p>
+                <a href="{% url 'marketplace' %}"><i class="ri-compass-3-line"></i> Browse Marketplace</a>
             </div>
-
-
-            <h3 class="mt-6 text-2xl font-bold text-white">
-
-                Your wishlist is empty
-
-            </h3>
-
-
-            <p
-                class="mt-2 max-w-md mx-auto text-slate-400 text-sm leading-relaxed"
-            >
-
-                Save your favourite courses here while browsing the marketplace.
-
-            </p>
-
-
-            <a
-                href="{% url 'marketplace' %}"
-                class="mt-6 inline-block px-6 py-2 rounded-full bg-gradient-to-r from-cyan-400 to-blue-400 text-black font-bold transition-all duration-300 hover:scale-[1.03] hover:shadow-lg hover:shadow-cyan-500/25"
-            >
-
-                Browse Marketplace
-
-            </a>
-
-        </div>
-
         {% endfor %}
-
     </div>
-
 </div>
 
-
-<!-- =============================================================
-     JAVASCRIPT
-============================================================== -->
-<script>
-
-document.addEventListener('DOMContentLoaded', function () {
-
-    console.log('❤️ Wishlist page initialized');
-
-
-    // =========================================================
-    // CSRF TOKEN
-    // =========================================================
-
-    function getCSRFToken() {
-
-        const csrfInput =
-            document.getElementById('csrf-token');
-
-        if (csrfInput && csrfInput.value) {
-
-            return csrfInput.value;
-
-        }
-
-
-        // Fallback: read Django CSRF cookie
-        const cookies =
-            document.cookie.split(';');
-
-
-        for (let cookie of cookies) {
-
-            cookie = cookie.trim();
-
-
-            if (
-                cookie.startsWith('csrftoken=')
-            ) {
-
-                return decodeURIComponent(
-                    cookie.substring(
-                        'csrftoken='.length
-                    )
-                );
-
-            }
-
-        }
-
-
-        return '';
-
-    }
-
-
-    // =========================================================
-    // REMOVE FROM WISHLIST
-    // =========================================================
-
-    document
-        .querySelectorAll('.remove-wishlist-btn')
-        .forEach(function (button) {
-
-            button.addEventListener(
-                'click',
-                function (event) {
-
-                    event.preventDefault();
-
-                    event.stopPropagation();
-
-
-                    const removeButton =
-                        this;
-
-
-                    const batchId =
-                        removeButton.dataset.batchId;
-
-
-                    const toggleUrl =
-                        removeButton.dataset.toggleUrl;
-
-
-                    const card =
-                        removeButton.closest(
-                            '.course-card'
-                        );
-
-
-                    // -----------------------------------------
-                    // Safety check
-                    // -----------------------------------------
-
-                    if (!batchId) {
-
-                        console.error(
-                            '❌ Wishlist remove: batch ID missing.'
-                        );
-
-                        return;
-
-                    }
-
-
-                    if (!toggleUrl) {
-
-                        console.error(
-                            '❌ Wishlist remove: toggle URL missing.'
-                        );
-
-                        return;
-
-                    }
-
-
-                    if (!card) {
-
-                        console.error(
-                            '❌ Wishlist remove: card not found.'
-                        );
-
-                        return;
-
-                    }
-
-
-                    // -----------------------------------------
-                    // Prevent double click
-                    // -----------------------------------------
-
-                    if (
-                        removeButton.disabled
-                    ) {
-
-                        return;
-
-                    }
-
-
-                    removeButton.disabled =
-                        true;
-
-
-                    // -----------------------------------------
-                    // Save original button
-                    // -----------------------------------------
-
-                    const originalHTML =
-                        removeButton.innerHTML;
-
-
-                    // -----------------------------------------
-                    // Loading state
-                    // -----------------------------------------
-
-                    removeButton.innerHTML = `
-                        <i class="ri-loader-4-line wishlist-spinner mr-1"></i>
-                        Removing...
-                    `;
-
-
-                    console.log(
-                        '🟡 Removing wishlist:',
-                        batchId
-                    );
-
-
-                    console.log(
-                        '🟡 Request URL:',
-                        toggleUrl
-                    );
-
-
-                    // =================================================
-                    // SEND POST REQUEST
-                    // =================================================
-
-                    fetch(
-                        toggleUrl,
-                        {
-                            method: 'POST',
-
-                            headers: {
-                                'X-CSRFToken':
-                                    getCSRFToken(),
-
-                                'X-Requested-With':
-                                    'XMLHttpRequest',
-
-                                'Content-Type':
-                                    'application/json'
-                            },
-
-                            credentials:
-                                'same-origin'
-                        }
-                    )
-
-
-                    // =================================================
-                    // CHECK RESPONSE
-                    // =================================================
-
-                    .then(
-                        function (response) {
-
-                            console.log(
-                                '🟡 Response status:',
-                                response.status
-                            );
-
-
-                            if (!response.ok) {
-
-                                return response
-                                    .text()
-                                    .then(
-                                        function (text) {
-
-                                            console.error(
-                                                '❌ Server response:',
-                                                text
-                                            );
-
-
-                                            throw new Error(
-                                                'Wishlist request failed. HTTP ' +
-                                                response.status
-                                            );
-
-                                        }
-                                    );
-
-                            }
-
-
-                            return response.json();
-
-                        }
-                    )
-
-
-                    // =================================================
-                    // HANDLE DJANGO RESPONSE
-                    // =================================================
-
-                    .then(
-                        function (data) {
-
-                            console.log(
-                                '🟢 Django response:',
-                                data
-                            );
-
-
-                            // -----------------------------------------
-                            // SUCCESSFULLY UNWISHLISTED
-                            // -----------------------------------------
-
-                            if (
-                                data.success === true &&
-                                data.wishlisted === false
-                            ) {
-
-                                console.log(
-                                    '✅ Removed from wishlist:',
-                                    batchId
-                                );
-
-
-                                // -------------------------------------
-                                // Animate card
-                                // -------------------------------------
-
-                                card.style.transition =
-                                    'opacity 0.3s ease, transform 0.3s ease';
-
-
-                                card.style.opacity =
-                                    '0';
-
-
-                                card.style.transform =
-                                    'scale(0.90)';
-
-
-                                // -------------------------------------
-                                // Remove card after animation
-                                // -------------------------------------
-
-                                setTimeout(
-                                    function () {
-
-                                        card.remove();
-
-
-                                        updateWishlistCount(
-                                            data.wishlist_count
-                                        );
-
-                                    },
-                                    300
-                                );
-
-                            }
-
-
-                            // -----------------------------------------
-                            // Unexpected response
-                            // -----------------------------------------
-
-                            else {
-
-                                console.error(
-                                    '❌ Wishlist was not removed:',
-                                    data
-                                );
-
-
-                                restoreRemoveButton(
-                                    removeButton,
-                                    originalHTML
-                                );
-
-                            }
-
-                        }
-                    )
-
-
-                    // =================================================
-                    // ERROR
-                    // =================================================
-
-                    .catch(
-                        function (error) {
-
-                            console.error(
-                                '❌ Wishlist remove error:',
-                                error
-                            );
-
-
-                            restoreRemoveButton(
-                                removeButton,
-                                originalHTML
-                            );
-
-                        }
-                    );
-
-                }
-
-            );
-
-        });
-
-
-    // =========================================================
-    // RESTORE REMOVE BUTTON
-    // =========================================================
-
-    function restoreRemoveButton(
-        button,
-        originalHTML
-    ) {
-
-        button.disabled =
-            false;
-
-
-        button.innerHTML =
-            originalHTML;
-
-    }
-
-
-    // =========================================================
-    // UPDATE COUNTS
-    // =========================================================
-
-    function updateWishlistCount(
-        serverCount
-    ) {
-
-        const resultsCount =
-            document.getElementById(
-                'resultsCount'
-            );
-
-
-        const totalCourses =
-            document.getElementById(
-                'totalCourses'
-            );
-
-
-        const remainingCards =
-            document.querySelectorAll(
-                '.course-card'
-            ).length;
-
-
-        const count =
-            typeof serverCount === 'number'
-                ? serverCount
-                : remainingCards;
-
-
-        // -----------------------------------------
-        // Update "Showing X Courses"
-        // -----------------------------------------
-
-        if (resultsCount) {
-
-            resultsCount.textContent =
-                `Showing ${count} Course${count !== 1 ? 's' : ''}`;
-
-        }
-
-
-        // -----------------------------------------
-        // Update "X Saved Courses"
-        // -----------------------------------------
-
-        if (totalCourses) {
-
-            totalCourses.textContent =
-                `${count} Saved Course${count !== 1 ? 's' : ''}`;
-
-        }
-
-
-        // -----------------------------------------
-        // Show empty state
-        // -----------------------------------------
-
-        if (count === 0) {
-
-            showEmptyWishlist();
-
-        }
-
-    }
-
-
-    // =========================================================
-    // EMPTY WISHLIST
-    // =========================================================
-
-    function showEmptyWishlist() {
-
-        const grid =
-            document.getElementById(
-                'courseGrid'
-            );
-
-
-        if (!grid) {
-
-            return;
-
-        }
-
-
-        grid.innerHTML = `
-
-            <div
-                class="wishlist-empty-state col-span-full rounded-2xl border border-dashed border-cyan-500/20 bg-[#111827] py-16 px-8 text-center"
-            >
-
-                <div
-                    class="mx-auto w-20 h-20 rounded-full bg-cyan-500/10 flex items-center justify-center"
-                >
-
-                    <i class="ri-heart-3-line text-4xl text-cyan-400"></i>
-
-                </div>
-
-
-                <h3 class="mt-6 text-2xl font-bold text-white">
-
-                    Your wishlist is empty
-
-                </h3>
-
-
-                <p
-                    class="mt-2 max-w-md mx-auto text-slate-400 text-sm leading-relaxed"
-                >
-
-                    Save your favourite courses here while browsing the marketplace.
-
-                </p>
-
-
-                <a
-                    href="{% url 'marketplace' %}"
-                    class="mt-6 inline-block px-6 py-2 rounded-full bg-gradient-to-r from-cyan-400 to-blue-400 text-black font-bold transition-all duration-300 hover:scale-[1.03] hover:shadow-lg hover:shadow-cyan-500/25"
-                >
-
-                    Browse Marketplace
-
-                </a>
-
-            </div>
-
-        `;
-
-    }
-
-
-    // =========================================================
-    // CARD CLICK
-    // =========================================================
-
-    document.addEventListener(
-        'click',
-        function (event) {
-
-            const card =
-                event.target.closest(
-                    '.course-card'
-                );
-
-
-            if (!card) {
-
-                return;
-
-            }
-
-
-            // Don't navigate when clicking
-            // remove button or View Course
-
-            if (
-                event.target.closest(
-                    '.remove-wishlist-btn'
-                ) ||
-                event.target.closest(
-                    'a'
-                ) ||
-                event.target.closest(
-                    'button'
-                )
-            ) {
-
-                return;
-
-            }
-
-
-            const id =
-                card.dataset.id;
-
-
-            if (id) {
-
-                window.location.href =
-                    `/marketplace/${id}/`;
-
-            }
-
-        }
-    );
-
-
-});
-
-</script>
-
-
-<!-- =============================================================
-     CSRF TOKEN
-============================================================== -->
-
-<input
-    type="hidden"
-    id="csrf-token"
-    value="{{ csrf_token }}"
->
-
-
 <style>
+/* Page shell */
+.nl-wishlist{display:flex;flex-direction:column;gap:14px;min-width:0;color:#e8f0fa}
+.nl-wishlist-header{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:15px 19px;border:1px solid rgba(16,185,129,.28);border-radius:14px;background:linear-gradient(110deg,rgba(16,185,129,.12),#111b2b 68%,rgba(13,148,136,.10))}
+.nl-wishlist-eyebrow{display:inline-flex;align-items:center;gap:6px;color:#34d399;font-size:10px;font-weight:850;letter-spacing:.8px}
+.nl-wishlist-header h1{margin:5px 0 2px;color:#f8fafc;font-size:21px;line-height:1.2;font-weight:900}
+.nl-wishlist-header p{margin:0;color:#9aabc0;font-size:11px}
+.nl-wishlist-count{display:inline-flex;align-items:center;gap:7px;min-height:35px;padding:0 12px;border:1px solid rgba(16,185,129,.35);border-radius:999px;background:rgba(16,185,129,.1);color:#6ee7b7;font-size:11px;font-weight:850;white-space:nowrap}
+.nl-wishlist-heading{display:flex;align-items:center;justify-content:space-between}
+.nl-wishlist-heading h2{margin:0;color:#f8fafc;font-size:16px;font-weight:850}
+.nl-wishlist-heading p{margin:3px 0 0;color:#8ca0b8;font-size:10px}
 
-/* =========================================================
-   REMOVE FROM WISHLIST BUTTON
-========================================================= */
+/* These card rules intentionally match the Marketplace card component. */
+.nl-wishlist-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;align-items:stretch}
+.nl-wishlist-card{min-width:0;display:flex;flex-direction:column;overflow:hidden;border:1px solid rgba(16,185,129,.34);border-radius:14px;background:#fff;color:#0f172a;box-shadow:0 3px 13px rgba(0,0,0,.13);transition:transform .2s ease,border-color .2s ease,box-shadow .2s ease;cursor:pointer}
+.nl-wishlist-card:hover{transform:translateY(-3px);border-color:#10b981;box-shadow:0 9px 24px rgba(16,185,129,.18)}
+.nl-wishlist-card:focus-visible{outline:3px solid rgba(16,185,129,.55);outline-offset:3px}
+.nl-wishlist-card .nl-batch-card-media{height:clamp(112px,11vw,158px);position:relative;overflow:hidden;background:#071426}
+.nl-wishlist-card .nl-batch-image-link{display:block;width:100%;height:100%}
+.nl-wishlist-card .nl-batch-image-link img{display:block;width:100%;height:100%;object-fit:cover;transition:transform .35s ease}
+.nl-wishlist-card:hover .nl-batch-image-link img{transform:scale(1.035)}
+.nl-wishlist-card .nl-no-image{width:100%;height:100%;display:grid;place-items:center;background:#e2e8f0;color:#64748b;font-size:42px}
+.nl-wishlist-card .nl-card-status{position:absolute;top:9px;left:9px;display:inline-flex;align-items:center;gap:4px;padding:5px 9px;border-radius:999px;font-size:10px;font-weight:850;box-shadow:0 2px 7px rgba(0,0,0,.16)}
+.nl-wishlist-card .nl-card-status.is-buy-now,.nl-wishlist-card .nl-card-status.is-new{background:#d1fae5;color:#065f46}
+.nl-wishlist-card .nl-card-status.is-coming{background:#fef3c7;color:#92400e}
+.nl-wishlist-card .nl-card-status.is-closed{background:#fee2e2;color:#991b1b}
+.nl-wishlist-card .nl-card-status.is-unavailable{background:#e2e8f0;color:#475569}
+.nl-wishlist-card .nl-batch-card-body{display:flex;flex:1;flex-direction:column;gap:8px;padding:10px 11px 8px}
+.nl-wishlist-card .nl-batch-title{display:-webkit-box;min-height:34px;overflow:hidden;-webkit-box-orient:vertical;-webkit-line-clamp:2;color:#101827;font-size:12px;font-weight:850;line-height:1.35}
+.nl-wishlist-card .nl-batch-meta{display:flex;flex-wrap:wrap;gap:5px 12px;color:#64748b;font-size:10px;line-height:1.4}
+.nl-wishlist-card .nl-batch-meta span{display:inline-flex;align-items:center;gap:4px}
+.nl-wishlist-card .nl-batch-meta i{color:#64748b}
+.nl-wishlist-card .nl-admission-date{display:flex;align-items:center;gap:5px;margin-top:2px;color:#0f766e;font-size:10px;font-weight:750;line-height:1.35}
+.nl-wishlist-card .nl-coming-date{color:#b45309}
+.nl-wishlist-card .nl-buy-date{color:#047857}
+.nl-wishlist-card .nl-closed-date{color:#b91c1c}
+.nl-wishlist-card .nl-price-block{margin-top:auto;padding-top:7px;border-top:1px solid #e8edf2;display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-height:50px}
+.nl-wishlist-card .nl-price-line{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.nl-wishlist-card .nl-price-line strong{color:#047857;font-size:19px;font-weight:900;line-height:1.2}
+.nl-wishlist-card .nl-price-line del{color:#64748b;font-size:10px}
+.nl-wishlist-card .nl-discount-label{color:#dc2626;font-size:9px;font-weight:800}
+.nl-wishlist-card .nl-offer-date{color:#64748b;font-size:9px}
 
-.remove-wishlist-btn {
+/* One-row actions: cart/state on the left, remove on the right. */
+.nl-wishlist-card .nl-batch-card-actions{display:flex;flex-wrap:nowrap;gap:7px;padding:0 9px 9px;margin-top:auto}
+.nl-wishlist-card .nl-card-action-form{display:flex;flex:1 1 0;min-width:0}
+.nl-wishlist-card .nl-card-button{height:34px;min-width:0;flex:1 1 0;display:flex;align-items:center;justify-content:center;gap:5px;padding:0 7px;border:1px solid transparent;border-radius:9px;font-size:10px;font-weight:850;text-decoration:none;white-space:nowrap;cursor:pointer}
+.nl-wishlist-card .nl-cart-button{width:100%;background:#fff;border-color:#cbd5e1;color:#111827}
+.nl-wishlist-card .nl-cart-button:hover{background:#f0fdf4;border-color:#10b981}
+.nl-wishlist-card .nl-added-button{background:#dcfce7;color:#047857;border-color:#86efac;cursor:default}
+.nl-wishlist-card .nl-remove-button{background:#fff;border-color:#fecaca;color:#b91c1c}
+.nl-wishlist-card .nl-remove-button:hover{background:#fef2f2;border-color:#f87171}
+.nl-wishlist-card .nl-remove-button:disabled{cursor:wait;opacity:.65}
+.nl-wishlist-card .nl-state-button{width:100%;font-size:10px;cursor:default}
+.nl-wishlist-card .nl-coming-button{background:#fef3c7;color:#92400e}
+.nl-wishlist-card .nl-closed-button{background:#fee2e2;color:#991b1b}
+.nl-wishlist-card .nl-unavailable-button{background:#e2e8f0;color:#475569}
 
-    cursor: pointer;
-
-    user-select: none;
-
+/* Empty state and feedback */
+.nl-wishlist-empty{grid-column:1/-1;padding:48px 20px;text-align:center;border:1px dashed rgba(16,185,129,.35);border-radius:14px;background:#111b2b}
+.nl-wishlist-empty-icon{width:62px;height:62px;margin:0 auto;display:grid;place-items:center;border-radius:18px;background:rgba(16,185,129,.12);color:#34d399;font-size:28px}
+.nl-wishlist-empty h2{margin:13px 0 4px;color:#f8fafc;font-size:18px;font-weight:850}
+.nl-wishlist-empty p{margin:0;color:#94a3b8;font-size:11px}
+.nl-wishlist-empty a{display:inline-flex;align-items:center;justify-content:center;gap:7px;height:37px;margin-top:15px;padding:0 16px;border-radius:9px;background:#059669;color:#fff;font-size:11px;font-weight:850;text-decoration:none}
+.nl-wishlist-empty a:hover{background:#047857}
+@media(max-width:1200px){.nl-wishlist-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:850px){.nl-wishlist-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){
+    .nl-wishlist{gap:12px}
+    .nl-wishlist-header{padding:13px 14px}
+    .nl-wishlist-header h1{font-size:18px}
+    .nl-wishlist-header p{font-size:10px}
+    .nl-wishlist-count{gap:5px;padding:0 9px;font-size:10px}
+    .nl-wishlist-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+    .nl-wishlist-card .nl-batch-card-media{height:clamp(100px,31vw,135px)}
+    .nl-wishlist-card .nl-batch-card-body{padding:8px 8px 6px;gap:6px}
+    .nl-wishlist-card .nl-batch-title{font-size:11px;min-height:30px}
+    .nl-wishlist-card .nl-batch-meta{font-size:9px;gap:4px 7px}
+    .nl-wishlist-card .nl-admission-date{font-size:9px}
+    .nl-wishlist-card .nl-price-line strong{font-size:16px}
+    .nl-wishlist-card .nl-batch-card-actions{gap:5px;padding:0 6px 7px}
+    .nl-wishlist-card .nl-card-button{height:32px;padding:0 4px;font-size:9px}
+    .nl-wishlist-card .nl-card-button i{display:none}
+    .nl-wishlist-heading h2{font-size:15px}
 }
-
-
-.remove-wishlist-btn:hover {
-
-    box-shadow:
-        0 8px 25px rgba(
-            239,
-            68,
-            68,
-            0.15
-        );
-
+@media(max-width:360px){
+    .nl-wishlist-grid{grid-template-columns:1fr}
+    .nl-wishlist-card .nl-batch-card-media{height:170px}
+    .nl-wishlist-card .nl-card-button{font-size:10px}
 }
-
-
-.remove-wishlist-btn:disabled {
-
-    cursor: not-allowed;
-
-    opacity: 0.65;
-
-    transform: none !important;
-
-}
-
-
-/* =========================================================
-   LOADING SPINNER
-========================================================= */
-
-.wishlist-spinner {
-
-    display: inline-block;
-
-    animation:
-        wishlist-spin
-        0.8s linear infinite;
-
-}
-
-
-@keyframes wishlist-spin {
-
-    from {
-
-        transform:
-            rotate(0deg);
-
-    }
-
-    to {
-
-        transform:
-            rotate(360deg);
-
-    }
-
-}
-
+@media(prefers-reduced-motion:reduce){.nl-wishlist-card,.nl-wishlist-spinner{transition:none!important;animation:none!important}}
 </style>
 
+<script>
+(function () {
+    "use strict";
+    if (window.__neoWishlistPageInitialized) return;
+    window.__neoWishlistPageInitialized = true;
+
+    const grid = document.getElementById("courseGrid");
+
+    function getCSRFToken(element) {
+        const input = element?.querySelector?.('input[name="csrfmiddlewaretoken"]');
+        if (input?.value) return input.value;
+        const cookie = document.cookie.split("; ").find(row => row.startsWith("csrftoken="));
+        return cookie ? decodeURIComponent(cookie.split("=").slice(1).join("=")) : "";
+    }
+
+    function updateCartCount(data) {
+        if (data.cart_count === undefined || data.cart_count === null) return;
+        document.querySelectorAll("#cartCount,#cart-count,.cart-count,[data-cart-count]").forEach(el => {
+            el.textContent = String(data.cart_count);
+            if (el.hasAttribute("data-cart-count")) el.setAttribute("data-cart-count", String(data.cart_count));
+        });
+    }
+
+    async function readJsonResponse(response, actionName) {
+        const contentType = response.headers.get("content-type") || "";
+        if (!contentType.toLowerCase().includes("application/json")) {
+            const responseText = await response.text();
+            console.error(actionName + " returned a non-JSON response:", response.status, responseText.slice(0, 500));
+            throw new Error("The request did not receive a valid response. Please refresh and try again.");
+        }
+        return await response.json();
+    }
+
+    /* Clicking the card opens its Marketplace details; action controls do not. */
+    if (grid) {
+        grid.addEventListener("click", function (event) {
+            if (event.target.closest("button,form,a,input,select,textarea,label")) return;
+            const card = event.target.closest("[data-wishlist-card]");
+            if (card?.dataset.detailUrl) window.location.href = card.dataset.detailUrl;
+        });
+
+        grid.addEventListener("keydown", function (event) {
+            if (event.key !== "Enter" && event.key !== " ") return;
+            const card = event.target.closest("[data-wishlist-card]");
+            if (!card || event.target !== card) return;
+            event.preventDefault();
+            window.location.href = card.dataset.detailUrl;
+        });
+    }
+
+    /* Add to Cart: POST to the existing cart view and reload so base messages display. */
+    document.addEventListener("submit", async function (event) {
+        const form = event.target.closest("[data-wishlist-cart-form]");
+        if (!form) return;
+        event.preventDefault();
+        if (form.dataset.busy === "1") return;
+
+        const button = form.querySelector("button[type='submit']");
+        if (!button) return;
+        const originalHTML = button.innerHTML;
+        form.dataset.busy = "1";
+        button.disabled = true;
+        button.textContent = "Adding...";
+
+        try {
+            const response = await fetch(form.getAttribute("action"), {
+                method: "POST",
+                body: new FormData(form),
+                credentials: "same-origin",
+                headers: {
+                    "X-Requested-With": "XMLHttpRequest",
+                    "X-CSRFToken": getCSRFToken(form),
+                    "Accept": "application/json"
+                }
+            });
+            const data = await readJsonResponse(response, "Add to Cart");
+            if (!response.ok || data.success !== true) {
+                throw new Error(data.message || "This batch could not be added to your cart.");
+            }
+            updateCartCount(data);
+            if (data.redirect_url) {
+                window.location.href = data.redirect_url;
+                return;
+            }
+            window.location.reload();
+        } catch (error) {
+            button.disabled = false;
+            button.innerHTML = originalHTML;
+            form.dataset.busy = "0";
+            console.error("Wishlist Add to Cart:", error);
+        }
+    });
+
+    /* Explicit remove action: only deletes the Wishlist row, never CartItem. */
+    document.addEventListener("submit", async function (event) {
+        const form = event.target.closest("[data-wishlist-remove-form]");
+        if (!form) return;
+        event.preventDefault();
+        if (form.dataset.busy === "1") return;
+
+        const button = form.querySelector("button[type='submit']");
+        if (!button) return;
+        const originalHTML = button.innerHTML;
+        form.dataset.busy = "1";
+        button.disabled = true;
+        button.textContent = "Removing...";
+
+        try {
+            const response = await fetch(form.getAttribute("action"), {
+                method: "POST",
+                body: new FormData(form),
+                credentials: "same-origin",
+                headers: {
+                    "X-Requested-With": "XMLHttpRequest",
+                    "X-CSRFToken": getCSRFToken(form),
+                    "Accept": "application/json"
+                }
+            });
+            const data = await readJsonResponse(response, "Remove from Wishlist");
+            if (!response.ok || data.success !== true || data.wishlisted !== false) {
+                throw new Error(data.message || "This batch could not be removed from your wishlist.");
+            }
+            updateCartCount(data);
+            window.location.reload();
+        } catch (error) {
+            button.disabled = false;
+            button.innerHTML = originalHTML;
+            form.dataset.busy = "0";
+            console.error("Wishlist Remove:", error);
+        }
+    });
+})();
+</script>
 {% endblock %}

@@ -4,10 +4,10 @@
 
 {% block student_content %}
 
-<div class="min-h-full bg-[#050B18] px-4 pb-6 pt-2 sm:px-6 sm:pt-3 lg:px-8">
+<div class="min-h-full bg-[#050B18] px-4 pb-6 pt-0 sm:px-6 sm:pt-0 lg:px-8">
     <div class="mx-auto w-full max-w-[1400px]">
 
-        <!-- COMPACT BREADCRUMB -->
+        <!-- BREADCRUMB: preserved exactly as supplied -->
         <nav aria-label="Breadcrumb"
              class="mb-4 flex flex-wrap items-center gap-2 text-[12px] sm:text-[13px]">
 
@@ -31,39 +31,68 @@
 
         </nav>
 
+        <!-- CHAPTER PAGE HEADER: refined emerald panel v2 -->
+        <section class="relative isolate mb-6 overflow-hidden rounded-[20px]
+                        border border-emerald-400/40 bg-[#04291F]
+                        shadow-[0_12px_32px_rgba(5,150,105,0.11)]">
 
-        <!-- CHAPTER PAGE HEADER: NO HAMBURGER ICON -->
-        <section class="mb-6 flex flex-col gap-4 border-b border-white/[0.07]
-                        pb-5 sm:flex-row sm:items-center sm:justify-between">
+            <div class="pointer-events-none absolute inset-0
+                        bg-[linear-gradient(105deg,#03251E_0%,#064B38_52%,#03251E_100%)]"></div>
+            <div class="pointer-events-none absolute inset-y-0 right-0 w-[42%]
+                        bg-[radial-gradient(ellipse_at_75%_50%,rgba(16,185,129,0.24),transparent_68%)]"></div>
+            <div class="pointer-events-none absolute -right-14 -top-24 h-64 w-64
+                        rounded-full border-[24px] border-emerald-200/10"></div>
+            <div class="pointer-events-none absolute bottom-0 left-0 h-[3px] w-full
+                        bg-gradient-to-r from-emerald-300/70 via-emerald-500/30 to-transparent"></div>
 
-            <div class="min-w-0">
-                <p class="mb-1 text-[10px] font-bold uppercase tracking-[0.2em] text-cyan-400">
-                    {{ subject.subject_name }}
-                </p>
+            <div class="relative flex flex-col gap-4 px-5 py-5
+                        sm:flex-row sm:items-center sm:justify-between sm:px-7 sm:py-[22px]">
 
-                <h1 class="text-[26px] font-extrabold leading-tight tracking-[-0.7px]
-                           text-white sm:text-[30px]">
-                    Chapters
-                </h1>
+                <div class="flex min-w-0 items-center gap-4">
+                    <div class="flex h-[54px] w-[54px] shrink-0 items-center justify-center
+                                rounded-[16px] border border-emerald-200/30
+                                bg-gradient-to-br from-emerald-300/20 to-emerald-700/20
+                                text-emerald-100 shadow-[0_8px_20px_rgba(0,0,0,0.16)]">
+                        <i class="ri-book-2-line text-[26px]"></i>
+                    </div>
 
-                <p class="mt-1.5 max-w-[720px] text-[12px] leading-5 text-slate-400 sm:text-[13px]">
-                    Explore the chapters in this subject. Open a chapter to access its videos,
-                    study materials and quizzes.
-                </p>
+                    <div class="min-w-0">
+                        <p class="mb-1 text-[10px] font-extrabold uppercase
+                                  tracking-[2px] text-emerald-200 sm:text-[11px]">
+                            {{ subject.subject_name }}
+                        </p>
+                        <h1 class="text-[26px] font-extrabold leading-tight
+                                   tracking-[-0.7px] text-white sm:text-[30px]">
+                            Chapters
+                        </h1>
+                        <p class="mt-1.5 max-w-[720px] text-[12px] leading-5
+                                  text-emerald-50/85 sm:text-[13px]">
+                            Explore the chapters in this subject. Open a chapter to access its videos,
+                            study materials and quizzes.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="flex w-fit shrink-0 items-center gap-3 rounded-[14px]
+                            border border-emerald-200/20 bg-[#021A15]/60
+                            px-4 py-2.5 backdrop-blur-sm">
+                    <span class="flex h-10 w-10 items-center justify-center
+                                 rounded-[12px] bg-emerald-300/15 text-emerald-200">
+                        <i class="ri-stack-line text-[20px]"></i>
+                    </span>
+                    <span>
+                        <span class="block text-[21px] font-extrabold leading-none
+                                     tabular-nums text-white">{{ chapters|length }}</span>
+                        <span class="mt-1 block text-[9px] font-bold uppercase
+                                     tracking-[1.15px] text-emerald-100/75">
+                            {% if chapters|length == 1 %}Chapter{% else %}Chapters{% endif %}
+                        </span>
+                    </span>
+                </div>
             </div>
-
-            <div class="inline-flex w-fit shrink-0 items-center gap-2 rounded-full
-                        border border-cyan-400/25 bg-cyan-400/[0.07] px-4 py-2.5
-                        text-[12px] font-bold text-cyan-300 shadow-[0_0_24px_rgba(34,211,238,0.05)]">
-                <i class="ri-stack-line text-[17px]"></i>
-                {{ chapters|length }}
-                {% if chapters|length == 1 %}Chapter{% else %}Chapters{% endif %}
-            </div>
-
         </section>
 
-
-        <!-- CHAPTER LIST -->
+        <!-- CHAPTER LIST: original row dimensions and layout preserved -->
         {% if chapters %}
 
             <div class="space-y-2.5">
@@ -72,23 +101,24 @@
 
                     <a href="{% url 'my_learning_chapter' batch.id subject.id chapter.id %}"
                        class="group flex min-h-[72px] min-w-0 items-center gap-3
-                              rounded-[15px] border border-[#17344B]/90
-                              bg-gradient-to-r from-[#09182A] to-[#071426]
+                              rounded-[15px] border border-emerald-500/25
+                              bg-gradient-to-r from-[#08251F] via-[#07231E] to-[#071A20]
                               px-3.5 py-3 shadow-[0_5px_18px_rgba(0,0,0,0.10)]
                               transition-all duration-200
-                              hover:-translate-y-[1px] hover:border-cyan-400/40
-                              hover:from-[#0C2034] hover:to-[#09182A]
-                              hover:shadow-[0_8px_24px_rgba(0,0,0,0.20)]
+                              hover:-translate-y-[1px] hover:border-emerald-400/55
+                              hover:from-[#0A3026] hover:to-[#08251F]
+                              hover:shadow-[0_8px_24px_rgba(5,150,105,0.13)]
                               focus:outline-none focus-visible:ring-2
-                              focus-visible:ring-cyan-400/70
+                              focus-visible:ring-emerald-400/70
                               sm:gap-5 sm:px-5">
 
                         <!-- CHAPTER NUMBER -->
                         <div class="flex h-[40px] w-[60px] shrink-0 items-center justify-center
-                                    rounded-[13px] border border-cyan-400/20
-                                    bg-cyan-400/[0.08] text-[20px] font-extrabold
-                                    tabular-nums text-cyan-300 transition
-                                    group-hover:border-cyan-300/35 group-hover:bg-cyan-400/[0.13]">
+                                    rounded-[13px] border border-emerald-400/30
+                                    bg-emerald-400/[0.12] text-[20px] font-extrabold
+                                    tabular-nums text-emerald-200 transition
+                                    group-hover:border-emerald-300/50
+                                    group-hover:bg-emerald-400/[0.18]">
                             {{ forloop.counter|stringformat:"02d" }}
                         </div>
 
@@ -97,19 +127,19 @@
                         <!-- ACTUAL CHAPTER NAME AND DESCRIPTION -->
                         <div class="min-w-0 flex-1">
                             <h2 class="truncate text-[14px] font-bold text-white
-                                       transition-colors group-hover:text-cyan-300 sm:text-[15px]">
+                                       transition-colors group-hover:text-emerald-200 sm:text-[15px]">
                                 {{ chapter.chapter_name }}
                             </h2>
 
                             <p class="mt-1 line-clamp-2 text-[11px] leading-[17px]
-                                      text-slate-400 sm:text-[12px]">
+                                      text-slate-300/80 sm:text-[12px]">
                                 {{ chapter.chapter_description }}
                             </p>
                         </div>
 
-                        <!-- PUBLISHED STATUS -->
+                        <!-- PUBLISHED STATUS: original status display retained -->
                         <span class="hidden shrink-0 items-center gap-1.5 rounded-full
-                                     border border-emerald-400/20 bg-emerald-400/[0.08]
+                                     border border-emerald-400/25 bg-emerald-400/[0.10]
                                      px-3 py-1.5 text-[10px] font-bold text-emerald-300
                                      sm:inline-flex">
                             <i class="ri-checkbox-circle-fill text-[11px]"></i>
@@ -118,9 +148,9 @@
 
                         <!-- WHOLE ROW IS CLICKABLE -->
                         <span class="flex h-9 w-9 shrink-0 items-center justify-center
-                                     rounded-full text-cyan-200 transition-all
-                                     group-hover:translate-x-1 group-hover:bg-cyan-400/10
-                                     group-hover:text-cyan-300">
+                                     rounded-full text-emerald-200 transition-all
+                                     group-hover:translate-x-1 group-hover:bg-emerald-400/15
+                                     group-hover:text-emerald-100">
                             <i class="ri-arrow-right-line text-[22px]"></i>
                         </span>
 
@@ -134,13 +164,13 @@
 
             <!-- EMPTY STATE -->
             <section class="flex min-h-[280px] items-center justify-center rounded-[20px]
-                            border border-white/10 bg-[#0A1424] px-5 py-10 sm:px-8">
+                            border border-emerald-500/20 bg-[#081B1B] px-5 py-10 sm:px-8">
 
                 <div class="mx-auto max-w-[460px] text-center">
 
                     <div class="mx-auto flex h-[70px] w-[70px] items-center justify-center
-                                rounded-[21px] border border-cyan-400/20
-                                bg-cyan-400/10 text-cyan-400">
+                                rounded-[21px] border border-emerald-400/25
+                                bg-emerald-400/10 text-emerald-300">
                         <i class="ri-book-open-line text-[33px]"></i>
                     </div>
 

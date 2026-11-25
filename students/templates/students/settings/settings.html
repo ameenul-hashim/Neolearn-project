@@ -9,8 +9,8 @@
     <div class="flex flex-wrap items-end justify-between gap-4">
         <div>
             <p class="text-xs font-bold uppercase tracking-[0.18em] text-cyan-600">Account management</p>
-            <h1 class="mt-1 text-3xl font-extrabold tracking-tight text-slate-900">Settings</h1>
-            <p class="mt-2 text-sm text-slate-500">Manage your profile, login details, appearance and notifications.</p>
+            <h1 class="settings-page-title mt-1 text-3xl font-extrabold tracking-tight text-slate-900" style="color:#ffffff !important;">Settings</h1>
+            <p class="settings-page-subtitle mt-2 text-sm text-slate-500">Manage your profile, login details, appearance and notifications.</p>
         </div>
         <div class="hidden items-center gap-2 text-sm text-slate-500 sm:flex">
             <span>Student</span><span>/</span><span class="font-semibold text-cyan-700" id="settings-breadcrumb">Profile</span>
@@ -33,11 +33,11 @@
                 <button type="button" data-section="password" class="settings-nav-item">
                     <i class="ri-shield-keyhole-line"></i><span>Password &amp; Security</span><i class="ri-arrow-right-s-line nav-arrow"></i>
                 </button>
-                <button type="button" data-section="appearance" class="settings-nav-item">
-                    <i class="ri-palette-line"></i><span>Appearance</span><i class="ri-arrow-right-s-line nav-arrow"></i>
+                <button type="button" data-section="appearance" class="settings-nav-item settings-nav-locked" disabled aria-disabled="true" title="Coming soon">
+                    <i class="ri-palette-line"></i><span>Appearance</span><span class="settings-coming-soon">Coming Soon</span><i class="ri-lock-2-line nav-arrow"></i>
                 </button>
-                <button type="button" data-section="notifications" class="settings-nav-item">
-                    <i class="ri-notification-3-line"></i><span>Notifications</span><i class="ri-arrow-right-s-line nav-arrow"></i>
+                <button type="button" data-section="notifications" class="settings-nav-item settings-nav-locked" disabled aria-disabled="true" title="Coming soon">
+                    <i class="ri-notification-3-line"></i><span>Notifications</span><span class="settings-coming-soon">Coming Soon</span><i class="ri-lock-2-line nav-arrow"></i>
                 </button>
             </nav>
             <div class="mt-4 rounded-xl border border-cyan-100 bg-cyan-50 p-4">
@@ -76,7 +76,8 @@
                             </div>
                             <img id="profile-preview" src="" alt="Selected profile photo" class="profile-preview hidden">
                             {% endif %}
-                            <span class="profile-camera-mark"><i class="ri-camera-line"></i></span>
+                            <span class="profile-camera-mark" aria-hidden="true"><i class="ri-camera-line"></i></span>
+                            <button type="button" id="profile-photo-trigger" class="profile-photo-trigger" aria-label="Choose a profile photo"></button>
                         </div>
 
                         <button type="button" id="open-cropper" class="change-photo-button">
@@ -166,40 +167,34 @@
                 </form>
             </section>
 
-            <!-- APPEARANCE -->
-            <section data-panel="appearance" class="settings-panel settings-card hidden">
+            <!-- APPEARANCE: LOCKED / COMING SOON -->
+            <section data-panel="appearance" class="settings-panel settings-card hidden settings-coming-panel">
                 <div class="panel-heading">
-                    <div class="panel-icon bg-amber-50 text-amber-700"><i class="ri-palette-line"></i></div>
-                    <div><h2>Appearance</h2><p>Choose your preferred appearance for the student content area.</p></div>
+                    <div class="panel-icon"><i class="ri-palette-line"></i></div>
+                    <div><h2>Appearance</h2><p>Personal appearance preferences are not available yet.</p></div>
                 </div>
-                <div class="grid gap-4 sm:grid-cols-2">
-                    <button type="button" class="theme-option" data-theme-choice="dark">
-                        <div class="theme-swatch theme-swatch-dark"><div class="swatch-sidebar"><i></i><i></i><i></i><i></i></div><div class="swatch-content"><i></i><i></i><i></i></div></div>
-                        <div class="mt-4 flex items-center gap-3"><span class="theme-radio"></span><span class="font-bold">Dark appearance</span><span class="theme-selected ml-auto hidden text-xs font-bold text-cyan-700">Selected</span></div>
-                        <p class="mt-2 text-left text-xs leading-5 text-slate-500">Keep the existing dark navy and cyan look.</p>
-                    </button>
-                    <button type="button" class="theme-option" data-theme-choice="light">
-                        <div class="theme-swatch theme-swatch-light"><div class="swatch-sidebar"><i></i><i></i><i></i><i></i></div><div class="swatch-content"><i></i><i></i><i></i></div></div>
-                        <div class="mt-4 flex items-center gap-3"><span class="theme-radio"></span><span class="font-bold">Light appearance</span><span class="theme-selected ml-auto hidden text-xs font-bold text-cyan-700">Selected</span></div>
-                        <p class="mt-2 text-left text-xs leading-5 text-slate-500">Use a bright surface for the student content area.</p>
-                    </button>
+                <div class="settings-coming-content">
+                    <span class="settings-coming-icon"><i class="ri-lock-2-line"></i></span>
+                    <div><span class="settings-coming-pill">COMING SOON</span>
+                        <h3>Appearance settings are locked</h3>
+                        <p>The NeoLearner student area currently uses the white and emerald green theme.</p>
+                    </div>
                 </div>
-                <p id="theme-status" class="mt-4 rounded-xl bg-slate-50 px-4 py-3 text-xs leading-5 text-slate-600">Choose the appearance for this browser. The shared navigation stays in the existing NeoLearn theme.</p>
             </section>
 
-            <!-- NOTIFICATIONS -->
-            <section data-panel="notifications" class="settings-panel settings-card hidden">
+            <!-- NOTIFICATIONS: LOCKED / COMING SOON -->
+            <section data-panel="notifications" class="settings-panel settings-card hidden settings-coming-panel">
                 <div class="panel-heading">
-                    <div class="panel-icon bg-rose-50 text-rose-700"><i class="ri-notification-3-line"></i></div>
-                    <div><h2>Notifications</h2><p>Turn notification preferences on or off.</p></div>
+                    <div class="panel-icon"><i class="ri-notification-3-line"></i></div>
+                    <div><h2>Notifications</h2><p>Notification preferences will be available in a future update.</p></div>
                 </div>
-                <div class="space-y-3">
-                    <label class="notification-option"><span class="notification-icon"><i class="ri-mail-line"></i></span><span class="min-w-0 flex-1"><strong>Email updates</strong><small>Preference for important account updates and announcements.</small></span><input type="checkbox" class="preference-toggle" data-pref="email_updates"><span class="toggle-ui"></span></label>
-                    <label class="notification-option"><span class="notification-icon"><i class="ri-calendar-event-line"></i></span><span class="min-w-0 flex-1"><strong>Live class reminders</strong><small>Preference for upcoming live-class reminders.</small></span><input type="checkbox" class="preference-toggle" data-pref="class_reminders"><span class="toggle-ui"></span></label>
-                    <label class="notification-option"><span class="notification-icon"><i class="ri-book-open-line"></i></span><span class="min-w-0 flex-1"><strong>Course updates</strong><small>Preference for new learning content and materials.</small></span><input type="checkbox" class="preference-toggle" data-pref="course_updates"><span class="toggle-ui"></span></label>
-                    <label class="notification-option"><span class="notification-icon"><i class="ri-shopping-bag-3-line"></i></span><span class="min-w-0 flex-1"><strong>Order and payment alerts</strong><small>Preference for purchase and order status updates.</small></span><input type="checkbox" class="preference-toggle" data-pref="order_alerts"><span class="toggle-ui"></span></label>
+                <div class="settings-coming-content">
+                    <span class="settings-coming-icon"><i class="ri-lock-2-line"></i></span>
+                    <div><span class="settings-coming-pill">COMING SOON</span>
+                        <h3>Notification settings are locked</h3>
+                        <p>Email updates, live-class reminders, course updates and order alerts will be configurable here in a future update.</p>
+                    </div>
                 </div>
-                <p id="notification-status" class="mt-4 rounded-xl bg-amber-50 px-4 py-3 text-xs leading-5 text-amber-900">Notification preferences are saved in this browser. Delivery of emails and class reminders must be configured separately.</p>
             </section>
         </div>
     </div>
@@ -351,7 +346,150 @@
     body.student-light-mode .student-settings .settings-card h2,body.student-light-mode .student-settings h1,body.student-light-mode .student-settings .settings-label,body.student-light-mode .student-settings .notification-option strong{color:#0f172a!important}
     body.student-light-mode .student-settings .settings-card p,body.student-light-mode .student-settings .settings-sidebar p{color:#475569!important}
     body.student-light-mode .student-settings .settings-input{background:#fff!important;color:#0f172a!important;border-color:#cbd5e1!important}
-</style>
+
+    /* NeoLearn Student Settings: white + emerald theme */
+    .student-settings{color:#0f172a!important}
+    .student-settings h1{color:#0f172a!important}
+    .student-settings .text-slate-900,.student-settings .text-slate-800,
+    .student-settings .text-slate-700,.student-settings .text-slate-600{color:#334155!important}
+    .student-settings .text-slate-500,.student-settings .text-slate-400{color:#64748b!important}
+    .student-settings .text-cyan-600,.student-settings .text-cyan-700,
+    .student-settings .text-cyan-800{color:#047857!important}
+    .student-settings .settings-sidebar,
+    .student-settings .settings-card{
+        background:#fff!important;color:#0f172a!important;border:1px solid #dbe7e1!important;
+        box-shadow:0 12px 32px rgba(15,23,42,.06)!important
+    }
+    .settings-nav-item{color:#475569!important}
+    .settings-nav-item:hover{background:#ecfdf5!important;color:#047857!important}
+    .settings-nav-item.is-active{
+        color:#047857!important;background:#ecfdf5!important;border-color:#a7f3d0!important;
+        box-shadow:inset 3px 0 0 #059669!important
+    }
+    .nav-arrow{color:#94a3b8!important}
+    .panel-heading{border-color:#e2e8f0!important}
+    .panel-heading h2{color:#0f172a!important}
+    .panel-heading p{color:#64748b!important}
+    .panel-icon{background:#ecfdf5!important;color:#047857!important;border:1px solid #a7f3d0!important}
+    .student-settings .bg-slate-50,.student-settings .bg-cyan-50,
+    .student-settings .bg-blue-50,.student-settings .bg-violet-50,
+    .student-settings .bg-amber-50,.student-settings .bg-rose-50{background:#f0fdf4!important}
+    .student-settings .border-slate-200,.student-settings .border-slate-300,
+    .student-settings .border-cyan-100,.student-settings .border-amber-100,
+    .student-settings .border-slate-100{border-color:#dbe7e1!important}
+    .student-settings .text-blue-700,.student-settings .text-violet-700,
+    .student-settings .text-amber-700,.student-settings .text-rose-700{color:#047857!important}
+    .settings-label{color:#334155!important}
+    .settings-input{
+        background:#fff!important;color:#0f172a!important;border:1px solid #cbd5e1!important;
+        color-scheme:light!important
+    }
+    .settings-input::placeholder{color:#94a3b8!important}
+    .settings-input:focus{border-color:#059669!important;box-shadow:0 0 0 3px rgba(5,150,105,.12)!important}
+    .student-settings input,.student-settings textarea{color-scheme:light}
+    .student-settings button.bg-cyan-600,.student-settings .bg-cyan-600,
+    .student-settings button[type="submit"]{
+        background:#059669!important;color:#fff!important
+    }
+    .student-settings button.bg-cyan-600:hover,.student-settings .hover\:bg-cyan-700:hover,
+    .student-settings button[type="submit"]:hover{background:#047857!important;color:#fff!important}
+    .toggle-password{color:#64748b!important}
+    .toggle-password:hover{color:#047857!important}
+    .theme-option{background:#fff!important;color:#0f172a!important;border-color:#dbe7e1!important}
+    .theme-option:hover,.theme-option.is-selected{border-color:#059669!important;background:#f0fdf4!important}
+    .theme-radio{border-color:#94a3b8!important}
+    .theme-option.is-selected .theme-radio{border-color:#059669!important}
+    .theme-selected{color:#047857!important}
+    .notification-option{background:#fff!important;border-color:#dbe7e1!important}
+    .notification-option:hover{background:#f8fffb!important;border-color:#a7f3d0!important}
+    .notification-icon{background:#ecfdf5!important;color:#047857!important}
+    .notification-option strong{color:#0f172a!important}
+    .notification-option small{color:#64748b!important}
+    .preference-toggle:checked+.toggle-ui{background:#059669!important}
+    .student-settings .rounded-xl.bg-amber-50{background:#fffbeb!important;color:#92400e!important}
+    .student-settings .profile-preview,.student-settings .profile-placeholder{
+        border-color:#059669!important;box-shadow:0 0 0 5px rgba(5,150,105,.10)!important
+    }
+    .student-settings .profile-placeholder{background:linear-gradient(145deg,#d1fae5,#ecfdf5)!important;color:#047857!important}
+    .student-settings .profile-camera-mark{
+        border-color:#fff!important;background:#059669!important;color:#fff!important
+    }
+    .student-settings .change-photo-button{
+        background:#ecfdf5!important;border-color:#a7f3d0!important;color:#047857!important
+    }
+    .student-settings .change-photo-button:hover{background:#d1fae5!important}
+    .student-settings .clear-photo-button{border-color:#cbd5e1!important;color:#475569!important}
+    .student-settings .image-help,.student-settings .student-id-help,
+    .student-settings .profile-field-help{color:#64748b!important}
+    .student-settings .profile-input-wrap>i{color:#64748b!important}
+    .student-settings .profile-input-wrap .settings-input{
+        background:#fff!important;border-color:#cbd5e1!important
+    }
+    .student-settings .profile-save-row{border-color:#e2e8f0!important}
+    .student-settings .save-profile-button{
+        background:#059669!important;color:#fff!important;box-shadow:0 8px 22px rgba(5,150,105,.14)!important
+    }
+    .student-settings .save-profile-button:hover{background:#047857!important}
+    .crop-modal{background:rgba(15,23,42,.62)!important}
+    .crop-dialog{background:#fff!important;color:#0f172a!important;border-color:#dbe7e1!important}
+    .crop-dialog .text-slate-900,.crop-dialog .text-slate-700{color:#0f172a!important}
+    .crop-dialog .text-slate-500{color:#64748b!important}
+    .crop-dialog .border-slate-200,.crop-dialog .border-b{border-color:#e2e8f0!important}
+    .crop-dialog .bg-slate-50{background:#f8fafc!important}
+    .crop-dialog #crop-zoom{accent-color:#059669!important}
+    .crop-dialog #crop-zoom-value{color:#047857!important}
+    .crop-dialog #cancel-crop{border-color:#cbd5e1!important;color:#475569!important}
+    .crop-dialog #cancel-crop:hover{background:#f1f5f9!important}
+    #crop-stage{background:#0f172a!important;border-color:#cbd5e1!important}
+    .crop-dialog #apply-crop{background:#059669!important;color:#fff!important}
+    .crop-dialog #apply-crop:hover{background:#047857!important}
+    .student-settings .profile-photo-frame{cursor:pointer}
+    .student-settings .profile-camera-mark{pointer-events:none}
+    .student-settings .profile-photo-trigger{
+        position:absolute;inset:0;z-index:2;width:100%;height:100%;padding:0;
+        border:0!important;border-radius:50%;background:transparent!important;cursor:pointer
+    }
+    .student-settings .profile-photo-trigger:focus-visible{
+        outline:3px solid #10b981!important;outline-offset:5px
+    }
+    body.student-dark-mode .student-settings .settings-sidebar,
+    body.student-dark-mode .student-settings .settings-card{background:#07101f!important;color:#e5edf8!important;border-color:#1e2b40!important}
+    body.student-dark-mode .student-settings h1,
+    body.student-dark-mode .student-settings .settings-card h2,
+    body.student-dark-mode .student-settings .settings-label{color:#f8fafc!important}
+    body.student-dark-mode .student-settings .settings-card p{color:#91a4bd!important}
+    body.student-dark-mode .student-settings .settings-input{background:#081927!important;color:#f1f5f9!important;border-color:#29415a!important;color-scheme:dark!important}
+    body.student-dark-mode .student-settings .notification-option{background:#081727!important;border-color:#20344b!important}
+    body.student-dark-mode .student-settings .notification-option strong{color:#e5edf8!important}
+    body.student-dark-mode .student-settings .notification-option small{color:#91a4bd!important}
+    @media(max-width:640px){
+        .student-settings .profile-photo-trigger{min-width:44px;min-height:44px}
+    }
+
+
+    /* Final approved NeoLearner white + emerald settings theme */
+    .student-settings .settings-coming-soon{display:inline-flex;align-items:center;justify-content:center;white-space:nowrap;padding:4px 7px;border:1px solid #a7f3d0;border-radius:999px;background:#ecfdf5;color:#047857;font-size:9px;font-weight:900;letter-spacing:.04em}
+    .student-settings .settings-nav-item.settings-nav-locked{opacity:.78;cursor:not-allowed;background:#f8fafc!important;color:#94a3b8!important;border-color:#e2e8f0!important;box-shadow:none!important}
+    .student-settings .settings-nav-item.settings-nav-locked:hover{background:#f8fafc!important;color:#94a3b8!important}
+    .student-settings .settings-coming-content{display:flex;align-items:center;gap:18px;padding:24px;border:1px solid #a7f3d0;border-radius:16px;background:linear-gradient(135deg,#f0fdf4,#fff)}
+    .student-settings .settings-coming-icon{display:flex;flex:0 0 58px;width:58px;height:58px;align-items:center;justify-content:center;border-radius:16px;background:#d1fae5;color:#047857;font-size:25px}
+    .student-settings .settings-coming-pill{display:inline-flex;padding:5px 9px;border-radius:999px;background:#d1fae5;color:#047857;font-size:10px;font-weight:900;letter-spacing:.1em}
+    .student-settings .settings-coming-content h3{margin-top:9px;color:#064e3b;font-size:17px;font-weight:900}
+    .student-settings .settings-coming-content p{margin-top:5px;color:#475569;font-size:13px;line-height:1.6}
+    @media(max-width:540px){.student-settings .settings-coming-content{align-items:flex-start;gap:12px;padding:16px}.student-settings .settings-coming-icon{width:46px;height:46px;flex-basis:46px;font-size:21px}.student-settings .settings-coming-soon{font-size:8px;padding:3px 5px}.student-settings .settings-nav-item{gap:8px;padding:10px}}
+
+
+    /* Keep only the Settings page heading and subtitle white; preserve all sizing/layout. */
+    .student-settings .settings-page-title,
+    .student-settings .settings-page-subtitle {
+        color: #ffffff !important;
+    }
+\n
+    /* Final override: Settings page title must remain pure white. */
+    .student-settings h1.settings-page-title {
+        color: #ffffff !important;
+    }
+\n</style>
 
 <script>
 document.addEventListener("DOMContentLoaded", function () {
@@ -374,9 +512,15 @@ document.addEventListener("DOMContentLoaded", function () {
         breadcrumb.textContent = sectionNames[section];
         if (updateHash) history.replaceState(null, "", "#" + section);
     }
-    navItems.forEach(button => button.addEventListener("click", () => showSection(button.dataset.section, true)));
+    navItems.forEach(button => button.addEventListener("click", () => {
+        if (button.disabled || button.getAttribute("aria-disabled") === "true") return;
+        showSection(button.dataset.section, true);
+    }));
     const initialSection = location.hash.replace("#", "");
-    showSection(sectionNames[initialSection] ? initialSection : "profile", false);
+    const initialButton = Array.from(navItems).find(button => button.dataset.section === initialSection);
+    const allowedInitialSection = sectionNames[initialSection] && initialButton && !initialButton.disabled
+        ? initialSection : "profile";
+    showSection(allowedInitialSection, false);
 
     // Password visibility buttons.
     document.querySelectorAll(".toggle-password").forEach(button => button.addEventListener("click", function () {
@@ -393,6 +537,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const themeStatus = document.getElementById("theme-status");
     function applyTheme(theme, save) {
         document.body.classList.toggle("student-light-mode", theme === "light");
+        document.body.classList.toggle("student-dark-mode", theme === "dark");
         themeButtons.forEach(button => {
             const selected = button.dataset.themeChoice === theme;
             button.classList.toggle("is-selected", selected);
@@ -404,8 +549,7 @@ document.addEventListener("DOMContentLoaded", function () {
             themeStatus.textContent = "Appearance preference saved in this browser.";
         }
     }
-    let savedTheme = "dark";
-    try { savedTheme = localStorage.getItem("neolearn_student_appearance") || "dark"; } catch (error) {}
+    const savedTheme = "light";
     applyTheme(savedTheme, false);
     themeButtons.forEach(button => button.addEventListener("click", () => applyTheme(button.dataset.themeChoice, true)));
 
@@ -538,11 +682,18 @@ document.addEventListener("DOMContentLoaded", function () {
 
         cropImage.src = sourceUrl;
     }
-    openCropper.addEventListener("click", function () {
-        // Always let the user choose a file. Valid images open the cropper on change;
-        // oversized/unsupported files remain selected for Django validation on Save.
+    function openProfileImagePicker() {
+        // The same file picker is used by both the avatar and Change Photo button.
+        // Existing cropper and Django-side file validation remain unchanged.
         imageInput.click();
-    });
+    }
+
+    openCropper.addEventListener("click", openProfileImagePicker);
+
+    const profilePhotoTrigger = document.getElementById("profile-photo-trigger");
+    if (profilePhotoTrigger) {
+        profilePhotoTrigger.addEventListener("click", openProfileImagePicker);
+    }
     imageInput.addEventListener("change", function () {
         if (imageInput.files && imageInput.files[0]) openFile(imageInput.files[0]);
     });

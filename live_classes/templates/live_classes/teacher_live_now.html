@@ -1,0 +1,416 @@
+{% extends "teachers/dashboard/teacher_base.html" %}
+{% load static %}
+
+{% block title %}Live Now | NeoLearn{% endblock %}
+
+
+
+{% block extra_head %}
+{{ block.super }}
+<style>
+/* ==========================================================
+   TEACHER LIVE NOW
+   Dimensions and responsive breakpoints intentionally match
+   teacher_upcoming_classes.html. Only page-specific selectors
+   are used so no other Teacher page is changed.
+   ========================================================== */
+#teacherLiveNowPage {
+    --nl-violet:#7c3aed;
+    --nl-violet-dark:#5b21b6;
+    --nl-violet-mid:#8b5cf6;
+    --nl-violet-soft:#f1ecff;
+    --nl-violet-line:#ddd6fe;
+    --nl-ink:#211b35;
+    --nl-muted:#716982;
+    color:#e9e5f5;
+}
+#teacherLiveNowPage .live-panel {
+    border:1px solid rgba(196,181,253,.45);
+    border-radius:17px;
+    background:linear-gradient(135deg,rgba(124,58,237,.16),rgba(22,18,48,.94));
+    box-shadow:0 8px 22px rgba(0,0,0,.16);
+}
+#teacherLiveNowPage .live-control {
+    width:100%;min-width:0;min-height:42px;border:1px solid #d8ccfa;border-radius:11px;
+    background:#fff;padding:9px 12px;color:#211b35;font-size:12px;outline:none;
+}
+#teacherLiveNowPage .live-control:focus {border-color:#8b5cf6;box-shadow:0 0 0 3px rgba(139,92,246,.14)}
+#teacherLiveNowPage .live-control option {color:#211b35;background:#fff}
+/* Larger searchable filter dropdowns, matching the Upcoming picker pattern. */
+#teacherLiveNowPage .live-picker {position:relative;min-width:0;}
+#teacherLiveNowPage .live-picker-trigger {
+    display:flex;width:100%;min-height:42px;align-items:center;justify-content:space-between;gap:10px;
+    border:1px solid #d8ccfa;border-radius:11px;background:#fff;padding:9px 12px;
+    color:#211b35;font-size:12px;text-align:left;outline:none;
+}
+#teacherLiveNowPage .live-picker-trigger:focus,
+#teacherLiveNowPage .live-picker.open .live-picker-trigger {
+    border-color:#8b5cf6;box-shadow:0 0 0 3px rgba(139,92,246,.14);
+}
+#teacherLiveNowPage .live-picker-panel {
+    position:absolute;top:calc(100% + 7px);left:0;right:0;z-index:80;display:none;
+    overflow:hidden;border:1px solid #d8ccfa;border-radius:13px;background:#fff;
+    box-shadow:0 16px 34px rgba(24,12,54,.24);
+}
+#teacherLiveNowPage .live-picker.open .live-picker-panel {display:block;}
+#teacherLiveNowPage .live-picker-search {
+    width:100%;height:40px;border:0;border-bottom:1px solid #eee8fb;outline:none;
+    padding:0 12px;color:#211b35;background:#faf8ff;font-size:12px;
+}
+#teacherLiveNowPage .live-picker-list {
+    max-height:320px;overflow-y:auto;overscroll-behavior:contain;padding:6px;
+    scrollbar-width:thin;scrollbar-color:#a78bfa #f3efff;
+}
+#teacherLiveNowPage .live-picker-list::-webkit-scrollbar {width:8px;}
+#teacherLiveNowPage .live-picker-list::-webkit-scrollbar-track {background:#f3efff;border-radius:8px;}
+#teacherLiveNowPage .live-picker-list::-webkit-scrollbar-thumb {background:#a78bfa;border-radius:8px;}
+#teacherLiveNowPage .live-picker-option {
+    display:flex;width:100%;align-items:center;gap:8px;border:0;border-radius:8px;
+    background:transparent;padding:10px 11px;color:#373047;font-size:12px;text-align:left;
+}
+#teacherLiveNowPage .live-picker-option:hover,
+#teacherLiveNowPage .live-picker-option[aria-selected="true"] {background:#f1ecff;color:#5b21b6;}
+#teacherLiveNowPage .live-picker-option[hidden] {display:none!important;}
+#teacherLiveNowPage .live-picker-empty {padding:14px 10px;color:#827991;font-size:11px;text-align:center;}
+#teacherLiveNowPage .live-primary {
+    display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:42px;
+    border:1px solid #7c3aed;border-radius:11px;padding:9px 15px;color:#fff;
+    background:linear-gradient(135deg,#8b5cf6,#5b21b6);font-size:12px;font-weight:800;
+    box-shadow:0 5px 14px rgba(91,33,182,.22);transition:transform .2s,filter .2s,box-shadow .2s;
+}
+#teacherLiveNowPage .live-primary:hover {transform:translateY(-2px);filter:brightness(1.07);box-shadow:0 9px 19px rgba(91,33,182,.3)}
+#teacherLiveNowPage .live-secondary {
+    display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:42px;
+    border:1px solid #c4b5fd;border-radius:11px;padding:9px 14px;color:#5b21b6;
+    background:#fff;font-size:12px;font-weight:800;transition:background .2s,transform .2s;
+}
+#teacherLiveNowPage .live-secondary:hover {background:#f5f1ff;transform:translateY(-1px)}
+
+/* Same four-column card grid and exact breakpoints as Upcoming. */
+#teacherLiveNowPage .live-grid {
+    display:grid;grid-template-columns:repeat(4,minmax(0,1fr));align-items:stretch;gap:16px;
+}
+#teacherLiveNowPage .live-card[hidden] {display:none!important}
+#teacherLiveNowPage .live-card {
+    position:relative;display:flex;min-width:0;min-height:326px;height:100%;flex-direction:column;
+    overflow:visible;border:1px solid #ddd6fe;border-radius:17px;background:#fff;
+    color:#211b35;box-shadow:0 8px 22px rgba(10,7,28,.15);
+    transition:transform .24s,border-color .24s,box-shadow .24s;
+    animation:nlTeacherLiveIn .35s ease both;
+}
+#teacherLiveNowPage .live-card:hover {
+    z-index:5;transform:translateY(-4px);border-color:#a78bfa;
+    box-shadow:0 15px 30px rgba(10,7,28,.2),0 0 0 2px rgba(139,92,246,.08);
+}
+@keyframes nlTeacherLiveIn {from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+#teacherLiveNowPage .live-thumb {
+    position:relative;flex:0 0 150px;height:150px;overflow:hidden;border-radius:16px 16px 0 0;
+    background:linear-gradient(135deg,#ede9fe,#c4b5fd);
+}
+#teacherLiveNowPage .live-thumb img {display:block;width:100%;height:100%;object-fit:cover;transition:transform .4s}
+#teacherLiveNowPage .live-card:hover .live-thumb img {transform:scale(1.045)}
+#teacherLiveNowPage .live-thumb-fallback {
+    display:flex;width:100%;height:100%;align-items:center;justify-content:center;
+    color:#6d28d9;font-size:42px;background:linear-gradient(135deg,#f3edff,#d8c9ff);
+}
+#teacherLiveNowPage .live-thumb-shade {position:absolute;inset:auto 0 0;height:42px;background:linear-gradient(transparent,rgba(35,15,72,.22));pointer-events:none}
+#teacherLiveNowPage .live-date-chip {
+    position:absolute;right:10px;top:10px;min-width:48px;text-align:center;padding:6px 8px;
+    border:1px solid rgba(255,255,255,.75);border-radius:10px;color:#211b35;
+    background:rgba(255,255,255,.94);box-shadow:0 3px 10px rgba(20,12,40,.16);
+}
+#teacherLiveNowPage .live-status-chip {
+    position:absolute;left:10px;top:10px;display:inline-flex;align-items:center;gap:5px;
+    padding:6px 10px;border:1px solid #c4b5fd;border-radius:999px;
+    color:#5b21b6;background:rgba(245,241,255,.96);font-size:10px;font-weight:900;
+}
+#teacherLiveNowPage .live-status-chip.is-live {border-color:#a7f3d0;background:#ecfdf5;color:#047857}
+#teacherLiveNowPage .live-status-chip.can-start {border-color:#f5d0a5;background:#fff7ed;color:#9a5b00}
+#teacherLiveNowPage .live-card-body {position:relative;display:flex;flex:1;min-width:0;flex-direction:column;padding:11px 13px 13px}
+#teacherLiveNowPage .live-subject-heading {display:flex;min-width:0;align-items:center;justify-content:space-between;gap:8px}
+#teacherLiveNowPage .live-subject-icon {
+    display:flex;width:38px;height:38px;flex:0 0 38px;align-items:center;justify-content:center;
+    border:1px solid #d8ccfa;border-radius:11px;background:#f1ecff;color:#6d28d9;font-size:19px;
+}
+#teacherLiveNowPage .live-subject-title {min-width:0;overflow:hidden;color:#211b35;font-size:14px;font-weight:900;text-overflow:ellipsis;white-space:nowrap}
+#teacherLiveNowPage .live-batch-name {color:#716982;font-size:10px;font-weight:700}
+#teacherLiveNowPage .live-chapter {min-height:22px;margin-top:6px;color:#514a63;font-size:11px;line-height:1.4}
+#teacherLiveNowPage .live-info-row {
+    display:flex;align-items:center;gap:8px;min-width:0;color:#373047;font-size:11px;font-weight:700;line-height:1.25;
+}
+#teacherLiveNowPage .live-info-row i {width:15px;flex:0 0 15px;color:#7c3aed;font-size:14px;text-align:center}
+#teacherLiveNowPage .live-note {color:#716982;font-size:10px;font-weight:700;line-height:1.4}
+#teacherLiveNowPage .live-action {
+    display:inline-flex;width:100%;min-width:0;min-height:38px;align-items:center;justify-content:center;gap:6px;
+    border:1px solid transparent;border-radius:10px;padding:7px 9px;font-size:11px;font-weight:900;
+    transition:transform .2s,filter .2s;
+}
+#teacherLiveNowPage .live-action:hover {transform:translateY(-1px);filter:brightness(1.04)}
+#teacherLiveNowPage .live-start {border-color:#eab308;background:#facc15;color:#211900}
+#teacherLiveNowPage .live-join {border-color:#089db7;background:#08b6d1;color:#fff}
+#teacherLiveNowPage .live-disabled {border-color:#e4deee;background:#eeeaf5;color:#a59bb8;cursor:not-allowed}
+#teacherLiveNowPage .live-empty {
+    grid-column:1/-1;display:flex;min-height:260px;flex-direction:column;align-items:center;justify-content:center;
+    border:1px dashed #bda9f4;border-radius:18px;background:linear-gradient(135deg,#f5f1ff,#fff 60%,#eee8ff);
+    padding:30px;text-align:center;color:#211b35;box-shadow:0 8px 22px rgba(10,7,28,.12);
+}
+#teacherLiveNowPage .live-pagination {
+    display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;
+    border:1px solid #ddd6fe;border-radius:14px;background:#fff;padding:12px 14px;
+}
+#teacherLiveNowPage .live-page-number {
+    display:inline-flex;min-width:34px;height:34px;align-items:center;justify-content:center;
+    border:1px solid #ddd6fe;border-radius:9px;background:#fff;color:#5b21b6;padding:0 9px;font-size:11px;font-weight:800;
+}
+#teacherLiveNowPage .live-page-number.active {border-color:#7c3aed;background:linear-gradient(135deg,#8b5cf6,#5b21b6);color:#fff}
+#teacherLiveNowPage .live-page-number.disabled {opacity:.4;pointer-events:none}
+@media(max-width:1350px) {#teacherLiveNowPage .live-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:1050px) {#teacherLiveNowPage .live-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:680px) {
+    #teacherLiveNowPage .live-grid{grid-template-columns:minmax(0,1fr)}
+    #teacherLiveNowPage .live-card{min-height:326px;height:auto}
+    #teacherLiveNowPage .live-thumb{flex-basis:150px;height:150px}
+    #teacherLiveNowPage .live-pagination{align-items:flex-start}
+    #teacherLiveNowPage .live-filters{grid-template-columns:minmax(0,1fr)}
+}
+@media(prefers-reduced-motion:reduce) {
+    #teacherLiveNowPage *,#teacherLiveNowPage *::before,#teacherLiveNowPage *::after {animation-duration:.01ms!important;transition-duration:.01ms!important;scroll-behavior:auto!important}
+}
+</style>
+{% endblock %}
+
+{% block teacher_content %}
+<section id="teacherLiveNowPage" class="mx-auto w-full max-w-[1600px] space-y-5 pb-5" aria-labelledby="teacherLiveNowTitle">
+    <header class="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+        <div class="flex min-w-0 items-center gap-3">
+            <span class="grid h-12 w-12 shrink-0 place-items-center rounded-2xl border border-[rgba(214,173,69,0.38)] bg-[rgba(214,173,69,0.10)] text-2xl text-[rgba(214,173,69,0.82)]"><i class="ri-broadcast-line"></i></span>
+            <div class="min-w-0">
+                <p class="text-[10px] font-extrabold uppercase tracking-[.18em] text-violet-300">TEACHING WORKSPACE</p>
+                <h1 id="teacherLiveNowTitle" class="mt-0.5 text-2xl font-extrabold tracking-tight text-white sm:text-3xl">Live Now</h1>
+                <p class="mt-1 text-xs text-slate-400 sm:text-sm">Start your scheduled class and manage sessions currently in progress.</p>
+            </div>
+        </div>
+        <a href="{% url 'live_classes:teacher_upcoming_classes' %}" class="live-secondary"><i class="ri-calendar-event-line"></i> Upcoming Classes</a>
+    </header>
+
+    {% if messages %}
+        <div class="space-y-2" aria-live="polite">
+            {% for message in messages %}
+                <div class="rounded-xl border px-4 py-3 text-xs font-semibold {% if message.tags == 'error' %}border-rose-200 bg-rose-50 text-rose-700{% else %}border-emerald-200 bg-emerald-50 text-emerald-700{% endif %}">{{ message }}</div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <!-- Summary cards follow the same compact panel styling as Upcoming. -->
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div class="live-panel flex items-center gap-2 px-3 py-2.5"><span class="grid h-9 w-9 place-items-center rounded-xl bg-violet-400/15 text-lg text-violet-200"><i class="ri-calendar-check-line"></i></span><div><p class="text-lg font-black leading-5 text-white">{{ today_classes_count|default:0 }}</p><p class="text-[9px] font-bold text-slate-400">Today's Classes</p></div></div>
+        <div class="live-panel flex items-center gap-2 px-3 py-2.5"><span class="grid h-9 w-9 place-items-center rounded-xl bg-emerald-400/15 text-lg text-emerald-300"><i class="ri-broadcast-line"></i></span><div><p class="text-lg font-black leading-5 text-white">{{ live_now_count|default:0 }}</p><p class="text-[9px] font-bold text-slate-400">Live Now</p></div></div>
+        <div class="live-panel flex items-center gap-2 px-3 py-2.5"><span class="grid h-9 w-9 place-items-center rounded-xl bg-amber-300/15 text-lg text-amber-300"><i class="ri-play-circle-line"></i></span><div><p class="text-lg font-black leading-5 text-white">{{ can_start_now_count|default:0 }}</p><p class="text-[9px] font-bold text-slate-400">Can Start Now</p></div></div>
+        <div class="live-panel flex items-center gap-2 px-3 py-2.5"><span class="grid h-9 w-9 place-items-center rounded-xl bg-violet-400/15 text-lg text-violet-200"><i class="ri-checkbox-circle-line"></i></span><div><p class="text-lg font-black leading-5 text-white">{{ completed_today_count|default:0 }}</p><p class="text-[9px] font-bold text-slate-400">Completed Today</p></div></div>
+    </div>
+
+    <!-- Same inline filter panel pattern and control heights as Upcoming. -->
+    <form method="get" action="{% url 'live_classes:teacher_live_now' %}" class="live-panel grid grid-cols-1 gap-3 p-3 sm:grid-cols-2 xl:grid-cols-[minmax(180px,1fr)_minmax(180px,1fr)_minmax(220px,1.2fr)_auto_auto] xl:items-end xl:p-4">
+        <div class="min-w-0">
+            <label for="liveBatchFilter" class="mb-1.5 block text-[10px] font-extrabold uppercase tracking-wide text-violet-200"><i class="ri-stack-line mr-1"></i>Batch</label>
+            <div class="live-picker" id="liveBatchPicker">
+                <input type="hidden" id="liveBatchFilter" name="batch" value="{{ selected_batch|default:'' }}">
+                <button type="button" class="live-picker-trigger" id="liveBatchTrigger" aria-haspopup="listbox" aria-expanded="false">
+                    <span id="liveBatchSelected">{% if selected_batch %}{% for batch in batches %}{% if selected_batch|stringformat:"s" == batch.pk|stringformat:"s" %}{{ batch.batch_name }}{% endif %}{% endfor %}{% else %}All batches{% endif %}</span>
+                    <i class="ri-arrow-down-s-line text-base text-violet-700"></i>
+                </button>
+                <div class="live-picker-panel">
+                    <input type="search" class="live-picker-search" id="liveBatchSearch" placeholder="Find a batch..." autocomplete="off" aria-label="Search batches">
+                    <div class="live-picker-list" id="liveBatchList" role="listbox" aria-label="Batches">
+                        <button type="button" class="live-picker-option" data-value="" data-search="all batches" role="option" aria-selected="{% if not selected_batch %}true{% else %}false{% endif %}"><i class="ri-apps-line"></i><span>All batches</span></button>
+                        {% for batch in batches %}
+                        <button type="button" class="live-picker-option" data-value="{{ batch.pk }}" data-search="{{ batch.batch_name|lower }}" role="option" aria-selected="{% if selected_batch|stringformat:'s' == batch.pk|stringformat:'s' %}true{% else %}false{% endif %}"><i class="ri-stack-line"></i><span>{{ batch.batch_name }}</span></button>
+                        {% empty %}<div class="live-picker-empty">No batches available</div>{% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="min-w-0">
+            <label for="liveSubjectFilter" class="mb-1.5 block text-[10px] font-extrabold uppercase tracking-wide text-violet-200"><i class="ri-book-2-line mr-1"></i>Subject</label>
+            <div class="live-picker" id="liveSubjectPicker">
+                <input type="hidden" id="liveSubjectFilter" name="subject" value="{{ selected_subject|default:'' }}">
+                <button type="button" class="live-picker-trigger" id="liveSubjectTrigger" aria-haspopup="listbox" aria-expanded="false">
+                    <span id="liveSubjectSelected">{% if selected_subject %}{% for subject in subjects %}{% if selected_subject|stringformat:"s" == subject.pk|stringformat:"s" %}{{ subject.subject_name }}{% endif %}{% endfor %}{% else %}All subjects{% endif %}</span>
+                    <i class="ri-arrow-down-s-line text-base text-violet-700"></i>
+                </button>
+                <div class="live-picker-panel">
+                    <input type="search" class="live-picker-search" id="liveSubjectSearch" placeholder="Find a subject..." autocomplete="off" aria-label="Search subjects">
+                    <div class="live-picker-list" id="liveSubjectList" role="listbox" aria-label="Subjects">
+                        <button type="button" class="live-picker-option" data-value="" data-search="all subjects" role="option" aria-selected="{% if not selected_subject %}true{% else %}false{% endif %}"><i class="ri-apps-line"></i><span>All subjects</span></button>
+                        {% for subject in subjects %}
+                        <button type="button" class="live-picker-option" data-value="{{ subject.pk }}" data-search="{{ subject.subject_name|lower }}" role="option" aria-selected="{% if selected_subject|stringformat:'s' == subject.pk|stringformat:'s' %}true{% else %}false{% endif %}"><i class="ri-book-2-line"></i><span>{{ subject.subject_name }}</span></button>
+                        {% empty %}<div class="live-picker-empty">No subjects available</div>{% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="min-w-0">
+            <label for="liveSearch" class="mb-1.5 block text-[10px] font-extrabold uppercase tracking-wide text-violet-200">Search classes</label>
+            <input id="liveSearch" type="search" name="search" value="{{ search_query|default:'' }}" class="live-control" placeholder="Search batch, subject or chapter..." autocomplete="off">
+        </div>
+        <button type="submit" class="live-primary"><i class="ri-search-line"></i> Search</button>
+        <a href="{% url 'live_classes:teacher_live_now' %}" class="live-secondary"><i class="ri-refresh-line"></i> Reset</a>
+        <input type="hidden" name="page" value="1">
+    </form>
+
+    <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+            <h2 class="text-lg font-black text-white">Today's Live Classes</h2>
+            <p class="text-[10px] text-slate-400">Showing {{ page_obj.start_index|default:0 }}–{{ page_obj.end_index|default:0 }} of {{ paginator.count|default:0 }} classes · 20 per page</p>
+        </div>
+        <a href="{% url 'live_classes:teacher_live_now' %}?{{ pagination_query }}" class="live-secondary"><i class="ri-refresh-line"></i> Refresh</a>
+    </div>
+
+    {% if live_now_classes %}
+        <div class="live-grid">
+            {% for item in live_now_classes %}
+                <article class="live-card">
+                    <div class="live-thumb">
+                        {% if item.subject.subject_thumbnail %}
+                            <img src="{{ item.subject.subject_thumbnail.url }}" alt="{{ item.subject.subject_name }} thumbnail" loading="lazy">
+                        {% else %}
+                            <div class="live-thumb-fallback"><i class="ri-book-open-line"></i></div>
+                        {% endif %}
+                        {% if item.is_live_now %}
+                            <span class="live-status-chip is-live"><i class="ri-record-circle-fill"></i> LIVE NOW</span>
+                        {% elif item.can_start_now %}
+                            <span class="live-status-chip can-start"><i class="ri-play-circle-fill"></i> CAN START NOW</span>
+                        {% endif %}
+                        <span class="live-date-chip"><span class="block text-lg font-black leading-5">{{ item.local_start|date:"d" }}</span><span class="block text-[9px] font-extrabold uppercase">{{ item.local_start|date:"M" }}</span></span>
+                        <span class="live-thumb-shade"></span>
+                    </div>
+
+                    <div class="live-card-body">
+                        <div class="live-subject-heading">
+                            <div class="flex min-w-0 flex-1 items-center gap-2">
+                                <span class="live-subject-icon"><i class="ri-book-2-line"></i></span>
+                                <div class="min-w-0 flex-1">
+                                    <h3 class="live-subject-title" title="{{ item.subject.subject_name }}">{{ item.subject.subject_name }}</h3>
+                                    <p class="live-batch-name truncate">{{ item.batch.batch_name }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <p class="live-chapter"><span class="font-extrabold text-violet-700">Chapter:</span> {{ item.chapter.chapter_name|default:"—" }}</p>
+                        <div class="mt-2 space-y-1.5">
+                            <div class="live-info-row"><i class="ri-calendar-line"></i><span>{{ item.local_start|date:"D, d M Y" }}</span></div>
+                            <div class="flex flex-wrap items-center justify-between gap-2">
+                                <div class="live-info-row"><i class="ri-time-line"></i><span>{{ item.time_range }}</span></div>
+                                <span class="text-[10px] font-bold text-slate-500">{% if item.duration_minutes == 60 %}1 hour{% elif item.duration_minutes == 120 %}2 hours{% elif item.duration_minutes == 180 %}3 hours{% else %}{{ item.duration_minutes }} min{% endif %}</span>
+                            </div>
+                        </div>
+
+                        <div class="mt-auto space-y-2 pt-3">
+                            {% if item.is_live_now %}
+                                <p class="live-note text-emerald-700">Session started {{ item.actual_start_at|date:"g:i A" }}</p>
+                                <a href="#" class="live-action live-join" aria-disabled="true" onclick="return false"><i class="ri-login-box-line"></i> Join Class</a>
+                            {% elif item.can_start_now %}
+                                <form method="post" action="{% url 'live_classes:teacher_start_live_class' item.pk %}">
+                                    {% csrf_token %}
+                                    <button class="live-action live-start" type="submit"><i class="ri-play-fill"></i> Start Class</button>
+                                </form>
+                                <p class="live-note text-center">Start window is open · within 5 minutes</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </article>
+            {% endfor %}
+        </div>
+
+        {% if page_obj and page_obj.paginator.num_pages > 1 %}
+            <nav class="live-pagination" aria-label="Live classes pagination">
+                <div>
+                    <p class="text-[11px] font-extrabold text-slate-800">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</p>
+                    <p class="mt-0.5 text-[10px] text-slate-500">Showing {{ page_obj.start_index }}–{{ page_obj.end_index }} of {{ page_obj.paginator.count }} classes · 20 per page</p>
+                </div>
+                <div class="flex flex-wrap items-center gap-1.5">
+                    {% if page_obj.has_previous %}<a class="live-page-number" href="?{{ pagination_query }}{% if pagination_query %}&amp;{% endif %}page={{ page_obj.previous_page_number }}" aria-label="Previous page"><i class="ri-arrow-left-s-line"></i></a>{% else %}<span class="live-page-number disabled"><i class="ri-arrow-left-s-line"></i></span>{% endif %}
+                    {% for page_number in page_obj.paginator.page_range %}
+                        {% if page_number == page_obj.number %}<span class="live-page-number active" aria-current="page">{{ page_number }}</span>
+                        {% elif page_number >= page_obj.number|add:"-2" and page_number <= page_obj.number|add:"2" %}<a class="live-page-number" href="?{{ pagination_query }}{% if pagination_query %}&amp;{% endif %}page={{ page_number }}">{{ page_number }}</a>{% endif %}
+                    {% endfor %}
+                    {% if page_obj.has_next %}<a class="live-page-number" href="?{{ pagination_query }}{% if pagination_query %}&amp;{% endif %}page={{ page_obj.next_page_number }}" aria-label="Next page"><i class="ri-arrow-right-s-line"></i></a>{% else %}<span class="live-page-number disabled"><i class="ri-arrow-right-s-line"></i></span>{% endif %}
+                </div>
+            </nav>
+        {% endif %}
+    {% else %}
+        <div class="live-empty">
+            <span class="grid h-16 w-16 place-items-center rounded-2xl border border-violet-200 bg-violet-100 text-3xl text-violet-700"><i class="ri-broadcast-line"></i></span>
+            <h2 class="mt-5 text-lg font-black">No live classes at the moment</h2>
+            <p class="mt-2 max-w-md text-xs leading-6 text-slate-500">Classes appear here when their five-minute start window opens or when a session is already running.</p>
+            <a href="{% url 'live_classes:teacher_upcoming_classes' %}" class="live-primary mt-5"><i class="ri-calendar-event-line"></i> View Upcoming Classes</a>
+        </div>
+    {% endif %}
+</section>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+(function () {
+    const root = document.getElementById('teacherLiveNowPage');
+    if (!root) return;
+
+    function setupPicker(prefix) {
+        const picker = document.getElementById(prefix + 'Picker');
+        const trigger = document.getElementById(prefix + 'Trigger');
+        const selected = document.getElementById(prefix + 'Selected');
+        const hidden = document.getElementById(prefix + 'Filter');
+        const search = document.getElementById(prefix + 'Search');
+        const list = document.getElementById(prefix + 'List');
+        if (!picker || !trigger || !selected || !hidden || !search || !list) return;
+
+        function close() {
+            picker.classList.remove('open');
+            trigger.setAttribute('aria-expanded', 'false');
+        }
+        function filterOptions() {
+            const query = search.value.trim().toLowerCase();
+            list.querySelectorAll('.live-picker-option').forEach(function (option) {
+                const text = (option.dataset.search || option.textContent).toLowerCase();
+                option.hidden = !!query && !text.includes(query);
+            });
+        }
+        trigger.addEventListener('click', function () {
+            const opening = !picker.classList.contains('open');
+            document.querySelectorAll('#teacherLiveNowPage .live-picker.open').forEach(function (node) {
+                node.classList.remove('open');
+                const button = node.querySelector('.live-picker-trigger');
+                if (button) button.setAttribute('aria-expanded', 'false');
+            });
+            if (opening) {
+                picker.classList.add('open');
+                trigger.setAttribute('aria-expanded', 'true');
+                search.value = '';
+                filterOptions();
+                search.focus();
+            }
+        });
+        search.addEventListener('input', filterOptions);
+        list.querySelectorAll('.live-picker-option').forEach(function (option) {
+            option.addEventListener('click', function () {
+                hidden.value = option.dataset.value || '';
+                selected.textContent = option.textContent.trim();
+                list.querySelectorAll('.live-picker-option').forEach(function (item) {
+                    item.setAttribute('aria-selected', item === option ? 'true' : 'false');
+                });
+                close();
+            });
+        });
+        document.addEventListener('click', function (event) {
+            if (!picker.contains(event.target)) close();
+        });
+        trigger.addEventListener('keydown', function (event) {
+            if (event.key === 'Escape') close();
+        });
+    }
+
+    setupPicker('liveBatch');
+    setupPicker('liveSubject');
+})();
+</script>
+{% endblock %}

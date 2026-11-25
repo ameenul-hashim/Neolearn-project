@@ -1,0 +1,541 @@
+{% extends 'students/base_student.html' %}
+{% load static %}
+
+{% block title %}{{ batch.batch_name }} | NeoLearn{% endblock %}
+
+{% block student_content %}
+<style>
+/* Compact marketplace detail layout: smaller, balanced spacing and typography. */
+#marketplace-detail-page { max-width: 1500px; margin-inline: auto; font-size: 13px; }
+#marketplace-detail-page .space-y-5 > :not([hidden]) ~ :not([hidden]) { margin-top: .85rem; }
+#marketplace-detail-page .space-y-4 > :not([hidden]) ~ :not([hidden]) { margin-top: .7rem; }
+#marketplace-detail-page .grid { min-width: 0; }
+#marketplace-detail-page section.grid { gap: .85rem; }
+#marketplace-detail-page .rounded-2xl { border-radius: 13px; }
+#marketplace-detail-page .rounded-xl { border-radius: 10px; }
+#marketplace-detail-page .p-5 { padding: .85rem; }
+#marketplace-detail-page .p-4 { padding: .75rem; }
+#marketplace-detail-page .p-3 { padding: .6rem; }
+#marketplace-detail-page .gap-6 { gap: .9rem; }
+#marketplace-detail-page .gap-5 { gap: .8rem; }
+#marketplace-detail-page .gap-4 { gap: .7rem; }
+#marketplace-detail-page .gap-3 { gap: .55rem; }
+#marketplace-detail-page h1 { font-size: clamp(1.25rem, 1.7vw, 1.65rem); line-height: 1.2; }
+#marketplace-detail-page h2 { font-size: 1rem; line-height: 1.35; }
+#marketplace-detail-page h3 { font-size: .9rem; line-height: 1.35; }
+#marketplace-detail-page .text-3xl { font-size: 1.55rem; line-height: 1.2; }
+#marketplace-detail-page .text-2xl { font-size: 1.35rem; line-height: 1.25; }
+#marketplace-detail-page .text-lg { font-size: .95rem; line-height: 1.4; }
+#marketplace-detail-page .text-base { font-size: .85rem; }
+#marketplace-detail-page .text-sm { font-size: .78rem; line-height: 1.45; }
+#marketplace-detail-page .text-xs { font-size: .68rem; line-height: 1.4; }
+#marketplace-detail-page .leading-7 { line-height: 1.65; }
+#marketplace-detail-page .leading-6 { line-height: 1.5; }
+#marketplace-detail-page .mt-5 { margin-top: .8rem; }
+#marketplace-detail-page .mt-4 { margin-top: .65rem; }
+#marketplace-detail-page .mt-3 { margin-top: .5rem; }
+#marketplace-detail-page .mt-2 { margin-top: .35rem; }
+#marketplace-detail-page .py-3 { padding-block: .5rem; }
+#marketplace-detail-page .px-4 { padding-inline: .8rem; }
+#marketplace-detail-page button { min-height: 34px; }
+#marketplace-detail-page [data-gallery-image] { object-fit: cover; }
+#marketplace-detail-page [data-gallery-thumb] img { max-height: 58px; }
+#marketplace-detail-page .detail-panel { min-width: 0; }
+#marketplace-detail-page #batchOverviewText.is-expanded { display: block; }
+#marketplace-detail-page .line-clamp-4 { display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+#marketplace-detail-page .detail-tab { padding: .55rem .8rem; font-size: .75rem; }
+@media (max-width: 1279px) {
+  #marketplace-detail-page { max-width: 100%; }
+}
+@media (max-width: 640px) {
+  #marketplace-detail-page { font-size: 12px; }
+  #marketplace-detail-page .text-3xl { font-size: 1.35rem; }
+  #marketplace-detail-page .p-5 { padding: .7rem; }
+}
+</style>
+
+<div id="marketplace-detail-page" class="min-w-0 space-y-5 pb-8 text-slate-100">
+
+    <!-- Breadcrumb -->
+    <div class="flex flex-wrap items-center gap-2 text-sm text-slate-400">
+        <a href="{% url 'marketplace' %}" class="transition hover:text-cyan-300">Marketplace</a>
+        <span class="text-slate-600">/</span>
+        <span class="max-w-full truncate font-medium text-slate-200">{{ batch.batch_name }}</span>
+    </div>
+
+    <!-- Main three-column details -->
+    <section class="grid min-w-0 grid-cols-1 gap-5 xl:grid-cols-12">
+
+        <!-- Gallery -->
+        <div class="min-w-0 xl:col-span-5">
+            <div class="relative overflow-hidden rounded-2xl border border-slate-700/80 bg-slate-900 shadow-xl">
+                <div class="relative aspect-[16/10] bg-slate-950">
+                    {% if gallery_images %}
+                        {% for image in gallery_images %}
+                            <img
+                                src="{{ image.url }}"
+                                alt="{{ image.alt|default:batch.batch_name }}"
+                                data-gallery-image
+                                class="absolute inset-0 h-full w-full object-cover transition-opacity duration-200 {% if not forloop.first %}hidden{% endif %}"
+                                {% if not forloop.first %}aria-hidden="true"{% endif %}
+                            >
+                        {% endfor %}
+                        <span id="galleryCounter" class="absolute right-3 top-3 rounded-lg border border-white/10 bg-slate-950/80 px-3 py-1 text-xs font-bold text-white">
+                            1 / {{ gallery_images|length }}
+                        </span>
+                        {% if gallery_images|length > 1 %}
+                            <button type="button" id="galleryPrev" aria-label="Previous image" class="absolute left-3 top-1/2 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full border border-white/20 bg-slate-950/75 text-xl text-white transition hover:bg-cyan-500">‹</button>
+                            <button type="button" id="galleryNext" aria-label="Next image" class="absolute right-3 top-1/2 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full border border-white/20 bg-slate-950/75 text-xl text-white transition hover:bg-cyan-500">›</button>
+                        {% endif %}
+                    {% else %}
+                        <div class="grid h-full place-items-center p-8 text-center text-slate-500">
+                            <div>
+                                <div class="mx-auto mb-3 grid h-16 w-16 place-items-center rounded-2xl bg-slate-800 text-3xl">▣</div>
+                                <p class="text-sm">Batch image will be available soon</p>
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            {% if gallery_images|length > 1 %}
+                <div class="mt-3 flex flex-nowrap gap-2 overflow-x-auto overflow-y-hidden pb-2" aria-label="Batch image thumbnails">
+                    {% for image in gallery_images %}
+                        <button type="button" data-gallery-thumb data-index="{{ forloop.counter0 }}" aria-label="Show image {{ forloop.counter }}" class="group w-[76px] shrink-0 overflow-hidden rounded-lg border-2 {% if forloop.first %}border-cyan-400{% else %}border-slate-700 hover:border-cyan-500/70{% endif %} bg-slate-900">
+                            <img src="{{ image.url }}" alt="" class="h-[58px] w-full object-cover transition group-hover:scale-105">
+                        </button>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Batch summary / purchase -->
+        <div class="min-w-0 space-y-4 xl:col-span-4">
+            <div class="flex flex-wrap items-center gap-2">
+                {% if marketplace_status == 'buy_now' %}
+                    <span class="rounded-full border border-emerald-400/30 bg-emerald-400/10 px-3 py-1 text-xs font-semibold text-emerald-300">Open for Admission</span>
+                {% elif marketplace_status == 'coming_soon' %}
+                    <span class="rounded-full border border-amber-400/30 bg-amber-400/10 px-3 py-1 text-xs font-semibold text-amber-300">Coming Soon</span>
+                {% else %}
+                    <span class="rounded-full border border-slate-500/30 bg-slate-700/50 px-3 py-1 text-xs font-semibold text-slate-300">Admissions Closed</span>
+                {% endif %}
+                {% if already_purchased %}
+                    <span class="rounded-full border border-cyan-400/30 bg-cyan-400/10 px-3 py-1 text-xs font-semibold text-cyan-200">Already Purchased</span>
+                {% endif %}
+            </div>
+
+            <div>
+                <h1 class="text-2xl font-extrabold leading-tight text-white sm:text-3xl">{{ batch.batch_name }}</h1>
+                <p class="mt-2 text-sm leading-6 text-slate-400">{{ batch.batch_description }}</p>
+                <div class="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-slate-300">
+                    <span class="inline-flex items-center gap-2"><span class="text-cyan-300">♙</span>{{ teachers|length }} Teacher{{ teachers|length|pluralize }}</span>
+                    <span class="inline-flex items-center gap-2"><span class="text-cyan-300">▦</span>{{ subjects|length }} Subject{{ subjects|length|pluralize }}</span>
+                </div>
+            </div>
+
+            <div
+                id="batchPricePanel"
+                class="rounded-2xl border border-slate-700/80 bg-slate-900/80 p-4"
+                data-original-price="{{ batch.original_price|floatformat:0 }}"
+            >
+                <div class="flex flex-wrap items-end gap-x-3 gap-y-1">
+                    <span
+                        id="batchCurrentPrice"
+                        class="text-3xl font-extrabold tracking-tight text-white"
+                    >₹{{ batch.current_price|floatformat:0 }}</span>
+
+                    {% if batch.current_price < batch.original_price %}
+                        <span
+                            id="batchOriginalPrice"
+                            class="pb-1 text-base text-slate-500 line-through"
+                        >₹{{ batch.original_price|floatformat:0 }}</span>
+
+                        {% if batch.discount_type == 'percentage' and batch.discount_value %}
+                            <span
+                                id="batchDiscountBadge"
+                                class="mb-1 rounded-md bg-emerald-500/15 px-2 py-1 text-xs font-bold text-emerald-300"
+                            >{{ batch.discount_value|floatformat:0 }}% OFF</span>
+                        {% elif batch.discount_type == 'fixed' and batch.discount_value %}
+                            <span
+                                id="batchDiscountBadge"
+                                class="mb-1 rounded-md bg-emerald-500/15 px-2 py-1 text-xs font-bold text-emerald-300"
+                            >SAVE ₹{{ batch.discount_value|floatformat:0 }}</span>
+                        {% endif %}
+                    {% endif %}
+                </div>
+
+                {% if offer_is_active and offer_end_timestamp %}
+                    <div
+                        id="offerCountdownPanel"
+                        class="mt-4 rounded-xl border border-rose-400/20 bg-rose-500/10 p-3"
+                    >
+                        <div class="flex flex-wrap items-center justify-between gap-2">
+                            <span class="text-sm font-semibold text-rose-100">Limited offer ends in</span>
+                            <span
+                                id="offerCountdown"
+                                data-end="{{ offer_end_timestamp }}"
+                                class="text-sm font-extrabold tabular-nums text-rose-300"
+                            >Calculating…</span>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div class="rounded-xl border border-slate-700/70 bg-slate-900/60 p-3">
+                    <p class="text-xs text-slate-400">Admission closing</p>
+                    <p class="mt-1 text-sm font-semibold text-amber-300">
+                        {% if admission_closing %}{{ admission_closing|date:"d M Y, h:i A" }}{% else %}Admissions open{% endif %}
+                    </p>
+                </div>
+                <div class="rounded-xl border border-slate-700/70 bg-slate-900/60 p-3">
+                    <p class="text-xs text-slate-400">Course end date</p>
+                    <p class="mt-1 text-sm font-semibold text-amber-300">
+                        {% if course_end_date %}{{ course_end_date|date:"d M Y" }}{% else %}Not specified{% endif %}
+                    </p>
+                </div>
+            </div>
+
+            {% if already_purchased %}
+                <div class="rounded-xl border border-cyan-500/30 bg-cyan-500/10 p-4">
+                    <p class="font-semibold text-cyan-200">You already have this batch.</p>
+                    <p class="mt-1 text-sm text-slate-300">Your learning access follows the batch course end date.</p>
+                    <a href="{% url 'my_learning' %}" class="mt-3 inline-flex rounded-lg bg-cyan-500 px-4 py-2 text-sm font-bold text-slate-950 hover:bg-cyan-400">Go to My Learning</a>
+                </div>
+            {% elif can_purchase %}
+                <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <form method="post" action="{% url 'add_to_cart' batch.id %}">
+                        {% csrf_token %}
+                        <button type="submit" class="flex w-full items-center justify-center gap-2 rounded-xl bg-cyan-400 px-4 py-3 font-bold text-slate-950 shadow-lg shadow-cyan-500/10 transition hover:bg-cyan-300">
+                            <span>🛒</span> Add to Cart
+                        </button>
+                    </form>
+                    <form method="post" action="{% url 'add_to_cart' batch.id %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="cart">
+                        <button type="submit" class="flex w-full items-center justify-center gap-2 rounded-xl border border-cyan-400 bg-cyan-400/5 px-4 py-3 font-bold text-cyan-200 transition hover:bg-cyan-400/15">
+                            <span>⚡</span> Buy Now
+                        </button>
+                    </form>
+                </div>
+            {% else %}
+                <div class="rounded-xl border border-slate-700 bg-slate-900 p-4 text-sm text-slate-300">
+                    This batch is not currently available for purchase.
+                </div>
+            {% endif %}
+
+            <form method="post" action="{% url 'toggle_wishlist' batch.id %}">
+                {% csrf_token %}
+                <button type="submit" class="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-700 bg-slate-900/70 px-4 py-3 text-sm font-semibold transition hover:border-rose-400/60 hover:bg-rose-500/10 {% if is_wishlisted %}text-rose-300{% else %}text-slate-200{% endif %}">
+                    <span class="text-lg">{% if is_wishlisted %}♥{% else %}♡{% endif %}</span>
+                    {% if is_wishlisted %}Remove from Wishlist{% else %}Add to Wishlist{% endif %}
+                </button>
+            </form>
+
+            {% if is_in_cart %}
+                <p class="text-center text-xs text-cyan-300">This batch is already in your cart.</p>
+            {% endif %}
+        </div>
+
+        <!-- Batch information -->
+        <aside class="min-w-0 space-y-4 xl:col-span-3">
+            <div class="rounded-2xl border border-slate-700/80 bg-slate-900/80 p-4 shadow-lg">
+                <h2 class="text-lg font-bold text-white">Batch Information</h2>
+                <dl class="mt-3 divide-y divide-slate-700/70">
+                    <div class="flex items-center justify-between gap-3 py-3">
+                        <dt class="text-sm text-slate-400">Language</dt>
+                        <dd class="text-right text-sm font-medium text-slate-100">{{ batch.get_course_language_display|default:"Not specified" }}</dd>
+                    </div>
+                    <div class="flex items-center justify-between gap-3 py-3">
+                        <dt class="text-sm text-slate-400">Course duration</dt>
+                        <dd class="text-right text-sm font-medium text-slate-100">{{ course_duration_display }}</dd>
+                    </div>
+                    <div class="flex items-center justify-between gap-3 py-3">
+                        <dt class="text-sm text-slate-400">Access</dt>
+                        <dd class="max-w-[58%] text-right text-sm font-medium text-slate-100">Purchase date until course end date</dd>
+                    </div>
+                    <div class="flex items-center justify-between gap-3 py-3">
+                        <dt class="text-sm text-slate-400">Publish type</dt>
+                        <dd class="text-right text-sm font-medium text-slate-100">{{ batch.get_publish_type_display }}</dd>
+                    </div>
+                    <div class="flex items-center justify-between gap-3 py-3">
+                        <dt class="text-sm text-slate-400">Batch status</dt>
+                        <dd class="text-right text-sm font-semibold text-emerald-300">{{ marketplace_status|title }}</dd>
+                    </div>
+                </dl>
+            </div>
+
+        </aside>
+    </section>
+
+    <!-- Tabs -->
+    <section class="overflow-hidden rounded-2xl border border-slate-700/80 bg-slate-900/60">
+        <div role="tablist" aria-label="Batch details" class="flex gap-2 overflow-x-auto border-b border-slate-700/80 p-3">
+            <button type="button" role="tab" aria-selected="true" aria-controls="panel-overview" data-tab="overview" class="detail-tab shrink-0 rounded-xl border border-cyan-400 bg-cyan-400/10 px-4 py-3 text-sm font-semibold text-cyan-200">▤ Overview</button>
+            <button type="button" role="tab" aria-selected="false" aria-controls="panel-subjects" data-tab="subjects" class="detail-tab shrink-0 rounded-xl border border-slate-700 px-4 py-3 text-sm font-semibold text-slate-300 hover:border-cyan-400/60">▦ Subjects</button>
+            <button type="button" role="tab" aria-selected="false" aria-controls="panel-teachers" data-tab="teachers" class="detail-tab shrink-0 rounded-xl border border-slate-700 px-4 py-3 text-sm font-semibold text-slate-300 hover:border-cyan-400/60">♙ Teachers</button>
+            <button type="button" role="tab" aria-selected="false" aria-controls="panel-demo" data-tab="demo" class="detail-tab shrink-0 rounded-xl border border-slate-700 px-4 py-3 text-sm font-semibold text-slate-300 hover:border-cyan-400/60">▷ Demo Class</button>
+        </div>
+
+        <!-- Overview panel -->
+        <div id="panel-overview" role="tabpanel" class="detail-panel space-y-5 p-4 sm:p-5">
+            <section>
+                <h2 class="text-lg font-bold text-white">About This Batch</h2>
+                <div id="batchOverviewText" class="mt-3 whitespace-pre-line text-sm leading-7 text-slate-300 line-clamp-4">{{ batch.batch_overview|default:batch.batch_description|default:"Batch overview will be updated soon." }}</div>
+                <button type="button" id="overviewReadMore" class="mt-2 hidden text-sm font-semibold text-cyan-300 hover:text-cyan-200">
+                    Read more
+                </button>
+                {% if batch.target_audience %}
+                    <div class="mt-4">
+                        <h3 class="font-semibold text-white">Who is this for?</h3>
+                        <p class="mt-1 text-sm leading-6 text-slate-400">{{ batch.target_audience }}</p>
+                    </div>
+                {% endif %}
+                {% if batch.prerequisites %}
+                    <div class="mt-3">
+                        <h3 class="font-semibold text-white">Prerequisites</h3>
+                        <p class="mt-1 text-sm leading-6 text-slate-400">{{ batch.prerequisites }}</p>
+                    </div>
+                {% endif %}
+            </section>
+
+            <section class="border-t border-slate-700/80 pt-4">
+                <h2 class="text-lg font-bold text-white">Key Features</h2>
+                {% if batch.features.all %}
+                    <ul class="mt-3 grid grid-cols-1 gap-x-6 gap-y-2 sm:grid-cols-2">
+                        {% for feature in batch.features.all %}
+                            <li class="flex items-start gap-2 text-sm leading-6 text-slate-300">
+                                <span class="mt-0.5 text-cyan-300">✓</span>
+                                <span>{{ feature.feature_text }}</span>
+                            </li>
+                        {% empty %}
+                            <li class="text-sm text-slate-500">Features will be updated soon.</li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="mt-3 text-sm text-slate-500">Features will be updated soon.</p>
+                {% endif %}
+                {% if batch.learning_level %}
+                    <p class="mt-4 text-sm text-slate-400">Learning level: <span class="font-semibold text-slate-200">{{ batch.get_learning_level_display }}</span></p>
+                {% endif %}
+            </section>
+        </div>
+
+        <!-- Subjects panel -->
+        <div id="panel-subjects" role="tabpanel" class="detail-panel hidden p-5">
+            <div class="mb-4 flex flex-wrap items-center justify-between gap-2">
+                <div>
+                    <h2 class="text-lg font-bold text-white">Subjects in This Batch</h2>
+                    <p class="mt-1 text-sm text-slate-400">Explore the subjects included in this batch.</p>
+                </div>
+                <span class="rounded-lg bg-slate-800 px-3 py-1.5 text-xs font-semibold text-cyan-200">{{ subjects|length }} Subjects</span>
+            </div>
+            {% if subjects %}
+                <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+                    {% for subject in subjects %}
+                        <article class="flex min-w-0 items-center gap-3 rounded-xl border border-slate-700/80 bg-slate-950/60 p-3 transition hover:border-cyan-500/50">
+                            {% if subject.subject_thumbnail %}
+                                <img src="{{ subject.subject_thumbnail.url }}" alt="{{ subject.subject_name }}" class="h-16 w-16 shrink-0 rounded-lg border border-slate-700 object-cover">
+                            {% else %}
+                                <div class="grid h-16 w-16 shrink-0 place-items-center rounded-lg bg-slate-800 text-2xl text-cyan-300">▦</div>
+                            {% endif %}
+                            <div class="min-w-0 flex-1">
+                                <h3 class="truncate font-semibold text-white">{{ subject.subject_name }}</h3>
+                                <p class="mt-1 line-clamp-2 text-xs leading-5 text-slate-400">{{ subject.subject_description }}</p>
+                                <p class="mt-2 text-xs font-medium text-cyan-300">{{ subject.published_chapter_count }} Published Chapter{{ subject.published_chapter_count|pluralize }}</p>
+                            </div>
+                        </article>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="rounded-xl border border-dashed border-slate-700 p-8 text-center text-sm text-slate-400">Subject information will be available soon.</div>
+            {% endif %}
+            <p class="mt-4 text-xs leading-5 text-slate-500">Full chapters and lessons are available only after purchasing the batch.</p>
+        </div>
+
+        <!-- Teachers panel -->
+        <div id="panel-teachers" role="tabpanel" class="detail-panel hidden p-5">
+            <div class="mb-4">
+                <h2 class="text-lg font-bold text-white">Teachers in This Batch</h2>
+                <p class="mt-1 text-sm text-slate-400">Meet the teachers assigned to this batch and its subjects.</p>
+            </div>
+            {% if teachers %}
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                    {% for teacher in teachers %}
+                        <article class="rounded-xl border border-slate-700/80 bg-slate-950/60 p-4">
+                            <div class="flex items-center gap-3">
+                                {% if teacher.profile_image %}
+                                    <img src="{{ teacher.profile_image.url }}" alt="{{ teacher.full_name }}" class="h-16 w-16 rounded-xl border border-slate-700 object-cover">
+                                {% else %}
+                                    <div class="grid h-16 w-16 place-items-center rounded-xl bg-slate-800 text-2xl text-cyan-300">♙</div>
+                                {% endif %}
+                                <div class="min-w-0">
+                                    <h3 class="font-bold text-white">{{ teacher.full_name }}</h3>
+                                    <p class="mt-1 text-xs text-cyan-300">{{ teacher.specialization|default:teacher.qualification|default:"Faculty" }}</p>
+                                    <p class="mt-1 text-xs text-slate-400">{{ teacher.experience }} year{{ teacher.experience|pluralize }} experience</p>
+                                </div>
+                            </div>
+                            {% if teacher.bio %}
+                                <p class="mt-3 line-clamp-3 text-sm leading-6 text-slate-400">{{ teacher.bio }}</p>
+                            {% endif %}
+                            {% if teacher.linkedin %}
+                                <a href="{{ teacher.linkedin }}" target="_blank" rel="noopener noreferrer" class="mt-3 inline-flex text-sm font-semibold text-cyan-300 hover:text-cyan-200">LinkedIn profile ↗</a>
+                            {% endif %}
+                        </article>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="rounded-xl border border-dashed border-slate-700 p-8 text-center text-sm text-slate-400">Teacher information will be available soon.</div>
+            {% endif %}
+        </div>
+
+        <!-- Demo panel: exactly one available demo type, currently batch-wide model exists -->
+        <div id="panel-demo" role="tabpanel" class="detail-panel hidden p-5">
+            <div id="demo-section">
+                <h2 class="text-lg font-bold text-white">Demo Class</h2>
+                <p class="mt-1 text-sm text-slate-400">Preview the teaching style before enrolling.</p>
+                {% if batch_demo %}
+                    <div class="mt-5 overflow-hidden rounded-xl border border-slate-700 bg-slate-950">
+                        <div class="border-b border-slate-700 p-4">
+                            <h3 class="font-semibold text-white">{{ batch_demo.title }}</h3>
+                            {% if batch_demo.description %}<p class="mt-1 text-sm text-slate-400">{{ batch_demo.description }}</p>{% endif %}
+                        </div>
+                        {% if batch_demo.video_file %}
+                            <video controls preload="metadata" class="aspect-video w-full bg-black">
+                                <source src="{{ batch_demo.video_file.url }}">
+                                Your browser does not support HTML video.
+                            </video>
+                        {% elif batch_demo.external_url %}
+                            <div class="p-4">
+                                <a href="{{ batch_demo.external_url }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 rounded-lg bg-violet-500 px-4 py-2.5 text-sm font-bold text-white hover:bg-violet-400">Open demo video ↗</a>
+                                <p class="mt-2 text-xs text-slate-500">This demo is hosted on an external video service.</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                {% else %}
+                    <div class="mt-5 rounded-xl border border-dashed border-slate-700 p-8 text-center">
+                        <div class="text-3xl text-violet-300">▷</div>
+                        <p class="mt-3 font-semibold text-white">No demo video available</p>
+                        <p class="mt-1 text-sm text-slate-400">The batch demo will appear here when it is added by the administrator.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </section>
+</div>
+
+<script>
+(function () {
+    // Gallery
+    const images = Array.from(document.querySelectorAll('[data-gallery-image]'));
+    const thumbs = Array.from(document.querySelectorAll('[data-gallery-thumb]'));
+    const counter = document.getElementById('galleryCounter');
+    let activeImage = 0;
+
+    function showImage(index) {
+        if (!images.length) return;
+        activeImage = (index + images.length) % images.length;
+        images.forEach((image, i) => {
+            image.classList.toggle('hidden', i !== activeImage);
+            image.setAttribute('aria-hidden', i === activeImage ? 'false' : 'true');
+        });
+        thumbs.forEach((thumb, i) => {
+            thumb.classList.toggle('border-cyan-400', i === activeImage);
+            thumb.classList.toggle('border-slate-700', i !== activeImage);
+        });
+        if (counter) counter.textContent = `${activeImage + 1} / ${images.length}`;
+    }
+
+    document.getElementById('galleryPrev')?.addEventListener('click', () => showImage(activeImage - 1));
+    document.getElementById('galleryNext')?.addEventListener('click', () => showImage(activeImage + 1));
+    thumbs.forEach((thumb) => thumb.addEventListener('click', () => showImage(Number(thumb.dataset.index))));
+
+    // Tabs
+    const tabs = Array.from(document.querySelectorAll('[data-tab]'));
+    const panels = Array.from(document.querySelectorAll('.detail-panel'));
+    tabs.forEach((tab) => {
+        tab.addEventListener('click', () => {
+            const target = tab.dataset.tab;
+            tabs.forEach((item) => {
+                const selected = item === tab;
+                item.setAttribute('aria-selected', selected ? 'true' : 'false');
+                item.classList.toggle('border-cyan-400', selected);
+                item.classList.toggle('bg-cyan-400/10', selected);
+                item.classList.toggle('text-cyan-200', selected);
+                item.classList.toggle('border-slate-700', !selected);
+                item.classList.toggle('text-slate-300', !selected);
+            });
+            panels.forEach((panel) => panel.classList.toggle('hidden', panel.id !== `panel-${target}`));
+        });
+    });
+
+    // Expand/collapse long batch overview without navigating away.
+    const overviewText = document.getElementById('batchOverviewText');
+    const readMoreButton = document.getElementById('overviewReadMore');
+    if (overviewText && readMoreButton) {
+        requestAnimationFrame(() => {
+            if (overviewText.scrollHeight > overviewText.clientHeight + 2) {
+                readMoreButton.classList.remove('hidden');
+            }
+        });
+        readMoreButton.addEventListener('click', () => {
+            const expanded = overviewText.classList.toggle('is-expanded');
+            overviewText.classList.toggle('line-clamp-4', !expanded);
+            readMoreButton.textContent = expanded ? 'Read less' : 'Read more';
+        });
+    }
+
+    // Offer countdown and automatic price reset at the exact expiry time.
+    const countdown = document.getElementById('offerCountdown');
+    if (countdown) {
+        const end = Number(countdown.dataset.end) * 1000;
+        const pricePanel = document.getElementById('batchPricePanel');
+        const currentPrice = document.getElementById('batchCurrentPrice');
+        const originalPrice = document.getElementById('batchOriginalPrice');
+        const discountBadge = document.getElementById('batchDiscountBadge');
+        const countdownPanel = document.getElementById('offerCountdownPanel');
+        let countdownTimer = null;
+
+        function expireOffer() {
+            if (pricePanel && currentPrice) {
+                const originalAmount = pricePanel.dataset.originalPrice;
+                if (originalAmount) {
+                    currentPrice.textContent = `₹${originalAmount}`;
+                }
+            }
+
+            // Remove all visual indicators of the expired discount.
+            originalPrice?.remove();
+            discountBadge?.remove();
+            countdownPanel?.remove();
+
+            if (countdownTimer !== null) {
+                window.clearInterval(countdownTimer);
+                countdownTimer = null;
+            }
+        }
+
+        function updateCountdown() {
+            const remaining = end - Date.now();
+
+            if (!Number.isFinite(end) || remaining <= 0) {
+                expireOffer();
+                return;
+            }
+
+            const days = Math.floor(remaining / 86400000);
+            const hours = Math.floor((remaining % 86400000) / 3600000);
+            const minutes = Math.floor((remaining % 3600000) / 60000);
+            const seconds = Math.floor((remaining % 60000) / 1000);
+            countdown.textContent = `${days}d ${hours}h ${minutes}m ${seconds}s`;
+        }
+
+        updateCountdown();
+
+        if (end > Date.now()) {
+            countdownTimer = window.setInterval(updateCountdown, 1000);
+        }
+    }
+})();
+</script>
+{% endblock %}

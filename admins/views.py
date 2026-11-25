@@ -3,6 +3,7 @@ from django.core.files.uploadedfile import UploadedFile
 from admins.models import CouponBatchRule
 from admins.models import AdminProfile
 from django.shortcuts import render, redirect
+from django.http import JsonResponse
 from django.contrib.auth import authenticate,login,logout
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.cache import cache_control
@@ -80,7 +81,8 @@ from teachers.models import (Teacher,TeacherBatch,TeacherSubject,)
 from decimal import Decimal
 from django.http import JsonResponse
 from django.utils import timezone
-from .validators import (validate_create_batch,validate_edit_batch,)
+
+from .validators import (validate_create_batch, validate_create_batch_step, validate_edit_batch, validate_edit_batch_step,)
 from cloudinary.uploader import destroy
 
 
@@ -786,20 +788,270 @@ def delete_student_view(request, user_id):
 @cache_control(no_cache=True, must_revalidate=True, no_store=True)
 @admin_required
 def admin_batches_view(request):
+    """
+    Admin batch listing.
+
+    Supplies the data required by admins/batches/batches.html:
+    - status summary cards;
+    - search, batch-wise, teacher-wise and status filters;
+    - active teacher assignments for the teacher popup/avatar stack;
+    - current offer-aware prices;
+    - publish/admission date values used by the template.
+
+    All marketplace statuses and display values are calculated for this
+    response only. This view does not change or save Batch records.
+    """
+    now = timezone.now()
 
     search = request.GET.get("search", "").strip()
+    selected_batch = request.GET.get("batch", "").strip()
+    selected_teacher = request.GET.get("teacher", "").strip()
+    selected_status = request.GET.get("status", "").strip().lower()
 
-    batches = Batch.objects.all().order_by("-id")
+    # ------------------------------------------------------
+    # BASE QUERYSET AND FILTER DROPDOWN OPTIONS
+    # ------------------------------------------------------
+    all_batches_qs = Batch.objects.all().order_by("-id")
+
+    batch_filter_options = Batch.objects.only(
+        "id", "batch_name"
+    ).order_by("batch_name")
+
+    teacher_filter_options = (
+        Teacher.objects.filter(
+            is_blocked=False,
+            user__is_active=True,
+        )
+        .select_related("user")
+        .order_by("full_name")
+    )
+
+    # The template currently prints teacher.name in the dropdown, while the
+    # Teacher model fields used elsewhere in this project use full_name.
+    # Add a display-only alias without changing the model.
+    teacher_filter_options = list(teacher_filter_options)
+    for teacher_option in teacher_filter_options:
+        teacher_option.name = teacher_option.full_name
+
+    # ------------------------------------------------------
+    # SEARCH AND BATCH FILTERS
+    # ------------------------------------------------------
+    filtered_qs = all_batches_qs
 
     if search:
+        filtered_qs = filtered_qs.filter(
+            Q(batch_name__icontains=search)
+            | Q(batch_description__icontains=search)
+        )
 
-        batches = batches.filter(
-            Q(batch_name__icontains=search) |
-            Q(batch_description__icontains=search))
+    if selected_batch:
+        if selected_batch.isdigit():
+            filtered_qs = filtered_qs.filter(id=int(selected_batch))
+        else:
+            selected_batch = ""
 
-    context = {"batches": batches,}
+    # ------------------------------------------------------
+    # LOAD BATCH RECORDS AND CALCULATE MARKETPLACE STATUS
+    # ------------------------------------------------------
+    all_batch_records = list(all_batches_qs)
+    status_by_batch_id = {}
 
-    return render(request,"admins/batches/batches.html",context,)
+    for batch in all_batch_records:
+        batch_status = (getattr(batch, "batch_status", "") or "").lower()
+        publish_type = (getattr(batch, "publish_type", "") or "").lower()
+        publish_datetime = getattr(batch, "publish_datetime", None)
+        admission_close_datetime = getattr(
+            batch, "admission_close_datetime", None
+        )
+
+        if batch_status == "archived":
+            marketplace_status = "archived"
+        elif (
+            batch_status == "published"
+            and admission_close_datetime
+            and admission_close_datetime <= now
+        ):
+            marketplace_status = "archived"
+        elif (
+            batch_status == "published"
+            and publish_type == "scheduled"
+            and publish_datetime
+            and publish_datetime > now
+        ):
+            marketplace_status = "coming_soon"
+        elif batch_status == "published":
+            marketplace_status = "published"
+        else:
+            marketplace_status = "draft"
+
+        status_by_batch_id[batch.id] = marketplace_status
+
+    # ------------------------------------------------------
+    # TEACHER-WISE FILTER
+    # ------------------------------------------------------
+    if selected_teacher:
+        if selected_teacher.isdigit():
+            teacher_batch_ids = (
+                TeacherBatch.objects.filter(
+                    teacher_id=int(selected_teacher),
+                    is_active=True,
+                    teacher__is_blocked=False,
+                    teacher__user__is_active=True,
+                )
+                .values_list("batch_id", flat=True)
+                .distinct()
+            )
+            filtered_qs = filtered_qs.filter(id__in=teacher_batch_ids)
+        else:
+            selected_teacher = ""
+
+    # ------------------------------------------------------
+    # STATUS FILTER
+    # ------------------------------------------------------
+    if selected_status in {"draft", "drafted"}:
+        allowed_status_ids = [
+            batch_id for batch_id, status_value in status_by_batch_id.items()
+            if status_value == "draft"
+        ]
+        filtered_qs = filtered_qs.filter(id__in=allowed_status_ids)
+    elif selected_status in {"coming_soon", "coming-soon"}:
+        allowed_status_ids = [
+            batch_id for batch_id, status_value in status_by_batch_id.items()
+            if status_value == "coming_soon"
+        ]
+        filtered_qs = filtered_qs.filter(id__in=allowed_status_ids)
+    elif selected_status == "published":
+        allowed_status_ids = [
+            batch_id for batch_id, status_value in status_by_batch_id.items()
+            if status_value == "published"
+        ]
+        filtered_qs = filtered_qs.filter(id__in=allowed_status_ids)
+    elif selected_status == "archived":
+        allowed_status_ids = [
+            batch_id for batch_id, status_value in status_by_batch_id.items()
+            if status_value == "archived"
+        ]
+        filtered_qs = filtered_qs.filter(id__in=allowed_status_ids)
+    else:
+        selected_status = ""
+
+    batches = list(filtered_qs)
+
+    # ------------------------------------------------------
+    # ACTIVE TEACHER ASSIGNMENTS FOR THE CARD AVATARS + POPUP
+    # ------------------------------------------------------
+    batch_ids = [batch.id for batch in batches]
+    assignments_by_batch = {batch_id: [] for batch_id in batch_ids}
+
+    if batch_ids:
+        active_assignments = (
+            TeacherBatch.objects.filter(
+                batch_id__in=batch_ids,
+                is_active=True,
+                teacher__is_blocked=False,
+                teacher__user__is_active=True,
+            )
+            .select_related("teacher", "teacher__user", "batch")
+            .order_by("teacher__full_name", "id")
+        )
+
+        for assignment in active_assignments:
+            assignments_by_batch.setdefault(
+                assignment.batch_id, []
+            ).append(assignment)
+
+    # ------------------------------------------------------
+    # ACTIVE STUDENT COUNTS (DISPLAY-ONLY DATA)
+    # ------------------------------------------------------
+    student_counts = {}
+    if batch_ids:
+        purchase_count_rows = (
+            StudentBatchPurchase.objects.filter(
+                batch_id__in=batch_ids,
+                status=StudentBatchPurchase.Status.ACTIVE,
+            )
+            .values("batch_id")
+            .annotate(total=Count("student_id", distinct=True))
+        )
+        student_counts = {
+            row["batch_id"]: row["total"]
+            for row in purchase_count_rows
+        }
+
+    # ------------------------------------------------------
+    # CURRENT PRICE / OFFER VALUES AND PER-CARD DISPLAY DATA
+    # ------------------------------------------------------
+    for batch in batches:
+        current_price = batch.get_current_price()
+        original_price = batch.original_price
+
+        batch.display_price = current_price
+        batch.has_current_discount = (
+            original_price is not None
+            and current_price is not None
+            and current_price < original_price
+        )
+
+        if batch.has_current_discount:
+            batch.display_discount_amount = original_price - current_price
+        else:
+            batch.display_discount_amount = Decimal("0.00")
+
+        batch.active_teacher_assignments = assignments_by_batch.get(
+            batch.id, []
+        )
+        batch.student_count = student_counts.get(batch.id, 0)
+        # Display-only status alias. Do not assign to batch.marketplace_status:
+        # that name is a read-only @property defined on the Batch model.
+        batch.admin_marketplace_status = status_by_batch_id.get(
+            batch.id, "draft"
+        )
+        # Use the model's actual publication timestamp for admin display.
+        batch.display_published_at = getattr(batch, "published_at", None)
+
+    # ------------------------------------------------------
+    # SUMMARY COUNTS — ALWAYS BASED ON ALL BATCHES, NOT FILTERED
+    # ------------------------------------------------------
+    total_batches_count = len(all_batch_records)
+    draft_batches_count = sum(
+        1 for value in status_by_batch_id.values() if value == "draft"
+    )
+    coming_soon_batches_count = sum(
+        1 for value in status_by_batch_id.values()
+        if value == "coming_soon"
+    )
+    published_batches_count = sum(
+        1 for value in status_by_batch_id.values()
+        if value == "published"
+    )
+    archived_batches_count = sum(
+        1 for value in status_by_batch_id.values()
+        if value == "archived"
+    )
+    active_batches_count = published_batches_count
+
+    context = {
+        "batches": batches,
+        "now": now,
+        "total_batches_count": total_batches_count,
+        "active_batches_count": active_batches_count,
+        "draft_batches_count": draft_batches_count,
+        "coming_soon_batches_count": coming_soon_batches_count,
+        "published_batches_count": published_batches_count,
+        "archived_batches_count": archived_batches_count,
+        "batch_filter_options": batch_filter_options,
+        "teacher_filter_options": teacher_filter_options,
+        "selected_batch": selected_batch,
+        "selected_teacher": selected_teacher,
+        "selected_status": selected_status,
+        "search": search,
+    }
+
+    return render(
+        request,
+        "admins/batches/batches.html",
+        context,
+    )
 
 
 @cache_control(no_cache=True, must_revalidate=True, no_store=True)
@@ -810,48 +1062,94 @@ def create_batch_view(request):
 
     if request.method == "POST":
 
+        # Intermediate Next clicks validate only the requested section.
+        # They never create a Batch or persist uploaded files as model records.
+        if request.POST.get("action") == "validate_step":
+            try:
+                validate_create_batch_step(
+                    request, request.POST.get("current_step")
+                )
+                return JsonResponse({"success": True})
+            except ValidationError as exc:
+                return JsonResponse(
+                    {"success": False, "errors": {"__all__": exc.messages}},
+                    status=400,
+                )
+            except Exception:
+                import traceback
+                traceback.print_exc()
+                return JsonResponse(
+                    {"success": False, "message": "Unable to validate this section. Please try again."},
+                    status=500,
+                )
+
+        # Step 7 Save Batch: validate the complete form and save once.
+        # The Create Batch page submits this final request through AJAX. This
+        # keeps the existing browser form (including selected upload files)
+        # alive when server-side validation fails, instead of reloading Step 1.
+        is_ajax_submit = (
+            request.headers.get("x-requested-with") == "XMLHttpRequest"
+        )
+
         try:
-
             cleaned_data = validate_create_batch(request)
-
             create_batch(cleaned_data)
 
-            messages.success(
-                request,
-                "Batch created successfully."
-            )
+            messages.success(request, "Batch created successfully.")
 
-            return redirect(
-                "admin_batches"
-            )
+            if is_ajax_submit:
+                return JsonResponse({
+                    "success": True,
+                    "redirect_url": redirect("admin_batches").url,
+                })
 
-        except ValidationError as e:
+            return redirect("admin_batches")
 
-            messages.error(
-                request,
-                e.messages[0]
-            )
+        except ValidationError as exc:
+            error_messages = exc.messages or [
+                "Please correct the batch details and try again."
+            ]
 
+            if is_ajax_submit:
+                return JsonResponse(
+                    {
+                        "success": False,
+                        "errors": {"__all__": error_messages},
+                    },
+                    status=400,
+                )
+
+            messages.error(request, error_messages[0])
             context["form_data"] = request.POST
-
+            context["active_step"] = 7
+            context["restore_form"] = True
             return render(
                 request,
                 "admins/batches/create_batch.html",
                 context,
             )
 
-        except Exception as e:
-
+        except Exception as exc:
             import traceback
             traceback.print_exc()
 
-            messages.error(
-                request,
-                str(e)
+            error_message = str(exc) or (
+                "Unable to save this batch. Please try again."
             )
 
-            context["form_data"] = request.POST
+            if is_ajax_submit:
+                return JsonResponse(
+                    {
+                        "success": False,
+                        "message": error_message,
+                    },
+                    status=500,
+                )
 
+            messages.error(request, error_message)
+            context["form_data"] = request.POST
+            context["active_step"] = 7
+            context["restore_form"] = True
             return render(
                 request,
                 "admins/batches/create_batch.html",
@@ -859,7 +1157,6 @@ def create_batch_view(request):
             )
 
     context["form_data"] = {}
-
     return render(
         request,
         "admins/batches/create_batch.html",
@@ -870,33 +1167,62 @@ def create_batch_view(request):
 @admin_required
 def edit_batch_view(request, batch_id):
 
-    batch = get_object_or_404(
-        Batch,
-        id=batch_id,
-    )
+    batch = get_object_or_404(Batch, id=batch_id)
 
-    # ==========================================================
-    # Temporary Student Count
-    # Replace with actual enrollment count later
-    # ==========================================================
-
-    student_count = 0
+    # Count every historical purchase record for this batch.
+    # Refunded or revoked purchases still count as a past purchase, so a batch
+    # with purchase history cannot be moved back to Draft.
+    student_count = StudentBatchPurchase.objects.filter(
+        batch_id=batch.id
+    ).count()
 
     context = build_batch_context(
         batch=batch,
         extra_context={
             "student_count": student_count,
-            "editable_fields": can_edit_batch(
-                batch,
-                student_count,
-            ),
+            "editable_fields": can_edit_batch(batch, student_count),
         },
     )
 
     if request.method == "POST":
 
-        try:
+        # Intermediate Next clicks validate only the requested Edit Batch step.
+        # They do not call update_batch() and do not save any Batch/model data.
+        if request.POST.get("action") == "validate_step":
+            try:
+                validate_edit_batch_step(
+                    request=request,
+                    batch=batch,
+                    step=request.POST.get("current_step"),
+                    student_count=student_count,
+                )
+                return JsonResponse({"success": True})
+            except ValidationError as exc:
+                return JsonResponse(
+                    {
+                        "success": False,
+                        "errors": {"__all__": exc.messages or [str(exc)]},
+                    },
+                    status=400,
+                )
+            except Exception:
+                import traceback
+                traceback.print_exc()
+                return JsonResponse(
+                    {
+                        "success": False,
+                        "message": "Unable to validate this section. Please try again.",
+                    },
+                    status=500,
+                )
 
+        is_ajax_submit = (
+            request.headers.get("x-requested-with") == "XMLHttpRequest"
+        )
+
+        try:
+            # Final Step 7 submission always runs the complete existing Edit
+            # Batch validation again before the existing update helper is used.
             cleaned_data = validate_edit_batch(
                 request=request,
                 batch=batch,
@@ -908,42 +1234,57 @@ def edit_batch_view(request, batch_id):
                 cleaned_data=cleaned_data,
             )
 
-            messages.success(
-                request,
-                "Batch updated successfully.",
-            )
+            messages.success(request, "Batch updated successfully.")
 
-            return redirect(
-                "admin_batches",
-            )
+            if is_ajax_submit:
+                return JsonResponse({
+                    "success": True,
+                    "redirect_url": redirect("admin_batches").url,
+                })
 
-        except ValidationError as e:
+            return redirect("admin_batches")
 
-            messages.error(
-                request,
-                e.messages[0],
-            )
+        except ValidationError as exc:
+            error_messages = exc.messages or [
+                "Please correct the batch details and try again."
+            ]
 
+            if is_ajax_submit:
+                return JsonResponse(
+                    {
+                        "success": False,
+                        "errors": {"__all__": error_messages},
+                    },
+                    status=400,
+                )
+
+            messages.error(request, error_messages[0])
             context["form_data"] = request.POST
-
+            context["active_step"] = 7
+            context["restore_form"] = True
             return render(
                 request,
                 "admins/batches/edit_batch.html",
                 context,
             )
 
-        except Exception as e:
-
+        except Exception as exc:
             import traceback
             traceback.print_exc()
-
-            messages.error(
-                request,
-                str(e),
+            error_message = str(exc) or (
+                "Unable to update this batch. Please try again."
             )
 
-            context["form_data"] = request.POST
+            if is_ajax_submit:
+                return JsonResponse(
+                    {"success": False, "message": error_message},
+                    status=500,
+                )
 
+            messages.error(request, error_message)
+            context["form_data"] = request.POST
+            context["active_step"] = 7
+            context["restore_form"] = True
             return render(
                 request,
                 "admins/batches/edit_batch.html",
@@ -951,7 +1292,6 @@ def edit_batch_view(request, batch_id):
             )
 
     context["form_data"] = batch
-
     return render(
         request,
         "admins/batches/edit_batch.html",
@@ -1164,6 +1504,8 @@ def delete_batch_view(request, batch_id):
 
         # =====================================================
         # Archived Batch Validation
+        # Preserve the existing rule: archived batches cannot
+        # be permanently deleted through this view.
         # =====================================================
 
         if batch.batch_status == "archived":
@@ -1176,50 +1518,125 @@ def delete_batch_view(request, batch_id):
             return redirect("admin_batches")
 
         # =====================================================
-        # Student Enrollment Validation
-        # =====================================================
-        #
-        # Add your enrollment/purchase check here later.
-        #
-        # Example:
-        #
-        # if StudentEnrollment.objects.filter(batch=batch).exists():
-        #
-        #     messages.error(
-        #         request,
-        #         "Students are already enrolled in this batch. Deletion is not allowed."
-        #     )
-        #
-        #     return redirect("admin_batches")
-        #
+        # SUBJECT PROTECTION
+        # A batch containing even one subject cannot be deleted.
         # =====================================================
 
+        if Subject.objects.filter(batch_id=batch.pk).exists():
+
+            messages.error(
+                request,
+                "This batch has subjects. Remove or transfer its subjects "
+                "before deleting the batch."
+            )
+
+            return redirect("admin_batches")
+
         # =====================================================
-        # Delete Cloudinary Image (Safe)
+        # STUDENT PURCHASE / ACTIVE LEARNING PROTECTION
+        # Protect all purchase history, including active, revoked
+        # and refunded purchases. This preserves order history too.
+        # =====================================================
+
+        if StudentBatchPurchase.objects.filter(batch_id=batch.pk).exists():
+
+            messages.error(
+                request,
+                "Students have purchased this batch. It cannot be "
+                "permanently deleted."
+            )
+
+            return redirect("admin_batches")
+
+        # Save the Cloudinary public ID before deleting the database row.
+        # Cloudinary cleanup happens only after the database deletion
+        # succeeds, so the batch never loses its image before a blocked
+        # database deletion.
+        thumbnail_public_id = None
+
+        if batch.batch_thumbnail:
+            thumbnail_public_id = getattr(
+                batch.batch_thumbnail,
+                "public_id",
+                None,
+            )
+
+        # =====================================================
+        # FINAL CHECKS + DATABASE DELETE
+        # Recheck related records while the batch row is locked.
         # =====================================================
 
         try:
 
-            if batch.batch_thumbnail:
+            with transaction.atomic():
 
-                public_id = getattr(
-                    batch.batch_thumbnail,
-                    "public_id",
-                    None,
+                batch = Batch.objects.select_for_update().get(
+                    pk=batch.pk
                 )
 
-                if public_id:
-                    destroy(public_id)
+                # Recheck the archived rule in case the batch status
+                # changed after the initial page validation.
+                if batch.batch_status == "archived":
 
-        except Exception:
-            # Ignore Cloudinary errors and continue deleting batch
-            pass
+                    messages.error(
+                        request,
+                        "Archived batches cannot be deleted."
+                    )
+
+                    return redirect("admin_batches")
+
+                # Final subject check inside the transaction.
+                if Subject.objects.filter(batch_id=batch.pk).exists():
+
+                    messages.error(
+                        request,
+                        "This batch has subjects. Remove or transfer its "
+                        "subjects before deleting the batch."
+                    )
+
+                    return redirect("admin_batches")
+
+                # Final purchase-history check inside the transaction.
+                if StudentBatchPurchase.objects.filter(
+                    batch_id=batch.pk
+                ).exists():
+
+                    messages.error(
+                        request,
+                        "Students have purchased this batch. It cannot be "
+                        "permanently deleted."
+                    )
+
+                    return redirect("admin_batches")
+
+                batch.delete()
+
+        except (ProtectedError, IntegrityError):
+            messages.error(
+                request,
+                "This batch has related student, purchase, or protected "
+                "records and cannot be deleted."
+            )
+
+            return redirect("admin_batches")
 
         # =====================================================
-        # Delete Batch
+        # CLOUDINARY CLEANUP
+        # Run only after the database deletion has succeeded.
+        # A Cloudinary failure must not undo or misreport the
+        # successful database deletion.
         # =====================================================
 
-        batch.delete()
+        if thumbnail_public_id:
+
+            try:
+                destroy(thumbnail_public_id)
+
+            except Exception:
+                logging.exception(
+                    "Unable to delete Cloudinary thumbnail for batch %s",
+                    batch_id,
+                )
 
         messages.success(
             request,

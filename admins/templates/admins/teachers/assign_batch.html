@@ -6,192 +6,189 @@
 {% block admin_content %}
 
 <style>
-    /* NeoLearn assignment workspace:
-       Teacher Information and Available Subjects may scroll internally.
-       Assignment Summary must display all content without an internal scrollbar. */
-    .neo-subject-list,
-    .neo-profile-scroll {
-        min-height: 0;
-        overscroll-behavior: contain;
-        scrollbar-width: none;
-        -ms-overflow-style: none;
-        -webkit-overflow-scrolling: touch;
+
+/* Batch picker: menu stays the same width as the trigger and scrolls internally. */
+#batch-select-form {
+    position: relative;
+    width: 100%;
+    min-width: 0;
+    z-index: 80;
+}
+.neo-batch-menu {
+    position: absolute;
+    top: calc(100% + 5px);
+    left: 0;
+    right: 0;
+    z-index: 120;
+    display: none;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-content: start;
+    gap: 5px;
+    width: 100%;
+    max-height: min(190px, 38vh);
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: #28718a #0a1728;
+    padding: 7px;
+    border: 1px solid rgba(34, 211, 238, .4);
+    border-radius: 11px;
+    background: #071426;
+    box-shadow: 0 16px 34px rgba(0, 0, 0, .55);
+}
+.neo-batch-menu.is-open { display: grid; }
+.neo-batch-menu::-webkit-scrollbar { width: 6px; }
+.neo-batch-menu::-webkit-scrollbar-track { background: #0a1728; border-radius: 8px; }
+.neo-batch-menu::-webkit-scrollbar-thumb { background: #28718a; border-radius: 8px; }
+.neo-batch-option {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 6px;
+    padding: 5px;
+    border: 1px solid rgba(71, 85, 105, .65);
+    border-radius: 8px;
+    background: #0b1930;
+    text-align: left;
+    cursor: pointer;
+}
+.neo-batch-option:hover,
+.neo-batch-option[aria-selected="true"] {
+    border-color: #22d3ee;
+    background: rgba(8, 145, 178, .18);
+}
+.neo-batch-option img,
+.neo-batch-option .neo-batch-placeholder {
+    width: 30px;
+    height: 30px;
+    flex: none;
+    border-radius: 6px;
+    object-fit: cover;
+}
+.neo-batch-option .neo-batch-name {
+    min-width: 0;
+    overflow: hidden;
+    color: #f8fafc;
+    font-size: 9px;
+    font-weight: 700;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.neo-batch-option .neo-batch-status {
+    margin-top: 2px;
+    color: #67e8f9;
+    font-size: 8px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+@media (max-width: 639px) {
+    .neo-batch-menu {
+        grid-template-columns: minmax(0, 1fr);
+        max-height: 180px;
     }
+    .neo-batch-option { padding: 6px; }
+}
 
-    .neo-subject-list::-webkit-scrollbar,
-    .neo-profile-scroll::-webkit-scrollbar {
-        display: none;
-        width: 0;
-        height: 0;
+
+/* Keep the open batch menu above the subject card on every screen size. */
+.neo-assignment-main {
+    position: relative;
+    z-index: 2;
+    min-width: 0;
+    overflow: visible !important;
+}
+.neo-assignment-main > section:first-child {
+    position: relative;
+    z-index: 70;
+    overflow: visible !important;
+}
+.neo-assignment-main > form {
+    position: relative;
+    z-index: 1;
+}
+.neo-subject-section {
+    position: relative;
+    z-index: 1;
+}
+#batch-select-form {
+    position: relative;
+    z-index: 90;
+}
+#batch-picker-menu {
+    position: absolute;
+    z-index: 999;
+    max-width: 100%;
+    max-height: min(190px, 38vh);
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+}
+@media (max-width: 767px) {
+    #batch-picker-menu {
+        max-height: min(175px, 32vh);
+        grid-template-columns: minmax(0, 1fr);
     }
-
-    .neo-summary-scroll {
-        height: auto !important;
-        max-height: none !important;
-        min-height: 0;
-        flex: 0 0 auto !important;
-        overflow: visible !important;
-        scrollbar-width: none;
-        -ms-overflow-style: none;
+    .neo-assignment-main > section:first-child {
+        margin-bottom: 2px;
     }
-
-    @media (min-width: 1280px) {
-        .neo-assignment-layout {
-            height: calc(100vh - 225px);
-            min-height: 440px;
-            max-height: 760px;
-            align-items: stretch;
-        }
-
-        .neo-teacher-card,
-        .neo-assignment-main {
-            height: 100%;
-            min-height: 0;
-        }
-
-        .neo-teacher-card {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .neo-profile-scroll {
-            flex: 1 1 0%;
-            overflow-x: hidden !important;
-            overflow-y: auto !important;
-        }
-
-        .neo-assignment-main {
-            display: flex;
-            flex-direction: column;
-            min-height: 0;
-        }
-
-        .neo-assignment-main > form {
-            display: flex;
-            flex: 1 1 0%;
-            flex-direction: column;
-            min-height: 0;
-            overflow: hidden;
-        }
-
-        .neo-subject-section {
-            display: flex;
-            flex: 1 1 0%;
-            flex-direction: column;
-            height: 100%;
-            min-height: 0;
-        }
-
-        .neo-subject-list {
-            flex: 1 1 0%;
-            height: 100%;
-            min-height: 0;
-            align-content: start;
-            grid-auto-rows: max-content;
-            overflow-x: hidden !important;
-            overflow-y: auto !important;
-            padding: 0 1px 2px 0;
-            margin: 0;
-            scroll-padding-block: 2px;
-        }
-
-        /*
-         * Fix only the Available Subjects content area:
-         * remove the oversized four-sided inset that was shrinking the
-         * visible list and clipping the top/bottom rows. The card header,
-         * teacher profile, batch selection and summary are untouched.
-         */
-        .neo-subject-section > div:last-child {
-            flex: 1 1 0%;
-            min-height: 0;
-            padding: 8px 8px 8px 10px !important;
-            overflow: hidden !important;
-        }
-
-        .neo-subject-section .neo-subject-list > label {
-            min-height: 72px;
-            align-self: start;
-        }
-
-        /* The yellow-marked Assignment Summary area never scrolls or clips. */
-        .neo-summary-card {
-            height: auto !important;
-            min-height: 0;
-            align-self: stretch;
-        }
-
-        .neo-summary-section {
-            height: auto !important;
-            min-height: 0;
-            overflow: visible !important;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .neo-summary-section > div:last-child {
-            height: auto !important;
-            max-height: none !important;
-            flex: 0 0 auto !important;
-            overflow: visible !important;
-        }
-
-        .neo-summary-scroll {
-            overflow: visible !important;
-        }
+}
+@media (min-width: 768px) and (max-width: 1279px) {
+    #batch-picker-menu {
+        max-height: min(185px, 34vh);
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
+}
 
-    @media (max-width: 1279px) {
-        .neo-assignment-layout {
-            height: auto;
-            max-height: none;
-        }
+/* Single-screen desktop workspace: no page or panel scrollbars. */
+@media (min-width:1280px){
+ .neo-assignment-layout{height:calc(100vh - 270px);min-height:520px;max-height:690px;gap:12px;grid-template-columns:245px minmax(0,1fr) 270px;align-items:stretch}
+ .neo-teacher-card,.neo-assignment-main,.neo-summary-card{height:100%;min-height:0}
+ .neo-teacher-card{display:flex;flex-direction:column}
+ .neo-profile-scroll{flex:1 1 auto;overflow:hidden!important;padding:10px!important}
+ .neo-profile-scroll>div:first-child{padding-bottom:9px!important}
+ .neo-profile-scroll img,.neo-profile-scroll>div:first-child>div{width:72px!important;height:72px!important}
+ .neo-profile-scroll h3{margin-top:7px!important;font-size:14px!important}
+ .neo-profile-scroll dl{margin-top:8px!important;display:grid;gap:5px!important}
+ .neo-profile-scroll dl>div{padding:6px!important;gap:7px!important}
+ .neo-profile-scroll dl>div>span{width:27px!important;height:27px!important}
+ .neo-profile-scroll dl dt{font-size:9px!important}
+ .neo-profile-scroll dl dd{margin-top:2px!important;font-size:10px!important;line-height:1.2!important}
+ .neo-profile-scroll>a{margin-top:7px!important;padding:7px!important;font-size:10px!important}
+ .neo-assignment-main{display:flex;flex-direction:column;gap:9px!important;overflow:visible}
+ .neo-assignment-main>form{display:flex;flex:1 1 auto;min-height:0;overflow:visible!important}
+ .neo-assignment-main>section{position:relative;z-index:70;overflow:visible!important}
+ .neo-assignment-main>section>div:first-child{padding:8px 11px!important}
+ .neo-assignment-main>section>div:last-child{padding:8px 11px!important}
+ .neo-assignment-main>section .h-10.w-10,.neo-subject-section>div:first-child .h-10.w-10{width:30px!important;height:30px!important}
+ .neo-assignment-main>section p,.neo-subject-section>div:first-child p{font-size:10px!important}
 
-        .neo-subject-list {
-            height: auto;
-            min-height: 0;
-            overflow: visible !important;
-            padding: 0;
-        }
-
-        .neo-profile-scroll {
-            overflow: visible !important;
-        }
-
-        .neo-summary-card,
-        .neo-summary-section,
-        .neo-summary-scroll {
-            height: auto !important;
-            max-height: none !important;
-            overflow: visible !important;
-        }
-    }
-
-    @media (max-height: 760px) and (min-width: 1280px) {
-        .neo-assignment-layout {
-            height: calc(100vh - 195px);
-            min-height: 390px;
-            gap: 0.75rem;
-        }
-
-        .neo-teacher-card > div:first-child,
-        .neo-summary-section > div:first-child {
-            padding-top: 0.65rem;
-            padding-bottom: 0.65rem;
-        }
-
-        .neo-profile-scroll,
-        .neo-summary-section > div:nth-child(2) {
-            padding: 0.75rem;
-        }
-    }
+ .neo-subject-section{display:flex;flex:1 1 auto;min-height:0;flex-direction:column;overflow:hidden}
+ .neo-subject-section>div:first-child{flex:none;padding:8px 11px!important}
+ .neo-subject-section>div:last-child{flex:1 1 auto;min-height:0;overflow:hidden!important;padding:7px!important}
+ .neo-subject-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px!important;align-content:start;overflow:hidden!important;padding:0!important}
+ .neo-subject-list>label{min-height:54px!important;padding:5px!important;gap:5px!important;border-radius:9px!important}
+ .neo-subject-list>label>span:first-of-type{width:31px!important;height:31px!important}
+ .neo-subject-list>label>span:last-child>span:first-child{font-size:9px!important;line-height:1.2!important}
+ .neo-subject-list>label>span:last-child>span:nth-child(3){display:none!important}
+ .neo-subject-list>label input{width:12px!important;height:12px!important}
+ .neo-summary-section{height:100%;display:flex;flex-direction:column;overflow:hidden!important}
+ .neo-summary-section>div:first-child{flex:none;padding:9px 11px!important}
+ .neo-summary-section>div:last-child{display:flex;flex:1 1 auto;min-height:0;flex-direction:column;padding:9px!important;overflow:hidden!important}
+ .neo-summary-section .neo-summary-scroll{flex:1 1 auto;overflow:hidden!important}
+ .neo-summary-section .neo-summary-scroll>div{padding:4px!important}
+ .neo-summary-section .mt-3.shrink-0{margin-top:auto!important}
+ .neo-summary-section button,.neo-summary-section a{padding:9px!important;font-size:10px!important}
+}
+@media(max-width:1279px){.neo-assignment-layout{height:auto;max-height:none}.neo-subject-list{overflow:visible!important}}
 </style>
 
 
-<div class="bg-[#050b18] px-3 py-4 text-slate-100 sm:px-5 lg:px-6">
+<div class="bg-[#050b18] px-3 py-2 text-slate-100 sm:px-5 lg:px-6">
     <div class="mx-auto max-w-[1600px]">
 
         <!-- Breadcrumbs -->
-        <nav aria-label="Breadcrumb" class="mb-5 flex flex-wrap items-center gap-2 text-sm">
+        <nav aria-label="Breadcrumb" class="mb-2 flex flex-wrap items-center gap-2 text-xs">
             <a href="{% url 'admin_teachers' %}"
                class="font-medium text-slate-400 transition hover:text-cyan-300">
                 Teachers
@@ -203,9 +200,9 @@
         </nav>
 
         <!-- Page heading -->
-        <header class="mb-4 flex flex-col gap-3 border-b border-slate-800/80 pb-4 sm:flex-row sm:items-end sm:justify-between">
+        <header class="mb-3 flex flex-col gap-2 border-b border-slate-800/80 pb-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
-                <h1 class="text-2xl font-bold tracking-tight text-white sm:text-3xl">
+                <h1 class="text-xl font-bold tracking-tight text-white sm:text-2xl">
                     Assign Batch &amp; Subjects
                 </h1>
             </div>
@@ -217,11 +214,11 @@
             </div>
         </header>
 
-        <div class="neo-assignment-layout grid items-stretch gap-5 lg:grid-cols-[250px_minmax(0,1fr)] xl:grid-cols-[270px_minmax(0,1fr)_300px]">
+        <div class="neo-assignment-layout grid items-stretch gap-3 lg:grid-cols-[230px_minmax(0,1fr)] xl:grid-cols-[245px_minmax(0,1fr)_270px]">
 
             <!-- LEFT: TEACHER PROFILE -->
             <aside class="neo-teacher-card h-full min-w-0 overflow-hidden rounded-2xl border border-slate-800 bg-gradient-to-b from-[#0c1930] to-[#071020] shadow-xl shadow-black/20">
-                <div class="flex items-center gap-3 border-b border-slate-800/90 px-5 py-4">
+                <div class="flex items-center gap-3 border-b border-slate-800/90 px-3 py-2.5">
                     <span class="flex h-10 w-10 items-center justify-center rounded-xl border border-violet-400/20 bg-violet-400/10 text-violet-300">
                         <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                             <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM20 8v6m3-3h-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
@@ -312,7 +309,7 @@
             <main class="neo-assignment-main min-w-0 space-y-3 xl:flex xl:min-h-0 xl:flex-col">
                 <!-- Batch selection -->
                 <section class="shrink-0 overflow-hidden rounded-2xl border border-cyan-900/70 bg-[#081426] shadow-xl shadow-black/20">
-                    <div class="flex items-center gap-3 border-b border-slate-800/90 px-5 py-4">
+                    <div class="flex items-center gap-3 border-b border-slate-800/90 px-3 py-2.5">
                         <span class="flex h-10 w-10 items-center justify-center rounded-xl border border-cyan-400/20 bg-cyan-400/10 text-cyan-300">
                             <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                                 <path d="m12 3 9 5-9 5-9-5 9-5ZM3 12l9 5 9-5M3 16l9 5 9-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
@@ -323,42 +320,25 @@
                             <p class="mt-0.5 text-xs text-slate-400">Choose a published batch to load its subjects.</p>
                         </div>
                     </div>
-                    <div class="p-5">
-                        <form method="GET">
-                            <label for="batch" class="mb-2 block text-xs font-semibold text-slate-300">Select batch</label>
-                            <div class="relative">
-                                <select id="batch" name="batch" onchange="this.form.submit()"
-                                        class="w-full appearance-none rounded-xl border border-slate-700 bg-slate-900/90 px-4 py-3.5 pr-10 text-sm text-white outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/10">
-                                    <option value="">-- Select Batch --</option>
-                                    {% for batch in batches %}
-                                        <option value="{{ batch.id }}" {% if selected_batch and selected_batch.id == batch.id %}selected{% endif %}>
-                                            {{ batch.batch_name }}
-                                        </option>
-                                    {% endfor %}
-                                </select>
-                                <svg class="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                                    <path d="m7 10 5 5 5-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-                                </svg>
+                    <div class="p-3">
+                        <form method="GET" id="batch-select-form" class="relative">
+                            <label for="batch-picker-button" class="mb-1 block text-[10px] font-semibold text-slate-300">Select batch</label>
+                            <input type="hidden" id="batch" name="batch" value="{% if selected_batch %}{{ selected_batch.id }}{% endif %}">
+                            <button type="button" id="batch-picker-button" aria-expanded="false" aria-controls="batch-picker-menu" class="flex w-full items-center gap-2 rounded-lg border border-cyan-500/70 bg-slate-950/80 px-2 py-1.5 text-left hover:border-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-400/20">
+                                {% if selected_batch and selected_batch.batch_thumbnail %}<img src="{{ selected_batch.batch_thumbnail.url }}" alt="" class="h-7 w-8 shrink-0 rounded object-cover">{% else %}<span class="flex h-7 w-8 shrink-0 items-center justify-center rounded bg-cyan-400/10 text-cyan-300">▦</span>{% endif %}
+                                <span class="min-w-0 flex-1"><span class="block truncate text-[11px] font-semibold text-white">{% if selected_batch %}{{ selected_batch.batch_name }}{% else %}Choose a batch{% endif %}</span><span class="block text-[8px] text-cyan-300">{% if selected_batch %}Selected batch{% else %}Select to load subjects{% endif %}</span></span>
+                                <svg id="batch-picker-chevron" class="h-3.5 w-3.5 shrink-0 text-cyan-300 transition" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m7 10 5 5 5-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                            </button>
+                            <div id="batch-picker-menu" class="neo-batch-menu" role="listbox" aria-label="Available batches">
+                                {% for batch in batches %}
+                                <button type="button" class="neo-batch-option" role="option" aria-selected="{% if selected_batch and selected_batch.id == batch.id %}true{% else %}false{% endif %}" data-batch-id="{{ batch.id }}">
+                                    {% if batch.batch_thumbnail %}<img src="{{ batch.batch_thumbnail.url }}" alt="" loading="lazy">{% else %}<span class="neo-batch-placeholder flex items-center justify-center bg-cyan-400/10 text-cyan-300">▦</span>{% endif %}
+                                    <span class="min-w-0 flex-1"><span class="neo-batch-name block">{{ batch.batch_name }}</span><span class="neo-batch-status block">{% if batch.marketplace_status == 'coming_soon' %}Coming Soon{% elif batch.marketplace_status == 'admissions_closed' %}Archived / Closed{% elif batch.marketplace_status == 'buy_now' %}Buy Now{% else %}{{ batch.batch_status|default:'Batch' }}{% endif %}</span></span>
+                                    {% if selected_batch and selected_batch.id == batch.id %}<span class="text-cyan-300">✓</span>{% endif %}
+                                </button>
+                                {% empty %}<p class="col-span-full px-2 py-2 text-xs text-slate-400">No batches available.</p>{% endfor %}
                             </div>
                         </form>
-                        {% if selected_batch %}
-                            <div class="mt-3 flex items-center gap-3 rounded-xl border border-slate-800 bg-slate-950/50 p-3">
-                                {% if selected_batch.batch_thumbnail %}
-                                    <img src="{{ selected_batch.batch_thumbnail.url }}" alt="{{ selected_batch.batch_name }}" class="h-12 w-14 shrink-0 rounded-lg object-cover">
-                                {% else %}
-                                    <span class="flex h-12 w-14 shrink-0 items-center justify-center rounded-lg bg-cyan-400/10 text-cyan-300">
-                                        <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                                            <path d="m12 3 9 5-9 5-9-5 9-5ZM3 12l9 5 9-5M3 16l9 5 9-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-                                        </svg>
-                                    </span>
-                                {% endif %}
-                                <div class="min-w-0 flex-1">
-                                    <p class="truncate text-sm font-semibold text-white">{{ selected_batch.batch_name }}</p>
-                                    <p class="mt-1 text-xs text-slate-400">Published batch selected</p>
-                                </div>
-                                <span class="shrink-0 rounded-full border border-emerald-400/20 bg-emerald-400/[0.08] px-2.5 py-1 text-[10px] font-semibold text-emerald-300">Selected</span>
-                            </div>
-                        {% endif %}
                     </div>
                 </section>
 
@@ -368,7 +348,7 @@
                     <input type="hidden" name="batch" value="{% if selected_batch %}{{ selected_batch.id }}{% endif %}">
 
                     <section class="neo-subject-section flex min-h-0 flex-col overflow-hidden rounded-2xl border border-slate-800 bg-[#081426] shadow-xl shadow-black/20 xl:h-full">
-                        <div class="flex flex-col gap-3 border-b border-slate-800/90 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+                        <div class="flex flex-col gap-3 border-b border-slate-800/90 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between">
                             <div class="flex items-center gap-3">
                                 <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-cyan-400/20 bg-cyan-400/10 text-cyan-300">
                                     <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -465,7 +445,7 @@
             <!-- RIGHT: LIVE ASSIGNMENT SUMMARY -->
             <aside class="neo-summary-card h-auto min-w-0 lg:col-span-2 xl:col-span-1">
                 <section class="neo-summary-section min-h-0 overflow-visible rounded-2xl border border-cyan-900/70 bg-gradient-to-b from-[#0b1930] to-[#071020] shadow-xl shadow-black/20">
-                    <div class="flex items-center gap-3 border-b border-slate-800/90 px-5 py-4">
+                    <div class="flex items-center gap-3 border-b border-slate-800/90 px-3 py-2.5">
                         <span class="flex h-10 w-10 items-center justify-center rounded-xl border border-cyan-400/20 bg-cyan-400/10 text-cyan-300">
                             <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                                 <path d="M7 3h7l5 5v13H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2ZM14 3v5h5M9 13h6M9 17h6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
@@ -569,6 +549,19 @@
     newCheckboxes.forEach((checkbox) => checkbox.addEventListener("change", updateAssignmentSummary));
     updateAssignmentSummary();
 })();
+
+(function () {
+    const form = document.getElementById("batch-select-form");
+    const trigger = document.getElementById("batch-picker-button");
+    const menu = document.getElementById("batch-picker-menu");
+    const hidden = document.getElementById("batch");
+    const chevron = document.getElementById("batch-picker-chevron");
+    if (!form || !trigger || !menu || !hidden) return;
+    function closeMenu() { menu.classList.remove("is-open"); trigger.setAttribute("aria-expanded", "false"); if (chevron) chevron.style.transform = "rotate(0deg)"; }
+    trigger.addEventListener("click", function () { const open = menu.classList.toggle("is-open"); trigger.setAttribute("aria-expanded", String(open)); if (chevron) chevron.style.transform = open ? "rotate(180deg)" : "rotate(0deg)"; });
+    menu.querySelectorAll("[data-batch-id]").forEach(function (item) { item.addEventListener("click", function () { hidden.value = item.dataset.batchId; form.submit(); }); });
+    document.addEventListener("click", function (event) { if (!form.contains(event.target)) closeMenu(); });
+    document.addEventListener("keydown", function (event) { if (event.key === "Escape") closeMenu(); });
+})();
 </script>
-<script src="{% static 'admins/js/assign_batch.js' %}"></script>
 {% endblock %}
