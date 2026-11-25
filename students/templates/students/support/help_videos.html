@@ -6,8 +6,8 @@
 {% block student_content %}
 <style>
     .support-page {
-        --support-accent: #22d3ee;
-        --support-accent-soft: rgba(34, 211, 238, .10);
+        --support-accent: #34d399;
+        --support-accent-soft: rgba(52, 211, 153, .10);
         --support-border: rgba(148, 163, 184, .14);
         color: #e5eefb;
     }
@@ -18,7 +18,7 @@
     }
 
     .support-count {
-        border: 1px solid rgba(34, 211, 238, .18);
+        border: 1px solid rgba(52, 211, 153, .18);
         background: linear-gradient(135deg, rgba(15, 35, 55, .92), rgba(9, 18, 34, .94));
         box-shadow: inset 0 1px 0 rgba(255,255,255,.025);
     }
@@ -32,8 +32,8 @@
     }
 
     .support-panel:focus-within {
-        border-color: rgba(34, 211, 238, .28);
-        box-shadow: 0 12px 34px rgba(0,0,0,.14), 0 0 0 3px rgba(34,211,238,.035);
+        border-color: rgba(52, 211, 153, .28);
+        box-shadow: 0 12px 34px rgba(0,0,0,.14), 0 0 0 3px rgba(52,211,153,.035);
     }
 
     .support-input {
@@ -75,9 +75,9 @@
     .support-input:hover { border-color: rgba(148, 163, 184, .34); }
 
     .support-input:focus {
-        border-color: rgba(34, 211, 238, .7);
+        border-color: rgba(52, 211, 153, .7);
         background: #081426;
-        box-shadow: 0 0 0 3px rgba(34, 211, 238, .09);
+        box-shadow: 0 0 0 3px rgba(52, 211, 153, .09);
     }
 
     .support-btn {
@@ -87,21 +87,21 @@
         gap: 7px;
         min-height: 42px;
         padding: 0 15px;
-        border: 1px solid rgba(34, 211, 238, .55);
+        border: 1px solid rgba(52, 211, 153, .55);
         border-radius: 11px;
-        background: linear-gradient(135deg, #35d9ee, #22c8e5);
+        background: linear-gradient(135deg, #6ee7b7, #10b981);
         color: #04111c;
         font-size: 12px;
         font-weight: 800;
         white-space: nowrap;
-        box-shadow: 0 5px 16px rgba(34, 211, 238, .10);
+        box-shadow: 0 5px 16px rgba(52, 211, 153, .10);
         transition: transform .18s ease, box-shadow .18s ease, filter .18s ease;
     }
 
     .support-btn:hover {
         transform: translateY(-1px);
         filter: brightness(1.06);
-        box-shadow: 0 8px 22px rgba(34, 211, 238, .18);
+        box-shadow: 0 8px 22px rgba(52, 211, 153, .18);
     }
 
     .support-btn:active { transform: translateY(0); }
@@ -111,9 +111,9 @@
     }
 
     .support-clear:hover {
-        border-color: rgba(34, 211, 238, .35);
+        border-color: rgba(52, 211, 153, .35);
         color: #a5f3fc;
-        background: rgba(34, 211, 238, .06);
+        background: rgba(52, 211, 153, .06);
     }
 
     .support-card {
@@ -129,8 +129,8 @@
 
     .support-card:hover {
         transform: translateY(-3px);
-        border-color: rgba(34, 211, 238, .42);
-        box-shadow: 0 14px 30px rgba(0,0,0,.22), 0 0 0 1px rgba(34,211,238,.045);
+        border-color: rgba(52, 211, 153, .42);
+        box-shadow: 0 14px 30px rgba(0,0,0,.22), 0 0 0 1px rgba(52,211,153,.045);
     }
 
     .support-player {
@@ -176,7 +176,7 @@
 
     .support-category-overlay .support-tag {
         background: rgba(3, 12, 25, .88);
-        border-color: rgba(34, 211, 238, .42);
+        border-color: rgba(52, 211, 153, .42);
         box-shadow: 0 3px 12px rgba(0, 0, 0, .28);
         backdrop-filter: blur(7px);
     }
@@ -227,8 +227,8 @@
 
     .support-cover:hover .support-play {
         transform: scale(1.08);
-        border-color: rgba(34,211,238,.9);
-        background: rgba(34,211,238,.92);
+        border-color: rgba(52,211,153,.9);
+        background: rgba(52,211,153,.92);
         color: #04111c;
     }
 
@@ -245,8 +245,8 @@
         display: inline-flex;
         align-items: center;
         max-width: 100%;
-        border: 1px solid rgba(34,211,238,.2);
-        background: rgba(34,211,238,.075);
+        border: 1px solid rgba(52,211,153,.2);
+        background: rgba(52,211,153,.075);
         color: #8be9f7;
         padding: 4px 8px;
         border-radius: 999px;
@@ -267,8 +267,8 @@
     }
 
     .support-pagination-link:hover {
-        border-color: rgba(34,211,238,.35);
-        background: rgba(34,211,238,.07);
+        border-color: rgba(52,211,153,.35);
+        background: rgba(52,211,153,.07);
         color: #a5f3fc;
     }
 
@@ -314,8 +314,8 @@
     .support-page .text-white,
     .support-page .text-slate-200,
     .support-page .text-slate-300 { color: #263b30 !important; }
-    .support-page .text-cyan-300,
-    .support-page .text-cyan-200 { color: #047857 !important; }
+    .support-page .text-emerald-300,
+    .support-page .text-emerald-200 { color: #047857 !important; }
 
     /* Keep the main page heading and subtitle explicitly white. */
     .support-page .support-page-head h1,
@@ -404,10 +404,10 @@
         color: #047857 !important;
     }
     .support-page .border-t { border-color: #e5eee8 !important; }
-    .support-page .bg-cyan-300\\/10 {
+    .support-page .bg-emerald-300\\/10 {
         background: #ecfdf3 !important;
     }
-    .support-page .border-cyan-300\\/15 { border-color: #cce8d8 !important; }
+    .support-page .border-emerald-300\\/15 { border-color: #cce8d8 !important; }
     .support-page .support-play {
         border-color: rgba(255,255,255,.72);
         background: rgba(4, 40, 26, .78);
@@ -418,51 +418,183 @@
         color: #ffffff;
     }
 
+
+    /* Compact two-column support heading and filter layout */
+    .support-top-grid {
+        display: grid;
+        grid-template-columns: minmax(250px, .78fr) minmax(0, 1.42fr);
+        gap: 16px;
+        align-items: stretch;
+    }
+    .support-intro {
+        position: relative;
+        display: flex;
+        min-height: 148px;
+        align-items: center;
+        gap: 13px;
+        overflow: hidden;
+        padding: 15px 16px;
+        border: 1px solid rgba(16,185,129,.42);
+        border-radius: 18px;
+        background:
+            radial-gradient(circle at 12% 100%, rgba(16,185,129,.22), transparent 45%),
+            linear-gradient(135deg, #062a22 0%, #07372b 52%, #08251f 100%);
+        box-shadow: 0 10px 28px rgba(0,0,0,.16), inset 0 1px 0 rgba(255,255,255,.07);
+    }
+    .support-intro::after {
+        content: "";
+        position: absolute;
+        width: 190px;
+        height: 110px;
+        right: -58px;
+        bottom: -66px;
+        border: 1px solid rgba(52,211,153,.25);
+        border-radius: 50%;
+        box-shadow: 0 0 0 18px rgba(16,185,129,.045), 0 0 0 38px rgba(16,185,129,.035);
+        pointer-events: none;
+    }
+    .support-avatar {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        flex: 0 0 88px;
+        width: 88px;
+        height: 88px;
+        aspect-ratio: 1 / 1;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        border: 1px solid rgba(110,231,183,.4);
+        border-radius: 17px;
+        background: linear-gradient(160deg, rgba(16,185,129,.24), rgba(2,20,16,.18));
+        box-shadow: 0 8px 22px rgba(0,0,0,.16);
+    }
+    .support-avatar img { display:block; width:100%; height:100%; object-fit:cover; object-position:center; }
+    .support-intro-copy { position:relative; z-index:1; min-width:0; }
+    .support-intro-copy .support-eyebrow {
+        color:#6ee7b7; font-size:9px; font-weight:900;
+        letter-spacing:.15em; text-transform:uppercase;
+    }
+    .support-intro-copy h1 {
+        margin:4px 0 0; color:#fff !important;
+        font-size:clamp(18px, 1.7vw, 23px);
+        font-weight:850; line-height:1.12; letter-spacing:-.035em;
+    }
+    .support-intro-copy p {
+        margin-top:7px; max-width:250px;
+        color:#d1fae5 !important; font-size:11px; line-height:1.5;
+    }
+    .support-search-panel {
+        display:grid;
+        grid-template-columns:minmax(0,1fr) minmax(145px,190px) auto;
+        gap:10px;
+        align-content:center;
+        align-items:end;
+        padding:14px 15px;
+    }
+    .support-search-panel .support-panel-foot {
+        grid-column:1 / -1;
+        display:flex; flex-wrap:wrap; align-items:center;
+        justify-content:space-between; gap:8px;
+        margin-top:1px; padding-top:9px;
+        border-top:1px solid #e5eee8;
+        color:#68796f; font-size:10px;
+    }
+    .support-search-panel .support-panel-foot i { color:#059669; }
+    .support-field-label {
+        display:block; margin-bottom:6px; color:#52675a;
+        font-size:9px; font-weight:900; letter-spacing:.07em;
+        text-transform:uppercase;
+    }
+    .support-search-panel .support-input {
+        border-color:#d7e4dc; background:#fbfdfb; color:#20372a;
+    }
+    .support-search-panel .support-input:focus {
+        border-color:#059669; background:#fff;
+        box-shadow:0 0 0 3px rgba(16,185,129,.10);
+    }
+    .support-search-panel .support-input::placeholder { color:#91a097; }
+    .support-search-panel .support-btn {
+        border-color:#059669;
+        background:linear-gradient(135deg,#10b981,#059669);
+        color:#fff;
+    }
+    .support-search-panel .support-clear {
+        border-color:#d7e4dc !important; background:#fff;
+        color:#52675a !important;
+    }
+    .support-search-panel .support-clear:hover {
+        border-color:#8bc6a5 !important; background:#f0fbf4 !important;
+        color:#047857 !important;
+    }
+    @media (max-width: 900px) {
+        .support-top-grid { grid-template-columns:minmax(0,1fr); }
+        .support-intro { min-height:122px; }
+        .support-search-panel { grid-template-columns:minmax(0,1fr) minmax(145px,190px) auto; }
+    }
+    @media (max-width: 600px) {
+        .support-intro { min-height:112px; padding:12px; }
+        .support-avatar { flex-basis:74px; width:74px; height:74px; }
+        .support-search-panel { grid-template-columns:minmax(0,1fr); padding:12px; }
+        .support-search-panel .support-panel-foot { grid-column:1; }
+        .support-search-panel .support-actions { display:flex; }
+        .support-search-panel .support-actions .support-btn { flex:1; }
+    }
+
 </style>
 
 <div class="support-page mx-auto w-full max-w-[1600px] space-y-5">
-    <section class="support-page-head flex items-center justify-between gap-4">
-        <div class="min-w-0">
-            <div class="mb-2 flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-[.16em] text-cyan-300">
-                <i class="ri-customer-service-2-line text-base"></i>
-                Student Support Centre
-            </div>
-            <h1 class="text-2xl font-extrabold tracking-tight text-white sm:text-3xl">FAQ &amp; Help Videos</h1>
-            <p class="mt-1 text-sm text-slate-400">Find answers and watch a guide whenever you need help.</p>
-        </div>
-        <div class="support-count flex shrink-0 items-center gap-2 rounded-2xl px-3.5 py-2.5">
-            <i class="ri-play-circle-line text-xl text-cyan-300"></i>
-            <span class="text-xs text-slate-400">Videos</span>
-            <strong class="text-lg text-white">{{ page_obj.paginator.count }}</strong>
-        </div>
-    </section>
+    <section class="support-top-grid" aria-label="Student support and video search">
 
-    <form method="get" class="support-panel grid grid-cols-1 gap-3 p-4 md:grid-cols-[minmax(0,1fr)_220px_auto] md:items-end">
-        <div class="min-w-0">
-            <label for="support-search" class="mb-2 block text-[10px] font-extrabold uppercase tracking-wide text-slate-400">Search support videos</label>
-            <div class="relative">
-                <i class="ri-search-line absolute left-3.5 top-1/2 -translate-y-1/2 text-lg text-slate-500"></i>
-                <input id="support-search" class="support-input pl-11" type="search" name="q" value="{{ search_query }}" placeholder="Search title or description...">
+        <!-- LEFT: FAQ & SUPPORT INTRO WITH MODERN EMBEDDED AVATAR -->
+        <div class="support-intro">
+            <div class="support-avatar">
+                <img src="{% static 'students/images/support-avatar.png' %}"
+                     alt="NeoLearner student support assistant"
+                     loading="lazy">
+            </div>
+            <div class="support-intro-copy">
+                <div class="support-eyebrow">
+                    <i class="ri-customer-service-2-line mr-1"></i> Student Support Centre
+                </div>
+                <h1>FAQ &amp; Help Videos</h1>
+                <p>Find answers and watch a guide whenever you need help.</p>
             </div>
         </div>
-        <div class="min-w-0">
-            <label for="support-category" class="mb-2 block text-[10px] font-extrabold uppercase tracking-wide text-slate-400">Category</label>
-            <select id="support-category" class="support-input" name="category">
-                <option value="">All categories</option>
-                {% for value,label in category_choices %}
-                    <option value="{{ value }}" {% if selected_category == value %}selected{% endif %}>{{ label }}</option>
-                {% endfor %}
-            </select>
-        </div>
-        <div class="flex gap-2">
-            <button class="support-btn flex-1 md:flex-none" type="submit"><i class="ri-search-line"></i> Search</button>
-            <a class="support-clear inline-flex min-h-[42px] items-center justify-center rounded-xl border border-white/10 px-4 text-[11px] font-bold text-slate-300" href="{% url 'student_help_videos' %}">Clear</a>
-        </div>
-        <div class="col-span-full flex flex-wrap items-center justify-between gap-2 border-t border-white/[.06] pt-3 text-[11px] text-slate-500">
-            <span>Published videos available to students</span>
-            <span class="inline-flex items-center gap-1.5"><i class="ri-shield-check-line text-cyan-300"></i> Published content only</span>
-        </div>
-    </form>
+
+        <!-- RIGHT: SEARCH AND CATEGORY FILTER -->
+        <form method="get" class="support-panel support-search-panel">
+            <div class="min-w-0">
+                <label for="support-search" class="support-field-label">Search support videos</label>
+                <div class="relative">
+                    <i class="ri-search-line absolute left-3.5 top-1/2 -translate-y-1/2 text-lg text-emerald-700"></i>
+                    <input id="support-search" class="support-input" type="search" name="q"
+                           value="{{ search_query }}" placeholder="Search title or description...">
+                </div>
+            </div>
+            <div class="min-w-0">
+                <label for="support-category" class="support-field-label">Category</label>
+                <select id="support-category" class="support-input" name="category">
+                    <option value="">All categories</option>
+                    {% for value,label in category_choices %}
+                        <option value="{{ value }}" {% if selected_category == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="flex gap-2 support-actions">
+                <button class="support-btn flex-1 md:flex-none" type="submit">
+                    <i class="ri-search-line"></i> Search
+                </button>
+                <a class="support-clear inline-flex min-h-[42px] items-center justify-center rounded-xl border px-4 text-[11px] font-bold"
+                   href="{% url 'student_help_videos' %}">Clear</a>
+            </div>
+            <div class="support-panel-foot">
+                <span>Published videos available to students</span>
+                <span class="inline-flex items-center gap-1.5"><i class="ri-shield-check-line"></i> Published content only</span>
+                <span class="inline-flex items-center gap-1.5"><i class="ri-play-circle-line"></i> {{ page_obj.paginator.count }} videos</span>
+            </div>
+        </form>
+    </section>
 
     {% if videos %}
         <div class="support-video-grid grid grid-cols-1 gap-3 sm:gap-4">
@@ -482,7 +614,7 @@
                     </div>
                     <div class="support-card-body">
                         <div class="mb-2 flex items-center justify-end">
-                            <span class="inline-flex items-center gap-1 text-[10px] text-slate-500"><i class="ri-play-circle-line text-cyan-300"></i> Help video</span>
+                            <span class="inline-flex items-center gap-1 text-[10px] text-slate-500"><i class="ri-play-circle-line text-emerald-300"></i> Help video</span>
                         </div>
                         <h2 class="break-words text-[14px] font-extrabold leading-snug text-white">{{ video.title }}</h2>
                         {% if video.description %}
@@ -503,14 +635,14 @@
                         <a class="support-pagination-link rounded-xl px-3 py-2 text-[11px] font-bold text-slate-200" href="?q={{ search_query|urlencode }}&category={{ selected_category|urlencode }}&page={{ page_obj.previous_page_number }}">Previous</a>
                     {% endif %}
                     {% if page_obj.has_next %}
-                        <a class="support-pagination-link rounded-xl bg-cyan-300/10 px-3 py-2 text-[11px] font-bold text-cyan-200" href="?q={{ search_query|urlencode }}&category={{ selected_category|urlencode }}&page={{ page_obj.next_page_number }}">Next</a>
+                        <a class="support-pagination-link rounded-xl bg-emerald-300/10 px-3 py-2 text-[11px] font-bold text-emerald-200" href="?q={{ search_query|urlencode }}&category={{ selected_category|urlencode }}&page={{ page_obj.next_page_number }}">Next</a>
                     {% endif %}
                 </div>
             </nav>
         {% endif %}
     {% else %}
         <div class="support-empty px-5 py-14 text-center">
-            <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-cyan-300/15 bg-cyan-300/10 text-2xl text-cyan-300"><i class="ri-question-answer-line"></i></div>
+            <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-emerald-300/15 bg-emerald-300/10 text-2xl text-emerald-300"><i class="ri-question-answer-line"></i></div>
             <h2 class="mt-4 text-lg font-extrabold text-white">No help videos found</h2>
             <p class="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-400">Try another search term or choose a different category.</p>
             <a href="{% url 'student_help_videos' %}" class="support-btn mt-5">Show all videos</a>

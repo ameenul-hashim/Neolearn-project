@@ -21,21 +21,46 @@
         </span>
     </nav>
 
-    <!-- PAGE HEADER -->
-    <div class="mb-7 flex items-center gap-3">
-        <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] border border-cyan-400/20 bg-cyan-400/10 text-cyan-400">
-            <i class="ri-book-open-line text-[20px]"></i>
-        </div>
+    <!-- PAGE HEADER: alternative emerald editorial banner -->
+    <section class="relative isolate mb-7 overflow-hidden rounded-[20px] border border-emerald-400/35 bg-[#04271f] shadow-[0_12px_34px_rgba(5,150,105,0.10)]">
+        <div class="pointer-events-none absolute inset-0 bg-[linear-gradient(105deg,#03271f_0%,#064b38_58%,#03251e_100%)]"></div>
+        <div class="pointer-events-none absolute right-0 top-0 h-full w-[34%] bg-[radial-gradient(ellipse_at_70%_45%,rgba(16,185,129,0.25),transparent_65%)]"></div>
+        <div class="pointer-events-none absolute -right-14 -top-20 h-56 w-56 rounded-full border-[25px] border-emerald-300/10"></div>
+        <div class="pointer-events-none absolute bottom-0 left-0 h-[3px] w-full bg-gradient-to-r from-emerald-300/70 via-emerald-500/30 to-transparent"></div>
 
-        <div>
-            <p class="text-[11px] font-semibold uppercase tracking-[1.5px] text-cyan-400">
-                My Learning
-            </p>
-            <h1 class="text-[25px] font-extrabold tracking-[-0.8px] text-white sm:text-[28px]">
-                Subjects
-            </h1>
+        <div class="relative flex flex-col gap-4 px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-7 sm:py-[22px]">
+            <div class="flex min-w-0 items-center gap-4">
+                <div class="relative flex h-[58px] w-[58px] shrink-0 items-center justify-center rounded-[17px] border border-emerald-200/30 bg-gradient-to-br from-emerald-300/20 to-emerald-700/20 text-emerald-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.10),0_8px_20px_rgba(0,0,0,0.16)]">
+                    <i class="ri-book-2-line text-[27px]"></i>
+                    <span class="absolute -right-1 -top-1 h-3 w-3 rounded-full border-2 border-[#064b38] bg-emerald-300"></span>
+                </div>
+
+                <div class="min-w-0">
+                    <p class="mb-1 text-[10px] font-extrabold uppercase tracking-[2.1px] text-emerald-200">
+                        Learning library
+                    </p>
+                    <h1 class="text-[25px] font-extrabold leading-tight tracking-[-0.7px] text-white sm:text-[30px]">
+                        Subjects
+                    </h1>
+                    <p class="mt-1 max-w-[620px] text-[12px] text-emerald-50/80 sm:text-[13px]">
+                        Browse the subjects available in {{ batch.batch_name }}.
+                    </p>
+                </div>
+            </div>
+
+            <div class="flex w-fit shrink-0 items-center gap-3 rounded-[14px] border border-emerald-200/20 bg-[#021a15]/55 px-4 py-2.5 shadow-inner backdrop-blur-sm">
+                <div class="flex h-10 w-10 items-center justify-center rounded-[12px] bg-emerald-300/15 text-emerald-200">
+                    <i class="ri-book-marked-line text-[20px]"></i>
+                </div>
+                <div class="pr-1">
+                    <div class="text-[21px] font-extrabold leading-none text-white tabular-nums">{{ subjects|length }}</div>
+                    <div class="mt-1 text-[9px] font-bold uppercase tracking-[1.2px] text-emerald-100/70">
+                        {% if subjects|length == 1 %}Available subject{% else %}Available subjects{% endif %}
+                    </div>
+                </div>
+            </div>
         </div>
-    </div>
+    </section>
 
     <!-- SUBJECT LIST -->
     {% if subjects %}
@@ -45,15 +70,16 @@
             {% for subject in subjects %}
 
                 <article
-                    class="group flex h-full min-h-[360px] min-w-0 flex-col overflow-hidden rounded-[18px] border border-slate-200 bg-white transition-all duration-300 hover:-translate-y-1 hover:border-emerald-400 hover:shadow-[0_20px_48px_rgba(16,185,129,0.22)]"
+                    role="link"
+                    tabindex="0"
+                    data-subject-card
+                    data-subject-url="{% url 'my_learning_subject' batch.id subject.id %}"
+                    aria-label="Open {{ subject.subject_name }}"
+                    class="group flex h-full min-h-[360px] min-w-0 cursor-pointer flex-col overflow-hidden rounded-[18px] border border-slate-200 bg-white transition-all duration-300 hover:-translate-y-1 hover:border-emerald-400 hover:shadow-[0_20px_48px_rgba(16,185,129,0.22)] focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2"
                 >
 
                     <!-- THUMBNAIL -->
-                    <a
-                        href="{% url 'my_learning_subject' batch.id subject.id %}"
-                        aria-label="Open {{ subject.subject_name }}"
-                        class="relative block aspect-[16/9] w-full shrink-0 overflow-hidden bg-slate-100"
-                    >
+                    <div class="relative block aspect-[16/9] w-full shrink-0 overflow-hidden bg-slate-100">
 
                         {% if subject.subject_thumbnail %}
                             <img
@@ -78,19 +104,14 @@
                         <div class="absolute right-3 top-3 flex h-[32px] w-[32px] translate-y-1 items-center justify-center rounded-full border border-white/10 bg-black/45 text-white opacity-0 backdrop-blur-md transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100">
                             <i class="ri-arrow-right-up-line text-[16px]"></i>
                         </div>
-                    </a>
+                    </div>
 
                     <!-- CARD CONTENT -->
                     <div class="flex flex-1 flex-col p-4 sm:p-[17px]">
 
-                        <a
-                            href="{% url 'my_learning_subject' batch.id subject.id %}"
-                            class="block"
-                        >
-                            <h2 class="min-h-[40px] line-clamp-2 text-[15px] font-bold leading-[1.35] text-emerald-700 transition-colors duration-200 group-hover:text-cyan-600">
-                                {{ subject.subject_name }}
-                            </h2>
-                        </a>
+                        <h2 class="min-h-[40px] line-clamp-2 text-[15px] font-bold leading-[1.35] text-emerald-700 transition-colors duration-200 group-hover:text-emerald-800">
+                            {{ subject.subject_name }}
+                        </h2>
 
                         <p class="mt-2 min-h-[40px] line-clamp-2 text-[11px] leading-5 {% if subject.subject_description %}text-slate-600{% else %}text-slate-400{% endif %}">
                             {% if subject.subject_description %}
@@ -158,13 +179,7 @@
 
                                 </div>
 
-                                <!-- OPEN SUBJECT -->
-                                <a
-                                    href="{% url 'my_learning_subject' batch.id subject.id %}"
-                                    class="shrink-0 whitespace-nowrap text-[11px] font-semibold text-cyan-600 transition-colors duration-200 hover:text-emerald-600"
-                                >
-                                    Open Subject
-                                </a>
+                                <!-- The complete subject card opens the subject. -->
 
                             </div>
                         </div>
@@ -184,14 +199,14 @@
                             role="dialog"
                             aria-modal="true"
                             aria-labelledby="subjectTeacherTitle{{ subject.id }}"
-                            class="subject-teacher-panel flex max-h-[min(680px,82vh)] w-full max-w-[700px] translate-y-3 flex-col overflow-hidden rounded-[22px] border border-cyan-400/40 bg-gradient-to-br from-[#12243B] to-[#071426] opacity-0 shadow-[0_25px_90px_rgba(0,0,0,0.65)] transition-all duration-200"
+                            class="subject-teacher-panel flex max-h-[min(680px,82vh)] w-full max-w-[700px] translate-y-3 flex-col overflow-hidden rounded-[22px] border border-emerald-400/35 bg-gradient-to-br from-[#12243B] to-[#071426] opacity-0 shadow-[0_25px_90px_rgba(0,0,0,0.65)] transition-all duration-200"
                         >
 
                             <!-- MODAL HEADER -->
                             <div class="flex shrink-0 items-center justify-between gap-4 border-b border-white/10 px-5 py-4 sm:px-6">
 
                                 <div class="flex min-w-0 items-center gap-3">
-                                    <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-[13px] border border-cyan-400/20 bg-cyan-400/10 text-cyan-300">
+                                    <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-[13px] border border-emerald-400/20 bg-emerald-400/10 text-emerald-300">
                                         <i class="ri-team-line text-[20px]"></i>
                                     </div>
 
@@ -210,7 +225,7 @@
 
                                 <button
                                     type="button"
-                                    class="subject-teacher-close flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-slate-400 transition hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
+                                    class="subject-teacher-close flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-slate-400 transition hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
                                     aria-label="Close assigned teachers"
                                 >
                                     <i class="ri-close-line text-[22px]"></i>
@@ -222,9 +237,9 @@
                                 <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
 
                                     {% for teacher in subject.card_teachers %}
-                                        <div class="flex min-h-[94px] min-w-0 items-center gap-3 rounded-[15px] border border-white/10 bg-[#0D1A2D]/90 p-3 transition-colors hover:border-cyan-400/30">
+                                        <div class="flex min-h-[94px] min-w-0 items-center gap-3 rounded-[15px] border border-white/10 bg-[#0D1A2D]/90 p-3 transition-colors hover:border-emerald-400/30">
 
-                                            <div class="flex h-[54px] w-[54px] shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-cyan-400/50 bg-[#12334A] text-[16px] font-extrabold text-cyan-300">
+                                            <div class="flex h-[54px] w-[54px] shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-emerald-400/50 bg-[#12334A] text-[16px] font-extrabold text-emerald-300">
                                                 {% if teacher.profile_image %}
                                                     <img
                                                         src="{{ teacher.profile_image.url }}"
@@ -244,20 +259,20 @@
 
                                                 {% if teacher.qualification %}
                                                     <p class="mt-1 flex items-start gap-1.5 text-[11px] leading-4 text-slate-300">
-                                                        <i class="ri-graduation-cap-line mt-0.5 shrink-0 text-cyan-400"></i>
+                                                        <i class="ri-graduation-cap-line mt-0.5 shrink-0 text-emerald-400"></i>
                                                         <span class="line-clamp-2">{{ teacher.qualification }}</span>
                                                     </p>
                                                 {% endif %}
 
                                                 {% if teacher.specialization %}
                                                     <p class="mt-1 flex items-start gap-1.5 text-[11px] leading-4 text-slate-400">
-                                                        <i class="ri-book-open-line mt-0.5 shrink-0 text-cyan-400"></i>
+                                                        <i class="ri-book-open-line mt-0.5 shrink-0 text-emerald-400"></i>
                                                         <span class="line-clamp-2">{{ teacher.specialization }}</span>
                                                     </p>
                                                 {% endif %}
 
                                                 <p class="mt-1 flex items-center gap-1.5 text-[11px] text-slate-400">
-                                                    <i class="ri-briefcase-line text-cyan-400"></i>
+                                                    <i class="ri-briefcase-line text-emerald-400"></i>
                                                     {{ teacher.experience }} year{% if teacher.experience != 1 %}s{% endif %} experience
                                                 </p>
                                             </div>
@@ -272,7 +287,7 @@
                             <div class="flex shrink-0 justify-end border-t border-white/10 px-5 py-3.5 sm:px-6">
                                 <button
                                     type="button"
-                                    class="subject-teacher-done inline-flex h-[39px] items-center justify-center gap-2 rounded-[12px] bg-cyan-400 px-5 text-[12px] font-extrabold text-[#03111D] transition hover:bg-cyan-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200"
+                                    class="subject-teacher-done inline-flex h-[39px] items-center justify-center gap-2 rounded-[12px] bg-emerald-400 px-5 text-[12px] font-extrabold text-[#03111D] transition hover:bg-emerald-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-200"
                                 >
                                     <i class="ri-check-line text-[15px]"></i>
                                     Done
@@ -292,7 +307,7 @@
         <!-- EMPTY STATE -->
         <div class="flex min-h-[420px] items-center justify-center rounded-[24px] border border-white/10 bg-[#071224] px-6 py-12">
             <div class="max-w-[480px] text-center">
-                <div class="mx-auto flex h-[82px] w-[82px] items-center justify-center rounded-[24px] border border-cyan-400/20 bg-cyan-400/10 text-cyan-400">
+                <div class="mx-auto flex h-[82px] w-[82px] items-center justify-center rounded-[24px] border border-cyan-400/20 bg-cyan-400/10 text-emerald-400">
                     <i class="ri-book-open-line text-[38px]"></i>
                 </div>
 
@@ -306,7 +321,7 @@
 
                 <a
                     href="{% url 'my_learning' %}"
-                    class="mt-6 inline-flex h-[46px] items-center justify-center gap-2 rounded-[14px] bg-cyan-400 px-6 text-[13px] font-extrabold text-[#02130D] transition-all hover:bg-cyan-300"
+                    class="mt-6 inline-flex h-[46px] items-center justify-center gap-2 rounded-[14px] bg-emerald-400 px-6 text-[13px] font-extrabold text-[#02130D] transition-all hover:bg-emerald-300"
                 >
                     <i class="ri-arrow-left-line text-[17px]"></i>
                     Back to My Learning
@@ -331,7 +346,7 @@
 
     .subject-teacher-scroll {
         scrollbar-width: thin;
-        scrollbar-color: rgba(34, 211, 238, 0.45) rgba(255, 255, 255, 0.04);
+        scrollbar-color: rgba(52, 211, 153, 0.45) rgba(255, 255, 255, 0.04);
     }
 
     .subject-teacher-scroll::-webkit-scrollbar {
@@ -344,7 +359,7 @@
     }
 
     .subject-teacher-scroll::-webkit-scrollbar-thumb {
-        background: rgba(34, 211, 238, 0.4);
+        background: rgba(52, 211, 153, 0.4);
         border-radius: 20px;
     }
 
@@ -355,6 +370,29 @@
 
 <script>
 (function () {
+    if (!window.__neoLearnSubjectCardNavigationInitialized) {
+        window.__neoLearnSubjectCardNavigationInitialized = true;
+
+        document.addEventListener("click", function (event) {
+            if (event.target.closest("[data-subject-teacher-modal]")) return;
+            const card = event.target.closest("[data-subject-card]");
+            if (!card) return;
+            const url = card.getAttribute("data-subject-url");
+            if (url) window.location.href = url;
+        });
+
+        document.addEventListener("keydown", function (event) {
+            const card = event.target.closest("[data-subject-card]");
+            if (!card || event.target.closest("button, a, input, select, textarea")) return;
+            if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                const url = card.getAttribute("data-subject-url");
+                if (url) window.location.href = url;
+            }
+        });
+    }
+
+
     if (window.__neoLearnSubjectTeacherPopupInitialized) {
         return;
     }

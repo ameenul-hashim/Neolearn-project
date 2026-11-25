@@ -262,46 +262,49 @@
 
 <div class="w-full max-w-[1800px] mx-auto">
 
-    <!-- PAGE HEADER -->
-    <div class="mb-7">
-        <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+    <!-- PAGE HEADER: refined emerald learning hero -->
+    <section class="relative isolate mb-6 overflow-hidden rounded-[22px] border border-emerald-400/50 bg-[#042f24] shadow-[0_16px_40px_rgba(5,150,105,0.13)]">
+        <div class="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_78%_20%,rgba(16,185,129,0.30),transparent_42%),linear-gradient(110deg,#022c22_0%,#064e3b_52%,#052e25_100%)]"></div>
+        <div class="pointer-events-none absolute -right-10 -top-24 h-64 w-64 rounded-full border-[30px] border-emerald-300/10"></div>
+        <div class="pointer-events-none absolute -bottom-24 right-[24%] h-44 w-72 rotate-[-17deg] rounded-full border-[22px] border-emerald-400/15"></div>
+        <div class="pointer-events-none absolute bottom-0 right-0 h-1 w-2/5 bg-gradient-to-l from-emerald-300/70 to-transparent"></div>
 
-            <div>
-                <div class="flex items-center gap-3 mb-2">
-                    <div class="w-10 h-10 rounded-[14px] bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600">
-                        <i class="ri-book-open-line text-[20px]"></i>
-                    </div>
-
-                    <div>
-                        <p class="text-[11px] uppercase tracking-[1.5px] text-emerald-600 font-semibold">
-                            Learning
-                        </p>
-                        <h1 class="text-[25px] sm:text-[28px] font-extrabold tracking-[-0.8px] text-white">
-                            My Learning
-                        </h1>
-                    </div>
+        <div class="relative flex flex-col gap-4 px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-7 sm:py-6">
+            <div class="flex min-w-0 items-center gap-4">
+                <div class="relative flex h-14 w-14 shrink-0 items-center justify-center rounded-[18px] border border-emerald-200/30 bg-gradient-to-br from-emerald-300/25 to-emerald-700/20 text-emerald-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_8px_22px_rgba(0,0,0,0.16)]">
+                    <i class="ri-book-open-line text-[27px]"></i>
+                    <span class="absolute -bottom-1 -right-1 h-3 w-3 rounded-full border-2 border-[#064e3b] bg-emerald-300"></span>
                 </div>
 
-                <p class="text-[13px] sm:text-[14px] text-white max-w-[650px]">
-                    Continue learning from the batches you have purchased.
-                </p>
+                <div class="min-w-0">
+                    <div class="mb-1 flex items-center gap-2">
+                        <span class="h-px w-5 bg-emerald-300/80"></span>
+                        <p class="text-[10px] font-extrabold uppercase tracking-[2.2px] text-emerald-200 sm:text-[11px]">
+                            Your learning space
+                        </p>
+                    </div>
+                    <h1 class="text-[24px] font-extrabold leading-tight tracking-[-0.8px] text-white sm:text-[30px]">
+                        My Learning
+                    </h1>
+                    <p class="mt-1 text-[12px] text-emerald-50/85 sm:text-[13px]">
+                        Pick up where you left off and keep making progress.
+                    </p>
+                </div>
             </div>
 
-            <!-- PURCHASED BATCH COUNT -->
-            <div class="inline-flex items-center gap-2 self-start sm:self-auto px-4 h-[40px] rounded-full bg-emerald-50 border border-emerald-100 text-emerald-700 text-[12px] font-semibold">
-                <i class="ri-graduation-cap-line text-[16px]"></i>
-                <span>
-                    {{ purchased_batches|length }}
-                    {% if purchased_batches|length == 1 %}
-                        Batch
-                    {% else %}
-                        Batches
-                    {% endif %}
+            <div class="flex shrink-0 items-center gap-3 self-start rounded-2xl border border-emerald-200/20 bg-black/15 px-3.5 py-2.5 shadow-inner backdrop-blur-sm sm:self-center">
+                <span class="flex h-9 w-9 items-center justify-center rounded-xl border border-emerald-200/20 bg-emerald-300/15 text-emerald-200">
+                    <i class="ri-graduation-cap-line text-[18px]"></i>
+                </span>
+                <span class="flex flex-col">
+                    <span class="text-[19px] font-extrabold leading-none text-white tabular-nums">{{ purchased_batches|length }}</span>
+                    <span class="mt-1 text-[9px] font-bold uppercase tracking-[1.2px] text-emerald-100/75">
+                        {% if purchased_batches|length == 1 %}Enrolled batch{% else %}Enrolled batches{% endif %}
+                    </span>
                 </span>
             </div>
-
         </div>
-    </div>
+    </section>
 
     <!-- PURCHASED BATCHES -->
     {% if purchased_batches %}
@@ -324,9 +327,9 @@
                         bg-white
                         border
                         border-slate-200
-                        hover:border-emerald-300
+                        hover:border-emerald-400
                         hover:-translate-y-1
-                        hover:shadow-[0_18px_45px_rgba(16,185,129,0.12)]
+                        hover:shadow-[0_16px_38px_rgba(5,150,105,0.16)]
                         transition-all
                         duration-300
                         focus:outline-none
@@ -360,7 +363,7 @@
                         {% endif %}
 
                         <!-- PURCHASED BADGE -->
-                        <div class="absolute top-3 left-3 inline-flex items-center gap-1.5 px-2.5 h-[27px] rounded-full bg-emerald-600 text-white text-[10px] font-extrabold shadow-lg">
+                        <div class="absolute top-3 left-3 inline-flex items-center gap-1.5 px-2.5 h-[27px] rounded-full bg-gradient-to-r from-emerald-600 to-emerald-700 text-white text-[10px] font-extrabold shadow-[0_5px_14px_rgba(5,150,105,0.24)]">
                             <i class="ri-check-line text-[13px]"></i>
                             Purchased
                         </div>
@@ -376,7 +379,7 @@
                     <div class="p-4 sm:p-[17px] flex flex-col flex-1">
 
                         <!-- BATCH NAME -->
-                        <h2 class="text-[15px] font-bold text-emerald-700 leading-[1.35] line-clamp-2 min-h-[40px] group-hover:text-cyan-600 group-hover:translate-x-0.5 transition-all duration-300">
+                        <h2 class="text-[15px] font-bold text-emerald-700 leading-[1.35] line-clamp-2 min-h-[40px] group-hover:text-emerald-600 group-hover:translate-x-0.5 transition-all duration-300">
                             {{ purchase.batch.batch_name }}
                         </h2>
 
@@ -464,7 +467,7 @@
 
                                 </div>
 
-                                <span class="text-[11px] font-semibold text-cyan-500 group-hover:text-emerald-600 transition-colors whitespace-nowrap shrink-0">
+                                <span class="text-[11px] font-semibold text-emerald-600 group-hover:text-emerald-700 transition-colors whitespace-nowrap shrink-0">
                                     View Subjects
                                 </span>
 

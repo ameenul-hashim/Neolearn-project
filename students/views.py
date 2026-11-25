@@ -1,5 +1,6 @@
 import re
 from PIL import Image, UnidentifiedImageError
+from django.utils.dateparse import parse_date
 from django.contrib.auth import (
     get_user_model,
     update_session_auth_hash,)
@@ -57,6 +58,8 @@ from .models import (
     QuizAttempt,
     QuizAttemptAnswer,
 )
+
+from live_classes.models import LiveClass
 
 from courses.models import (
     CourseChapter,
@@ -2598,6 +2601,97 @@ def my_learning_chapter_view(request, batch_id, subject_id, chapter_id):
                     2,
                 )
 
+    # --------------------------------------------------------
+    # CHAPTER LIVE CLASSES
+    # --------------------------------------------------------
+    # The chapter view has already verified that this student owns an
+    # ACTIVE purchase for this batch and that the subject/chapter belong
+    # to that batch. Reuse that same verified scope for LiveClass records.
+    chapter_live_classes = list(
+        LiveClass.objects.filter(
+            batch=batch,
+            subject=subject,
+            chapter=chapter,
+        ).select_related(
+            "batch",
+            "subject",
+            "chapter",
+            "teacher",
+        )
+    )
+
+    chapter_live_class_counts = {
+        "total": len(chapter_live_classes),
+        "upcoming": 0,
+        "live": 0,
+        "completed": 0,
+        "cancelled": 0,
+        "no_show": 0,
+    }
+
+    now = timezone.now()
+
+    for live_class in chapter_live_classes:
+        if live_class.status == "cancelled":
+            display_status = "cancelled"
+        elif live_class.status == "no_show":
+            display_status = "no_show"
+        elif live_class.status == "completed" or live_class.actual_end_at:
+            display_status = "completed"
+        elif (
+            live_class.status == "confirmed"
+            and live_class.actual_start_at
+            and live_class.actual_start_at <= now
+            and not live_class.actual_end_at
+        ):
+            display_status = "live"
+        else:
+            # A scheduled time passing does not start a class. Only the
+            # Admin/Teacher start action sets actual_start_at.
+            display_status = "upcoming"
+
+        live_class.display_status = display_status
+        live_class.local_start = timezone.localtime(live_class.start_at)
+        live_class.local_end = timezone.localtime(live_class.end_at)
+        live_class.duration_minutes = max(
+            1,
+            int((live_class.end_at - live_class.start_at).total_seconds() // 60),
+        )
+        if live_class.duration_minutes >= 60:
+            hours, minutes = divmod(live_class.duration_minutes, 60)
+            live_class.duration_display = (
+                f"{hours} hr" if not minutes else f"{hours} hr {minutes} min"
+            )
+        else:
+            live_class.duration_display = f"{live_class.duration_minutes} min"
+
+        # The current ZIP contains provider identifiers but no student
+        # meeting/join endpoint or provider URL builder. Do not fabricate
+        # a meeting destination from provider_room_id.
+        live_class.student_join_url = ""
+        live_class.student_can_join = False
+
+        chapter_live_class_counts[display_status] += 1
+
+    # Live first, then nearest upcoming, then most recently completed,
+    # followed by cancelled/no-show records. This keeps useful access at top.
+    status_order = {
+        "live": 0,
+        "upcoming": 1,
+        "completed": 2,
+        "cancelled": 3,
+        "no_show": 4,
+    }
+
+    chapter_live_classes.sort(
+        key=lambda item: (
+            status_order[item.display_status],
+            item.start_at if item.display_status in {"live", "upcoming"}
+            else -item.start_at.timestamp(),
+            item.pk,
+        )
+    )
+
     return render(
         request,
         "students/my_learning/chapter_learning.html",
@@ -2615,6 +2709,8 @@ def my_learning_chapter_view(request, batch_id, subject_id, chapter_id):
             "quiz_mode": quiz_mode,
             "remaining_seconds": remaining_seconds,
             "quiz_percentage": quiz_percentage,
+            "chapter_live_classes": chapter_live_classes,
+            "chapter_live_class_counts": chapter_live_class_counts,
         },
     )
 
@@ -4211,5 +4307,291 @@ def student_help_videos_view(request):
             "search_query": search_query,
             "selected_category": selected_category,
             "category_choices": category_choices,
+        },
+    )
+
+# ============================================================
+# STUDENT MY TIMETABLE
+# ============================================================
+
+@login_required(login_url="signin")
+@cache_control(no_cache=True, must_revalidate=True, no_store=True)
+def student_timetable_view(request):
+    """Read-only weekly timetable with a separate today-only summary."""
+    if not is_student_user(request.user):
+        messages.error(
+            request,
+            "Student access required. Please use the student login area.",
+        )
+        return redirect("signin")
+
+    purchased_batches = Batch.objects.filter(
+        student_purchases__student=request.user,
+        student_purchases__status=StudentBatchPurchase.Status.ACTIVE,
+    ).distinct().order_by("batch_name")
+
+    selected_batch_id = (request.GET.get("batch") or "").strip()
+    selected_batch = None
+    if selected_batch_id:
+        selected_batch = purchased_batches.filter(pk=selected_batch_id).first()
+    if selected_batch is None:
+        selected_batch = purchased_batches.first()
+
+    today = timezone.localdate()
+    requested_date = request.GET.get("week", "").strip()
+    week_date = today
+    if requested_date:
+        parsed = parse_date(requested_date)
+        if parsed:
+            week_date = parsed
+
+    week_start = week_date
+    week_end = week_start + timedelta(days=7)
+    days = [week_start + timedelta(days=offset) for offset in range(7)]
+    current_tz = timezone.get_current_timezone()
+
+    week_start_dt = timezone.make_aware(
+        datetime.combine(week_start, datetime.min.time()), current_tz
+    )
+    week_end_dt = timezone.make_aware(
+        datetime.combine(week_end, datetime.min.time()), current_tz
+    )
+    today_start_dt = timezone.make_aware(
+        datetime.combine(today, datetime.min.time()), current_tz
+    )
+    tomorrow_start_dt = timezone.make_aware(
+        datetime.combine(today + timedelta(days=1), datetime.min.time()),
+        current_tz,
+    )
+    now = timezone.now()
+
+    def get_display_status(live_class):
+        if live_class.status == "cancelled":
+            return "cancelled"
+        if live_class.status == "no_show":
+            return "no_show"
+        if live_class.status == "completed" or live_class.actual_end_at:
+            return "completed"
+        if (
+            live_class.actual_start_at
+            and live_class.actual_start_at <= now
+            and not live_class.actual_end_at
+        ):
+            return "live"
+        return "upcoming"
+
+    classes = []
+    counts = {
+        "total": 0,
+        "upcoming": 0,
+        "live": 0,
+        "completed": 0,
+        "cancelled": 0,
+    }
+
+    if selected_batch:
+        base_qs = LiveClass.objects.filter(batch=selected_batch).select_related(
+            "batch", "subject", "chapter", "teacher"
+        )
+
+        weekly_classes = base_qs.filter(
+            start_at__lt=week_end_dt,
+            end_at__gt=week_start_dt,
+        ).order_by("start_at", "pk")
+
+        for live_class in weekly_classes:
+            live_class.display_status = get_display_status(live_class)
+            live_class.local_start = timezone.localtime(live_class.start_at)
+            live_class.local_end = timezone.localtime(live_class.end_at)
+            live_class.duration_minutes = max(
+                1,
+                int(
+                    (live_class.end_at - live_class.start_at).total_seconds()
+                    // 60
+                ),
+            )
+            classes.append(live_class)
+
+        # Daily summary is independent of the week selected in the calendar.
+        # It counts sessions whose scheduled start date is today.
+        todays_classes = base_qs.filter(
+            start_at__gte=today_start_dt,
+            start_at__lt=tomorrow_start_dt,
+        ).order_by("start_at", "pk")
+
+        for live_class in todays_classes:
+            display_status = get_display_status(live_class)
+            counts["total"] += 1
+            if display_status == "upcoming":
+                counts["upcoming"] += 1
+            elif display_status == "live":
+                counts["live"] += 1
+            elif display_status == "completed":
+                counts["completed"] += 1
+            elif display_status in {"cancelled", "no_show"}:
+                counts["cancelled"] += 1
+
+    context = {
+        "purchased_batches": purchased_batches,
+        "selected_batch": selected_batch,
+        "selected_batch_id": str(selected_batch.pk) if selected_batch else "",
+        "days": days,
+        "week_start": week_start,
+        "week_end": week_end - timedelta(days=1),
+        "previous_week": week_start - timedelta(days=7),
+        "next_week": week_start + timedelta(days=7),
+        "today": today,
+        "classes": classes,
+        "class_counts": counts,
+        "time_slots": range(5, 24),
+    }
+    return render(
+        request,
+        "students/live_classes/student_timetable.html",
+        context,
+    )
+
+
+# ============================================================
+# STUDENT - TODAY'S LIVE SCHEDULES
+# ============================================================
+
+@login_required(login_url="signin")
+@cache_control(no_cache=True, must_revalidate=True, no_store=True)
+def student_today_live_schedules_view(request):
+    """Show today's live and upcoming sessions across active purchases."""
+
+    if not is_student_user(request.user):
+        messages.error(
+            request,
+            "Student access required. Please use the student login area.",
+        )
+        return redirect("signin")
+
+    today = timezone.localdate()
+    current_tz = timezone.get_current_timezone()
+    today_start = timezone.make_aware(
+        datetime.combine(today, datetime.min.time()),
+        current_tz,
+    )
+    tomorrow_start = timezone.make_aware(
+        datetime.combine(today + timedelta(days=1), datetime.min.time()),
+        current_tz,
+    )
+    now = timezone.now()
+
+    # Only batches with an ACTIVE purchase belonging to this student.
+    active_batch_ids = StudentBatchPurchase.objects.filter(
+        student=request.user,
+        status=StudentBatchPurchase.Status.ACTIVE,
+    ).values_list("batch_id", flat=True).distinct()
+
+    todays_classes = list(
+        LiveClass.objects.filter(
+            batch_id__in=active_batch_ids,
+            start_at__gte=today_start,
+            start_at__lt=tomorrow_start,
+        ).select_related(
+            "batch",
+            "subject",
+            "chapter",
+            "teacher",
+        ).order_by("start_at", "pk")
+    )
+
+    counts = {
+        "total": 0,
+        "live": 0,
+        "upcoming": 0,
+        "completed": 0,
+    }
+    schedule_cards = []
+
+    for live_class in todays_classes:
+        # Cancelled and No Show sessions are intentionally excluded from
+        # the four agreed summary counts and from the schedule card grid.
+        if live_class.status in {"cancelled", "no_show"}:
+            continue
+
+        if live_class.status == "completed" or live_class.actual_end_at:
+            display_status = "completed"
+        elif (
+            live_class.actual_start_at
+            and live_class.actual_start_at <= now
+            and not live_class.actual_end_at
+        ):
+            display_status = "live"
+        else:
+            # Reaching the scheduled start time does not start a class.
+            # Only the existing Admin/Teacher start action sets actual_start_at.
+            display_status = "upcoming"
+
+        counts["total"] += 1
+        counts[display_status] += 1
+
+        live_class.display_status = display_status
+        live_class.local_start = timezone.localtime(live_class.start_at)
+        live_class.local_end = timezone.localtime(live_class.end_at)
+        live_class.duration_minutes = max(
+            1,
+            int((live_class.end_at - live_class.start_at).total_seconds() // 60),
+        )
+        if live_class.duration_minutes >= 60:
+            hours, minutes = divmod(live_class.duration_minutes, 60)
+            live_class.duration_display = (
+                f"{hours} hr" if not minutes else f"{hours} hr {minutes} min"
+            )
+        else:
+            live_class.duration_display = f"{live_class.duration_minutes} min"
+
+        # Use the Admin-managed subject thumbnail. Fall back to the batch
+        # thumbnail if the subject image is unavailable.
+        live_class.card_thumbnail_url = ""
+        try:
+            if live_class.subject.subject_thumbnail:
+                live_class.card_thumbnail_url = live_class.subject.subject_thumbnail.url
+        except (AttributeError, ValueError):
+            pass
+        if not live_class.card_thumbnail_url:
+            try:
+                if live_class.batch.batch_thumbnail:
+                    live_class.card_thumbnail_url = live_class.batch.batch_thumbnail.url
+            except (AttributeError, ValueError):
+                pass
+
+        live_class.teacher_display_name = (
+            getattr(live_class.teacher, "full_name", "")
+            or getattr(getattr(live_class.teacher, "user", None), "get_full_name", lambda: "")()
+            or getattr(getattr(live_class.teacher, "user", None), "username", "")
+            or "Teacher"
+        )
+
+        # The supplied LiveClass model stores provider + room identifiers,
+        # but the supplied project has no student join URL/endpoint builder.
+        # Keep the action unavailable until the real meeting integration exists.
+        live_class.student_join_url = ""
+        live_class.student_can_join = False
+
+        # Completed sessions contribute to the count only. The card grid
+        # contains today's Live Now and Upcoming sessions.
+        if display_status in {"live", "upcoming"}:
+            schedule_cards.append(live_class)
+
+    # Live sessions first; upcoming sessions then follow by nearest start time.
+    schedule_cards.sort(
+        key=lambda item: (
+            0 if item.display_status == "live" else 1,
+            item.start_at,
+            item.pk,
+        )
+    )
+
+    return render(
+        request,
+        "students/live_classes/today_live_schedules.html",
+        {
+            "today": today,
+            "counts": counts,
+            "schedule_cards": schedule_cards,
         },
     )

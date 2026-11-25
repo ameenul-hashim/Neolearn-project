@@ -1,0 +1,517 @@
+{% extends "students/base_student.html" %}
+{% load static %}
+
+{% block title %}Today's Live Schedules | NeoLearn{% endblock %}
+
+{% block student_content %}
+<style>
+    .today-live-page {
+        width: 100%;
+        max-width: 1800px;
+        margin: 0 auto;
+        color: #0f172a;
+    }
+
+    /* Emerald feature header */
+    .today-live-hero {
+        position: relative;
+        isolation: isolate;
+        overflow: hidden;
+        border: 1px solid rgba(16, 185, 129, .65);
+        border-radius: 20px;
+        padding: 20px 24px;
+        background:
+            radial-gradient(ellipse at 75% 10%, rgba(16, 185, 129, .26), transparent 42%),
+            linear-gradient(105deg, #032b20 0%, #064e3b 52%, #022c22 100%);
+        box-shadow: 0 12px 32px rgba(16, 185, 129, .10);
+    }
+
+    .today-live-hero::after {
+        content: "";
+        position: absolute;
+        z-index: -1;
+        right: 10%;
+        bottom: -75px;
+        width: 290px;
+        height: 150px;
+        border: 24px solid rgba(16, 185, 129, .22);
+        border-radius: 50%;
+        transform: rotate(-16deg);
+        box-shadow: 70px -18px 0 -12px rgba(16, 185, 129, .18);
+        pointer-events: none;
+    }
+
+    .today-live-hero-icon {
+        display: grid;
+        width: 62px;
+        height: 62px;
+        flex: 0 0 62px;
+        place-items: center;
+        border: 1px solid rgba(110, 231, 183, .4);
+        border-radius: 18px;
+        background: linear-gradient(145deg, rgba(16, 185, 129, .38), rgba(5, 150, 105, .12));
+        color: #a7f3d0;
+        box-shadow: inset 0 1px 0 rgba(255,255,255,.12);
+        font-size: 29px;
+    }
+
+    .today-live-date {
+        display: inline-flex;
+        min-height: 40px;
+        align-items: center;
+        gap: 9px;
+        border: 1px solid rgba(52, 211, 153, .5);
+        border-radius: 999px;
+        padding: 0 15px;
+        background: rgba(2, 44, 34, .65);
+        color: #ecfdf5;
+        font-size: 11px;
+        font-weight: 750;
+        white-space: nowrap;
+    }
+
+    /* Compact summary counters */
+    .today-live-stat {
+        display: flex;
+        min-width: 0;
+        min-height: 78px;
+        align-items: center;
+        gap: 12px;
+        padding: 11px 14px;
+        border: 1px solid #e2e8f0;
+        border-radius: 17px;
+        background: #ffffff;
+        box-shadow: 0 4px 14px rgba(15, 23, 42, .035);
+    }
+
+    .today-live-stat-icon {
+        display: grid;
+        width: 44px;
+        height: 44px;
+        flex: 0 0 44px;
+        place-items: center;
+        border: 1px solid #a7f3d0;
+        border-radius: 13px;
+        background: #ecfdf5;
+        color: #059669;
+        font-size: 22px;
+    }
+
+    .today-live-stat-icon.live {
+        border-color: #fecdd3;
+        background: #fff1f2;
+        color: #e11d48;
+    }
+
+    .today-live-stat-icon.upcoming {
+        border-color: #fde68a;
+        background: #fffbeb;
+        color: #d97706;
+    }
+
+    .today-live-stat-icon.completed {
+        border-color: #bfdbfe;
+        background: #eff6ff;
+        color: #2563eb;
+    }
+
+    .today-live-stat-value {
+        color: #0f172a;
+        font-size: 25px;
+        font-weight: 850;
+        line-height: 1;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .today-live-stat-label {
+        margin-top: 5px;
+        color: #475569;
+        font-size: 11px;
+        font-weight: 700;
+        line-height: 1.25;
+    }
+
+    /* Class cards follow the My Learning 16:9 media and compact content pattern */
+    .today-live-class-card {
+        display: flex;
+        width: 100%;
+        min-width: 0;
+        height: 100%;
+        flex-direction: column;
+        overflow: hidden;
+        border: 1px solid #dbe3ec;
+        border-radius: 18px;
+        background: #ffffff;
+        box-shadow: 0 5px 18px rgba(15, 23, 42, .045);
+        transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease;
+    }
+
+    .today-live-class-card:hover {
+        transform: translateY(-3px);
+        border-color: #6ee7b7;
+        box-shadow: 0 14px 32px rgba(16, 185, 129, .12);
+    }
+
+    .today-live-thumb-wrap {
+        position: relative;
+        width: 100%;
+        aspect-ratio: 16 / 9;
+        flex: 0 0 auto;
+        overflow: hidden;
+        background: #ecfdf5;
+    }
+
+    .today-live-thumb {
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: transform .4s ease;
+    }
+
+    .today-live-class-card:hover .today-live-thumb {
+        transform: scale(1.035);
+    }
+
+    .today-live-thumb-fallback {
+        display: grid;
+        width: 100%;
+        height: 100%;
+        place-items: center;
+        background: linear-gradient(135deg, #064e3b, #047857, #d1fae5);
+        color: #ecfdf5;
+        font-size: 38px;
+    }
+
+    .today-live-status {
+        display: inline-flex;
+        min-height: 25px;
+        align-items: center;
+        gap: 6px;
+        border: 1px solid transparent;
+        border-radius: 999px;
+        padding: 4px 10px;
+        font-size: 10px;
+        font-weight: 850;
+        letter-spacing: .025em;
+        white-space: nowrap;
+    }
+
+    .today-live-status.live {
+        border-color: #fecaca;
+        background: #fff1f2;
+        color: #e11d48;
+    }
+
+    .today-live-status.upcoming {
+        border-color: #a7f3d0;
+        background: #ecfdf5;
+        color: #047857;
+    }
+
+    .today-live-duration {
+        position: absolute;
+        right: 10px;
+        bottom: 10px;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        border: 1px solid rgba(255,255,255,.18);
+        border-radius: 999px;
+        padding: 5px 9px;
+        background: rgba(2, 6, 23, .88);
+        color: #ffffff;
+        font-size: 10px;
+        font-weight: 750;
+        backdrop-filter: blur(8px);
+    }
+
+    .today-live-card-body {
+        display: flex;
+        min-width: 0;
+        flex: 1 1 auto;
+        flex-direction: column;
+        padding: 13px 15px 14px;
+    }
+
+    .today-live-card-title {
+        min-height: 38px;
+        margin-bottom: 7px;
+        color: #047857;
+        font-size: 15px;
+        font-weight: 850;
+        line-height: 1.3;
+    }
+
+    .today-live-detail {
+        display: flex;
+        min-width: 0;
+        align-items: center;
+        gap: 8px;
+        color: #334155;
+        font-size: 11px;
+        font-weight: 550;
+        line-height: 1.4;
+    }
+
+    .today-live-detail + .today-live-detail {
+        margin-top: 7px;
+    }
+
+    .today-live-detail i {
+        flex: 0 0 auto;
+        color: #059669;
+        font-size: 16px;
+    }
+
+    .today-live-card-action {
+        margin-top: auto;
+        padding-top: 13px;
+    }
+
+    .today-live-card-action a,
+    .today-live-card-action button,
+    .today-live-card-action > div {
+        min-height: 42px;
+        border-radius: 13px;
+    }
+
+    .today-live-empty {
+        display: flex;
+        min-height: 260px;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        border: 1px dashed #a7f3d0;
+        border-radius: 20px;
+        background: #ffffff;
+        padding: 32px 24px;
+        text-align: center;
+    }
+
+    @media (max-width: 639px) {
+        .today-live-hero {
+            padding: 16px;
+        }
+        .today-live-hero-icon {
+            width: 48px;
+            height: 48px;
+            flex-basis: 48px;
+            border-radius: 15px;
+            font-size: 23px;
+        }
+        .today-live-date {
+            min-height: 35px;
+            font-size: 10px;
+        }
+        .today-live-stat {
+            min-height: 68px;
+            padding: 9px 11px;
+            gap: 9px;
+        }
+        .today-live-stat-icon {
+            width: 36px;
+            height: 36px;
+            flex-basis: 36px;
+            border-radius: 11px;
+            font-size: 18px;
+        }
+        .today-live-stat-value {
+            font-size: 21px;
+        }
+        .today-live-stat-label {
+            font-size: 10px;
+        }
+        .today-live-card-body {
+            padding: 12px 13px 13px;
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .today-live-class-card,
+        .today-live-thumb {
+            transition: none !important;
+        }
+    }
+</style>
+
+<div class="today-live-page space-y-5">
+
+    <!-- APPROVED EMERALD PAGE HEADER -->
+    <header class="today-live-hero mb-5">
+        <div class="relative z-10 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div class="flex min-w-0 items-center gap-4">
+                <div class="today-live-hero-icon">
+                    <i class="ri-live-line"></i>
+                </div>
+                <div class="min-w-0">
+                    <p class="mb-1 text-[10px] font-extrabold uppercase tracking-[2px] text-emerald-300 sm:text-[11px]">Student learning</p>
+                    <h1 class="text-[23px] font-extrabold tracking-[-0.7px] text-white sm:text-[28px]">Today's Live Schedules</h1>
+                    <p class="mt-1 text-[12px] text-emerald-50/90 sm:text-[13px]">Your live and upcoming classes across all active batches.</p>
+                </div>
+            </div>
+
+            <div class="today-live-date self-start sm:self-center">
+                <i class="ri-calendar-event-line text-[17px] text-emerald-300"></i>
+                {{ today|date:"l, d F Y" }}
+            </div>
+        </div>
+    </header>
+
+    <!-- DAILY SUMMARY -->
+    <section class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label="Today's class summary">
+        <div class="today-live-stat">
+            <div class="today-live-stat-icon"><i class="ri-calendar-check-line"></i></div>
+            <div class="min-w-0">
+                <div class="today-live-stat-value">{{ counts.total }}</div>
+                <div class="today-live-stat-label">Total Live Sessions</div>
+            </div>
+        </div>
+
+        <div class="today-live-stat">
+            <div class="today-live-stat-icon live"><i class="ri-broadcast-line"></i></div>
+            <div class="min-w-0">
+                <div class="today-live-stat-value">{{ counts.live }}</div>
+                <div class="today-live-stat-label">Live Now</div>
+            </div>
+        </div>
+
+        <div class="today-live-stat">
+            <div class="today-live-stat-icon upcoming"><i class="ri-time-line"></i></div>
+            <div class="min-w-0">
+                <div class="today-live-stat-value">{{ counts.upcoming }}</div>
+                <div class="today-live-stat-label">Upcoming</div>
+            </div>
+        </div>
+
+        <div class="today-live-stat">
+            <div class="today-live-stat-icon completed"><i class="ri-checkbox-circle-line"></i></div>
+            <div class="min-w-0">
+                <div class="today-live-stat-value">{{ counts.completed }}</div>
+                <div class="today-live-stat-label">Completed Today</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- TODAY'S CLASSES -->
+    <section class="pt-1">
+        <div class="mb-4 flex items-center justify-between gap-3">
+            <div>
+                <h2 class="flex items-center gap-2 text-[18px] font-extrabold text-white sm:text-[20px]">
+                    <i class="ri-video-chat-line text-[21px] text-emerald-400"></i>
+                    Today's Classes
+                </h2>
+                <p class="mt-1 text-[12px] text-slate-400">Live sessions first, followed by upcoming classes.</p>
+            </div>
+            <span class="inline-flex shrink-0 items-center rounded-full border border-emerald-300/30 bg-emerald-400/10 px-3 py-1.5 text-[10px] font-extrabold text-emerald-300 sm:text-[11px]">
+                {{ schedule_cards|length }} Available
+            </span>
+        </div>
+
+        {% if schedule_cards %}
+            <div class="grid grid-cols-1 items-stretch gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {% for live_class in schedule_cards %}
+                    <article class="today-live-class-card group">
+                        <div class="today-live-thumb-wrap">
+                            {% if live_class.card_thumbnail_url %}
+                                <img
+                                    class="today-live-thumb"
+                                    src="{{ live_class.card_thumbnail_url }}"
+                                    alt="{{ live_class.subject.subject_name }} thumbnail"
+                                    loading="lazy"
+                                >
+                            {% else %}
+                                <div class="today-live-thumb-fallback">
+                                    <i class="ri-book-open-line"></i>
+                                </div>
+                            {% endif %}
+
+                            <div class="absolute left-3 top-3">
+                                {% if live_class.display_status == 'live' %}
+                                    <span class="today-live-status live">
+                                        <i class="ri-record-circle-line text-[12px]"></i>
+                                        LIVE NOW
+                                    </span>
+                                {% else %}
+                                    <span class="today-live-status upcoming">
+                                        <i class="ri-calendar-check-line text-[12px]"></i>
+                                        UPCOMING
+                                    </span>
+                                {% endif %}
+                            </div>
+
+                            <span class="today-live-duration">
+                                <i class="ri-time-line"></i>
+                                {{ live_class.duration_display }}
+                            </span>
+                        </div>
+
+                        <div class="today-live-card-body">
+                            <h3 class="today-live-card-title line-clamp-2">
+                                {{ live_class.subject.subject_name }} – {{ live_class.chapter.chapter_name }}
+                            </h3>
+
+                            <div class="space-y-0">
+                                <div class="today-live-detail">
+                                    <i class="ri-user-3-line"></i>
+                                    <span class="min-w-0 truncate">{{ live_class.teacher_display_name }}</span>
+                                </div>
+                                <div class="today-live-detail">
+                                    <i class="ri-calendar-event-line"></i>
+                                    <span>{{ live_class.local_start|date:"D, d M Y" }}</span>
+                                </div>
+                                <div class="today-live-detail">
+                                    <i class="ri-time-line"></i>
+                                    <span>{{ live_class.local_start|date:"h:i A" }} – {{ live_class.local_end|date:"h:i A" }}</span>
+                                </div>
+                            </div>
+
+                            <div class="today-live-card-action">
+                                {% if live_class.display_status == 'live' %}
+                                    {% if live_class.student_can_join and live_class.student_join_url %}
+                                        <a
+                                            href="{{ live_class.student_join_url }}"
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            class="flex w-full items-center justify-center gap-2 bg-gradient-to-r from-emerald-500 to-emerald-700 text-[12px] font-extrabold text-white shadow-sm transition hover:from-emerald-600 hover:to-emerald-800"
+                                        >
+                                            <i class="ri-play-circle-line text-[18px]"></i>
+                                            Join Class Now
+                                        </a>
+                                    {% else %}
+                                        <button
+                                            type="button"
+                                            disabled
+                                            title="Student meeting access is not configured yet"
+                                            class="flex w-full cursor-not-allowed items-center justify-center gap-2 border border-emerald-100 bg-emerald-50 text-[11px] font-bold text-emerald-700/70"
+                                        >
+                                            <i class="ri-lock-line text-[15px]"></i>
+                                            Join Class
+                                        </button>
+                                        <p class="mt-1.5 text-center text-[10px] text-slate-400">Meeting access is not available yet</p>
+                                    {% endif %}
+                                {% else %}
+                                    <div class="flex w-full items-center justify-center gap-2 border border-emerald-100 bg-emerald-50 text-[11px] font-extrabold text-emerald-800">
+                                        <i class="ri-calendar-schedule-line text-[15px]"></i>
+                                        Scheduled for {{ live_class.local_start|date:"h:i A" }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </article>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="today-live-empty">
+                <div class="mb-4 flex h-[68px] w-[68px] items-center justify-center rounded-[20px] border border-emerald-100 bg-emerald-50 text-emerald-600">
+                    <i class="ri-calendar-event-line text-[32px]"></i>
+                </div>
+                <h3 class="text-[18px] font-extrabold text-slate-900">No live classes scheduled for today</h3>
+                <p class="mt-2 max-w-md text-[12px] leading-6 text-slate-600">
+                    Your live and upcoming sessions from active purchased batches will appear here when scheduled.
+                </p>
+            </div>
+        {% endif %}
+    </section>
+</div>
+{% endblock %}
