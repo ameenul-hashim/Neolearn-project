@@ -1,0 +1,125 @@
+{% extends "students/base_student.html" %}
+{% load static %}
+{% block title %}My Teachers | NeoLearn{% endblock %}
+{% block student_content %}
+<style>
+.teacher-page{width:100%;color:#0f172a}
+.teacher-hero{position:relative;overflow:hidden;border:1px solid rgba(16,185,129,.42);border-radius:20px;background:linear-gradient(115deg,#064e3b,#065f46 55%,#022c22)}
+.teacher-hero-ring{position:absolute;width:210px;height:130px;right:7%;top:15%;border:20px solid rgba(110,231,183,.1);border-radius:50%;transform:rotate(-25deg);pointer-events:none}
+.teacher-stat{display:flex;align-items:center;gap:12px;min-width:0;min-height:68px;padding:12px 15px;border:1px solid #e2e8f0;border-radius:15px;background:#fff;box-shadow:0 3px 12px rgba(15,23,42,.035)}
+.teacher-stat-icon{display:flex;width:40px;height:40px;flex:0 0 40px;align-items:center;justify-content:center;border-radius:12px;font-size:19px}
+.teacher-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-auto-rows:1fr;align-items:stretch;gap:14px}
+.teacher-card{display:flex;width:100%;height:100%;min-width:0;min-height:184px;flex-direction:column;padding:14px;overflow:hidden;border:1px solid #e2e8f0;border-radius:16px;background:#fff;color:inherit;text-decoration:none;box-shadow:0 4px 14px rgba(15,23,42,.035);transition:transform .2s,border-color .2s,box-shadow .2s}
+.teacher-card:hover{transform:translateY(-3px);border-color:#10b981;box-shadow:0 12px 25px rgba(5,150,105,.12)}
+.teacher-card:focus-visible{outline:3px solid rgba(16,185,129,.35);outline-offset:3px}
+.teacher-card-top{display:flex;align-items:flex-start;gap:11px;min-width:0}
+.teacher-avatar{display:flex;width:58px;height:58px;flex:0 0 58px;align-items:center;justify-content:center;overflow:hidden;border:2px solid #a7f3d0;border-radius:16px;background:linear-gradient(135deg,#ecfdf5,#d1fae5);color:#047857;font-size:22px;font-weight:900}
+.teacher-avatar img{width:100%;height:100%;object-fit:cover}
+.teacher-card-identity{min-width:0;flex:1;padding-top:2px}
+.teacher-name{display:-webkit-box;overflow:hidden;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow-wrap:anywhere;color:#0f172a;font-size:13px;font-weight:850;line-height:1.35}
+.teacher-qualification{display:-webkit-box;min-height:28px;margin-top:4px;overflow:hidden;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow-wrap:anywhere;color:#64748b;font-size:10px;font-weight:550;line-height:1.4}
+.verified-badge{display:inline-flex;align-items:center;gap:5px;width:fit-content;margin-top:6px;padding:5px 8px;border:1px solid #bbf7d0;border-radius:999px;background:#ecfdf5;color:#047857;font-size:9px;font-weight:800;line-height:1;white-space:nowrap}
+.teacher-card-details{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0;margin-top:12px;padding-top:11px;border-top:1px solid #f1f5f9}
+.teacher-experience{display:flex;align-items:center;gap:8px;min-width:0}
+.teacher-experience-icon{display:flex;width:30px;height:30px;flex:0 0 30px;align-items:center;justify-content:center;border-radius:9px;background:#fffbeb;color:#d97706;font-size:14px}
+.teacher-detail-label{color:#94a3b8;font-size:8px;font-weight:800;letter-spacing:.06em;text-transform:uppercase}
+.teacher-detail-value{overflow:hidden;color:#334155;font-size:10px;font-weight:800;text-overflow:ellipsis;white-space:nowrap}
+.teacher-specialization{min-width:0;max-width:46%;text-align:right}
+.teacher-card-bottom{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:auto;padding-top:11px}
+.teacher-profile-hint{overflow:hidden;color:#047857;font-size:10px;font-weight:800;text-overflow:ellipsis;white-space:nowrap}
+.teacher-card-arrow{display:flex;width:29px;height:29px;flex:0 0 29px;align-items:center;justify-content:center;border-radius:9px;background:#ecfdf5;color:#059669;transition:.2s}
+.teacher-card:hover .teacher-card-arrow{background:#059669;color:#fff}
+.teacher-search:focus{outline:none;border-color:#10b981;box-shadow:0 0 0 3px rgba(16,185,129,.1)}
+.teacher-card[hidden]{display:none!important}
+.teacher-empty{padding:50px 20px;border:1px solid #e2e8f0;border-radius:18px;background:#fff;text-align:center}
+@media(max-width:1199px){.teacher-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:850px){.teacher-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:540px){.teacher-grid{grid-template-columns:minmax(0,1fr)}.teacher-card{min-height:174px}.teacher-hero-ring{right:-100px}}
+@media(prefers-reduced-motion:reduce){.teacher-card,.teacher-card-arrow{transition:none!important}}
+</style>
+
+<div class="teacher-page space-y-4">
+    <section class="teacher-hero">
+        <div class="teacher-hero-ring"></div>
+        <div class="relative flex flex-col gap-3 px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+            <div class="flex min-w-0 items-center gap-3">
+                <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-emerald-200/30 bg-emerald-300/15 text-emerald-200"><i class="ri-user-star-line text-[24px]"></i></div>
+                <div class="min-w-0">
+                    <p class="mb-1 text-[9px] font-extrabold uppercase tracking-[2px] text-emerald-200">Your Learning Team</p>
+                    <h1 class="text-[24px] font-extrabold tracking-tight text-white sm:text-[27px]">My Teachers</h1>
+                    <p class="mt-1 text-[11px] leading-5 text-emerald-50/90">Meet the teachers guiding you through your purchased courses and batches.</p>
+                </div>
+            </div>
+            <div class="flex shrink-0 items-center gap-2 self-start rounded-xl border border-emerald-200/25 bg-black/15 px-3 py-2 sm:self-center"><i class="ri-shield-check-line text-emerald-300"></i><span class="text-[10px] font-bold text-white">Verified Teachers</span></div>
+        </div>
+    </section>
+
+    <section class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <div class="teacher-stat"><div class="teacher-stat-icon border border-emerald-100 bg-emerald-50 text-emerald-600"><i class="ri-user-star-line"></i></div><div><p class="text-[22px] font-extrabold leading-none text-slate-900">{{ total_teachers }}</p><p class="mt-1 text-[10px] font-bold text-slate-500">Verified Teachers</p></div></div>
+        <div class="teacher-stat"><div class="teacher-stat-icon border border-blue-100 bg-blue-50 text-blue-600"><i class="ri-book-open-line"></i></div><div><p class="text-[22px] font-extrabold leading-none text-slate-900">{{ total_batches }}</p><p class="mt-1 text-[10px] font-bold text-slate-500">Purchased Batches</p></div></div>
+        <div class="teacher-stat"><div class="teacher-stat-icon border border-amber-100 bg-amber-50 text-amber-600"><i class="ri-book-2-line"></i></div><div><p class="text-[22px] font-extrabold leading-none text-slate-900">{{ total_subjects }}</p><p class="mt-1 text-[10px] font-bold text-slate-500">Subjects Covered</p></div></div>
+    </section>
+
+    <section class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div><div class="flex items-center gap-2"><i class="ri-team-line text-[20px] text-emerald-400"></i><h2 class="text-[17px] font-extrabold text-white">Your Teaching Team</h2></div><p class="mt-1 text-[10px] text-slate-400">Your verified teachers for your purchased batches.</p></div>
+        {% if teachers %}
+        <div class="relative w-full sm:w-[270px]"><i class="ri-search-line absolute left-3.5 top-1/2 -translate-y-1/2 text-[16px] text-slate-400"></i><input id="teacherSearch" type="search" placeholder="Search teachers..." class="teacher-search h-[39px] w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-[11px] font-medium text-slate-700 transition"></div>
+        {% endif %}
+    </section>
+
+    {% if teachers %}
+    <section id="teacherGrid" class="teacher-grid">
+        {% for teacher in teachers %}
+        <a href="{% url 'student_teacher_profile' teacher.id %}" class="teacher-card" data-teacher-card data-search="{{ teacher.full_name|lower }} {{ teacher.qualification|default:''|lower }} {{ teacher.specialization|default:''|lower }}" aria-label="View profile of {{ teacher.full_name }}">
+            <div class="teacher-card-top">
+                <div class="teacher-avatar">
+                    {% if teacher.profile_image %}<img src="{{ teacher.profile_image.url }}" alt="{{ teacher.full_name }}" loading="lazy">{% else %}{{ teacher.full_name|slice:":1"|upper }}{% endif %}
+                </div>
+                <div class="teacher-card-identity">
+                    <h3 class="teacher-name">{{ teacher.full_name }}</h3>
+                    <p class="teacher-qualification">{% if teacher.qualification %}{{ teacher.qualification }}{% else %}Qualification not provided{% endif %}</p>
+                    <span class="verified-badge"><i class="ri-checkbox-circle-fill"></i>Verified Teacher</span>
+                </div>
+            </div>
+            <div class="teacher-card-details">
+                <div class="teacher-experience"><span class="teacher-experience-icon"><i class="ri-medal-line"></i></span><div class="min-w-0"><p class="teacher-detail-label">Experience</p><p class="teacher-detail-value">{{ teacher.experience|default:"0" }} {% if teacher.experience == 1 %}Year{% else %}Years{% endif %}</p></div></div>
+                <div class="teacher-specialization">{% if teacher.specialization %}<p class="teacher-detail-label">Specialization</p><p class="teacher-detail-value" title="{{ teacher.specialization }}">{{ teacher.specialization }}</p>{% endif %}</div>
+            </div>
+            <div class="teacher-card-bottom"><span class="teacher-profile-hint">View Full Profile</span><span class="teacher-card-arrow" aria-hidden="true"><i class="ri-arrow-right-line text-[16px]"></i></span></div>
+        </a>
+        {% endfor %}
+    </section>
+
+    <div id="teacherSearchEmpty" class="hidden rounded-2xl border border-slate-200 bg-white px-5 py-10 text-center">
+        <i class="ri-search-eye-line text-[32px] text-slate-300"></i><h3 class="mt-3 text-[14px] font-extrabold text-slate-800">No matching teachers found</h3><p class="mt-1 text-[11px] text-slate-500">Try another teacher name or qualification.</p>
+    </div>
+    {% else %}
+    <section class="teacher-empty">
+        <div class="mx-auto flex h-[65px] w-[65px] items-center justify-center rounded-2xl border border-emerald-100 bg-emerald-50 text-emerald-600"><i class="ri-user-star-line text-[30px]"></i></div>
+        <h2 class="mt-4 text-[17px] font-extrabold text-slate-900">No Verified Teachers Yet</h2>
+        <p class="mx-auto mt-2 max-w-md text-[11px] leading-6 text-slate-500">Teachers will appear here when they are active, their profiles are completed, and they are assigned to your eligible purchased batches.</p>
+        <a href="{% url 'my_learning' %}" class="mt-5 inline-flex h-[40px] items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 text-[11px] font-extrabold text-white transition hover:bg-emerald-700"><i class="ri-book-open-line"></i>Explore My Learning</a>
+    </section>
+    {% endif %}
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const searchInput = document.getElementById("teacherSearch");
+    const cards = document.querySelectorAll("[data-teacher-card]");
+    const emptyResult = document.getElementById("teacherSearchEmpty");
+    if (!searchInput) return;
+    searchInput.addEventListener("input", function () {
+        const query = this.value.trim().toLowerCase();
+        let visibleCount = 0;
+        cards.forEach(function (card) {
+            const text = (card.innerText + " " + (card.dataset.search || "")).toLowerCase();
+            const matched = text.includes(query);
+            card.hidden = !matched;
+            if (matched) visibleCount++;
+        });
+        if (emptyResult) emptyResult.classList.toggle("hidden", visibleCount !== 0);
+    });
+});
+</script>
+{% endblock %}

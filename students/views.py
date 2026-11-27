@@ -4595,3 +4595,369 @@ def student_today_live_schedules_view(request):
             "schedule_cards": schedule_cards,
         },
     )
+    
+
+# ============================================================
+# STUDENT - MY TEACHERS
+# ============================================================
+
+@login_required(login_url="signin")
+@cache_control(
+    no_cache=True,
+    must_revalidate=True,
+    no_store=True,
+)
+def student_my_teachers_view(request):
+    """
+    Display unique teachers assigned to the student's
+    active purchased batches.
+    """
+
+    if not is_student_user(request.user):
+        messages.error(
+            request,
+            "Student access required.",
+        )
+        return redirect("signin")
+
+    # --------------------------------------------------------
+    # 1. FETCH ACTIVE PURCHASED BATCHES
+    # --------------------------------------------------------
+
+    purchased_batches = list(
+        StudentBatchPurchase.objects.filter(
+            student=request.user,
+            status=StudentBatchPurchase.Status.ACTIVE,
+        )
+        .select_related("batch")
+        .order_by("-purchased_at")
+    )
+
+    batch_ids = list({
+        purchase.batch_id
+        for purchase in purchased_batches
+    })
+
+    if not batch_ids:
+        return render(
+            request,
+            "students/teachers/my_teachers.html",
+            {
+                "teachers": [],
+                "total_teachers": 0,
+                "total_batches": 0,
+                "total_subjects": 0,
+            },
+        )
+
+    # --------------------------------------------------------
+    # 2. FETCH VALID ACTIVE TEACHER-BATCH ASSIGNMENTS
+    # --------------------------------------------------------
+
+    batch_assignments = list(
+        TeacherBatch.objects.filter(
+            batch_id__in=batch_ids,
+            is_active=True,
+            teacher__is_blocked=False,
+            teacher__user__is_active=True,
+        )
+        .select_related(
+            "teacher",
+            "teacher__user",
+            "batch",
+        )
+        .order_by(
+            "teacher__full_name",
+            "batch__batch_name",
+        )
+    )
+
+    # Group each unique teacher across all purchased batches.
+    teacher_map = {}
+
+    for assignment in batch_assignments:
+        teacher = assignment.teacher
+
+        if teacher.pk not in teacher_map:
+            teacher_map[teacher.pk] = {
+                "teacher": teacher,
+                "batches": {},
+                "subjects": {},
+            }
+
+        teacher_map[teacher.pk]["batches"][
+            assignment.batch_id
+        ] = assignment.batch
+
+    # --------------------------------------------------------
+    # 3. FETCH ACTIVE SUBJECT ASSIGNMENTS
+    # --------------------------------------------------------
+
+    subject_assignments = (
+        TeacherSubject.objects.filter(
+            batch_id__in=batch_ids,
+            is_active=True,
+            teacher__is_blocked=False,
+            teacher__user__is_active=True,
+        )
+        .select_related(
+            "teacher",
+            "batch",
+            "subject",
+        )
+        .order_by(
+            "subject__subject_name",
+            "batch__batch_name",
+        )
+    )
+
+    valid_teacher_batch_pairs = {
+        (
+            assignment.teacher_id,
+            assignment.batch_id,
+        )
+        for assignment in batch_assignments
+    }
+
+    total_subject_ids = set()
+
+    for assignment in subject_assignments:
+        pair = (
+            assignment.teacher_id,
+            assignment.batch_id,
+        )
+
+        # A subject is visible only when the teacher also has
+        # an active assignment to that exact purchased batch.
+        if pair not in valid_teacher_batch_pairs:
+            continue
+
+        teacher_data = teacher_map.get(
+            assignment.teacher_id
+        )
+
+        if not teacher_data:
+            continue
+
+        teacher_data["subjects"][
+            (
+                assignment.batch_id,
+                assignment.subject_id,
+            )
+        ] = {
+            "subject": assignment.subject,
+            "batch": assignment.batch,
+        }
+
+        total_subject_ids.add(assignment.subject_id)
+
+    # --------------------------------------------------------
+    # 4. PREPARE UNIQUE TEACHER CARDS
+    # --------------------------------------------------------
+
+    teachers = []
+
+    for teacher_id, teacher_data in teacher_map.items():
+        teacher = teacher_data["teacher"]
+
+        teacher.student_batches = sorted(
+            teacher_data["batches"].values(),
+            key=lambda batch: batch.batch_name.lower(),
+        )
+
+        teacher.student_subject_assignments = sorted(
+            teacher_data["subjects"].values(),
+            key=lambda item: (
+                item["subject"].subject_name.lower(),
+                item["batch"].batch_name.lower(),
+            ),
+        )
+
+        # Unique subjects for the card display.
+        unique_subjects = {}
+
+        for item in teacher.student_subject_assignments:
+            subject = item["subject"]
+            unique_subjects[subject.pk] = subject
+
+        teacher.student_subjects = sorted(
+            unique_subjects.values(),
+            key=lambda subject: subject.subject_name.lower(),
+        )
+
+        teacher.student_batch_count = len(
+            teacher.student_batches
+        )
+
+        teacher.student_subject_count = len(
+            teacher.student_subjects
+        )
+
+        teachers.append(teacher)
+
+    teachers.sort(
+        key=lambda teacher: teacher.full_name.lower()
+    )
+
+    # --------------------------------------------------------
+    # 5. RENDER MY TEACHERS
+    # --------------------------------------------------------
+
+    return render(
+        request,
+        "students/teachers/my_teachers.html",
+        {
+            "teachers": teachers,
+            "total_teachers": len(teachers),
+            "total_batches": len(batch_ids),
+            "total_subjects": len(total_subject_ids),
+        },
+    )
+
+
+# ============================================================
+# STUDENT - TEACHER PROFILE
+# ============================================================
+
+@login_required(login_url="signin")
+@cache_control(
+    no_cache=True,
+    must_revalidate=True,
+    no_store=True,
+)
+def student_teacher_profile_view(request, teacher_id):
+    """
+    Allow a student to view a teacher profile only when
+    the teacher is actively assigned to one of their
+    active purchased batches.
+    """
+
+    if not is_student_user(request.user):
+        messages.error(
+            request,
+            "Student access required.",
+        )
+        return redirect("signin")
+
+    # --------------------------------------------------------
+    # 1. GET THE STUDENT'S ACTIVE PURCHASED BATCHES
+    # --------------------------------------------------------
+
+    batch_ids = list(
+        StudentBatchPurchase.objects.filter(
+            student=request.user,
+            status=StudentBatchPurchase.Status.ACTIVE,
+        ).values_list(
+            "batch_id",
+            flat=True,
+        ).distinct()
+    )
+
+    if not batch_ids:
+        messages.error(
+            request,
+            "You do not have any active purchased batches.",
+        )
+        return redirect("student_my_teachers")
+
+    # --------------------------------------------------------
+    # 2. VERIFY TEACHER ACCESS
+    # --------------------------------------------------------
+
+    teacher = get_object_or_404(
+        Teacher.objects.filter(
+            pk=teacher_id,
+            is_blocked=False,
+            user__is_active=True,
+            assigned_batches__batch_id__in=batch_ids,
+            assigned_batches__is_active=True,
+        )
+        .distinct()
+        .select_related("user")
+    )
+
+    # --------------------------------------------------------
+    # 3. FETCH ONLY THE STUDENT'S RELEVANT BATCHES
+    # --------------------------------------------------------
+
+    teacher_batches = list(
+        TeacherBatch.objects.filter(
+            teacher=teacher,
+            batch_id__in=batch_ids,
+            is_active=True,
+        )
+        .select_related("batch")
+        .order_by("batch__batch_name")
+    )
+
+    assigned_batches = [
+        assignment.batch
+        for assignment in teacher_batches
+    ]
+
+    # --------------------------------------------------------
+    # 4. FETCH ACTIVE SUBJECT ASSIGNMENTS
+    # --------------------------------------------------------
+
+    subject_assignments = list(
+        TeacherSubject.objects.filter(
+            teacher=teacher,
+            batch_id__in=batch_ids,
+            is_active=True,
+            batch__assigned_teachers__teacher=teacher,
+            batch__assigned_teachers__is_active=True,
+        )
+        .select_related(
+            "batch",
+            "subject",
+        )
+        .order_by(
+            "batch__batch_name",
+            "subject__subject_name",
+        )
+        .distinct()
+    )
+
+    # --------------------------------------------------------
+    # 5. PREPARE SUBJECT INFORMATION
+    # --------------------------------------------------------
+
+    subjects_by_batch = {}
+
+    for assignment in subject_assignments:
+        subjects_by_batch.setdefault(
+            assignment.batch_id,
+            [],
+        ).append(assignment.subject)
+
+    for batch in assigned_batches:
+        batch.student_teacher_subjects = (
+            subjects_by_batch.get(batch.pk, [])
+        )
+
+    unique_subjects = {
+        assignment.subject_id: assignment.subject
+        for assignment in subject_assignments
+    }
+
+    # --------------------------------------------------------
+    # 6. RENDER TEACHER PROFILE
+    # --------------------------------------------------------
+
+    return render(
+        request,
+        "students/teachers/teacher_profile.html",
+        {
+            "teacher": teacher,
+            "assigned_batches": assigned_batches,
+            "subject_assignments": subject_assignments,
+            "unique_subjects": sorted(
+                unique_subjects.values(),
+                key=lambda subject: (
+                    subject.subject_name.lower()
+                ),
+            ),
+            "total_batches": len(assigned_batches),
+            "total_subjects": len(unique_subjects),
+        },
+    )
