@@ -1,4 +1,3 @@
-
 from django.conf import settings
 from django.db import models
 from django.db.models import Q
@@ -15,6 +14,18 @@ from courses.models import ChapterQuiz, QuizQuestion
 
 class StudentProfile(models.Model):
 
+    class Gender(models.TextChoices):
+        FEMALE = "female", "Female"
+        MALE = "male", "Male"
+        OTHER = "other", "Other"
+        PREFER_NOT_TO_SAY = "prefer_not_to_say", "Prefer not to say"
+
+    class StudyWorkStatus(models.TextChoices):
+        STUDYING = "studying", "Studying"
+        WORKING = "working", "Working"
+        BOTH = "both", "Studying and Working"
+        OTHER = "other", "Other"
+
     user = models.OneToOneField(
         User,
         on_delete=models.CASCADE,
@@ -27,6 +38,7 @@ class StudentProfile(models.Model):
         db_index=True,
     )
 
+    # Existing platform avatar. Keep this separate from identity_photo.
     profile_image = models.URLField(
         blank=True,
         null=True,
@@ -42,8 +54,182 @@ class StudentProfile(models.Model):
         blank=True,
     )
 
+    # Existing primary contact number used by Settings.
     phone = models.CharField(
         max_length=10,
+        blank=True,
+    )
+
+    # --------------------------------------------------------
+    # MY PROFILE - PERSONAL INFORMATION
+    # Full name and email remain on the linked Django User.
+    # --------------------------------------------------------
+
+    alternate_phone = models.CharField(
+        max_length=20,
+        blank=True,
+        default="",
+    )
+
+    gender = models.CharField(
+        max_length=20,
+        choices=Gender.choices,
+        blank=True,
+        default="",
+    )
+
+    date_of_birth = models.DateField(
+        null=True,
+        blank=True,
+    )
+
+    # Separate identification photo. Never use the avatar fields for this.
+    identity_photo = models.URLField(
+        blank=True,
+        default="",
+    )
+
+    identity_photo_public_id = models.CharField(
+        max_length=255,
+        blank=True,
+        default="",
+    )
+
+    # --------------------------------------------------------
+    # MY PROFILE - PARENT / GUARDIAN
+    # These fields intentionally have no uniqueness constraints.
+    # Siblings may share guardian phone numbers and email addresses.
+    # --------------------------------------------------------
+
+    guardian_full_name = models.CharField(
+        max_length=150,
+        blank=True,
+        default="",
+    )
+
+    guardian_relationship = models.CharField(
+        max_length=50,
+        blank=True,
+        default="",
+    )
+
+    guardian_phone = models.CharField(
+        max_length=20,
+        blank=True,
+        default="",
+    )
+
+    guardian_alternate_phone = models.CharField(
+        max_length=20,
+        blank=True,
+        default="",
+    )
+
+    guardian_email = models.EmailField(
+        blank=True,
+        default="",
+    )
+
+    # --------------------------------------------------------
+    # MY PROFILE - STUDY / WORK
+    # Keep learner details flexible; do not bind them to one exam.
+    # --------------------------------------------------------
+
+    study_work_status = models.CharField(
+        max_length=20,
+        choices=StudyWorkStatus.choices,
+        blank=True,
+        default="",
+    )
+
+    institution_or_workplace = models.CharField(
+        max_length=200,
+        blank=True,
+        default="",
+    )
+
+    education_qualification = models.CharField(
+        max_length=150,
+        blank=True,
+        default="",
+    )
+
+    course_or_field = models.CharField(
+        max_length=150,
+        blank=True,
+        default="",
+    )
+
+    # --------------------------------------------------------
+    # MY PROFILE - POSTAL ADDRESS
+    # --------------------------------------------------------
+
+    address_house_street = models.CharField(
+        max_length=255,
+        blank=True,
+        default="",
+    )
+
+    address_locality = models.CharField(
+        max_length=150,
+        blank=True,
+        default="",
+    )
+
+    address_city = models.CharField(
+        max_length=100,
+        blank=True,
+        default="",
+    )
+
+    address_district = models.CharField(
+        max_length=100,
+        blank=True,
+        default="",
+    )
+
+    address_state = models.CharField(
+        max_length=100,
+        blank=True,
+        default="",
+    )
+
+    address_pin_code = models.CharField(
+        max_length=12,
+        blank=True,
+        default="",
+    )
+
+    address_country = models.CharField(
+        max_length=100,
+        blank=True,
+        default="India",
+    )
+
+    # --------------------------------------------------------
+    # MY PROFILE - OPTIONAL LEARNING INTERESTS
+    # JSON list supports multiple exams/courses without a fixed taxonomy.
+    # --------------------------------------------------------
+
+    learning_goals = models.TextField(
+        blank=True,
+        default="",
+    )
+
+    interested_exams_courses = models.JSONField(
+        default=list,
+        blank=True,
+    )
+
+    # Set permanently to True after the first successful completion.
+    # Editing profile details later must not reset this flag.
+    profile_completed = models.BooleanField(
+        default=False,
+        db_index=True,
+    )
+
+    profile_completed_at = models.DateTimeField(
+        null=True,
         blank=True,
     )
 

@@ -1,0 +1,314 @@
+{% extends "students/base_student.html" %}
+{% load static %}
+
+{% block title %}Teacher Profile | NeoLearn{% endblock %}
+
+{% block student_content %}
+
+<style>
+/* Compact desktop profile layout: keep both information panels side by side and avoid nested scrolling. */
+.teacher-profile-page{display:flex;flex-direction:column;gap:clamp(10px,1.25vh,16px)!important;max-width:100%;}
+.tp-hero{border-radius:18px;padding:clamp(14px,1.6vh,20px)!important;}
+.tp-card{padding:clamp(12px,1.2vw,18px);border-radius:15px;}
+.tp-avatar{width:clamp(76px,6vw,96px);height:clamp(76px,6vw,96px);border-radius:22px;}
+.tp-info-row{padding:clamp(7px,.8vh,11px) 0;gap:10px;}
+.tp-icon{width:32px;height:32px;border-radius:9px;}
+.tp-label{font-size:9px;margin-bottom:4px;}
+.tp-value{font-size:12px;line-height:1.35;}
+.tp-batch-trigger{padding:10px 12px;gap:10px;}
+.tp-batch-icon{width:34px;height:34px;flex-basis:34px;}
+.tp-batch-count{padding:5px 9px;min-width:72px;}
+.tp-batch-chevron{width:30px;height:30px;flex-basis:30px;}
+.tp-batch-panel{padding:0 12px 12px;}
+.tp-batch-panel-inner{padding:10px;}
+.tp-chip{padding:5px 8px;font-size:10px;}
+@media(min-width:1280px){.tp-batch-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.tp-batch-grid>.tp-batch{min-width:0}.tp-batch-grid>.tp-batch:last-child:nth-child(odd){grid-column:1/-1}}
+@media(min-width:1280px) and (min-height:850px){.teacher-profile-page{gap:12px!important}.tp-info-row{padding:8px 0}.tp-card{padding:15px}.tp-hero{padding:17px!important}}
+@media(max-width:1023px){.teacher-profile-page{gap:14px!important}}
+/* Desktop: keep the approved 84% profile-page scale without changing the design. */
+@media (min-width: 1024px) {
+    .teacher-profile-page {
+        zoom: 0.84;
+        width: 100%;
+        max-width: 100%;
+    }
+}
+@media (max-width: 1023px) {
+    .teacher-profile-page {
+        zoom: 1;
+        width: 100%;
+    }
+}
+.teacher-profile-page{color:#0f172a}
+.tp-hero{background:linear-gradient(120deg,#064e3b,#047857,#022c22);border:1px solid rgba(52,211,153,.3);border-radius:22px;overflow:hidden;position:relative}
+.tp-card{background:#fff;border:1px solid #e2e8f0;border-radius:17px;padding:20px;box-shadow:0 5px 18px rgba(15,23,42,.035)}
+.tp-avatar{width:112px;height:112px;flex-shrink:0;display:flex;align-items:center;justify-content:center;overflow:hidden;border-radius:27px;border:4px solid rgba(167,243,208,.8);background:#d1fae5;color:#047857;font-size:38px;font-weight:900}
+.tp-avatar img{width:100%;height:100%;object-fit:cover}
+.tp-label{font-size:10px;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px}
+.tp-value{font-size:13px;font-weight:750;color:#1e293b}
+.tp-chip{display:inline-flex;align-items:center;padding:7px 11px;border-radius:9px;background:#ecfdf5;border:1px solid #d1fae5;color:#047857;font-size:11px;font-weight:750}
+.tp-info-row{display:flex;gap:12px;align-items:flex-start;padding:13px 0;border-bottom:1px solid #f1f5f9}
+.tp-info-row:last-child{border-bottom:0}
+.tp-icon{width:36px;height:36px;flex-shrink:0;display:flex;align-items:center;justify-content:center;border-radius:11px;background:#ecfdf5;color:#059669;font-size:17px}
+.tp-batch{overflow:hidden;border:1px solid #e2e8f0;border-radius:14px;background:#fff;transition:border-color .2s,box-shadow .2s}
+.tp-batch[ data-open="true" ]{border-color:#6ee7b7;box-shadow:0 5px 16px rgba(5,150,105,.07)}
+.tp-batch-trigger{display:flex;width:100%;align-items:center;gap:12px;padding:14px 15px;text-align:left;background:#f8fafc;transition:background .2s}
+.tp-batch-trigger:hover{background:#f0fdf4}
+.tp-batch[ data-open="true" ] .tp-batch-trigger{background:#ecfdf5}
+.tp-batch-icon{display:flex;width:40px;height:40px;flex:0 0 40px;align-items:center;justify-content:center;border:1px solid #dbeafe;border-radius:12px;background:#eff6ff;color:#2563eb;font-size:19px}
+.tp-batch-count{display:inline-flex;align-items:center;justify-content:center;min-width:84px;padding:7px 10px;border:1px solid #bbf7d0;border-radius:999px;background:#d1fae5;color:#047857;font-size:10px;font-weight:850;white-space:nowrap}
+.tp-batch-chevron{display:flex;width:34px;height:34px;flex:0 0 34px;align-items:center;justify-content:center;border-radius:10px;background:#d1fae5;color:#047857;transition:transform .2s}
+.tp-batch[ data-open="true" ] .tp-batch-chevron{transform:rotate(180deg)}
+.tp-batch-panel{padding:0 15px 15px;background:#ecfdf5}
+.tp-batch-panel-inner{padding:14px;border:1px solid #bbf7d0;border-radius:12px;background:#f0fdf4}
+.tp-subjects{display:flex;flex-wrap:wrap;gap:8px}
+.tp-empty-subjects{padding:12px;border:1px dashed #cbd5e1;border-radius:10px;background:#fff;color:#64748b;font-size:11px}
+@media(max-width:640px){.tp-avatar{width:88px;height:88px;border-radius:21px}.tp-card{padding:16px}.tp-batch-trigger{gap:9px;padding:12px}.tp-batch-count{min-width:0;padding:6px 8px;font-size:9px}}
+@media(prefers-reduced-motion:reduce){.tp-batch,.tp-batch-trigger,.tp-batch-chevron{transition:none}}
+</style>
+
+<div class="teacher-profile-page space-y-5 sm:space-y-6">
+
+    <!-- BREADCRUMB: retained; no back buttons -->
+    <div>
+        <div class="flex flex-wrap items-center gap-2 text-[11px] text-slate-400">
+            <a href="{% url 'student_my_teachers' %}" class="transition hover:text-emerald-400">My Teachers</a>
+            <i class="ri-arrow-right-s-line"></i>
+            <span class="font-bold text-emerald-400">Teacher Profile</span>
+        </div>
+        <div class="mt-2 flex items-center gap-3">
+            <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-emerald-300/20 bg-emerald-400/10 text-emerald-300">
+                <i class="ri-user-star-line text-[23px]"></i>
+            </div>
+            <div>
+                <h1 class="text-[19px] font-extrabold text-white">Teacher Profile</h1>
+                <p class="mt-1 text-[11px] text-slate-400">View your teacher's profile, experience and batch-wise teaching assignments.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- TEACHER HEADER -->
+    <section class="tp-hero p-5 sm:p-7">
+        <div class="relative flex flex-col gap-5 sm:flex-row sm:items-center">
+            <div class="tp-avatar">
+                {% if teacher.profile_image %}
+                    <img src="{{ teacher.profile_image.url }}" alt="{{ teacher.full_name }}">
+                {% else %}
+                    {{ teacher.full_name|slice:":1"|upper }}
+                {% endif %}
+            </div>
+
+            <div class="min-w-0 flex-1">
+                <div class="mb-2 inline-flex items-center gap-1.5 rounded-full border border-emerald-200/30 bg-emerald-300/10 px-3 py-1 text-[10px] font-extrabold text-emerald-100">
+                    <i class="ri-checkbox-circle-fill"></i> Your Assigned Teacher
+                </div>
+                <h2 class="break-words text-[25px] font-extrabold text-white sm:text-[30px]">{{ teacher.full_name }}</h2>
+                <p class="mt-2 text-[13px] font-semibold text-emerald-100">
+                    {% if teacher.qualification %}{{ teacher.qualification }}{% else %}Professional Educator{% endif %}
+                </p>
+                {% if teacher.specialization %}
+                    <p class="mt-1 text-[12px] text-emerald-50/80">{{ teacher.specialization }}</p>
+                {% endif %}
+                <div class="mt-4 flex flex-wrap gap-2">
+                    <span class="rounded-lg border border-white/15 bg-white/10 px-3 py-2 text-[11px] font-bold text-white">
+                        <i class="ri-medal-line mr-1 text-emerald-200"></i>
+                        {{ teacher.experience }} {% if teacher.experience == 1 %}Year{% else %}Years{% endif %} Experience
+                    </span>
+                    <span class="rounded-lg border border-white/15 bg-white/10 px-3 py-2 text-[11px] font-bold text-white">
+                        <i class="ri-book-open-line mr-1 text-emerald-200"></i> {{ total_subjects }} Subjects
+                    </span>
+                    <span class="rounded-lg border border-white/15 bg-white/10 px-3 py-2 text-[11px] font-bold text-white">
+                        <i class="ri-graduation-cap-line mr-1 text-emerald-200"></i> {{ total_batches }} Batches
+                    </span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- PROFESSIONAL INFORMATION + ABOUT -->
+    <section class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <div class="tp-card">
+            <div class="mb-4 flex items-center gap-2">
+                <i class="ri-user-settings-line text-xl text-emerald-600"></i>
+                <h3 class="text-[15px] font-extrabold text-slate-900">Professional Information</h3>
+            </div>
+
+            <div class="tp-info-row">
+                <div class="tp-icon"><i class="ri-graduation-cap-line"></i></div>
+                <div class="min-w-0"><p class="tp-label">Educational Qualification</p><p class="tp-value">{{ teacher.qualification|default:"Not provided" }}</p></div>
+            </div>
+            <div class="tp-info-row">
+                <div class="tp-icon"><i class="ri-building-2-line"></i></div>
+                <div class="min-w-0"><p class="tp-label">Institution</p><p class="tp-value">{{ teacher.institution_name|default:"Not provided" }}</p></div>
+            </div>
+            <div class="tp-info-row">
+                <div class="tp-icon"><i class="ri-calendar-line"></i></div>
+                <div class="min-w-0"><p class="tp-label">Graduation Year</p><p class="tp-value">{{ teacher.graduation_year|default:"Not provided" }}</p></div>
+            </div>
+            <div class="tp-info-row">
+                <div class="tp-icon"><i class="ri-award-line"></i></div>
+                <div class="min-w-0"><p class="tp-label">Specialization</p><p class="tp-value">{{ teacher.specialization|default:"Not provided" }}</p></div>
+            </div>
+            <div class="tp-info-row">
+                <div class="tp-icon"><i class="ri-medal-line"></i></div>
+                <div class="min-w-0"><p class="tp-label">Teaching Experience</p><p class="tp-value">{{ teacher.experience }} {% if teacher.experience == 1 %}Year{% else %}Years{% endif %}</p></div>
+            </div>
+            <div class="tp-info-row">
+                <div class="tp-icon"><i class="ri-building-line"></i></div>
+                <div class="min-w-0"><p class="tp-label">Previous Institution</p><p class="tp-value">{{ teacher.previous_institution|default:"Not provided" }}</p></div>
+            </div>
+        </div>
+
+        <div class="tp-card">
+            <div class="mb-4 flex items-center gap-2">
+                <i class="ri-user-heart-line text-xl text-emerald-600"></i>
+                <h3 class="text-[15px] font-extrabold text-slate-900">About the Teacher</h3>
+            </div>
+
+            <div class="rounded-xl bg-slate-50 p-4">
+                <p class="tp-label">Professional Introduction</p>
+                <p class="whitespace-pre-line text-[12px] leading-7 text-slate-600">
+                    {% if teacher.bio %}{{ teacher.bio }}{% else %}Professional introduction has not been added yet.{% endif %}
+                </p>
+            </div>
+
+            <div class="mt-4">
+                <p class="tp-label">Additional Qualifications</p>
+                <p class="whitespace-pre-line text-[12px] leading-6 text-slate-600">{{ teacher.additional_qualifications|default:"No additional qualifications provided." }}</p>
+            </div>
+
+            <div class="mt-5">
+                <p class="tp-label">Qualified Subjects</p>
+                <p class="whitespace-pre-line text-[12px] leading-6 text-slate-600">{{ teacher.qualified_subjects|default:"Not provided." }}</p>
+            </div>
+
+            <div class="mt-5">
+                <p class="tp-label">Teaching Languages</p>
+                <div class="mt-2 flex flex-wrap gap-2">
+                    {% if teacher.language %}
+                        <span class="tp-chip"><i class="ri-translate-2 mr-1"></i>{{ teacher.language }}</span>
+                    {% else %}
+                        <span class="text-[11px] text-slate-400">Not provided</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- BATCH-WISE SUBJECT ACCORDION -->
+    <section class="tp-card">
+        <div class="mb-5 flex items-center gap-2">
+            <i class="ri-book-2-line text-xl text-emerald-600"></i>
+            <div>
+                <h3 class="text-[15px] font-extrabold text-slate-900">Assigned Batches (Your Purchased)</h3>
+                <p class="mt-1 text-[11px] text-slate-400">Select a batch to see the subjects this teacher handles in that batch.</p>
+            </div>
+        </div>
+
+        {% if assigned_batches %}
+            <div id="teacherBatchAccordion" class="tp-batch-grid space-y-2">
+                {% for batch in assigned_batches %}
+                    <article class="tp-batch" data-batch-item data-open="false">
+                        <button
+                            type="button"
+                            class="tp-batch-trigger"
+                            data-batch-trigger
+                            aria-expanded="false"
+                            aria-controls="teacher-batch-panel-{{ forloop.counter }}"
+                        >
+                            <span class="tp-batch-icon"><i class="ri-book-open-line"></i></span>
+                            <span class="min-w-0 flex-1">
+                                <span class="block text-[12px] font-extrabold leading-5 text-slate-800">{{ batch.batch_name }}</span>
+                                <span class="mt-1 block text-[10px] text-slate-500">View assigned subjects</span>
+                            </span>
+                            <span class="tp-batch-count">Subjects</span>
+                            <span class="tp-batch-chevron"><i class="ri-arrow-down-s-line text-[19px]"></i></span>
+                        </button>
+
+                        <div
+                            id="teacher-batch-panel-{{ forloop.counter }}"
+                            data-batch-panel
+                            hidden
+                        >
+                            <div class="tp-batch-panel">
+                                <div class="tp-batch-panel-inner">
+                                    <p class="mb-3 text-[11px] font-extrabold text-emerald-900">Subjects in this batch</p>
+                                    <div class="tp-subjects">
+                                        {% for subject in batch.student_teacher_subjects %}
+                                            <span class="tp-chip"><i class="ri-bookmark-line mr-1"></i>{{ subject.subject_name }}</span>
+                                        {% empty %}
+                                            <p class="tp-empty-subjects w-full">No active subject assignments for this batch.</p>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </article>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p class="py-8 text-center text-[12px] text-slate-400">No purchased batch assignments available.</p>
+        {% endif %}
+    </section>
+
+    <!-- PROFESSIONAL LINKS -->
+    {% if teacher.linkedin or teacher.website %}
+        <section class="tp-card">
+            <div class="mb-4 flex items-center gap-2">
+                <i class="ri-links-line text-xl text-emerald-600"></i>
+                <h3 class="text-[15px] font-extrabold text-slate-900">Professional Links</h3>
+            </div>
+            <div class="flex flex-wrap gap-3">
+                {% if teacher.linkedin %}
+                    <a href="{{ teacher.linkedin }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-[12px] font-bold text-blue-700 hover:bg-blue-100">
+                        <i class="ri-linkedin-box-fill text-lg"></i> LinkedIn Profile <i class="ri-external-link-line"></i>
+                    </a>
+                {% endif %}
+                {% if teacher.website %}
+                    <a href="{{ teacher.website }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-[12px] font-bold text-emerald-700 hover:bg-emerald-100">
+                        <i class="ri-global-line text-lg"></i> Personal Website <i class="ri-external-link-line"></i>
+                    </a>
+                {% endif %}
+            </div>
+        </section>
+    {% endif %}
+
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const accordion = document.getElementById("teacherBatchAccordion");
+    if (!accordion) return;
+
+    const items = Array.from(accordion.querySelectorAll("[data-batch-item]"));
+
+    items.forEach(function (item) {
+        const trigger = item.querySelector("[data-batch-trigger]");
+        const panel = item.querySelector("[data-batch-panel]");
+        if (!trigger || !panel) return;
+
+        trigger.addEventListener("click", function () {
+            const shouldOpen = panel.hidden;
+
+            // Keep only one batch expanded at a time.
+            items.forEach(function (otherItem) {
+                const otherTrigger = otherItem.querySelector("[data-batch-trigger]");
+                const otherPanel = otherItem.querySelector("[data-batch-panel]");
+                if (!otherTrigger || !otherPanel) return;
+
+                otherPanel.hidden = true;
+                otherTrigger.setAttribute("aria-expanded", "false");
+                otherItem.dataset.open = "false";
+            });
+
+            if (shouldOpen) {
+                panel.hidden = false;
+                trigger.setAttribute("aria-expanded", "true");
+                item.dataset.open = "true";
+            }
+        });
+    });
+});
+</script>
+
+{% endblock %}

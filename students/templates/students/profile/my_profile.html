@@ -1,0 +1,644 @@
+{% extends "students/base_student.html" %}
+{% load static %}
+
+{% block title %}My Profile | NeoLearner{% endblock %}
+
+{% block student_content %}
+<style>
+    .nl-profile{--nl-green:#059669;--nl-green-dark:#047857;--nl-ink:#10231c;--nl-muted:#718278;--nl-line:#e2eee8;width:100%;max-width:none;margin:0;padding:0 16px 0;color:var(--nl-ink)}
+    .nl-profile *{box-sizing:border-box}
+    .nl-profile .nl-card{background:#fff;border:1px solid var(--nl-line);border-radius:20px;box-shadow:0 9px 28px rgba(15,55,38,.055)}
+    .nl-profile .nl-heading{margin-bottom:18px}
+    .nl-profile .nl-heading-kicker{
+        display:inline-flex;align-items:center;gap:8px;
+        min-height:27px;margin:0 0 7px;padding:5px 10px;
+        border:1px solid rgba(52,211,153,.28);border-radius:8px;
+        background:rgba(5,150,105,.10);color:#34d399;
+        font-size:10px;font-weight:850;letter-spacing:.14em;
+        line-height:1;text-transform:uppercase
+    }
+    .nl-profile .nl-heading-kicker i{font-size:13px;color:#10b981}
+    .nl-profile .nl-heading h1{font-size:clamp(25px,2.4vw,32px);font-weight:850;letter-spacing:-.045em;color:#fff}
+    .nl-profile .nl-heading p{margin-top:4px;color:rgba(255,255,255,.82);font-size:14px}
+    .nl-profile .nl-heading .text-slate-500{color:rgba(255,255,255,.72)!important}
+    .nl-profile .nl-hero{display:grid;grid-template-columns:minmax(0,1fr) minmax(320px,.9fr);gap:26px;align-items:center;padding:22px 26px;margin-bottom:18px;position:relative;overflow:hidden;border:1px solid #ccefe0;border-radius:23px;background:radial-gradient(circle at 100% 0%,rgba(16,185,129,.12),transparent 34%),linear-gradient(115deg,#fff 0%,#f3fcf7 100%);box-shadow:0 12px 32px rgba(5,150,105,.07)}
+    .nl-profile .nl-identity{display:flex;align-items:center;gap:20px;min-width:0}
+    .nl-profile .nl-avatar-wrap{position:relative;flex:0 0 116px}
+    .nl-profile .nl-avatar{width:116px;height:116px;display:grid;place-items:center;overflow:hidden;border:4px solid white;border-radius:23px;background:linear-gradient(145deg,#d1fae5,#f0fdf4);box-shadow:0 7px 20px rgba(15,70,48,.14);font-size:38px;color:#047857}
+    .nl-profile .nl-avatar img{width:100%;height:100%;object-fit:cover}
+    .nl-profile .nl-avatar-camera{position:absolute;right:-5px;bottom:-5px;width:34px;height:34px;display:grid;place-items:center;border:3px solid white;border-radius:50%;background:#047857;color:#fff}
+    .nl-profile .nl-student-name{font-size:clamp(20px,2vw,27px);font-weight:850;letter-spacing:-.035em;overflow-wrap:anywhere}
+    .nl-profile .nl-student-id{display:inline-flex;margin-top:7px;padding:6px 11px;border:1px solid #cdeee0;border-radius:10px;background:#e9f9f1;color:#075c40;font-size:12px;font-weight:800;letter-spacing:.025em}
+    .nl-profile .nl-contact-row{display:flex;flex-wrap:wrap;gap:9px 18px;margin-top:13px;color:#47594f;font-size:12px}
+    .nl-profile .nl-contact-row span{display:inline-flex;align-items:center;gap:7px;overflow-wrap:anywhere}
+    .nl-profile .nl-contact-row i{color:#047857;font-size:16px}
+    .nl-profile .nl-progress{padding-left:26px;border-left:1px solid #cfe6da;position:relative;z-index:1}
+    .nl-profile .nl-progress-top{display:flex;align-items:center;justify-content:space-between;gap:12px}
+    .nl-profile .nl-progress-top strong{font-size:15px;font-weight:850}
+    .nl-profile .nl-progress-top b{font-size:16px;color:#047857}
+    .nl-profile .nl-progress-track{height:10px;margin:13px 0 14px;overflow:hidden;border-radius:99px;background:#dcefe5}
+    .nl-profile .nl-progress-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,#059669,#34d399);transition:width .25s}
+    .nl-profile .nl-progress-items{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 14px}
+    .nl-profile .nl-progress-items span{display:flex;align-items:center;gap:7px;color:#42574b;font-size:12px}
+    .nl-profile .nl-progress-items i{color:#059669;font-size:16px}
+    .nl-profile .nl-complete-pill{display:inline-flex;align-items:center;gap:7px;margin-top:13px;padding:7px 11px;border:1px solid #c6efd7;border-radius:10px;background:#e7f9ee;color:#05603f;font-size:11px;font-weight:800}
+    .nl-profile .nl-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+    .nl-profile .nl-section{padding:20px 22px;min-width:0;position:relative;overflow:hidden}
+    .nl-profile .nl-section:before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:linear-gradient(180deg,#6ee7b7,#d1fae5)}
+    .nl-profile .nl-section-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+    .nl-profile .nl-section-title{display:flex;align-items:center;gap:13px;min-width:0}
+    .nl-profile .nl-icon{width:45px;height:45px;flex:0 0 45px;display:grid;place-items:center;border:1px solid #c8f0d9;border-radius:14px;background:linear-gradient(145deg,#d1fae5,#f0fdf4);color:#047857;font-size:22px}
+    .nl-profile .nl-section-title h2{font-size:15px;font-weight:850;letter-spacing:-.02em;color:#12251b}
+    .nl-profile .nl-section-title p{margin-top:3px;color:#718278;font-size:11px}
+    .nl-profile .nl-edit{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:36px;padding:8px 13px;border:1px solid #9ed9b9;border-radius:11px;background:#f5fcf7;color:#047857;font-size:12px;font-weight:800;white-space:nowrap;transition:.18s}
+    .nl-profile .nl-edit:hover{background:#dcfce7;border-color:#6bc895;transform:translateY(-1px)}
+    .nl-profile .nl-status{display:inline-flex;align-items:center;gap:5px;margin:9px 0 0 58px;padding:4px 9px;border-radius:99px;background:#ecfdf3;color:#087443;font-size:10px;font-weight:800}
+    .nl-profile .nl-status.incomplete{background:#fff7e6;color:#9a5b00}
+    .nl-profile .nl-data{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px 18px;margin-top:16px;padding-left:5px}
+    .nl-profile .nl-data-item{min-width:0}
+    .nl-profile .nl-data-item.wide{grid-column:1/-1}
+    .nl-profile .nl-label{margin-bottom:4px;color:#84958c;font-size:9px;font-weight:850;letter-spacing:.09em;text-transform:uppercase}
+    .nl-profile .nl-value{color:#1c3329;font-size:12px;font-weight:700;line-height:1.55;overflow-wrap:anywhere}
+    .nl-profile .nl-muted{color:#98a69e;font-weight:500}
+    .nl-profile .nl-photo-small{width:48px;height:55px;object-fit:cover;border:2px solid white;border-radius:9px;box-shadow:0 3px 10px #10231c18}
+    .nl-profile .nl-interests{display:flex;flex-wrap:wrap;gap:7px}
+    .nl-profile .nl-chip{padding:6px 11px;border:1px solid #d0f0df;border-radius:99px;background:#effbf4;color:#075d40;font-size:11px;font-weight:750}
+    .nl-profile .nl-learning{grid-column:1/-1}
+    .nl-profile .nl-learning-content{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin:17px 4px 0}
+    .nl-profile .nl-goals{padding-left:22px;border-left:1px solid #dcebe2}
+    .nl-profile .nl-goals p{white-space:pre-line;color:#42574b;font-size:12px;line-height:1.7}
+    .nl-profile .nl-footnote{padding:8px 0 0;text-align:center;color:#98a69e;font-size:11px}
+    .nl-profile .nl-error{margin:0 0 16px;padding:13px 16px;border:1px solid #fecaca;border-radius:13px;background:#fff1f2;color:#b42345;font-size:12px}
+    .nl-profile .nl-error ul{margin:6px 0 0 18px;list-style:disc}
+    .nl-profile .nl-modal[hidden]{display:none!important}
+    .nl-profile .nl-modal{position:fixed;inset:0;z-index:10020;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(7,24,16,.56);backdrop-filter:blur(7px)}
+    .nl-profile .nl-dialog{width:min(720px,100%);max-height:calc(100dvh - 32px);overflow:auto;border:1px solid #d7eee1;border-radius:22px;background:#fff;box-shadow:0 28px 90px rgba(0,0,0,.25);animation:nlModalIn .2s ease both}
+    @keyframes nlModalIn{from{opacity:0;transform:translateY(10px) scale(.985)}to{opacity:1;transform:translateY(0) scale(1)}}
+    .nl-profile .nl-modal-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:19px 22px;border-bottom:1px solid #e7f0eb}
+    .nl-profile .nl-modal-head h3{font-size:17px;font-weight:850;letter-spacing:-.025em}
+    .nl-profile .nl-close{width:36px;height:36px;display:grid;place-items:center;border:1px solid #e4eee8;border-radius:10px;background:#f7fbf8;color:#547064;font-size:19px}
+    .nl-profile .nl-form{padding:20px 22px 22px}
+    .nl-profile .nl-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:15px}
+    .nl-profile .nl-field{min-width:0}
+    .nl-profile .nl-field.wide{grid-column:1/-1}
+    .nl-profile .nl-field label{display:block;margin-bottom:6px;color:#52675b;font-size:11px;font-weight:800}
+    .nl-profile .nl-required{color:#dc2626;font-weight:900;margin-left:2px}
+    .nl-profile .nl-input{width:100%;min-height:43px;padding:10px 12px;border:1px solid #dce9e1;border-radius:11px;background:#fbfefc;color:#10231c;font:inherit;font-size:12px;outline:none;transition:.18s}
+    .nl-profile .nl-input:focus{border-color:#10a66c;box-shadow:0 0 0 3px rgba(16,185,129,.12);background:#fff}
+    .nl-profile .nl-input[readonly]{background:#f2f7f4;color:#64756b;cursor:not-allowed}
+    .nl-profile textarea.nl-input{min-height:105px;resize:vertical}
+    .nl-profile .nl-help{margin-top:5px;color:#8a9a91;font-size:10px;line-height:1.5}
+    .nl-profile .nl-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:20px;padding-top:16px;border-top:1px solid #edf3ef}
+    .nl-profile .nl-btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:40px;padding:9px 15px;border:1px solid transparent;border-radius:11px;font-size:12px;font-weight:800}
+    .nl-profile .nl-btn-cancel{border-color:#e2e8e4;background:#f7faf8;color:#52675b}
+    .nl-profile .nl-btn-save{background:linear-gradient(135deg,#059669,#047857);color:#fff;box-shadow:0 5px 14px #05966924}
+    .nl-profile .nl-upload{display:flex;align-items:center;gap:13px;padding:13px;border:1px dashed #9edbb9;border-radius:14px;background:#f5fcf7}
+    .nl-profile .nl-upload-preview{width:62px;height:72px;flex:0 0 62px;display:grid;place-items:center;overflow:hidden;border:2px solid white;border-radius:10px;background:#e8f7ee;color:#047857;font-size:22px}
+    .nl-profile .nl-upload-preview img{width:100%;height:100%;object-fit:cover}
+    .nl-profile .nl-upload-copy{min-width:0}
+    .nl-profile .nl-upload-copy strong{display:block;color:#164e36;font-size:11px}
+    .nl-profile .nl-upload-copy span{display:block;margin-top:4px;color:#718278;font-size:10px;line-height:1.5}
+    .nl-profile .nl-file{display:block;width:100%;margin-top:8px;color:#52675b;font-size:11px}
+    @media(max-width:900px){.nl-profile .nl-hero{grid-template-columns:1fr}.nl-profile .nl-progress{padding:17px 0 0;border-left:0;border-top:1px solid #cfe6da}.nl-profile .nl-grid{gap:12px}.nl-profile .nl-section{padding:17px}}
+    @media(max-width:650px){.nl-profile{width:100%;max-width:none;margin:0;padding:0 10px 0}.nl-profile .nl-grid{grid-template-columns:1fr}.nl-profile .nl-hero{padding:17px}.nl-profile .nl-identity{gap:13px}.nl-profile .nl-avatar-wrap,.nl-profile .nl-avatar{width:76px;height:76px;flex-basis:76px;border-radius:17px}.nl-profile .nl-avatar{font-size:27px}.nl-profile .nl-student-name{font-size:19px}.nl-profile .nl-contact-row{gap:7px 12px}.nl-profile .nl-section{padding:17px 15px}.nl-profile .nl-section-title{gap:9px}.nl-profile .nl-icon{width:39px;height:39px;flex-basis:39px;font-size:19px}.nl-profile .nl-section-title h2{font-size:13px}.nl-profile .nl-status{margin-left:48px}.nl-profile .nl-data{gap:11px 12px}.nl-profile .nl-learning{grid-column:auto}.nl-profile .nl-learning-content{grid-template-columns:1fr;gap:17px}.nl-profile .nl-goals{padding:15px 0 0;border-left:0;border-top:1px solid #dcebe2}.nl-profile .nl-form-grid{grid-template-columns:1fr}.nl-profile .nl-field.wide{grid-column:auto}.nl-profile .nl-modal-head,.nl-profile .nl-form{padding-left:16px;padding-right:16px}}
+
+    /* Identity photo cropper — matched to Settings: square crop, drag, zoom and emerald styling. */
+    .nl-profile .nl-photo-choose{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:38px;margin-top:9px;padding:9px 13px;border:1px solid #a7f3d0;border-radius:10px;background:#ecfdf5;color:#047857;font-size:11px;font-weight:850;cursor:pointer;transition:.18s}
+    .nl-profile .nl-photo-choose:hover{background:#d1fae5;border-color:#6ee7b7}
+    .nl-profile .nl-photo-status{display:block;margin-top:7px;color:#718278;font-size:10px;line-height:1.5}
+    .nl-profile .nl-crop-modal[hidden]{display:none!important}
+    .nl-profile .nl-crop-modal{position:fixed;inset:0;z-index:10060;display:flex;align-items:center;justify-content:center;overflow-y:auto;padding:16px;background:rgba(15,23,42,.62);backdrop-filter:blur(5px)}
+    .nl-profile .nl-crop-dialog{width:100%;max-width:720px;max-height:calc(100dvh - 32px);margin:auto;overflow-y:auto;border:1px solid #dbe7e1;border-radius:18px;background:#fff;color:#0f172a;box-shadow:0 24px 80px rgba(0,0,0,.32)}
+    .nl-profile .nl-crop-stage{position:relative;width:100%;height:min(42dvh,340px);min-height:200px;overflow:hidden;border:1px solid #cbd5e1;border-radius:12px;background:#0f172a;touch-action:none}
+    .nl-profile .nl-crop-image{position:absolute;display:block;max-width:none;max-height:none;object-fit:fill;user-select:none;-webkit-user-drag:none}
+    .nl-profile .nl-crop-selection{position:absolute;box-sizing:border-box;border:2px solid #fff;box-shadow:0 0 0 9999px rgba(2,6,23,.48);pointer-events:none}
+    .nl-profile .nl-crop-grid{position:absolute;inset:0;background-image:linear-gradient(to right,transparent 33.1%,rgba(255,255,255,.65) 33.1%,rgba(255,255,255,.65) 33.6%,transparent 33.6%,transparent 66.3%,rgba(255,255,255,.65) 66.3%,rgba(255,255,255,.65) 66.8%,transparent 66.8%),linear-gradient(to bottom,transparent 33.1%,rgba(255,255,255,.65) 33.1%,rgba(255,255,255,.65) 33.6%,transparent 33.6%,transparent 66.3%,rgba(255,255,255,.65) 66.3%,rgba(255,255,255,.65) 66.8%,transparent 66.8%)}
+    .nl-profile .nl-crop-zoom{display:block;width:100%;accent-color:#059669}
+    .nl-profile .nl-crop-zoom-value{color:#047857;font-size:12px;font-weight:850}
+    .nl-profile .nl-crop-error{margin-top:12px;color:#e11d48;font-size:12px;font-weight:700}
+    .nl-profile .nl-crop-error[hidden]{display:none!important}
+    .nl-profile .nl-avatar img[hidden],.nl-profile .nl-avatar i[hidden],.nl-profile .nl-upload-preview img[hidden],.nl-profile .nl-upload-preview i[hidden]{display:none!important}
+    @media(max-width:640px){.nl-profile .nl-crop-modal{padding:8px}.nl-profile .nl-crop-dialog{max-height:calc(100dvh - 16px);border-radius:14px}.nl-profile .nl-crop-stage{height:min(35dvh,260px);min-height:160px}.nl-profile .nl-upload{align-items:flex-start}.nl-profile .nl-upload-preview{width:58px;height:68px;flex-basis:58px}}
+</style>
+
+<div class="nl-profile">
+    <div class="nl-heading">
+        <span class="nl-heading-kicker"><i class="ri-shield-user-line"></i> Personal Profile Management</span>
+        <h1>My Profile</h1>
+        <p>Manage your personal, academic and communication details</p>
+    </div>
+
+    {% if profile_errors %}
+    <div class="nl-error" role="alert">
+        <strong><i class="ri-error-warning-line"></i> Please check these details</strong>
+        <ul>{% for error in profile_errors %}<li>{{ error }}</li>{% endfor %}</ul>
+    </div>
+    {% endif %}
+
+    <section class="nl-hero">
+        <div class="nl-identity">
+            <div class="nl-avatar-wrap">
+                <div class="nl-avatar">
+                    {% if profile.identity_photo %}
+                        <img id="nl-hero-identity-photo" src="{{ profile.identity_photo }}" alt="Student identity photo">
+                        <i id="nl-hero-identity-placeholder" class="ri-user-line" hidden></i>
+                    {% else %}
+                        <img id="nl-hero-identity-photo" src="" alt="Student identity photo" hidden>
+                        <i id="nl-hero-identity-placeholder" class="ri-user-line"></i>
+                    {% endif %}
+                </div>
+                <span class="nl-avatar-camera"><i class="ri-camera-line"></i></span>
+            </div>
+            <div class="min-w-0">
+                <h2 class="nl-student-name">{{ full_name|default:username }}</h2>
+                <span class="nl-student-id">Student ID : {{ profile.neo_student_id|default:"Generating..." }}</span>
+                <div class="nl-contact-row">
+                    <span><i class="ri-mail-line"></i>{{ email|default:"Email not added" }}</span>
+                    <span><i class="ri-phone-line"></i>{{ profile.phone|default:"Phone not added" }}</span>
+                    <span><i class="ri-at-line"></i>{{ username }}</span>
+                </div>
+            </div>
+        </div>
+        <div class="nl-progress">
+            <div class="nl-progress-top"><strong>Profile Completion</strong><b>{% if profile_completed %}100%{% else %}In progress{% endif %}</b></div>
+            <div class="nl-progress-track"><div class="nl-progress-fill" style="width:{% if profile_completed %}100{% else %}0{% endif %}%"></div></div>
+            <div class="nl-progress-items">
+                <span><i class="{% if profile.gender and profile.identity_photo %}ri-checkbox-circle-fill{% else %}ri-time-line{% endif %}"></i> Personal</span>
+                <span><i class="{% if profile.address_house_street and profile.address_locality and profile.address_city and profile.address_district and profile.address_state and profile.address_pin_code and profile.address_country %}ri-checkbox-circle-fill{% else %}ri-time-line{% endif %}"></i> Address</span>
+                <span><i class="{% if profile.guardian_full_name and profile.guardian_relationship and profile.guardian_phone and profile.guardian_email %}ri-checkbox-circle-fill{% else %}ri-time-line{% endif %}"></i> Guardian</span>
+                <span><i class="{% if profile.interested_exams_courses or profile.learning_goals %}ri-checkbox-circle-fill{% else %}ri-information-line{% endif %}"></i> Learning Interests</span>
+                <span><i class="{% if profile.study_work_status %}ri-checkbox-circle-fill{% else %}ri-time-line{% endif %}"></i> Study / Work</span>
+            </div>
+            <span class="nl-complete-pill"><i class="ri-checkbox-circle-fill"></i>{% if profile_completed %}Profile Completed{% else %}Keep your details up to date{% endif %}</span>
+        </div>
+    </section>
+
+    <div class="nl-grid">
+        <!-- PERSONAL INFORMATION -->
+        <section class="nl-card nl-section" id="profile-personal">
+            <div class="nl-section-head">
+                <div class="nl-section-title"><span class="nl-icon"><i class="ri-user-line"></i></span><div><h2>Personal Information</h2><p>Your identity and personal details</p></div></div>
+                <button type="button" class="nl-edit" data-open-profile="personal"><i class="ri-pencil-line"></i> Edit</button>
+            </div>
+            <span class="nl-status {% if not profile.gender or not profile.identity_photo %}incomplete{% endif %}"><i class="ri-checkbox-circle-fill"></i>{% if profile.gender and profile.identity_photo %}Completed{% else %}Needs details{% endif %}</span>
+            <div class="nl-data">
+                <div class="nl-data-item"><div class="nl-label">Full Name</div><div class="nl-value">{{ full_name|default:"Not added" }}</div></div>
+                <div class="nl-data-item"><div class="nl-label">Gender</div><div class="nl-value">{{ profile.get_gender_display|default:"Not added" }}</div></div>
+                <div class="nl-data-item"><div class="nl-label">Date of Birth</div><div class="nl-value">{{ profile.date_of_birth|date:"d M Y"|default:"Not added" }}</div></div>
+                <div class="nl-data-item"><div class="nl-label">Username</div><div class="nl-value">{{ username }}</div></div>
+            </div>
+        </section>
+
+        <!-- GUARDIAN -->
+        <section class="nl-card nl-section" id="profile-guardian">
+            <div class="nl-section-head">
+                <div class="nl-section-title"><span class="nl-icon"><i class="ri-parent-line"></i></span><div><h2>Parent / Guardian Information</h2><p>Parent or guardian contact details</p></div></div>
+                <button type="button" class="nl-edit" data-open-profile="guardian"><i class="ri-pencil-line"></i> Edit</button>
+            </div>
+            <span class="nl-status {% if not profile.guardian_full_name or not profile.guardian_phone or not profile.guardian_email %}incomplete{% endif %}"><i class="ri-checkbox-circle-fill"></i>{% if profile.guardian_full_name and profile.guardian_phone and profile.guardian_email %}Completed{% else %}Needs details{% endif %}</span>
+            <div class="nl-data">
+                <div class="nl-data-item"><div class="nl-label">Guardian Name</div><div class="nl-value">{{ profile.guardian_full_name|default:"Not added" }}</div></div>
+                <div class="nl-data-item"><div class="nl-label">Relationship</div><div class="nl-value">{{ profile.guardian_relationship|default:"Not added" }}</div></div>
+                <div class="nl-data-item"><div class="nl-label">Guardian Phone</div><div class="nl-value">{{ profile.guardian_phone|default:"Not added" }}</div></div>
+                <div class="nl-data-item"><div class="nl-label">Alternate Phone</div><div class="nl-value">{{ profile.guardian_alternate_phone|default:"Not added" }}</div></div>
+                <div class="nl-data-item wide"><div class="nl-label">Guardian Email</div><div class="nl-value">{{ profile.guardian_email|default:"Not added" }}</div></div>
+            </div>
+        </section>
+
+        <!-- STUDY / WORK -->
+        <section class="nl-card nl-section" id="profile-study-work">
+            <div class="nl-section-head">
+                <div class="nl-section-title"><span class="nl-icon"><i class="ri-book-open-line"></i></span><div><h2>Study / Work Details</h2><p>Your current education or work information</p></div></div>
+                <button type="button" class="nl-edit" data-open-profile="study_work"><i class="ri-pencil-line"></i> Edit</button>
+            </div>
+            <span class="nl-status {% if not profile.study_work_status %}incomplete{% endif %}"><i class="ri-checkbox-circle-fill"></i>{% if profile.study_work_status %}Completed{% else %}Needs details{% endif %}</span>
+            <div class="nl-data">
+                <div class="nl-data-item"><div class="nl-label">Current Status</div><div class="nl-value">{{ profile.get_study_work_status_display|default:"Not added" }}</div></div>
+                <div class="nl-data-item"><div class="nl-label">Institution / Workplace</div><div class="nl-value">{{ profile.institution_or_workplace|default:"Not added" }}</div></div>
+                <div class="nl-data-item"><div class="nl-label">Qualification</div><div class="nl-value">{{ profile.education_qualification|default:"Not added" }}</div></div>
+                <div class="nl-data-item"><div class="nl-label">Course / Field</div><div class="nl-value">{{ profile.course_or_field|default:"Not added" }}</div></div>
+            </div>
+        </section>
+
+        <!-- ADDRESS -->
+        <section class="nl-card nl-section" id="profile-address">
+            <div class="nl-section-head">
+                <div class="nl-section-title"><span class="nl-icon"><i class="ri-map-pin-line"></i></span><div><h2>Postal Address</h2><p>Your communication and postal address</p></div></div>
+                <button type="button" class="nl-edit" data-open-profile="address"><i class="ri-pencil-line"></i> Edit</button>
+            </div>
+            <span class="nl-status {% if not profile.address_house_street or not profile.address_pin_code %}incomplete{% endif %}"><i class="ri-checkbox-circle-fill"></i>{% if profile.address_house_street and profile.address_pin_code %}Completed{% else %}Needs details{% endif %}</span>
+            <div class="nl-data">
+                <div class="nl-data-item wide"><div class="nl-label">House / Street</div><div class="nl-value">{{ profile.address_house_street|default:"Not added" }}</div></div>
+                <div class="nl-data-item"><div class="nl-label">Locality</div><div class="nl-value">{{ profile.address_locality|default:"Not added" }}</div></div>
+                <div class="nl-data-item"><div class="nl-label">City</div><div class="nl-value">{{ profile.address_city|default:"Not added" }}</div></div>
+                <div class="nl-data-item"><div class="nl-label">District</div><div class="nl-value">{{ profile.address_district|default:"Not added" }}</div></div>
+                <div class="nl-data-item"><div class="nl-label">State</div><div class="nl-value">{{ profile.address_state|default:"Not added" }}</div></div>
+                <div class="nl-data-item"><div class="nl-label">PIN Code</div><div class="nl-value">{{ profile.address_pin_code|default:"Not added" }}</div></div>
+                <div class="nl-data-item"><div class="nl-label">Country</div><div class="nl-value">{{ profile.address_country|default:"Not added" }}</div></div>
+            </div>
+        </section>
+
+        <!-- LEARNING INTERESTS -->
+        <section class="nl-card nl-section nl-learning" id="profile-learning">
+            <div class="nl-section-head">
+                <div class="nl-section-title"><span class="nl-icon"><i class="ri-focus-3-line"></i></span><div><h2>Learning Interests</h2><p>Your interested exams, courses and learning goals</p></div></div>
+                <button type="button" class="nl-edit" data-open-profile="learning"><i class="ri-pencil-line"></i> Edit</button>
+            </div>
+            <span class="nl-status"><i class="ri-information-line"></i> Optional</span>
+            <div class="nl-learning-content">
+                <div><div class="nl-label">Interested Courses / Exams</div><div class="nl-interests">{% for interest in profile.interested_exams_courses %}<span class="nl-chip">{{ interest }}</span>{% empty %}<span class="nl-value nl-muted">No interests added yet</span>{% endfor %}</div></div>
+                <div class="nl-goals"><div class="nl-label">Learning Goals</div><p>{{ profile.learning_goals|default:"Add your learning goals to help us understand what you want to achieve." }}</p></div>
+            </div>
+        </section>
+    </div>
+    <p class="nl-footnote">Your profile information is used to support your NeoLearner learning experience.</p>
+
+    <!-- PERSONAL MODAL -->
+    <div class="nl-modal" data-profile-modal="personal" hidden>
+        <div class="nl-dialog" role="dialog" aria-modal="true" aria-labelledby="nl-title-personal">
+            <div class="nl-modal-head"><h3 id="nl-title-personal">Edit Personal Information</h3><button type="button" class="nl-close" data-close-profile aria-label="Close"><i class="ri-close-line"></i></button></div>
+            <form method="post" enctype="multipart/form-data" class="nl-form">
+                {% csrf_token %}<input type="hidden" name="section" value="personal">
+                <input type="hidden" name="email" value="{{ email }}">
+                <input type="hidden" name="phone" value="{{ profile.phone }}">
+                <div class="nl-form-grid">
+                    <div class="nl-field"><label for="nl-full-name">Full Name <span class="nl-required" aria-hidden="true">*</span></label><input class="nl-input" id="nl-full-name" name="full_name" value="{{ profile_form_data.full_name|default:full_name }}"></div>
+                    <div class="nl-field"><label>Login Email (managed in Settings)</label><input class="nl-input" value="{{ email }}" readonly></div>
+                    <div class="nl-field"><label>Primary Phone (managed in Settings)</label><input class="nl-input" value="{{ profile.phone }}" readonly></div>
+                    <div class="nl-field"><label for="nl-gender">Gender <span class="nl-required" aria-hidden="true">*</span></label><select class="nl-input" id="nl-gender" name="gender"><option value="">Select gender</option>{% for value,label in profile.Gender.choices %}<option value="{{ value }}" {% if profile_form_data.gender == value or not profile_form_data.gender and profile.gender == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+                    <div class="nl-field"><label for="nl-dob">Date of Birth</label><input class="nl-input" id="nl-dob" type="date" name="date_of_birth" value="{{ profile_form_data.date_of_birth|default:profile.date_of_birth|date:'Y-m-d' }}"></div>
+                    <div class="nl-field wide">
+                        <label for="nl-identity-photo">Student Identity Photo {% if not profile.identity_photo %}<span class="nl-required" aria-hidden="true">*</span>{% endif %}</label>
+                        <div class="nl-upload">
+                            <div class="nl-upload-preview" id="nl-photo-preview">
+                                {% if profile.identity_photo %}
+                                    <img id="nl-identity-photo-preview" src="{{ profile.identity_photo }}" alt="Current student identity photo">
+                                    <i id="nl-identity-photo-placeholder" class="ri-user-line" hidden></i>
+                                {% else %}
+                                    <img id="nl-identity-photo-preview" src="" alt="Selected student identity photo" hidden>
+                                    <i id="nl-identity-photo-placeholder" class="ri-user-line"></i>
+                                {% endif %}
+                            </div>
+                            <div class="nl-upload-copy">
+                                <strong>Identity photo — separate from your account avatar</strong>
+                                <span>Upload a clear, front-facing passport-style portrait. JPG or PNG, maximum 5 MB. This photo appears in your My Profile overview and does not replace your NeoLearner account avatar.</span>
+                                <input class="sr-only" id="nl-identity-photo" type="file" name="identity_photo">
+                                <button type="button" class="nl-photo-choose" id="nl-identity-photo-choose"><i class="ri-crop-line"></i> Choose &amp; crop photo</button>
+                                <span class="nl-photo-status" id="nl-identity-photo-status" aria-live="polite">No new photo selected. Your saved identity photo will remain unchanged.</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="nl-actions"><button type="button" class="nl-btn nl-btn-cancel" data-close-profile>Cancel</button><button type="submit" class="nl-btn nl-btn-save"><i class="ri-save-line"></i> Save Changes</button></div>
+            </form>
+        </div>
+    </div>
+
+    <!-- GUARDIAN MODAL -->
+    <div class="nl-modal" data-profile-modal="guardian" hidden>
+        <div class="nl-dialog" role="dialog" aria-modal="true" aria-labelledby="nl-title-guardian">
+            <div class="nl-modal-head"><h3 id="nl-title-guardian">Edit Parent / Guardian Information</h3><button type="button" class="nl-close" data-close-profile aria-label="Close"><i class="ri-close-line"></i></button></div>
+            <form method="post" class="nl-form">{% csrf_token %}<input type="hidden" name="section" value="guardian">
+                <div class="nl-form-grid">
+                    <div class="nl-field"><label for="nl-guardian-name">Guardian Full Name <span class="nl-required" aria-hidden="true">*</span></label><input class="nl-input" id="nl-guardian-name" name="guardian_full_name" value="{{ profile_form_data.guardian_full_name|default:profile.guardian_full_name }}"></div>
+                    <div class="nl-field"><label for="nl-guardian-relation">Relationship <span class="nl-required" aria-hidden="true">*</span></label><input class="nl-input" id="nl-guardian-relation" name="guardian_relationship" placeholder="Father, Mother, Guardian" value="{{ profile_form_data.guardian_relationship|default:profile.guardian_relationship }}"></div>
+                    <div class="nl-field"><label for="nl-guardian-phone">Guardian Phone <span class="nl-required" aria-hidden="true">*</span></label><input class="nl-input" id="nl-guardian-phone" name="guardian_phone" inputmode="numeric" value="{{ profile_form_data.guardian_phone|default:profile.guardian_phone }}"></div>
+                    <div class="nl-field"><label for="nl-guardian-alt">Alternate Phone</label><input class="nl-input" id="nl-guardian-alt" name="guardian_alternate_phone" inputmode="numeric" value="{{ profile_form_data.guardian_alternate_phone|default:profile.guardian_alternate_phone }}"></div>
+                    <div class="nl-field wide"><label for="nl-guardian-email">Guardian Email <span class="nl-required" aria-hidden="true">*</span></label><input class="nl-input" id="nl-guardian-email" type="text" inputmode="email" name="guardian_email" value="{{ profile_form_data.guardian_email|default:profile.guardian_email }}"></div>
+                </div>
+                <div class="nl-actions"><button type="button" class="nl-btn nl-btn-cancel" data-close-profile>Cancel</button><button type="submit" class="nl-btn nl-btn-save"><i class="ri-save-line"></i> Save Guardian Details</button></div>
+            </form>
+        </div>
+    </div>
+
+    <!-- STUDY / WORK MODAL -->
+    <div class="nl-modal" data-profile-modal="study_work" hidden>
+        <div class="nl-dialog" role="dialog" aria-modal="true" aria-labelledby="nl-title-study">
+            <div class="nl-modal-head"><h3 id="nl-title-study">Edit Study / Work Details</h3><button type="button" class="nl-close" data-close-profile aria-label="Close"><i class="ri-close-line"></i></button></div>
+            <form method="post" class="nl-form">{% csrf_token %}<input type="hidden" name="section" value="study_work">
+                <div class="nl-form-grid">
+                    <div class="nl-field"><label for="nl-study-status">Current Status <span class="nl-required" aria-hidden="true">*</span></label><select class="nl-input" id="nl-study-status" name="study_work_status"><option value="">Select status</option>{% for value,label in profile.StudyWorkStatus.choices %}<option value="{{ value }}" {% if profile_form_data.study_work_status == value or not profile_form_data.study_work_status and profile.study_work_status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+                    <div class="nl-field"><label for="nl-institution">Institution / Workplace</label><input class="nl-input" id="nl-institution" name="institution_or_workplace" value="{{ profile_form_data.institution_or_workplace|default:profile.institution_or_workplace }}"></div>
+                    <div class="nl-field"><label for="nl-qualification">Qualification</label><input class="nl-input" id="nl-qualification" name="education_qualification" placeholder="e.g. Higher Secondary, Degree" value="{{ profile_form_data.education_qualification|default:profile.education_qualification }}"></div>
+                    <div class="nl-field"><label for="nl-course">Course / Field</label><input class="nl-input" id="nl-course" name="course_or_field" placeholder="e.g. Class 12, B.Com, Nursing" value="{{ profile_form_data.course_or_field|default:profile.course_or_field }}"></div>
+                </div>
+                <div class="nl-actions"><button type="button" class="nl-btn nl-btn-cancel" data-close-profile>Cancel</button><button type="submit" class="nl-btn nl-btn-save"><i class="ri-save-line"></i> Save Study / Work</button></div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ADDRESS MODAL -->
+    <div class="nl-modal" data-profile-modal="address" hidden>
+        <div class="nl-dialog" role="dialog" aria-modal="true" aria-labelledby="nl-title-address">
+            <div class="nl-modal-head"><h3 id="nl-title-address">Edit Postal Address</h3><button type="button" class="nl-close" data-close-profile aria-label="Close"><i class="ri-close-line"></i></button></div>
+            <form method="post" class="nl-form">{% csrf_token %}<input type="hidden" name="section" value="address">
+                <div class="nl-form-grid">
+                    <div class="nl-field wide"><label for="nl-house">House / Street <span class="nl-required" aria-hidden="true">*</span></label><input class="nl-input" id="nl-house" name="address_house_street" value="{{ profile_form_data.address_house_street|default:profile.address_house_street }}"></div>
+                    <div class="nl-field"><label for="nl-locality">Locality <span class="nl-required" aria-hidden="true">*</span></label><input class="nl-input" id="nl-locality" name="address_locality" value="{{ profile_form_data.address_locality|default:profile.address_locality }}"></div>
+                    <div class="nl-field"><label for="nl-city">City <span class="nl-required" aria-hidden="true">*</span></label><input class="nl-input" id="nl-city" name="address_city" value="{{ profile_form_data.address_city|default:profile.address_city }}"></div>
+                    <div class="nl-field"><label for="nl-district">District <span class="nl-required" aria-hidden="true">*</span></label><input class="nl-input" id="nl-district" name="address_district" value="{{ profile_form_data.address_district|default:profile.address_district }}"></div>
+                    <div class="nl-field"><label for="nl-state">State <span class="nl-required" aria-hidden="true">*</span></label><input class="nl-input" id="nl-state" name="address_state" value="{{ profile_form_data.address_state|default:profile.address_state }}"></div>
+                    <div class="nl-field"><label for="nl-pin">PIN Code <span class="nl-required" aria-hidden="true">*</span></label><input class="nl-input" id="nl-pin" name="address_pin_code" value="{{ profile_form_data.address_pin_code|default:profile.address_pin_code }}"></div>
+                    <div class="nl-field"><label for="nl-country">Country <span class="nl-required" aria-hidden="true">*</span></label><input class="nl-input" id="nl-country" name="address_country" value="{{ profile_form_data.address_country|default:profile.address_country|default:'India' }}"></div>
+                </div>
+                <div class="nl-actions"><button type="button" class="nl-btn nl-btn-cancel" data-close-profile>Cancel</button><button type="submit" class="nl-btn nl-btn-save"><i class="ri-save-line"></i> Save Address</button></div>
+            </form>
+        </div>
+    </div>
+
+    <!-- LEARNING INTERESTS MODAL -->
+    <div class="nl-modal" data-profile-modal="learning" hidden>
+        <div class="nl-dialog" role="dialog" aria-modal="true" aria-labelledby="nl-title-learning">
+            <div class="nl-modal-head"><h3 id="nl-title-learning">Edit Learning Interests</h3><button type="button" class="nl-close" data-close-profile aria-label="Close"><i class="ri-close-line"></i></button></div>
+            <form method="post" class="nl-form">{% csrf_token %}<input type="hidden" name="section" value="learning">
+                <div class="nl-form-grid">
+                    <div class="nl-field wide"><label for="nl-interests">Interested Exams / Courses</label><input class="nl-input" id="nl-interests" name="interested_exams_courses_text" placeholder="Python, Django, Web Development" value="{{ profile_form_data.interested_exams_courses_text|default:profile.interested_exams_courses|join:', ' }}"><p class="nl-help">Separate multiple interests with commas. Up to 20 interests, 100 characters each.</p></div>
+                    <div class="nl-field wide"><label for="nl-goals">Learning Goals</label><textarea class="nl-input" id="nl-goals" name="learning_goals" rows="4" placeholder="What would you like to achieve?">{{ profile_form_data.learning_goals|default:profile.learning_goals }}</textarea></div>
+                </div>
+                <div class="nl-actions"><button type="button" class="nl-btn nl-btn-cancel" data-close-profile>Cancel</button><button type="submit" class="nl-btn nl-btn-save"><i class="ri-save-line"></i> Save Learning Interests</button></div>
+            </form>
+        </div>
+    </div>
+
+    <!-- IDENTITY PHOTO CROPPER (same interaction as Student Settings) -->
+    <div class="nl-crop-modal" id="nl-identity-crop-modal" hidden role="dialog" aria-modal="true" aria-labelledby="nl-identity-crop-title">
+        <div class="nl-crop-dialog">
+            <div class="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4">
+                <div>
+                    <p class="text-[10px] font-extrabold uppercase tracking-[.16em] text-emerald-700">Photo editor</p>
+                    <h2 id="nl-identity-crop-title" class="mt-1 text-lg font-extrabold text-slate-900">Crop student identity photo</h2>
+                    <p class="mt-1 text-xs leading-5 text-slate-500">Move the photo and adjust zoom. The output is always a 1:1 square.</p>
+                </div>
+                <button type="button" id="nl-identity-crop-close" class="rounded-lg px-3 py-1 text-2xl leading-none text-slate-400 hover:bg-slate-100 hover:text-slate-800" aria-label="Close crop dialog">&times;</button>
+            </div>
+            <div class="p-4 sm:p-5">
+                <div class="nl-crop-stage" id="nl-identity-crop-stage">
+                    <img class="nl-crop-image" id="nl-identity-crop-source" alt="Image to crop" draggable="false">
+                    <div class="nl-crop-selection" id="nl-identity-crop-selection"><div class="nl-crop-grid"></div></div>
+                </div>
+                <div class="mt-4 rounded-xl border border-emerald-100 bg-emerald-50 p-4">
+                    <div class="mb-2 flex items-center justify-between">
+                        <label for="nl-identity-crop-zoom" class="text-sm font-bold text-slate-700">Zoom</label>
+                        <span id="nl-identity-crop-zoom-value" class="nl-crop-zoom-value">1.00×</span>
+                    </div>
+                    <input id="nl-identity-crop-zoom" class="nl-crop-zoom" type="range" min="1" max="3" step="0.01" value="1">
+                    <p class="mt-2 text-xs text-slate-500">Drag the photo to reposition it inside the square.</p>
+                </div>
+                <p id="nl-identity-crop-error" class="nl-crop-error" hidden role="alert"></p>
+                <div class="mt-5 flex flex-col-reverse gap-2 border-t border-slate-200 pt-4 sm:flex-row sm:justify-end">
+                    <button type="button" id="nl-identity-crop-cancel" class="nl-btn nl-btn-cancel">Cancel</button>
+                    <button type="button" id="nl-identity-crop-apply" class="nl-btn nl-btn-save"><i class="ri-check-line"></i> Apply crop</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+(function(){
+    const root=document.querySelector('.nl-profile');
+    if(!root)return;
+    const modals=[...root.querySelectorAll('[data-profile-modal]')];
+    let lastFocus=null;
+    function closeAll(){
+        modals.forEach(modal=>modal.hidden=true);
+        document.body.style.overflow='';
+        if(lastFocus){lastFocus.focus({preventScroll:true});lastFocus=null;}
+    }
+    function openModal(key,trigger){
+        closeAll();
+        const modal=modals.find(item=>item.dataset.profileModal===key);
+        if(!modal)return;
+        lastFocus=trigger||document.activeElement;
+        modal.hidden=false;
+        document.body.style.overflow='hidden';
+        const first=modal.querySelector('input:not([type=hidden]):not([readonly]),select,textarea');
+        if(first)requestAnimationFrame(()=>first.focus({preventScroll:true}));
+    }
+    root.querySelectorAll('[data-open-profile]').forEach(button=>{
+        button.addEventListener('click',()=>openModal(button.dataset.openProfile,button));
+    });
+    root.querySelectorAll('[data-close-profile]').forEach(button=>{
+        button.addEventListener('click',closeAll);
+    });
+    modals.forEach(modal=>{
+        modal.addEventListener('click',event=>{if(event.target===modal)closeAll();});
+    });
+    document.addEventListener('keydown',event=>{
+        if(event.key==='Escape'&&document.getElementById('nl-identity-crop-modal')?.hidden!==false&&modals.some(modal=>!modal.hidden))closeAll();
+    });
+    {% if active_section and profile_errors %}
+    openModal('{{ active_section|escapejs }}',null);
+    {% endif %}
+    // Identity-photo cropper: same square selection, drag, zoom and 400x400 PNG output as Settings.
+    // My Profile keeps its existing 5 MB backend upload limit.
+    const photoInput=document.getElementById('nl-identity-photo');
+    const photoChoose=document.getElementById('nl-identity-photo-choose');
+    const cropModal=document.getElementById('nl-identity-crop-modal');
+    const cropClose=document.getElementById('nl-identity-crop-close');
+    const cropCancel=document.getElementById('nl-identity-crop-cancel');
+    const cropApply=document.getElementById('nl-identity-crop-apply');
+    const cropStage=document.getElementById('nl-identity-crop-stage');
+    const cropImage=document.getElementById('nl-identity-crop-source');
+    const cropSelection=document.getElementById('nl-identity-crop-selection');
+    const cropZoom=document.getElementById('nl-identity-crop-zoom');
+    const cropZoomValue=document.getElementById('nl-identity-crop-zoom-value');
+    const cropError=document.getElementById('nl-identity-crop-error');
+    const photoPreview=document.getElementById('nl-identity-photo-preview');
+    const photoPlaceholder=document.getElementById('nl-identity-photo-placeholder');
+    const heroPhoto=document.getElementById('nl-hero-identity-photo');
+    const heroPlaceholder=document.getElementById('nl-hero-identity-placeholder');
+    const photoStatus=document.getElementById('nl-identity-photo-status');
+
+    let cropSourceUrl=null,cropReady=false;
+    let cropRect={x:0,y:0,size:0};
+    let cropImageRect={x:0,y:0,w:0,h:0};
+    let cropBaseScale=1,cropScale=1,cropDragging=false,cropLast={x:0,y:0};
+
+    function clampCrop(value,min,max){return Math.max(min,Math.min(value,max));}
+    function showCropError(message){
+        cropError.textContent=message;
+        cropError.hidden=false;
+    }
+    function closeCropModal(){
+        cropModal.hidden=true;
+        document.body.style.overflow=modals.some(modal=>!modal.hidden)?'hidden':'';
+        cropDragging=false;
+    }
+    function openCropModal(){
+        cropError.hidden=true;
+        cropModal.hidden=false;
+        document.body.style.overflow='hidden';
+    }
+    function applyCropLayout(){
+        const minX=cropRect.x+cropRect.size-cropImageRect.w,maxX=cropRect.x;
+        const minY=cropRect.y+cropRect.size-cropImageRect.h,maxY=cropRect.y;
+        cropImageRect.x=clampCrop(cropImageRect.x,minX,maxX);
+        cropImageRect.y=clampCrop(cropImageRect.y,minY,maxY);
+        cropImage.style.width=cropImageRect.w+'px';
+        cropImage.style.height=cropImageRect.h+'px';
+        cropImage.style.left=cropImageRect.x+'px';
+        cropImage.style.top=cropImageRect.y+'px';
+        cropSelection.style.left=cropRect.x+'px';
+        cropSelection.style.top=cropRect.y+'px';
+        cropSelection.style.width=cropRect.size+'px';
+        cropSelection.style.height=cropRect.size+'px';
+        cropZoomValue.textContent=cropScale.toFixed(2)+'×';
+    }
+    function drawCropLayout(resetZoom){
+        if(!cropReady||!cropImage.naturalWidth)return;
+        const stageW=cropStage.clientWidth,stageH=cropStage.clientHeight;
+        const side=Math.min(stageW*.72,stageH*.84);
+        cropRect={x:(stageW-side)/2,y:(stageH-side)/2,size:side};
+        cropBaseScale=Math.max(side/cropImage.naturalWidth,side/cropImage.naturalHeight);
+        if(resetZoom){cropScale=1;cropZoom.value='1';}
+        const width=cropImage.naturalWidth*cropBaseScale*cropScale;
+        const height=cropImage.naturalHeight*cropBaseScale*cropScale;
+        cropImageRect={x:(stageW-width)/2,y:(stageH-height)/2,w:width,h:height};
+        applyCropLayout();
+    }
+    function setPhotoPreview(url){
+        if(photoPreview){
+            photoPreview.onload=()=>{};
+            photoPreview.onerror=()=>{};
+            photoPreview.src=url;
+            photoPreview.hidden=false;
+        }
+        if(photoPlaceholder)photoPlaceholder.hidden=true;
+        if(heroPhoto){
+            heroPhoto.src=url;
+            heroPhoto.hidden=false;
+        }
+        if(heroPlaceholder)heroPlaceholder.hidden=true;
+    }
+    function openSelectedFile(file){
+        if(!file)return;
+
+        // Image editing only. Validation remains on the Django backend.
+        cropError.hidden=true;
+        cropReady=false;
+        cropApply.disabled=false;
+        if(cropSourceUrl){URL.revokeObjectURL(cropSourceUrl);cropSourceUrl=null;}
+
+        cropSourceUrl=URL.createObjectURL(file);
+        cropImage.onload=function(){
+            if(!cropImage.naturalWidth||!cropImage.naturalHeight){
+                cropReady=false;
+                closeCropModal();
+                photoStatus.textContent='The selected file cannot be previewed for cropping. You can still submit it; the server will validate the upload.';
+                photoStatus.style.color='#718278';
+                return;
+            }
+            cropReady=true;
+            openCropModal();
+            requestAnimationFrame(()=>{if(!cropModal.hidden&&cropReady)drawCropLayout(true);});
+        };
+        cropImage.onerror=function(){
+            cropReady=false;
+            closeCropModal();
+            photoStatus.textContent='The selected file cannot be previewed for cropping. You can still submit it; the server will validate the upload.';
+            photoStatus.style.color='#718278';
+        };
+        cropImage.src=cropSourceUrl;
+    }
+
+    if(photoInput&&photoChoose&&cropModal&&cropStage&&cropImage){
+        photoChoose.addEventListener('click',()=>photoInput.click());
+        photoInput.addEventListener('change',()=>{
+            if(photoInput.files&&photoInput.files[0])openSelectedFile(photoInput.files[0]);
+        });
+        cropZoom.addEventListener('input',()=>{
+            if(!cropReady)return;
+            const centreX=cropImageRect.x+cropImageRect.w/2;
+            const centreY=cropImageRect.y+cropImageRect.h/2;
+            cropScale=Number(cropZoom.value);
+            cropImageRect.w=cropImage.naturalWidth*cropBaseScale*cropScale;
+            cropImageRect.h=cropImage.naturalHeight*cropBaseScale*cropScale;
+            cropImageRect.x=centreX-cropImageRect.w/2;
+            cropImageRect.y=centreY-cropImageRect.h/2;
+            applyCropLayout();
+        });
+        cropStage.addEventListener('pointerdown',event=>{
+            if(!cropReady)return;
+            cropDragging=true;
+            cropLast={x:event.clientX,y:event.clientY};
+            cropStage.setPointerCapture(event.pointerId);
+        });
+        cropStage.addEventListener('pointermove',event=>{
+            if(!cropDragging||!cropReady)return;
+            cropImageRect.x+=event.clientX-cropLast.x;
+            cropImageRect.y+=event.clientY-cropLast.y;
+            cropLast={x:event.clientX,y:event.clientY};
+            applyCropLayout();
+        });
+        cropStage.addEventListener('pointerup',()=>cropDragging=false);
+        cropStage.addEventListener('pointercancel',()=>cropDragging=false);
+        window.addEventListener('resize',()=>{
+            if(!cropModal.hidden&&cropReady)drawCropLayout(false);
+        });
+        cropClose.addEventListener('click',closeCropModal);
+        cropCancel.addEventListener('click',closeCropModal);
+        cropModal.addEventListener('click',event=>{
+            if(event.target===cropModal)closeCropModal();
+        });
+        document.addEventListener('keydown',event=>{
+            if(event.key==='Escape'&&!cropModal.hidden)closeCropModal();
+        });
+        cropApply.addEventListener('click',()=>{
+            if(!cropReady||!cropRect.size){
+                showCropError('Please choose a valid image and wait for it to load.');
+                return;
+            }
+            const scaleX=cropImage.naturalWidth/cropImageRect.w;
+            const scaleY=cropImage.naturalHeight/cropImageRect.h;
+            const sx=clampCrop(Math.round((cropRect.x-cropImageRect.x)*scaleX),0,cropImage.naturalWidth-1);
+            const sy=clampCrop(Math.round((cropRect.y-cropImageRect.y)*scaleY),0,cropImage.naturalHeight-1);
+            const side=Math.max(1,Math.min(
+                Math.round(cropRect.size*scaleX),
+                Math.round(cropRect.size*scaleY),
+                cropImage.naturalWidth-sx,
+                cropImage.naturalHeight-sy
+            ));
+            const canvas=document.createElement('canvas');
+            canvas.width=400;
+            canvas.height=400;
+            const context=canvas.getContext('2d');
+            if(!context){
+                showCropError('Unable to crop this image in your browser.');
+                return;
+            }
+            context.imageSmoothingEnabled=true;
+            context.imageSmoothingQuality='high';
+            context.drawImage(cropImage,sx,sy,side,side,0,0,400,400);
+            canvas.toBlob(blob=>{
+                if(!blob){
+                    showCropError('Unable to crop this image. Please try another file.');
+                    return;
+                }
+                const croppedFile=new File([blob],'student-identity.png',{
+                    type:'image/png',
+                    lastModified:Date.now()
+                });
+                const transfer=new DataTransfer();
+                transfer.items.add(croppedFile);
+                photoInput.files=transfer.files;
+                const previewUrl=URL.createObjectURL(blob);
+                setPhotoPreview(previewUrl);
+                const revokeWhenLoaded=()=>{
+                    URL.revokeObjectURL(previewUrl);
+                    if(photoPreview){photoPreview.onload=null;photoPreview.onerror=null;}
+                };
+                if(photoPreview){
+                    photoPreview.onload=revokeWhenLoaded;
+                    photoPreview.onerror=revokeWhenLoaded;
+                }
+                photoStatus.textContent='Cropped identity photo ready. Save Changes to upload.';
+                photoStatus.style.color='#047857';
+                closeCropModal();
+            },'image/png');
+        });
+    }
+})();
+</script>
+{% endblock %}

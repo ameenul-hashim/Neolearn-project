@@ -117,55 +117,225 @@
             background-size: 42px 42px;
         }
 
-        .active-menu {
-            background:
-                linear-gradient(
-                    90deg,
-                    rgba(0,255,224,0.14),
-                    rgba(0,255,224,0.03)
-                );
-
-            border-left: 3px solid #00F5D4;
-            color: #00F5D4;
+        :root {
+            --student-sidebar-expanded: 270px;
+            --student-sidebar-collapsed: 78px;
+            --student-aqua: #67DCEB;
+            --student-emerald: #34D399;
         }
 
         .nav-label {
-            font-size: 11px;
+            padding: 17px 16px 8px;
+            color: rgba(160, 205, 216, 0.78);
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 1.05px;
+            line-height: 1.3;
             text-transform: uppercase;
-            letter-spacing: 0.6px;
-            color: #475569;
-            padding: 16px 16px 8px 16px;
+            white-space: nowrap;
+            transition: opacity 180ms ease;
         }
 
         .student-nav-link {
             display: flex;
             min-width: 0;
-            height: 48px;
+            height: 47px;
             align-items: center;
             gap: 12px;
-            border-radius: 14px;
-            padding: 0 16px;
-            color: #94A3B8;
-            font-size: 14px;
+            border: 1px solid transparent;
+            border-radius: 13px;
+            padding: 0 15px;
+            color: #DCE5EF;
+            font-size: 13px;
             font-weight: 600;
-            transition: background 180ms ease, color 180ms ease;
+            transition: background 180ms ease, color 180ms ease, border-color 180ms ease;
+        }
+
+        .student-nav-link > i {
+            width: 20px;
+            min-width: 20px;
+            text-align: center;
+            font-size: 18px;
         }
 
         .student-nav-link:hover {
-            background: rgba(255,255,255,0.05);
-            color: #ffffff;
+            background: rgba(255,255,255,0.045);
+            color: #FFFFFF;
         }
 
         .student-nav-link.active-menu {
-            background: linear-gradient(
-                90deg,
-                rgba(0,255,224,0.14),
-                rgba(0,255,224,0.03)
-            );
-            border-left: 3px solid #00F5D4;
-            color: #00F5D4;
+            background: rgba(16,185,129,0.105);
+            border-color: rgba(52,211,153,0.10);
+            border-left: 3px solid #10B981;
+            color: #34D399;
+            padding-left: 13px;
         }
 
+        .student-nav-link:focus-visible,
+        .sidebar-toggle:focus-visible {
+            outline: 2px solid rgba(103,220,235,0.8);
+            outline-offset: 2px;
+        }
+
+        .coming-soon-link {
+            color: rgba(203,213,225,0.72);
+            cursor: default;
+            user-select: none;
+        }
+
+        .coming-soon-link:hover {
+            background: rgba(255,255,255,0.025);
+            color: rgba(226,232,240,0.82);
+        }
+
+        .soon-pill {
+            margin-left: auto;
+            flex-shrink: 0;
+            border: 1px solid rgba(34,211,238,0.30);
+            border-radius: 999px;
+            background: rgba(34,211,238,0.09);
+            padding: 3px 7px;
+            color: #67E8F9;
+            font-size: 9px;
+            font-weight: 700;
+            letter-spacing: 0.35px;
+        }
+
+        .sidebar-toggle {
+            display: inline-flex;
+            width: 36px;
+            height: 36px;
+            flex-shrink: 0;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid rgba(103,220,235,0.24);
+            border-radius: 12px;
+            background: linear-gradient(
+                145deg,
+                rgba(34,211,238,0.10),
+                rgba(16,185,129,0.09)
+            );
+            color: #7DE5F0;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.18);
+            transition: transform 180ms ease, border-color 180ms ease,
+                        background 180ms ease, color 180ms ease,
+                        box-shadow 180ms ease;
+        }
+
+        .sidebar-toggle:hover {
+            transform: translateY(-1px);
+            border-color: rgba(103,220,235,0.48);
+            background: linear-gradient(
+                145deg,
+                rgba(34,211,238,0.19),
+                rgba(16,185,129,0.16)
+            );
+            color: #A5F3FC;
+            box-shadow: 0 6px 18px rgba(6,182,212,0.13);
+        }
+
+        .sidebar-toggle:active {
+            transform: scale(0.96);
+        }
+
+        /* Desktop icon-only sidebar state */
+        @media (min-width: 1024px) {
+            body.student-sidebar-collapsed #sidebar {
+                width: var(--student-sidebar-collapsed) !important;
+            }
+
+            body.student-sidebar-collapsed #appMain {
+                margin-left: var(--student-sidebar-collapsed) !important;
+            }
+
+            body.student-sidebar-collapsed #studentTopbar {
+                left: var(--student-sidebar-collapsed) !important;
+            }
+
+            body.student-sidebar-collapsed #sidebar .sidebar-brand-text,
+            body.student-sidebar-collapsed #sidebar .sidebar-nav-text,
+            body.student-sidebar-collapsed #sidebar .nav-label,
+            body.student-sidebar-collapsed #sidebar .soon-pill,
+            body.student-sidebar-collapsed #sidebar .logout-text {
+                display: none !important;
+            }
+
+            /* Collapsed header: hide the logo mark and show one clear expand button */
+            body.student-sidebar-collapsed #sidebar .sidebar-brand-row {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding-left: 0;
+                padding-right: 0;
+            }
+
+            body.student-sidebar-collapsed #sidebar .sidebar-brand-inner {
+                display: none !important;
+            }
+
+            body.student-sidebar-collapsed #sidebar .sidebar-toggle {
+                position: relative;
+                display: inline-flex !important;
+                align-items: center;
+                justify-content: center;
+                width: 44px;
+                height: 44px;
+                margin: 0;
+                flex: 0 0 44px;
+                border: 1px solid rgba(34,211,238,0.42);
+                border-radius: 14px;
+                background: linear-gradient(
+                    145deg,
+                    rgba(34,211,238,0.18),
+                    rgba(16,185,129,0.16)
+                );
+                color: #67E8F9;
+                box-shadow: 0 5px 18px rgba(6,182,212,0.14);
+            }
+
+            body.student-sidebar-collapsed #sidebar .sidebar-toggle:hover {
+                border-color: rgba(34,211,238,0.72);
+                background: linear-gradient(
+                    145deg,
+                    rgba(34,211,238,0.27),
+                    rgba(16,185,129,0.23)
+                );
+                color: #CFFAFE;
+            }
+
+            body.student-sidebar-collapsed #sidebar #sidebarScroll {
+                padding-left: 10px;
+                padding-right: 10px;
+            }
+
+            body.student-sidebar-collapsed #sidebar .student-nav-link {
+                justify-content: center;
+                gap: 0;
+                padding-left: 0;
+                padding-right: 0;
+            }
+
+            body.student-sidebar-collapsed #sidebar .student-nav-link > i {
+                width: 22px;
+                min-width: 22px;
+                font-size: 19px;
+            }
+
+            body.student-sidebar-collapsed #sidebar .student-nav-link.active-menu {
+                border-left-width: 0;
+                box-shadow: inset 0 0 0 1px rgba(52,211,153,0.18);
+            }
+
+            body.student-sidebar-collapsed #sidebar .logout-link {
+                justify-content: center;
+                padding-left: 0;
+                padding-right: 0;
+            }
+
+            body.student-sidebar-collapsed #sidebar .logout-link > i {
+                margin: 0;
+            }
+        }
 
         /* =====================================================
            PROFILE IMAGE
@@ -176,7 +346,7 @@
             height: 42px;
             border-radius: 50%;
             object-fit: cover;
-            border: 2px solid rgba(0,255,224,0.2);
+            border: 2px solid rgba(16,185,129,0.22);
         }
 
         .profile-img-placeholder {
@@ -186,18 +356,62 @@
             background:
                 linear-gradient(
                     135deg,
-                    rgba(0,255,224,0.2),
+                    rgba(16,185,129,0.22),
                     rgba(0,150,255,0.1)
                 );
 
-            border: 2px solid rgba(0,255,224,0.2);
+            border: 2px solid rgba(16,185,129,0.22);
 
             display: flex;
             align-items: center;
             justify-content: center;
 
             font-size: 18px;
-            color: #00F5D4;
+            color: #34D399;
+        }
+
+
+        /* Custom aqua tooltips for the icon-only sidebar.
+           These replace the browser's default title popups. */
+        #studentSidebarTooltip {
+            position: fixed;
+            z-index: 1000;
+            pointer-events: none;
+            display: none;
+            max-width: 220px;
+            padding: 8px 12px;
+            border: 1px solid rgba(103, 220, 235, 0.42);
+            border-radius: 10px;
+            background: rgba(7, 25, 38, 0.96);
+            color: #A5F3FC;
+            font-size: 12px;
+            font-weight: 600;
+            line-height: 1.35;
+            letter-spacing: 0.01em;
+            white-space: nowrap;
+            box-shadow: 0 8px 22px rgba(6, 182, 212, 0.16);
+            backdrop-filter: blur(12px);
+            transform: translateY(-50%);
+            opacity: 0;
+            transition: opacity 140ms ease;
+        }
+
+        #studentSidebarTooltip.is-visible {
+            display: block;
+            opacity: 1;
+        }
+
+        #studentSidebarTooltip::before {
+            content: "";
+            position: absolute;
+            left: -5px;
+            top: 50%;
+            width: 8px;
+            height: 8px;
+            border-left: 1px solid rgba(103, 220, 235, 0.42);
+            border-bottom: 1px solid rgba(103, 220, 235, 0.42);
+            background: rgba(7, 25, 38, 0.96);
+            transform: translateY(-50%) rotate(45deg);
         }
 
     </style>
@@ -359,15 +573,15 @@ SIDEBAR
 
         <div
             class="
+                sidebar-brand-row
+                relative
                 flex
                 h-[80px]
                 shrink-0
                 items-center
                 justify-between
-
                 border-b
                 border-white/5
-
                 px-5
                 sm:px-7
             "
@@ -375,6 +589,7 @@ SIDEBAR
 
             <div
                 class="
+                    sidebar-brand-inner
                     flex
                     min-w-0
                     items-center
@@ -395,7 +610,7 @@ SIDEBAR
 
                             rounded-[18px]
 
-                            bg-cyan-400/20
+                            bg-emerald-400/20
 
                             blur-xl
 
@@ -420,7 +635,7 @@ SIDEBAR
                             rounded-[16px]
 
                             border
-                            border-cyan-400/20
+                            border-emerald-400/20
 
                             bg-[#071224]
                         "
@@ -438,7 +653,7 @@ SIDEBAR
                                 rounded-[6px]
 
                                 border-[3px]
-                                border-cyan-400
+                                border-emerald-400
                             "
                         ></div>
 
@@ -451,6 +666,7 @@ SIDEBAR
 
                 <h1
                     class="
+                        sidebar-brand-text
                         truncate
                         text-[22px]
                         font-extrabold
@@ -462,7 +678,7 @@ SIDEBAR
                         Neo
                     </span>
 
-                    <span class="text-cyan-400">
+                    <span class="text-emerald-400">
                         Learn
                     </span>
 
@@ -471,10 +687,24 @@ SIDEBAR
             </div>
 
 
-            <!-- MOBILE CLOSE -->
+            <!-- DESKTOP COLLAPSE / EXPAND -->
+            <button
+                id="toggleSidebar"
+                type="button"
+                class="sidebar-toggle hidden lg:inline-flex"
+                aria-controls="sidebar"
+                aria-label="Collapse sidebar"
+                aria-expanded="true"
+                title="Collapse sidebar"
+            >
+                <i id="sidebarToggleIcon" class="ri-arrow-left-s-line text-[19px]"></i>
+            </button>
 
+            <!-- MOBILE CLOSE -->
             <button
                 id="closeSidebar"
+                type="button"
+                aria-label="Close navigation"
                 class="
                     shrink-0
                     text-[#94A3B8]
@@ -495,6 +725,7 @@ SIDEBAR
         ====================================================== -->
 
         <div
+            id="sidebarScroll"
             class="
                 min-h-0
                 flex-1
@@ -507,97 +738,118 @@ SIDEBAR
 
             <nav class="space-y-0.5">
 
+                <!-- OVERVIEW -->
+                <div class="nav-label">Overview</div>
 
-                <!-- LEARNING -->
-                <div class="nav-label">Learning</div>
-
-                <a href="{% url 'dashboard' %}" class="student-nav-link {% if request.resolver_match.url_name == 'dashboard' %}active-menu{% endif %}">
+                <a href="{% url 'dashboard' %}" data-tooltip="Dashboard" class="student-nav-link {% if request.resolver_match.url_name == 'dashboard' %}active-menu{% endif %}">
                     <i class="ri-layout-grid-fill shrink-0 text-[18px]"></i>
-                    <span class="truncate">Dashboard</span>
+                    <span class="sidebar-nav-text truncate">Dashboard</span>
                 </a>
+
+                <!-- MY LEARNING -->
+                <div class="nav-label mt-4">My Learning</div>
+
                 <a
-                href="{% url 'my_learning' %}"
-                class="student-nav-link {% if request.resolver_match.url_name == 'my_learning' or request.resolver_match.url_name == 'my_learning_batch' or request.resolver_match.url_name == 'my_learning_subject' or request.resolver_match.url_name == 'my_learning_chapter' %}active-menu{% endif %}"
+                    href="{% url 'my_learning' %}" data-tooltip="My Learning"
+                    class="student-nav-link {% if request.resolver_match.url_name == 'my_learning' or request.resolver_match.url_name == 'my_learning_batch' or request.resolver_match.url_name == 'my_learning_subject' or request.resolver_match.url_name == 'my_learning_chapter' %}active-menu{% endif %}"
                 >
-                <i class="ri-book-open-line shrink-0 text-[18px]"></i>
-                <span class="truncate">My Learning</span>
+                    <i class="ri-book-open-line shrink-0 text-[18px]"></i>
+                    <span class="sidebar-nav-text truncate">My Learning</span>
                 </a>
 
-
                 <a
-                    href="{% url 'student_timetable' %}"
+                    href="{% url 'student_timetable' %}" data-tooltip="My Timetable"
                     class="student-nav-link {% if request.resolver_match.url_name == 'student_timetable' %}active-menu{% endif %}"
                 >
                     <i class="ri-calendar-schedule-line shrink-0 text-[18px]"></i>
-                    <span class="truncate">My Timetable</span>
+                    <span class="sidebar-nav-text truncate">My Timetable</span>
                 </a>
 
                 <a
-                    href="{% url 'student_today_live_schedules' %}"
+                    href="{% url 'student_today_live_schedules' %}" data-tooltip="Today's Live Schedules"
                     class="student-nav-link {% if request.resolver_match.url_name == 'student_today_live_schedules' %}active-menu{% endif %}"
                 >
                     <i class="ri-live-line shrink-0 text-[18px]"></i>
-                    <span class="truncate">Today's Live Schedules</span>
+                    <span class="sidebar-nav-text truncate">Today's Live Schedules</span>
                 </a>
 
+                <!-- MY LEARNING TEAM -->
+                <div class="nav-label mt-4">My Learning Team</div>
 
-                <!-- ORDERS AND SAVED -->
-                <div class="nav-label mt-4">Orders &amp; Saved</div>
-
-                <a href="{% url 'order_history' %}" class="student-nav-link {% if request.resolver_match.url_name == 'order_history' %}active-menu{% endif %}">
-                    <i class="ri-file-list-3-line shrink-0 text-[18px]"></i>
-                    <span class="truncate">Order History</span>
+                <a
+                    href="{% url 'student_my_teachers' %}" data-tooltip="My Teachers"
+                    class="student-nav-link {% if request.resolver_match.url_name == 'student_my_teachers' or request.resolver_match.url_name == 'student_teacher_profile' %}active-menu{% endif %}"
+                >
+                    <i class="ri-user-star-line shrink-0 text-[18px]"></i>
+                    <span class="sidebar-nav-text truncate">My Teachers</span>
                 </a>
 
-                <a href="{% url 'wishlist' %}" class="student-nav-link {% if request.resolver_match.url_name == 'wishlist' %}active-menu{% endif %}">
-                    <i class="ri-heart-3-line shrink-0 text-[18px]"></i>
-                    <span class="truncate">Wishlist</span>
+                <!-- SHOPPING & ORDERS -->
+                <div class="nav-label mt-4">Shopping &amp; Orders</div>
+
+                <a href="{% url 'marketplace' %}" data-tooltip="Marketplace" class="student-nav-link {% if request.resolver_match.url_name == 'marketplace' or request.resolver_match.url_name == 'marketplace_detail' %}active-menu{% endif %}">
+                    <i class="ri-shopping-bag-3-line shrink-0 text-[18px]"></i>
+                    <span class="sidebar-nav-text truncate">Marketplace</span>
                 </a>
 
-                <a href="{% url 'cart' %}" class="student-nav-link {% if request.resolver_match.url_name == 'cart' %}active-menu{% endif %}">
+                <a href="{% url 'cart' %}" data-tooltip="Shopping Cart" class="student-nav-link {% if request.resolver_match.url_name == 'cart' %}active-menu{% endif %}">
                     <i class="ri-shopping-cart-2-line shrink-0 text-[18px]"></i>
-                    <span class="truncate">Shopping Cart</span>
+                    <span class="sidebar-nav-text truncate">Shopping Cart</span>
                 </a>
 
-                <!-- EXPLORE AND PROGRESS -->
+                <a href="{% url 'wishlist' %}" data-tooltip="Wishlist" class="student-nav-link {% if request.resolver_match.url_name == 'wishlist' %}active-menu{% endif %}">
+                    <i class="ri-heart-3-line shrink-0 text-[18px]"></i>
+                    <span class="sidebar-nav-text truncate">Wishlist</span>
+                </a>
+
+                <a href="{% url 'order_history' %}" data-tooltip="Order History" class="student-nav-link {% if request.resolver_match.url_name == 'order_history' or request.resolver_match.url_name == 'order_details' %}active-menu{% endif %}">
+                    <i class="ri-file-list-3-line shrink-0 text-[18px]"></i>
+                    <span class="sidebar-nav-text truncate">Order History</span>
+                </a>
+
+                <!-- EXPLORE & PROGRESS -->
                 <div class="nav-label mt-4">Explore &amp; Progress</div>
 
-                <a href="{% url 'marketplace' %}" class="student-nav-link {% if request.resolver_match.url_name == 'marketplace' %}active-menu{% endif %}">
-                    <i class="ri-shopping-bag-3-line shrink-0 text-[18px]"></i>
-                    <span class="truncate">Marketplace</span>
-                </a>
+                <div
+                    class="student-nav-link coming-soon-link"
+                    aria-disabled="true"
+                    data-tooltip="Achievements"
+                >
+                    <i class="ri-award-line shrink-0"></i>
+                    <span class="sidebar-nav-text truncate">Achievements</span>
+                    <span class="soon-pill">SOON</span>
+                </div>
 
-                <a href="#" class="student-nav-link">
-                    <i class="ri-live-line shrink-0 text-[18px]"></i>
-                    <span class="truncate">Live Classes</span>
-                </a>
+                <div
+                    class="student-nav-link coming-soon-link"
+                    aria-disabled="true"
+                    data-tooltip="Learning Progress"
+                >
+                    <i class="ri-bar-chart-2-line shrink-0"></i>
+                    <span class="sidebar-nav-text truncate">Learning Progress</span>
+                    <span class="soon-pill">SOON</span>
+                </div>
 
-                <a href="#" class="student-nav-link">
-                    <i class="ri-user-star-line shrink-0 text-[18px]"></i>
-                    <span class="truncate">Teachers</span>
-                </a>
-
-                <a href="#" class="student-nav-link">
-                    <i class="ri-award-line shrink-0 text-[18px]"></i>
-                    <span class="truncate">Achievements</span>
-                </a>
-
-                <a href="#" class="student-nav-link">
-                    <i class="ri-bar-chart-2-line shrink-0 text-[18px]"></i>
-                    <span class="truncate">Learning Progress</span>
-                </a>
-
-                <!-- ACCOUNT AND SUPPORT -->
+                <!-- ACCOUNT & SUPPORT -->
                 <div class="nav-label mt-4">Account &amp; Support</div>
 
-                <a href="{% url 'student_help_videos' %}" class="student-nav-link {% if request.resolver_match.url_name == 'student_help_videos' %}active-menu{% endif %}">
+                <a href="{% url 'student_help_videos' %}" data-tooltip="FAQ & Support" class="student-nav-link {% if request.resolver_match.url_name == 'student_help_videos' %}active-menu{% endif %}">
                     <i class="ri-question-line shrink-0 text-[18px]"></i>
-                    <span class="truncate">FAQ &amp; Support</span>
+                    <span class="sidebar-nav-text truncate">FAQ &amp; Support</span>
                 </a>
 
-                <a href="{% url 'student_settings' %}" class="student-nav-link {% if request.resolver_match.url_name == 'student_settings' %}active-menu{% endif %}">
+                <a
+                    href="{% url 'student_my_profile' %}"
+                    data-tooltip="My Profile"
+                    class="student-nav-link {% if request.resolver_match.url_name == 'student_my_profile' %}active-menu{% endif %}"
+                >
+                    <i class="ri-user-line shrink-0"></i>
+                    <span class="sidebar-nav-text truncate">My Profile</span>
+                </a>
+
+                <a href="{% url 'student_settings' %}" data-tooltip="Settings" class="student-nav-link {% if request.resolver_match.url_name == 'student_settings' %}active-menu{% endif %}">
                     <i class="ri-settings-3-line shrink-0 text-[18px]"></i>
-                    <span class="truncate">Settings</span>
+                    <span class="sidebar-nav-text truncate">Settings</span>
                 </a>
 
             </nav>
@@ -620,8 +872,9 @@ SIDEBAR
         >
 
             <a
-                href="{% url 'logout' %}"
+                href="{% url 'logout' %}" data-tooltip="Logout"
                 class="
+                    logout-link
                     flex
                     h-[50px]
                     items-center
@@ -646,7 +899,7 @@ SIDEBAR
 
                 <i class="ri-logout-box-r-line shrink-0 text-[18px]"></i>
 
-                Logout
+                <span class="logout-text">Logout</span>
 
             </a>
 
@@ -661,12 +914,14 @@ SIDEBAR
     ========================================================== -->
 
     <div
+        id="appMain"
         class="
             flex
             min-w-0
             flex-1
             flex-col
             lg:ml-[270px]
+            transition-[margin] duration-300
         "
     >
 
@@ -676,6 +931,7 @@ SIDEBAR
         ====================================================== -->
 
         <header
+            id="studentTopbar"
             class="
                 fixed
                 left-0
@@ -786,7 +1042,7 @@ SIDEBAR
 
                             placeholder:text-[#64748B]
 
-                            focus:border-cyan-400/30
+                            focus:border-emerald-400/30
                         "
                     >
 
@@ -945,7 +1201,7 @@ SIDEBAR
                         text-[#CBD5E1]
 
                         transition-all
-                        hover:text-cyan-400
+                        hover:text-emerald-400
 
                         sm:h-10
                         sm:w-10
@@ -972,7 +1228,7 @@ SIDEBAR
 
                             rounded-full
 
-                            bg-cyan-400
+                            bg-emerald-400
 
                             px-1
 
@@ -1030,7 +1286,7 @@ SIDEBAR
 
                             rounded-full
 
-                            bg-cyan-400
+                            bg-emerald-400
                         "
                     ></span>
 
@@ -1280,6 +1536,18 @@ SIDEBAR
                         <div class="py-2">
 
 
+                            <!-- MY PROFILE -->
+
+                            <a
+                                href="{% url 'student_my_profile' %}"
+                                class="flex h-[46px] min-w-0 items-center gap-3 rounded-xl px-5 text-[14px] font-medium text-slate-300 transition hover:bg-white/5 hover:text-white {% if request.resolver_match.url_name == 'student_my_profile' %}bg-emerald-500/10 text-emerald-300{% endif %}"
+                                data-tooltip="My Profile"
+                            >
+                                <i class="ri-user-line shrink-0 text-[18px]"></i>
+                                <span class="truncate">My Profile</span>
+                            </a>
+
+
                             <!-- MY ORDERS -->
 
                             <a
@@ -1411,6 +1679,90 @@ SIDEBAR
 <!-- =============================================================
      STUDENT BASE JS
 ============================================================== -->
+
+
+<script>
+/* Custom emerald hover labels for the collapsed student sidebar.
+   Uses data-tooltip, so no native browser title tooltip is shown. */
+document.addEventListener("DOMContentLoaded", function () {
+    const sidebar = document.getElementById("sidebar");
+    if (!sidebar) return;
+
+    const tooltip = document.createElement("div");
+    tooltip.id = "studentSidebarTooltip";
+    tooltip.setAttribute("role", "tooltip");
+    document.body.appendChild(tooltip);
+
+    let activeItem = null;
+
+    function showTooltip(item) {
+        if (!document.body.classList.contains("student-sidebar-collapsed")) return;
+        const label = item.getAttribute("data-tooltip");
+        if (!label) return;
+
+        activeItem = item;
+        tooltip.textContent = label;
+        tooltip.style.display = "block";
+
+        const rect = item.getBoundingClientRect();
+        const tipRect = tooltip.getBoundingClientRect();
+        const left = Math.min(rect.right + 12, window.innerWidth - tipRect.width - 12);
+        const top = Math.max(12, Math.min(rect.top + rect.height / 2, window.innerHeight - 12));
+
+        tooltip.style.left = Math.max(8, left) + "px";
+        tooltip.style.top = top + "px";
+        tooltip.classList.add("is-visible");
+    }
+
+    function hideTooltip(item) {
+        if (item && activeItem !== item) return;
+        activeItem = null;
+        tooltip.classList.remove("is-visible");
+        window.setTimeout(function () {
+            if (!activeItem) tooltip.style.display = "none";
+        }, 150);
+    }
+
+    sidebar.addEventListener("pointerover", function (event) {
+        const target = event.target instanceof Element ? event.target : null;
+        const item = target ? target.closest("[data-tooltip]") : null;
+        if (item && sidebar.contains(item)) showTooltip(item);
+    });
+
+    sidebar.addEventListener("pointerout", function (event) {
+        const target = event.target instanceof Element ? event.target : null;
+        const item = target ? target.closest("[data-tooltip]") : null;
+        if (item && !item.contains(event.relatedTarget)) hideTooltip(item);
+    });
+
+    sidebar.addEventListener("focusin", function (event) {
+        const target = event.target instanceof Element ? event.target : null;
+        const item = target ? target.closest("[data-tooltip]") : null;
+        if (item) showTooltip(item);
+    });
+
+    sidebar.addEventListener("focusout", function (event) {
+        const target = event.target instanceof Element ? event.target : null;
+        const item = target ? target.closest("[data-tooltip]") : null;
+        if (item) hideTooltip(item);
+    });
+
+    window.addEventListener("scroll", function () {
+        if (activeItem) showTooltip(activeItem);
+    }, true);
+
+    window.addEventListener("resize", function () {
+        if (activeItem) showTooltip(activeItem);
+    });
+
+    const observer = new MutationObserver(function () {
+        if (!document.body.classList.contains("student-sidebar-collapsed")) {
+            hideTooltip();
+        }
+    });
+    observer.observe(document.body, { attributes: true, attributeFilter: ["class"] });
+});
+</script>
 
 <script src="{% static 'students/js/student-base.js' %}"></script>
 
