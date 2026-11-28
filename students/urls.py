@@ -1,4 +1,3 @@
-
 from django.urls import path
 
 from .views import (
@@ -6,6 +5,7 @@ from .views import (
     student_timetable_view,
     student_today_live_schedules_view,
     student_settings_view,
+    student_my_profile_view,
     marketplace_view,
     marketplace_detail_view,
     my_learning_view,
@@ -62,6 +62,13 @@ urlpatterns = [
     ),
 
     path("settings/", student_settings_view, name="student_settings"),
+
+    # My Profile
+    path(
+        "my-profile/",
+        student_my_profile_view,
+        name="student_my_profile",
+    ),
 
     path("marketplace/", marketplace_view, name="marketplace"),
     path(

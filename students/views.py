@@ -94,6 +94,58 @@ def is_student_user(user):
 
 
 # ============================================================
+# PURCHASED LEARNING PROFILE COMPLETION GATE
+# ============================================================
+
+def _student_learning_profile_gate(request, *, json_response=False):
+    """
+    Protect purchased learning content until the student's first profile
+    completion. Browsing and purchasing remain available.
+
+    This gate is intentionally based on an ACTIVE purchase. A student with
+    no active purchased batch is not forced to complete the profile.
+    """
+    if not is_student_user(request.user):
+        return None
+
+    has_active_purchase = StudentBatchPurchase.objects.filter(
+        student=request.user,
+        status=StudentBatchPurchase.Status.ACTIVE,
+    ).exists()
+
+    if not has_active_purchase:
+        return None
+
+    profile = StudentProfile.objects.filter(
+        user=request.user,
+    ).only("profile_completed").first()
+
+    if profile and profile.profile_completed:
+        return None
+
+    profile_url = reverse("student_my_profile")
+    message = (
+        "Please complete your My Profile before accessing your purchased "
+        "learning content."
+    )
+
+    if json_response:
+        return JsonResponse(
+            {
+                "success": False,
+                "profile_required": True,
+                "redirect_url": profile_url,
+                "message": message,
+            },
+            status=403,
+        )
+
+    messages.warning(request, message)
+    return redirect(profile_url)
+
+
+
+# ============================================================
 # STUDENT DASHBOARD
 # ============================================================
 
@@ -2113,6 +2165,13 @@ def remove_coupon_view(request, coupon_id):
     no_store=True,
 )
 def my_learning_view(request):
+    profile_gate_response = _student_learning_profile_gate(
+        request,
+        json_response=False,
+    )
+    if profile_gate_response is not None:
+        return profile_gate_response
+
 
     # ========================================================
     # STUDENT ACCESS VALIDATION
@@ -2254,6 +2313,13 @@ def my_learning_view(request):
     no_store=True
 )
 def my_learning_batch_view(request, batch_id):
+    profile_gate_response = _student_learning_profile_gate(
+        request,
+        json_response=False,
+    )
+    if profile_gate_response is not None:
+        return profile_gate_response
+
 
     if not is_student_user(request.user):
         messages.error(
@@ -2374,6 +2440,13 @@ def my_learning_batch_view(request, batch_id):
     no_store=True
 )
 def my_learning_subject_view(request, batch_id, subject_id):
+    profile_gate_response = _student_learning_profile_gate(
+        request,
+        json_response=False,
+    )
+    if profile_gate_response is not None:
+        return profile_gate_response
+
 
     if not is_student_user(request.user):
         messages.error(
@@ -2439,6 +2512,13 @@ def my_learning_subject_view(request, batch_id, subject_id):
     no_store=True,
 )
 def my_learning_chapter_view(request, batch_id, subject_id, chapter_id):
+    profile_gate_response = _student_learning_profile_gate(
+        request,
+        json_response=False,
+    )
+    if profile_gate_response is not None:
+        return profile_gate_response
+
     if not is_student_user(request.user):
         messages.error(
             request,
@@ -3674,6 +3754,13 @@ def order_details_view(request, order_number):
     no_store=True,
 )
 def start_quiz_view(request, batch_id, subject_id, chapter_id, quiz_id):
+    profile_gate_response = _student_learning_profile_gate(
+        request,
+        json_response=False,
+    )
+    if profile_gate_response is not None:
+        return profile_gate_response
+
     if not is_student_user(request.user):
         messages.error(request, "Student access required.")
         return redirect("signin")
@@ -3866,6 +3953,13 @@ def start_quiz_view(request, batch_id, subject_id, chapter_id, quiz_id):
     no_store=True,
 )
 def student_quiz_answer_save_view(request, attempt_id, answer_id):
+    profile_gate_response = _student_learning_profile_gate(
+        request,
+        json_response=True,
+    )
+    if profile_gate_response is not None:
+        return profile_gate_response
+
 
     if request.method != "POST":
         return JsonResponse(
@@ -4028,6 +4122,13 @@ def student_quiz_answer_save_view(request, attempt_id, answer_id):
     no_store=True,
 )
 def student_quiz_take_view(request, attempt_id):
+    profile_gate_response = _student_learning_profile_gate(
+        request,
+        json_response=False,
+    )
+    if profile_gate_response is not None:
+        return profile_gate_response
+
     if not is_student_user(request.user):
         messages.error(request, "Student access required.")
         return redirect("signin")
@@ -4170,6 +4271,13 @@ def student_quiz_take_view(request, attempt_id):
     no_store=True,
 )
 def student_quiz_result_view(request, attempt_id):
+    profile_gate_response = _student_learning_profile_gate(
+        request,
+        json_response=False,
+    )
+    if profile_gate_response is not None:
+        return profile_gate_response
+
     if not is_student_user(request.user):
         messages.error(request, "Student access required.")
         return redirect("signin")
@@ -4960,4 +5068,533 @@ def student_teacher_profile_view(request, teacher_id):
             "total_batches": len(assigned_batches),
             "total_subjects": len(unique_subjects),
         },
+    )
+
+# ============================================================
+# STUDENT MY PROFILE
+# ============================================================
+# My Profile is deliberately additive: existing student features above remain
+# unchanged. Account email and primary phone are managed only in Settings.
+
+
+def _my_profile_get_or_create(user):
+    """Return the student's profile, creating its student ID when necessary."""
+    from .signals import generate_neo_student_id
+
+    profile, _created = StudentProfile.objects.get_or_create(
+        user=user,
+        defaults={"neo_student_id": generate_neo_student_id()},
+    )
+    return profile
+
+
+def _my_profile_clean_text(post_data, field_name, label, max_length,
+                           required=False):
+    """Normalize a text value and return (value, error)."""
+    value = " ".join(post_data.get(field_name, "").split())
+    if required and not value:
+        return value, f"{label} is required."
+    if len(value) > max_length:
+        return value, f"{label} cannot exceed {max_length} characters."
+    return value, None
+
+
+def _my_profile_valid_indian_phone(value, label, required=False):
+    """Validate an Indian mobile number; shared family numbers are allowed."""
+    if not value:
+        return f"{label} is required." if required else None
+    if not re.fullmatch(r"[6-9]\d{9}", value):
+        return (
+            f"Enter a valid 10-digit Indian mobile number for {label}, "
+            "starting with 6, 7, 8, or 9."
+        )
+    return None
+
+
+def _my_profile_is_complete(profile, user):
+    """Return whether all agreed first-completion requirements are present."""
+    full_name = " ".join(
+        part for part in (user.first_name, user.last_name) if part
+    ).strip()
+    required_values = (
+        full_name,
+        user.email,
+        profile.gender,
+        profile.identity_photo,
+        profile.guardian_full_name,
+        profile.guardian_relationship,
+        profile.guardian_phone,
+        profile.guardian_email,
+        profile.study_work_status,
+        profile.address_house_street,
+        profile.address_locality,
+        profile.address_city,
+        profile.address_district,
+        profile.address_state,
+        profile.address_pin_code,
+        profile.address_country,
+    )
+    return all(str(value or "").strip() for value in required_values)
+
+
+def _my_profile_completion_percent(profile, user):
+    """Calculate progress from the 16 mandatory profile values."""
+    if profile.profile_completed:
+        return 100
+
+    full_name = " ".join(
+        part for part in (user.first_name, user.last_name) if part
+    ).strip()
+    required_values = (
+        full_name,
+        user.email,
+        profile.gender,
+        profile.identity_photo,
+        profile.guardian_full_name,
+        profile.guardian_relationship,
+        profile.guardian_phone,
+        profile.guardian_email,
+        profile.study_work_status,
+        profile.address_house_street,
+        profile.address_locality,
+        profile.address_city,
+        profile.address_district,
+        profile.address_state,
+        profile.address_pin_code,
+        profile.address_country,
+    )
+    completed = sum(bool(str(value or "").strip()) for value in required_values)
+    return round((completed / len(required_values)) * 100)
+
+
+def _my_profile_upload_identity_photo(uploaded_file):
+    """Validate and upload a separate identity photo; never touch the avatar."""
+    from PIL import Image, UnidentifiedImageError
+    import cloudinary.uploader
+
+    if not uploaded_file:
+        return None, "Please select your student identity photo."
+
+    if uploaded_file.size > 5 * 1024 * 1024:
+        return None, "Identity photo must be 5 MB or smaller."
+
+    extension = (
+        "." + uploaded_file.name.rsplit(".", 1)[-1].lower()
+        if "." in uploaded_file.name else ""
+    )
+    if extension not in {".jpg", ".jpeg", ".png"}:
+        return None, "Choose a JPG or PNG identity photo."
+
+    try:
+        uploaded_file.seek(0)
+        with Image.open(uploaded_file) as image:
+            image_format = image.format
+            width, height = image.size
+            image.verify()
+        if image_format not in {"JPEG", "PNG"}:
+            return None, "Choose a valid JPG or PNG identity photo."
+        if width < 200 or height < 200:
+            return None, "Identity photo must be at least 200 × 200 pixels."
+        uploaded_file.seek(0)
+    except (UnidentifiedImageError, OSError, ValueError):
+        return None, "The identity photo is invalid or could not be opened."
+
+    try:
+        result = cloudinary.uploader.upload(
+            uploaded_file,
+            folder="neolearn_student_identity",
+            resource_type="image",
+            allowed_formats=["jpg", "jpeg", "png"],
+            use_filename=False,
+            unique_filename=True,
+        )
+        secure_url = result.get("secure_url")
+        public_id = result.get("public_id")
+        if not secure_url or not public_id:
+            if public_id:
+                try:
+                    cloudinary.uploader.destroy(public_id)
+                except Exception:
+                    pass
+            return None, "Cloudinary did not return a valid identity photo."
+        return {"url": secure_url, "public_id": public_id}, None
+    except Exception:
+        return None, (
+            "Your identity photo could not be uploaded. Please try again."
+        )
+
+
+@login_required(login_url="signin")
+@cache_control(no_cache=True, must_revalidate=True, no_store=True)
+def student_my_profile_view(request):
+    """Display and independently save the five My Profile sections."""
+    from datetime import date
+    from django.core.validators import validate_email
+    from django.core.exceptions import ValidationError
+    from django.db import transaction
+    from django.utils.dateparse import parse_date
+    import cloudinary.uploader
+
+    if not is_student_user(request.user):
+        messages.error(
+            request,
+            "Student access required. Please use the student login area.",
+        )
+        return redirect("signin")
+
+    profile = _my_profile_get_or_create(request.user)
+
+    def page_context(reopen_section="", form_data=None):
+        full_name = " ".join(
+            part for part in (request.user.first_name, request.user.last_name)
+            if part
+        ).strip()
+        return {
+            "profile": profile,
+            "full_name": full_name,
+            "email": request.user.email,
+            "username": request.user.username,
+            "reopen_section": reopen_section,
+            "profile_form_data": form_data or {},
+            "profile_completed": profile.profile_completed,
+            "profile_completion_percent": _my_profile_completion_percent(
+                profile, request.user
+            ),
+        }
+
+    if request.method == "POST":
+        section = request.POST.get("section", "").strip().lower()
+        allowed_sections = {
+            "personal", "guardian", "study_work", "address", "learning"
+        }
+        if section not in allowed_sections:
+            messages.error(request, "Invalid profile section. Please try again.")
+            return redirect("student_my_profile")
+
+        errors = []
+        changed_fields = []
+        form_data = request.POST.dict()
+        old_identity_public_id = profile.identity_photo_public_id
+        new_identity_photo = None
+
+        # ----------------------------------------------------
+        # 1. PERSONAL INFORMATION
+        # ----------------------------------------------------
+        if section == "personal":
+            full_name, error = _my_profile_clean_text(
+                request.POST, "full_name", "Full name", 150, required=True
+            )
+            if error:
+                errors.append(error)
+
+            # Email and primary phone are displayed read-only here. Reject
+            # attempts to change them; their updates belong in Settings.
+            posted_email = request.POST.get("email")
+            if posted_email is not None and posted_email.strip() != request.user.email:
+                errors.append(
+                    "Email is managed in Settings and cannot be changed here."
+                )
+
+            posted_phone = request.POST.get("phone")
+            if posted_phone is not None and posted_phone.strip() != profile.phone:
+                errors.append(
+                    "Primary phone is managed in Settings and cannot be changed here."
+                )
+
+            alternate_phone = request.POST.get("alternate_phone", "").strip()
+            if len(alternate_phone) > 20:
+                errors.append("Alternate phone cannot exceed 20 characters.")
+            elif alternate_phone and not re.fullmatch(r"[0-9+\-\s()]{7,20}", alternate_phone):
+                errors.append("Enter a valid alternate phone number.")
+
+            gender = request.POST.get("gender", "").strip().lower()
+            valid_genders = {
+                choice[0] for choice in StudentProfile.Gender.choices
+            }
+            if gender not in valid_genders:
+                errors.append("Please select a valid gender option.")
+
+            dob_raw = request.POST.get("date_of_birth", "").strip()
+            date_of_birth = None
+            if dob_raw:
+                date_of_birth = parse_date(dob_raw)
+                if not date_of_birth:
+                    errors.append("Enter a valid date of birth.")
+                elif date_of_birth > date.today():
+                    errors.append("Date of birth cannot be in the future.")
+
+            identity_file = request.FILES.get("identity_photo")
+            if identity_file:
+                upload_result, upload_error = _my_profile_upload_identity_photo(
+                    identity_file
+                )
+                if upload_error:
+                    errors.append(upload_error)
+                else:
+                    new_identity_photo = upload_result
+            elif not profile.identity_photo:
+                errors.append("Please upload your student identity photo.")
+
+            if not errors:
+                name_parts = full_name.split(" ", 1)
+                try:
+                    with transaction.atomic():
+                        request.user.first_name = name_parts[0]
+                        request.user.last_name = (
+                            name_parts[1] if len(name_parts) > 1 else ""
+                        )
+                        request.user.save(
+                            update_fields=["first_name", "last_name"]
+                        )
+
+                        profile.alternate_phone = alternate_phone
+                        profile.gender = gender
+                        profile.date_of_birth = date_of_birth
+                        changed_fields.extend([
+                            "alternate_phone", "gender", "date_of_birth"
+                        ])
+                        if new_identity_photo:
+                            profile.identity_photo = new_identity_photo["url"]
+                            profile.identity_photo_public_id = (
+                                new_identity_photo["public_id"]
+                            )
+                            changed_fields.extend([
+                                "identity_photo", "identity_photo_public_id"
+                            ])
+                        profile.save(update_fields=changed_fields)
+                except Exception:
+                    errors.append(
+                        "Your personal information could not be saved. "
+                        "Please try again."
+                    )
+
+        # ----------------------------------------------------
+        # 2. PARENT / GUARDIAN INFORMATION
+        # ----------------------------------------------------
+        elif section == "guardian":
+            fields = [
+                ("guardian_full_name", "Guardian full name", 150, True),
+                ("guardian_relationship", "Relationship", 50, True),
+                ("guardian_phone", "Guardian phone number", 20, True),
+                ("guardian_alternate_phone", "Guardian alternate phone", 20, False),
+                ("guardian_email", "Guardian email address", 254, True),
+            ]
+            values = {}
+            for field_name, label, limit, required in fields:
+                value, error = _my_profile_clean_text(
+                    request.POST, field_name, label, limit, required
+                )
+                values[field_name] = value
+                if error:
+                    errors.append(error)
+
+            if values.get("guardian_phone"):
+                error = _my_profile_valid_indian_phone(
+                    values["guardian_phone"], "Guardian phone number", True
+                )
+                if error:
+                    errors.append(error)
+            if values.get("guardian_alternate_phone"):
+                error = _my_profile_valid_indian_phone(
+                    values["guardian_alternate_phone"],
+                    "Guardian alternate phone",
+                )
+                if error:
+                    errors.append(error)
+
+            if values.get("guardian_email"):
+                try:
+                    validate_email(values["guardian_email"])
+                except ValidationError:
+                    errors.append("Enter a valid guardian email address.")
+
+            if not errors:
+                try:
+                    for field_name, value in values.items():
+                        setattr(profile, field_name, value)
+                        changed_fields.append(field_name)
+                    profile.save(update_fields=changed_fields)
+                except Exception:
+                    errors.append(
+                        "Guardian information could not be saved. Please try again."
+                    )
+
+        # ----------------------------------------------------
+        # 3. STUDY / WORK DETAILS
+        # ----------------------------------------------------
+        elif section == "study_work":
+            status = request.POST.get("study_work_status", "").strip().lower()
+            valid_statuses = {
+                choice[0] for choice in StudentProfile.StudyWorkStatus.choices
+            }
+            if status not in valid_statuses:
+                errors.append("Please select your current study/work status.")
+
+            study_fields = [
+                ("institution_or_workplace", "Institution or workplace", 200),
+                ("education_qualification", "Qualification", 150),
+                ("course_or_field", "Course or field of study", 150),
+            ]
+            values = {"study_work_status": status}
+            for field_name, label, limit in study_fields:
+                value, error = _my_profile_clean_text(
+                    request.POST, field_name, label, limit
+                )
+                values[field_name] = value
+                if error:
+                    errors.append(error)
+
+            if not errors:
+                try:
+                    for field_name, value in values.items():
+                        setattr(profile, field_name, value)
+                        changed_fields.append(field_name)
+                    profile.save(update_fields=changed_fields)
+                except Exception:
+                    errors.append(
+                        "Study/work details could not be saved. Please try again."
+                    )
+
+        # ----------------------------------------------------
+        # 4. POSTAL ADDRESS
+        # ----------------------------------------------------
+        elif section == "address":
+            address_fields = [
+                ("address_house_street", "House / street", 255),
+                ("address_locality", "Locality", 150),
+                ("address_city", "City", 100),
+                ("address_district", "District", 100),
+                ("address_state", "State", 100),
+                ("address_pin_code", "PIN code", 12),
+                ("address_country", "Country", 100),
+            ]
+            values = {}
+            for field_name, label, limit in address_fields:
+                value, error = _my_profile_clean_text(
+                    request.POST, field_name, label, limit, required=True
+                )
+                values[field_name] = value
+                if error:
+                    errors.append(error)
+
+            pin_code = values.get("address_pin_code", "")
+            country = values.get("address_country", "").casefold()
+            if pin_code:
+                if country in {"india", "भारत"}:
+                    if not re.fullmatch(r"\d{6}", pin_code):
+                        errors.append("Enter a valid 6-digit Indian PIN code.")
+                elif not re.fullmatch(r"[A-Za-z0-9 -]{3,12}", pin_code):
+                    errors.append("Enter a valid postal code.")
+
+            if not errors:
+                try:
+                    for field_name, value in values.items():
+                        setattr(profile, field_name, value)
+                        changed_fields.append(field_name)
+                    profile.save(update_fields=changed_fields)
+                except Exception:
+                    errors.append(
+                        "Postal address could not be saved. Please try again."
+                    )
+
+        # ----------------------------------------------------
+        # 5. OPTIONAL LEARNING INTERESTS
+        # ----------------------------------------------------
+        elif section == "learning":
+            goals, error = _my_profile_clean_text(
+                request.POST, "learning_goals", "Learning goals", 3000
+            )
+            if error:
+                errors.append(error)
+
+            raw_interests = request.POST.getlist("interested_exams_courses")
+            if not raw_interests:
+                raw_text = request.POST.get(
+                    "interested_exams_courses_text", ""
+                )
+                raw_interests = raw_text.split(",") if raw_text else []
+
+            interests = [
+                " ".join(value.split())
+                for value in raw_interests
+                if value and value.strip()
+            ]
+            interests = list(dict.fromkeys(interests))
+            if len(interests) > 20:
+                errors.append("You can add up to 20 learning interests.")
+            if any(len(value) > 100 for value in interests):
+                errors.append(
+                    "Each learning interest must be 100 characters or fewer."
+                )
+
+            if not errors:
+                try:
+                    profile.learning_goals = goals
+                    profile.interested_exams_courses = interests
+                    profile.save(update_fields=[
+                        "learning_goals", "interested_exams_courses"
+                    ])
+                except Exception:
+                    errors.append(
+                        "Learning interests could not be saved. Please try again."
+                    )
+
+        # ----------------------------------------------------
+        # ERROR HANDLING
+        # ----------------------------------------------------
+        if errors:
+            # Restore in-memory instances if a database save raised after
+            # assigning values, so the rerender shows persisted data only.
+            profile.refresh_from_db()
+            request.user.refresh_from_db()
+            if new_identity_photo:
+                try:
+                    cloudinary.uploader.destroy(new_identity_photo["public_id"])
+                except Exception:
+                    pass
+            for error in errors:
+                messages.error(request, error)
+            return render(
+                request,
+                "students/profile/my_profile.html",
+                page_context(reopen_section=section, form_data=form_data),
+                status=400,
+            )
+
+        # Refresh persisted values before calculating first completion.
+        profile.refresh_from_db()
+        request.user.refresh_from_db()
+
+        if not profile.profile_completed and _my_profile_is_complete(
+            profile, request.user
+        ):
+            profile.profile_completed = True
+            profile.profile_completed_at = timezone.now()
+            profile.save(update_fields=[
+                "profile_completed", "profile_completed_at"
+            ])
+            messages.success(
+                request,
+                "Your profile is complete. You can now access your learning area.",
+            )
+        else:
+            messages.success(
+                request,
+                "Your profile section has been saved successfully.",
+            )
+
+        # Remove the old identity image only after the replacement is saved.
+        if new_identity_photo and old_identity_public_id:
+            if old_identity_public_id != new_identity_photo["public_id"]:
+                try:
+                    cloudinary.uploader.destroy(old_identity_public_id)
+                except Exception:
+                    pass
+
+        return redirect("student_my_profile")
+
+    return render(
+        request,
+        "students/profile/my_profile.html",
+        page_context(),
     )

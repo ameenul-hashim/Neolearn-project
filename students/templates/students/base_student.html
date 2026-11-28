@@ -838,15 +838,14 @@ SIDEBAR
                     <span class="sidebar-nav-text truncate">FAQ &amp; Support</span>
                 </a>
 
-                <div
-                    class="student-nav-link coming-soon-link"
-                    aria-disabled="true"
+                <a
+                    href="{% url 'student_my_profile' %}"
                     data-tooltip="My Profile"
+                    class="student-nav-link {% if request.resolver_match.url_name == 'student_my_profile' %}active-menu{% endif %}"
                 >
                     <i class="ri-user-line shrink-0"></i>
                     <span class="sidebar-nav-text truncate">My Profile</span>
-                    <span class="soon-pill">SOON</span>
-                </div>
+                </a>
 
                 <a href="{% url 'student_settings' %}" data-tooltip="Settings" class="student-nav-link {% if request.resolver_match.url_name == 'student_settings' %}active-menu{% endif %}">
                     <i class="ri-settings-3-line shrink-0 text-[18px]"></i>
@@ -1537,17 +1536,16 @@ SIDEBAR
                         <div class="py-2">
 
 
-                            <!-- MY PROFILE — COMING SOON -->
+                            <!-- MY PROFILE -->
 
-                            <div
-                                class="flex h-[46px] min-w-0 items-center gap-3 px-5 text-[14px] font-medium text-slate-300/70"
-                                aria-disabled="true"
+                            <a
+                                href="{% url 'student_my_profile' %}"
+                                class="flex h-[46px] min-w-0 items-center gap-3 rounded-xl px-5 text-[14px] font-medium text-slate-300 transition hover:bg-white/5 hover:text-white {% if request.resolver_match.url_name == 'student_my_profile' %}bg-emerald-500/10 text-emerald-300{% endif %}"
                                 data-tooltip="My Profile"
                             >
                                 <i class="ri-user-line shrink-0 text-[18px]"></i>
                                 <span class="truncate">My Profile</span>
-                                <span class="soon-pill">SOON</span>
-                            </div>
+                            </a>
 
 
                             <!-- MY ORDERS -->
